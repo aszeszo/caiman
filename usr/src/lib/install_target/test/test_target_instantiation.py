@@ -65,7 +65,7 @@ class TestDiskPartition(unittest.TestCase):
         part = Partition(2)
         part.action = "create"
         part.start_sector = 0
-        part.size = Size("50" + Size.sector_units)
+        part.size = Size("50" + Size.gb_units)
         part.part_type = "primary"
         part.bootid = Partition.ACTIVE
 
@@ -81,14 +81,14 @@ class TestDiskPartition(unittest.TestCase):
         part = Partition(2)
         part.action = "create"
         part.start_sector = 0
-        part.size = Size("50" + Size.sector_units)
+        part.size = Size("20" + Size.gb_units)
         part.part_type = "primary"
         part.bootid = Partition.ACTIVE
 
         part2 = Partition(4)
         part2.action = "create"
         part2.start_sector = 50 * GBSECTOR + 50
-        part2.size = Size("50" + Size.sector_units)
+        part2.size = Size("50" + Size.gb_units)
         part2.part_type = "extended"
         part2.bootid = 0
 
@@ -104,14 +104,14 @@ class TestDiskPartition(unittest.TestCase):
         part = Partition(1)
         part.action = "create"
         part.start_sector = 0
-        part.size = Size("50" + Size.sector_units)
+        part.size = Size("50" + Size.gb_units)
         part.part_type = "primary"
         part.bootid = Partition.ACTIVE
 
         part2 = Partition(2)
         part2.action = "destroy"
         part2.start_sector = 50 * GBSECTOR + 51
-        part2.size = Size("50" + Size.sector_units)
+        part2.size = Size("50" + Size.gb_units)
         part2.part_type = "primary"
         part2.bootid = 0
 
@@ -384,13 +384,13 @@ class TestDiskLabeling(unittest.TestCase):
         part.action = "create"
         part.part_type = "primary"
         part.bootid = Partition.ACTIVE
-        part.size = Size("2b")
+        part.size = Size("2gb")
 
         part2 = Partition(2)
         part2.action = "destroy"
         part2.part_type = "primary"
         part2.bootid = 0
-        part2.size = Size("2b")
+        part2.size = Size("2gb")
 
         self.disk.insert_children([part, part2])
 

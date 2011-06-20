@@ -77,14 +77,14 @@ class Target(SimpleXmlHandlerBase):
             if child.has_children:
                 # recurse
                 self.validate_node(child)
-            else:
-                # This child object has no children.  Make a copy of it, insert
-                # it into node_copy and check the errsvc
-                child_copy = copy.copy(child)
-                node_copy.insert_children(child_copy)
-                if errsvc._ERRORS:
-                    raise Target.InvalidError("DOC object which caused the " +
-                                              "failure: " + str(child))
+
+            # Make a copy of the child object, insert it into node_copy, and
+            # check the errsvc
+            child_copy = copy.copy(child)
+            node_copy.insert_children(child_copy)
+            if errsvc._ERRORS:
+                raise Target.InvalidError("DOC object which caused the " +
+                                          "failure: " + str(child))
 
     def final_validation(self):
         """ final_validiation() - method to validate the entire Target sub-tree

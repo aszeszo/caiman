@@ -454,7 +454,14 @@ class TargetDiscovery(Checkpoint):
             # dataset (also the dataset with the same name as that of the
             # zpool) may have a different mountpoint than the zpool.
             for dataset in p.stdout.rstrip().split("\n")[1:]:
-                (name, ds_type, ds_size, mountpoint) = dataset.split()
+                try:
+                    name, ds_type, ds_size, mountpoint = dataset.split(None, 3)
+                except ValueError as err:
+                    # trap on ValueError so any inconsistencies are captured
+                    self.logger.debug("Unable to process dataset: %r" % 
+                                      dataset)
+                    self.logger.debug(str(err))
+                    continue
 
                 # fix the name field to remove the name of the pool
                 name = name.partition(zpool_name + "/")[2]

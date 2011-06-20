@@ -432,7 +432,7 @@ class ShadowPhysical(ShadowList):
             else:
                 # verify the logical partition we're trying to insert fits
                 # within the extended partition "parent"
-                if partition.is_extended:
+                if partition.is_extended and partition.action != "delete":
                     if p_start < start or p_end > end:
                         self.set_error(self.LogicalPartitionOverlapError())
 
@@ -563,22 +563,29 @@ class ShadowPhysical(ShadowList):
             disk_size = self.container.parent.disk_prop.dev_size.sectors
             arch = self.container.parent.kernel_arch
 
-        # round the start sector up/down if it doesn't already start on
-        # cylinder boundary
+        # adjust the start_sector up to the next cylinder boundary
         if value.start_sector % cyl_boundary != 0:
-            value.start_sector = ((value.start_sector + (cyl_boundary / 2)) / \
-                                 cyl_boundary) * cyl_boundary
+            new_start_sector = ((value.start_sector / cyl_boundary) * \
+                               cyl_boundary) + cyl_boundary
+
+            # adjust the size down by the same amount
+            difference = new_start_sector - value.start_sector
+            value.start_sector = new_start_sector
+            value.size = Size(str(value.size.sectors - difference) + \
+                              Size.sector_units)
 
         # check the start_sector of the object.  If it starts at zero, adjust
         # it to start at the first cylinder boundary instead so as not to
         # clobber the disk label
         if value.start_sector == 0:
             value.start_sector = cyl_boundary
+            value.size = Size(str(value.size.sectors - cyl_boundary) + \
+                              Size.sector_units)
 
         # adjust the size down to the nearest end cylinder
         if value.size.sectors % cyl_boundary != 0:
-            end_cylinder = (value.size.sectors / cyl_boundary) * cyl_boundary
-            value.size = Size(str(end_cylinder) + Size.sector_units)
+            new_size = (value.size.sectors / cyl_boundary) * cyl_boundary
+            value.size = Size(str(new_size) + Size.sector_units)
 
         # x86 specific check for slices and partitions
         if arch == "x86":

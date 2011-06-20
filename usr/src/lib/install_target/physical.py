@@ -919,24 +919,63 @@ class Disk(DataObject):
         holes = list()
         i = 0
         while i < len(usage) - 1:
+            start_sector = usage[i]
+
             # subtract i+1 to get the size of this hole.
             size = usage[i + 1] - usage[i]
 
             # if the size is 0 (for a starting sector of 0) or 1 (for adjacent
-            # children), there's no gap, so skip it
-            if size not in [0, 1]:
+            # children), there's no gap, so skip it.  Also skip any hole which
+            # is smaller than the cylinder boundary
+            if size not in [0, 1] and size > self.geometry.cylsize:
                 # do not correct for holes that start at 0
-                if usage[i] == 0:
-                    holes.append(HoleyObject(
-                        usage[i], Size(str(size - 1) + Size.sector_units)))
+                if start_sector == 0:
+                    holes.append(HoleyObject(start_sector,
+                        Size(str(size - 1) + Size.sector_units)))
                 else:
-                    holes.append(HoleyObject(
-                        usage[i] + 1, Size(str(size - 1) + Size.sector_units)))
+                    holes.append(HoleyObject(start_sector + 1,
+                        Size(str(size - 1) + Size.sector_units)))
 
             # step across the size of the child
             i += 2
 
-        return holes
+        # now that the holes are calculated, adjust any holes whose start
+        # sector does not fall on a cylinder boundary.
+        final_list = list()
+        for hole in holes:
+            if hole.start_sector % self.geometry.cylsize != 0:
+                # celing the start_sector to the next cylinder boundary
+                new_start_sector = ((start_sector / self.geometry.cylsize) * \
+                    self.geometry.cylsize) + self.geometry.cylsize
+                
+                # calculate the difference so the size can be adjusted
+                difference = new_start_sector - hole.start_sector
+
+                # reset the attributes of the hole
+                hole.start_sector = new_start_sector
+                hole.size = Size(str(hole.size.sectors - difference) + \
+                                 Size.sector_units)
+
+            # check the start_sector of the gap.  If it starts at zero, adjust
+            # it to start at the first cylinder boundary instead
+            if hole.start_sector == 0:
+                hole.start_sector = self.geometry.cylsize
+                hole.size = \
+                    Size(str(hole.size.sectors - self.geometry.cylsize) + \
+                         Size.sector_units)
+
+            # adjust the size down to the nearest end cylinder
+            if hole.size.sectors % self.geometry.cylsize != 0:
+                new_size = (hole.size.sectors / self.geometry.cylsize) * \
+                           self.geometry.cylsize
+                hole.size = Size(str(new_size) + Size.sector_units)
+
+            # finally, re-check the size of the hole.  If it's smaller than a
+            # cylinder, do not add it to the list
+            if hole.size.sectors > self.geometry.cylsize:
+                final_list.append(hole)
+
+        return final_list
 
     def get_logical_partition_gaps(self):
         """ get_logical_parittion_gaps() - method to return a list of Holey

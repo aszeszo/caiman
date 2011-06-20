@@ -224,7 +224,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
               <size val="14.99Gb" start_sector="18827520"/>
             </partition>
             <partition action="preserve" name="5" part_type="12">
-              <size val="1.5Gb" start_sector="18827520"/>:w
+              <size val="1.5Gb" start_sector="18827520"/>
             </partition>
             <partition action="preserve" name="6" part_type="191">
               <size val="5.5Gb" start_sector="21973248"/>
@@ -1390,7 +1390,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 <partition action="create" name="1" part_type="191">
                   <slice name="0" action="create" force="false"
                    is_swap="false">
-                    <size val="390714879secs" start_sector="512"/>
+                    <size val="390714367secs" start_sector="512"/>
                   </slice>
                 </partition>
               </disk>
@@ -1419,7 +1419,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
+        ......<size val="390714368secs" start_sector="512"/>
         ......<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="rpool1" in_vdev="vdev">
         ........<size val="390713344secs" start_sector="512"/>
@@ -1472,7 +1472,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
+        ......<size val="390714368secs" start_sector="512"/>
         ......<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="rpool1" in_vdev="vdev">
         ........<size val="390713344secs" start_sector="512"/>
@@ -1587,7 +1587,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="62914560secs" start_sector="512"/>
         ......<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="rpool1" in_vdev="vdev">
-        ........<size val="62914560secs" start_sector="512"/>
+        ........<size val="62914048secs" start_sector="512"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -1646,7 +1646,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......</slice>
         ....</partition>
         ....<partition action="create" name="2" part_type="11">
-        ......<size val="8388608secs" start_sector="52429312"/>
+        ......<size val="8388608secs" start_sector="52429824"/>
         ....</partition>
         ..</disk>
         </target>
@@ -1705,10 +1705,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="62914560secs" start_sector="512"/>
         ......<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="rpool1" in_vdev="vdev">
-        ........<size val="41943040secs" start_sector="512"/>
+        ........<size val="41942528secs" start_sector="512"/>
         ......</slice>
         ......<slice name="1" action="create" force="false" is_swap="false">
-        ........<size val="18874368secs" start_sector="41943552"/>
+        ........<size val="18873856secs" start_sector="41943552"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -2281,7 +2281,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="348144615secs" start_sector="0"/>
         ......<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="rpool1" in_vdev="vdev">
-        ........<size val="348144128secs" start_sector="512"/>
+        ........<size val="348143616secs" start_sector="512"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -2336,7 +2336,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="348144615secs" start_sector="0"/>
         ......<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="rpool1" in_vdev="vdev">
-        ........<size val="18874368secs" start_sector="48128"/>
+        ........<size val="18873856secs" start_sector="48128"/>
         ......</slice>
         ......<slice name="1" action="delete" force="false" is_swap="false">
         ........<size val="1060290secs" start_sector="48195"/>
@@ -2709,10 +2709,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
+        ......<size val="390714368secs" start_sector="512"/>
         ......<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="12582912secs" start_sector="512"/>
+        ........<size val="12582400secs" start_sector="512"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -2783,7 +2783,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="20971457secs" start_sector="575"/>
         ......<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="20971008secs" start_sector="512"/>
+        ........<size val="20970496secs" start_sector="512"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -2881,7 +2881,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="2" part_type="191">
-        ......<size val="20971520secs" start_sector="401408"/>
+        ......<size val="20971520secs" start_sector="401920"/>
         ......<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
         ........<size val="20971008secs" start_sector="512"/>
@@ -2966,7 +2966,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="3341520secs" start_sector="0"/>
         ....</partition>
         ....<partition action="create" name="2" part_type="191">
-        ......<size val="20971520secs" start_sector="3341312"/>
+        ......<size val="20971520secs" start_sector="3341824"/>
         ......<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
         ........<size val="20971008secs" start_sector="512"/>
@@ -3020,7 +3020,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="625141248secs" start_sector="512"/>
         ......<slice name="1" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="rpool-none">
-        ........<size val="276976640secs" start_sector="512"/>
+        ........<size val="276976128secs" start_sector="512"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -3080,16 +3080,16 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="625141248secs" start_sector="512"/>
         ......<slice name="1" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="rpool-none">
-        ........<size val="276976640secs" start_sector="512"/>
+        ........<size val="276976128secs" start_sector="512"/>
         ......</slice>
         ......<slice name="3" action="create" force="false" is_swap="true">
-        ........<size val="2097152secs" start_sector="276977152"/>
+        ........<size val="2096640secs" start_sector="276977152"/>
         ......</slice>
         ......<slice name="5" action="create" force="false" is_swap="false">
-        ........<size val="2097152secs" start_sector="279074304"/>
+        ........<size val="2096640secs" start_sector="279074304"/>
         ......</slice>
         ......<slice name="7" action="create" force="false" is_swap="true">
-        ........<size val="2097152secs" start_sector="281171456"/>
+        ........<size val="2096640secs" start_sector="281171456"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -3097,5 +3097,6 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         '''
 
         self.__run_simple_test(test_manifest_xml, expected_xml)
+
 if __name__ == '__main__':
     unittest.main()

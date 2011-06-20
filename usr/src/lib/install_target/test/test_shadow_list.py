@@ -533,7 +533,7 @@ class TestPartition(unittest.TestCase):
 
     def test_resize_partition(self):
         # create a 1 GB partition
-        p1 = self.disk.add_partition(1, 0, 1, Size.gb_units)
+        p1 = self.disk.add_partition(1, CYLSIZE, 1, Size.gb_units)
         self.disk.insert_children(p1)
 
         # verify the size of the slice is 1 GB of sectors, rounded for CYLSIZE
@@ -646,12 +646,19 @@ class TestPartition(unittest.TestCase):
         holey_list = self.disk.get_gaps()
 
         # verify the holey list is correct
-        self.assertEqual(len(holey_list), 2)
+        self.assertEqual(len(holey_list), 1)
 
-        self.assertEqual(holey_list[1].start_sector, \
-            CYLSIZE + p.size.sectors + 1)
-        self.assertEqual(holey_list[1].size.sectors, \
-            disksize - p.size.sectors - CYLSIZE - 1)
+        # round the expected value up to the next cylinder boundary
+        rounded_value = (((CYLSIZE + p.size.sectors + 1) / CYLSIZE) * \
+            CYLSIZE) + CYLSIZE
+        difference = rounded_value - (p.start_sector + p.size.sectors)
+
+        rounded_size = \
+            ((disksize - CYLSIZE - p.size.sectors - difference) / CYLSIZE) * \
+                CYLSIZE
+
+        self.assertEqual(holey_list[0].start_sector, rounded_value)
+        self.assertEqual(holey_list[0].size.sectors, rounded_size)
 
         # verify the logical list is empty as well
         self.assertFalse(self.disk.get_logical_partition_gaps())
@@ -667,17 +674,10 @@ class TestPartition(unittest.TestCase):
 
         disksize = self.disk.disk_prop.dev_size.sectors
 
-        disk_holey_list = self.disk.get_gaps()
         logical_holey_list = self.disk.get_logical_partition_gaps()
 
         # verify the disk's holey lists are correct
-        self.assertEqual(len(disk_holey_list), 2)
         self.assertEqual(len(logical_holey_list), 1)
-
-        self.assertEqual(disk_holey_list[1].start_sector, \
-            CYLSIZE + extended_part.size.sectors + 1)
-        self.assertEqual(disk_holey_list[1].size.sectors, \
-            disksize - extended_part.size.sectors - CYLSIZE - 1)
 
         self.assertEqual(logical_holey_list[0].start_sector, \
             extended_part.start_sector + LOGICAL_ADJUSTMENT + \
@@ -983,7 +983,7 @@ class TestSliceInDisk(unittest.TestCase):
 
     def test_resize_slice(self):
         # create a 1 GB slice
-        s1 = self.disk.add_slice(1, 0, 1, Size.gb_units)
+        s1 = self.disk.add_slice(1, CYLSIZE, 1, Size.gb_units)
 
         # verify the size of the slice is 1 GB of sectors, rounded for CYLSIZE
         self.assertEqual(s1.size.sectors, (GBSECTOR / CYLSIZE) * CYLSIZE)
@@ -1054,16 +1054,24 @@ class TestSliceInDisk(unittest.TestCase):
         holey_list = self.disk.get_gaps()
 
         # verify the holey list is correct
-        self.assertEqual(len(holey_list), 2)
+        self.assertEqual(len(holey_list), 1)
 
-        self.assertEqual(holey_list[1].start_sector, \
-            s.start_sector + s.size.sectors + 1)
-        self.assertEqual(holey_list[1].size.sectors, \
-            disksize - s.size.sectors - CYLSIZE - 1)
+        # round the expected value up to the next cylinder boundary
+        rounded_value = (((CYLSIZE + s.size.sectors + 1) / CYLSIZE) * \
+            CYLSIZE) + CYLSIZE
+        difference = rounded_value - (s.start_sector + s.size.sectors)
+
+        rounded_size = \
+            ((disksize - CYLSIZE - s.size.sectors - difference) / \
+                CYLSIZE) * CYLSIZE
+
+        self.assertEqual(holey_list[0].start_sector, rounded_value)
+        self.assertEqual(holey_list[0].size.sectors, rounded_size)
 
     def test_holey_object_one_child_start_at_nonzero(self):
-        # add a single partition, starting at start sector CYLSIZE * 10
+        # add a single slice, starting at start sector CYLSIZE * 10
         start = CYLSIZE * 10
+
         s = self.disk.add_slice(1, start, 25, Size.gb_units)
         disksize = self.disk.disk_prop.dev_size.sectors
 
@@ -1072,12 +1080,21 @@ class TestSliceInDisk(unittest.TestCase):
         # verify the holey list is correct
         self.assertEqual(len(holey_list), 2)
 
-        self.assertEqual(holey_list[0].start_sector, 0)
-        self.assertEqual(holey_list[0].size.sectors, start - 1)
-        self.assertEqual(holey_list[1].start_sector, \
-            CYLSIZE * 10 + s.size.sectors + 1)
-        self.assertEqual(holey_list[1].size.sectors, \
-            disksize - s.size.sectors - CYLSIZE * 10 - 1)
+        self.assertEqual(holey_list[0].start_sector, CYLSIZE)
+        self.assertEqual(holey_list[0].size.sectors, 
+            (((start - CYLSIZE - 1) / CYLSIZE) * CYLSIZE))
+
+        # round the expected value up to the next cylinder boundary
+        rounded_value = (((CYLSIZE * 10 + s.size.sectors + 1) / CYLSIZE) * \
+            CYLSIZE) + CYLSIZE
+        difference = rounded_value - (s.start_sector + s.size.sectors)
+
+        rounded_size = \
+            ((disksize - (CYLSIZE * 10) - s.size.sectors - difference) / \
+                CYLSIZE) * CYLSIZE
+
+        self.assertEqual(holey_list[1].start_sector, rounded_value)
+        self.assertEqual(holey_list[1].size.sectors, rounded_size)
 
     def test_invalid_start_sector(self):
         self.disk.add_slice(0, -16065, 1, Size.gb_units)
@@ -1311,7 +1328,7 @@ class TestSliceInPartition(unittest.TestCase):
 
     def test_slice_entire_size_of_partition(self):
         # add a non V_BACKUP slice the entire size of the partition
-        s = self.partition.add_slice(0, 0, self.partition.size.sectors,
+        s = self.partition.add_slice(0, CYLSIZE, self.partition.size.sectors,
                                      Size.sector_units)
 
         # verify there are no errors
@@ -1601,6 +1618,20 @@ class TestFinalValidation(unittest.TestCase):
         zpool.insert_children(BE())
 
         self.target.insert_children([self.disk1, self.logical])
+        self.assertFalse(self.target.final_validation())
+
+    def test_invalid_parent_with_valid_child(self):
+        # 10 gb logical partition (with no extended partition), 1 gb slice
+        p = self.disk1.add_partition(5, 0, 10, Size.gb_units,
+                                     bootid=Partition.ACTIVE)
+        p.add_slice(0, 0, 1, in_zpool="rpool")
+
+        # "rpool" boot pool with one BE
+        zpool = self.logical.add_zpool("rpool", is_root=True)
+        zpool.insert_children(BE())
+
+        self.target.insert_children([self.disk1, self.logical])
+
         self.assertFalse(self.target.final_validation())
 
 
