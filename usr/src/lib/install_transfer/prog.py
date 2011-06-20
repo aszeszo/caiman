@@ -86,7 +86,7 @@ class ProgressMon(object):
         try:
             stat = os.statvfs(filesystem)
             return ((stat.f_blocks - stat.f_bfree) * stat.f_frsize) / 1024
-        except OSError, msg:
+        except OSError:
             # The file system hasn't been created yet
             pass
 
@@ -99,7 +99,7 @@ class ProgressMon(object):
         try:
             while initsize is None:
                 initsize = self.__fssize(filesystem)
-        except Exception, ex:
+        except Exception as ex:
             # set this flag so the startmonitor() function won't hang
             self.prog_init_completed = True
             raise ex

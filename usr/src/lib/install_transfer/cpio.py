@@ -409,11 +409,6 @@ class AbstractCPIO(Checkpoint):
         '''
 
         self.logger.debug("Transferring files in %s", file_list)
-        # Check for the existence of the destination directory for the
-        # transfer and create it if it doesn't exist.
-        if not os.path.exists(self.dst):
-            if not self.dry_run:
-                os.makedirs(self.dst)
 
         os.chdir(self.src)
         if cpio_args != "-pdum":
@@ -500,6 +495,12 @@ class AbstractCPIO(Checkpoint):
 
     def _transfer(self):
         '''Method to transfer from the source to the destination'''
+        # Check for the existence of the destination directory for the
+        # transfer and create it if it doesn't exist.
+        if not os.path.exists(self.dst):
+            if not self.dry_run:
+                os.makedirs(self.dst)
+
         if self.give_progress:
             if self.distro_size == self.DEFAULT_SIZE:
                 # We weren't able to compute the size due to the
@@ -508,12 +509,10 @@ class AbstractCPIO(Checkpoint):
                 # get that size now.
                 self.distro_size = self.get_size()
 
-           # Start up the ProgressMon to report progress
-            # while the actual transfer is taking place.
-
-            # This needs to be addressed:
+            # Start up the ProgressMon to report progress while the actual
+            # transfer is taking place.
             self.pmon = ProgressMon(logger=self.logger)
-            self.pmon.startmonitor(self.dst, self.distro_size, 0, 100)
+            self.pmon.startmonitor(self.dst, self.distro_size)
 
         for trans in self._transfer_list:
             # before starting any transforms, installs or uninstalls, first
