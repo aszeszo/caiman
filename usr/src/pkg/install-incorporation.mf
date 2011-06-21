@@ -27,6 +27,7 @@ set name=pkg.fmri value=pkg:/consolidation/install/install-incorporation@$(PKGVE
 set name=variant.arch value=$(ARCH)
 set name=pkg.description value="This incorporation constrains packages from the install consolidation."
 set name=pkg.summary value="install consolidation incorporation"
+set name=info.classification value="org.opensolaris.category.2008:Meta Packages/Incorporations"
 set name=pkg.depend.install-hold value=core-os.install
 $(i386_ONLY)depend fmri=SUNWicdc@0.5.11-0.130 type=incorporate
 depend fmri=SUNWswmt@0.5.11-0.130 type=incorporate
