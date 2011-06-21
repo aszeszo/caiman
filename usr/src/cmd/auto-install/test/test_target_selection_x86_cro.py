@@ -261,10 +261,10 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ......<vdev name="vdev" redundancy="none"/>
         ......<be name="solaris"/>
         ......<zvol name="swap" action="create" use="swap">
-        ........<size val="8192m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<zvol name="dump" action="create" use="dump">
-        ........<size val="8192m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ....</zpool>
         ..</logical>
@@ -300,10 +300,10 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="solaris"/>
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
-        ........<size val="8192m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<zvol name="dump" action="create" use="dump">
-        ........<size val="8192m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ....</zpool>
         ..</logical>
@@ -390,10 +390,10 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ....<zpool name="myrpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
-        ........<size val="8192m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<zvol name="dump" action="create" use="dump">
-        ........<size val="8192m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<be name="solaris"/>
         ....</zpool>
@@ -625,10 +625,10 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ....<zpool name="myrpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="mirror"/>
         ......<zvol name="swap" action="create" use="swap">
-        ........<size val="8192m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<zvol name="dump" action="create" use="dump">
-        ........<size val="8192m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<be name="solaris"/>
         ....</zpool>
@@ -687,10 +687,10 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ....<zpool name="myrpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
-        ........<size val="8192m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<zvol name="dump" action="create" use="dump">
-        ........<size val="8192m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<be name="solaris"/>
         ....</zpool>
