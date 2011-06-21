@@ -190,7 +190,7 @@ class Target(SimpleXmlHandlerBase):
             return unsorted_children
 
         # retreive the DataObjectDict from the DOC
-        cro_data = self.root.persistent.get_first_child(
+        cro_data = self.root_object.persistent.get_first_child(
             name=CRO_LABEL)
 
         # not all systems support croinfo so if the data_dict is empty or not

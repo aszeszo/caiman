@@ -66,16 +66,18 @@ class  TestDataObjectUtility(unittest.TestCase):
         except AttributeError:
             pass
 
-    def test_data_object_utility_root(self):
-        '''Validate root property is read-only and returns correct info'''
-        self.assertEqual(self.data_obj["child_1_2"].root,
+    def test_data_object_utility_root_object(self):
+        '''Validate root_object property is read-only and returns correct info
+        '''
+        self.assertEqual(self.data_obj["child_1_2"].root_object,
             self.data_obj["data_obj"])
-        self.assertEqual(self.data_obj["child_5_2"].root,
+        self.assertEqual(self.data_obj["child_5_2"].root_object,
             self.data_obj["data_obj"])
 
         try:
-            self.data_obj["child_1_1"].root = self.data_obj["child_2"]
-            self.fail("Succeeded in setting root, when expected failure.")
+            self.data_obj["child_1_1"].root_object = self.data_obj["child_2"]
+            self.fail(
+                "Succeeded in setting root_object, when expected failure.")
         except AttributeError:
             pass
 
