@@ -585,12 +585,12 @@ class P5ISpec(DataObject):
 
     @classmethod
     def can_handle(cls, element):
+        '''Always returns False
+
+           Creationg of a P5ISpec should be handled in Software object's
+           can_handle and from_xml()
         '''
-           Returns True if element has:
-           - tag = software_data
-           Returns False otherwise.
-        '''
-        return element.tag == P5ISpec.P5I_SOFTWARE_DATA_LABEL
+        return False
 
     @classmethod
     def from_xml(cls, element):
