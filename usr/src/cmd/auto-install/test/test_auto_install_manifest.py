@@ -68,7 +68,7 @@ class TestAutoInstallManifest(unittest.TestCase):
         # that $SRC environment variable will be set.
         testmanifest = os.environ['SRC'] + \
             "/cmd/auto-install/test/manifest_auto_reboot_true.xml"
-        args = ["-n", "-s", "target-selection", "-m", testmanifest]
+        args = ["-n", "-s", "target-discovery", "-m", testmanifest]
 
         try:
             self.AI = auto_install.AutoInstall(args)
@@ -86,7 +86,7 @@ class TestAutoInstallManifest(unittest.TestCase):
         # that $SRC environment variable will be set.
         testmanifest = os.environ['SRC'] + \
             "/cmd/auto-install/test/manifest_auto_reboot_false.xml"
-        args = ["-n", "-s", "target-selection", "-m", testmanifest]
+        args = ["-n", "-s", "target-discovery", "-m", testmanifest]
 
         try:
             self.AI = auto_install.AutoInstall(args)
@@ -104,7 +104,7 @@ class TestAutoInstallManifest(unittest.TestCase):
         # that $SRC environment variable will be set.
         testmanifest = os.environ['SRC'] + \
             "/cmd/auto-install/test/manifest_auto_reboot_not_set.xml"
-        args = ["-n", "-s", "target-selection", "-m", testmanifest]
+        args = ["-n", "-s", "target-discovery", "-m", testmanifest]
 
         try:
             self.AI = auto_install.AutoInstall(args)
@@ -124,7 +124,7 @@ class TestAutoInstallManifest(unittest.TestCase):
         # that $SRC environment variable will be set.
         testmanifest = os.environ['SRC'] + \
             "/cmd/auto-install/test/manifest_auto_reboot_invalid.xml"
-        args = ["-n", "-s", "target-selection", "-m", testmanifest]
+        args = ["-n", "-s", "target-discovery", "-m", testmanifest]
 
         try:
             self.AI = auto_install.AutoInstall(args)

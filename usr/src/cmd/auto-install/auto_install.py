@@ -75,8 +75,8 @@ from solaris_install.target import Target, discovery, instantiation
 from solaris_install.target.instantiation_zone import ALT_POOL_DATASET
 from solaris_install.target.logical import BE, Logical
 from solaris_install.transfer import create_checkpoint
-from solaris_install.transfer.info import Software, Destination, Image, \
-    ImType, Dir, INSTALL, IPSSpec, CPIOSpec, SVR4Spec
+from solaris_install.transfer.info import Software, Source, Destination, \
+    Image, ImType, Dir, INSTALL, IPSSpec, CPIOSpec, SVR4Spec
 from solaris_install.transfer.ips import AbstractIPS
 
 ZPOOL = "/usr/sbin/zpool"
@@ -932,6 +932,10 @@ class AutoInstall(object):
                         found_sw_data = True
                         if sw_child.action == SVR4Spec.INSTALL:
                             found_install_sw_data = True
+                    elif isinstance(sw_child, Source) or \
+                         isinstance(sw_child, Destination):
+                        # Skip these
+                        continue
                     else:
                         self.logger.error("Unsupported transfer type: %s"
                             % (tran_type))
