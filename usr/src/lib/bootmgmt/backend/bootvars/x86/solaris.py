@@ -158,7 +158,7 @@ class BootenvBootVariables(bootinfo.BootVariables):
             bvtempfile = bvfile
         else:
             # BOOTENV_DOT_RC has a leading slash:
-            bvfile = inst.rootpath + self.BOOTENV_DOT_RC
+            bvfile = self.BOOTENV_DOT_RC
             bvtempfile = bvfile + '.new'
             try:
                 fileobj = open(bvtempfile, 'w')
@@ -183,7 +183,7 @@ class BootenvBootVariables(bootinfo.BootVariables):
 
         # Now move the file over the become the new bootenv.rc:
         try:
-            if not alt_dir is None:
+            if alt_dir is None:
                 shutil.move(bvtempfile, bvfile)
             self.dirty = False
         except IOError as ioe:
