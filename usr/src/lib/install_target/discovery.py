@@ -678,6 +678,11 @@ class TargetDiscovery(Checkpoint):
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger=ILN)
 
+        # for systems that do not support CRO, nothing will be returned in
+        # stdout so simply return.
+        if not p.stdout:
+            return
+
         # keep a positional counter since we can't use OrderedDicts until 2.7
         i = 1
         for line in p.stdout.splitlines():
