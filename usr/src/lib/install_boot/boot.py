@@ -44,6 +44,7 @@ from shutil import move, copyfile, rmtree
 from bootmgmt import bootconfig, BootmgmtUnsupportedPropertyError
 from bootmgmt.bootconfig import BootConfig, DiskBootConfig, ODDBootConfig, \
     SolarisDiskBootInstance, SolarisODDBootInstance, ChainDiskBootInstance
+from bootmgmt.bootloader import BootLoader
 from solaris_install import DC_LABEL, DC_PERS_LABEL, CalledProcessError, Popen
 from solaris_install.boot.boot_spec import BootMods, BootEntry
 from solaris_install.data_object import ObjectNotFoundError
@@ -191,6 +192,10 @@ class BootMenu(Checkpoint):
             and copies over content as appropriate to their targets.
         """
         for boot_config in boot_config_list:
+            # boot-config elements can be either tuples or lists of tuples.
+            # Cast tuples into a list for consistent iteration loop below.
+            if not isinstance(boot_config, list):
+                boot_config = [boot_config]
             for config_set in boot_config:
                 ftype = config_set[0]
                 if ftype == BootConfig.OUTPUT_TYPE_FILE:
@@ -283,6 +288,8 @@ class SystemBootMenu(BootMenu):
         # Filesystem name of the target boot environment eg.
         # rpool/ROOT/solaris-11-XYZ
         self.target_bootfs = None
+        # Convenience reference to the SolarisDiskBootInstance for boot target
+        self.target_boot_instance = None
         # Mountpoint of pool toplevel dataset
         self.pool_tld_mount = None
 
@@ -321,7 +328,7 @@ class SystemBootMenu(BootMenu):
             except BootmgmtUnsupportedPropertyError:
                 self.logger.warning("Boot loader type %s does not support the \
                                     'timeout' property. Ignoring." \
-                                    % self.config.bootloader.name)
+                                    % self.config.boot_loader.name)
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class
@@ -356,6 +363,59 @@ class SystemBootMenu(BootMenu):
         self.logger.debug("Setting bootfs zpool property on %s to %s" \
                           % (pool.name, self.target_bootfs))
         pool.set("bootfs", self.target_bootfs, dry_run)
+
+    def _get_x86_console(self):
+        """
+            Determine X86 console device. Adapted from libict_pymod
+            Returns console device found in bootenv.rc, from devprop command,
+            or default 'text'.
+        """
+        osconsole = None
+        bootvars = self.target_boot_instance.boot_vars
+        osconsole = bootvars.getprop('output-device')
+        if osconsole is not None:
+            return osconsole
+
+        # get console setting from devprop via. 'console'
+        osconsole = self._get_dev_property(propname='console')
+
+        if osconsole is None:
+            # get console setting from devprop via. 'output-device'
+            osconsole = self._get_dev_property(
+                propname='output-device')
+            if osconsole == 'screen':
+                osconsole = 'text'
+        # Set default console value to text
+        if osconsole is None or osconsole == '':
+            osconsole = 'text'
+        return osconsole
+
+    def _get_dev_property(self, propname):
+        """
+            Internal helper method.
+            Retrieves the value of propname reported by devprop(1M)
+
+            Returns: A string value associated with propname or None
+        """
+        propname_val = None
+        cmd = ["/usr/sbin/devprop", "-s", propname]
+        p = Popen.check_call(cmd,
+            stdout=Popen.STORE,
+            stderr=Popen.STORE,
+            logger=ILN)
+        if p.returncode != 0:
+            raise RuntimeError('Error getting device property: %s' \
+                               'Exit status=%s' % (cmd, p.stderr))
+
+        result = p.stdout.strip()
+        if len(result) > 0:
+            propname_val = result
+            self.logger.debug("Found device property value for " \
+                              "%s: '%s'" % (propname, propname_val))
+        else:
+            self.logger.debug("No device property value found for %s" \
+                             % propname)
+        return propname_val
 
     def _create_sparc_boot_menu(self, dry_run):
         """ Create a boot menu.lst file on a SPARC system.
@@ -565,6 +625,12 @@ class SystemBootMenu(BootMenu):
 
         return False
 
+    def _ref_target_instance(self, instance):
+        """ Trivial internal convenience method that stores a
+            reference to the target SolarisDiskBootInstance.
+        """
+        self.target_boot_instance = instance
+
     def _set_as_default_instance(self, instance):
         """ Sets instance as the default boot instance in a boot configuration
             Inputs:
@@ -573,6 +639,35 @@ class SystemBootMenu(BootMenu):
         self.logger.debug("Marking '%s' as the default boot instance" \
                          % instance.title)
         instance.default = True
+
+    def _set_instance_bootenv(self, instance, mountpoint):
+        """
+            Updates instance's bootenv.rc 'console' property.
+            'console' property determined from bootenv.rc and
+            devprop(1M) values for 'output-device' and 'console'
+        """
+        # First, bootmgmt needs to read from the bootenv.rc of the BE
+        instance.init_from_rootpath(mountpoint)
+
+        curosconsole = instance.boot_vars.getprop('output-device')
+        osconsole = self._get_x86_console()
+
+        # Put it in bootenv.rc
+        if osconsole is not None and curosconsole != osconsole:
+            self.logger.info('Setting console boot device property to %s' \
+                             % osconsole)
+            instance.boot_vars.setprop('console', osconsole)
+        # If the console device is not the framebuffer, eg. set to serial
+        # tty, disable graphical splash images in the boot loader.
+        if osconsole != 'text' and osconsole != 'graphics':
+            # Disable splash image from the bootloader which is indicated
+            # by PROP_CONSOLE_GFX and set by default by pybootmgmt.
+            # Note 'text' above indicates a framebuffer based console so
+            # don't confuse it with the meaning of PROP_CONSOLE_TEXT below.
+            self.logger.info("Disabling graphical console in boot loader")
+            self.config.boot_loader.setprop(
+                BootLoader.PROP_CONSOLE,
+                BootLoader.PROP_CONSOLE_TEXT)
 
     def _set_instance_title(self, instance):
         """ Sets the title of instance to match self.boot_title
@@ -668,15 +763,21 @@ class SystemBootMenu(BootMenu):
             is autogenerated based on discovery routines within bootmgmt.
             The discovered entries should already be present from the
             invocation of init_boot_config() so the only remaining tasks here
-            are to set the new boot environment as the default boot instance.
+            are to set the new boot environment as the default boot instance
+            and the console properties on X86.
         """
         # Find the boot environment (BE) we just installed and
         # make it the default boot instance
         self.config.modify_boot_instance(self._is_target_instance,
-                                         self._set_as_default_instance)
-        # And set its boot title
-        self.config.modify_boot_instance(self._is_target_instance,
-                                         self._set_instance_title)
+                                         self._ref_target_instance)
+        self._set_as_default_instance(self.target_boot_instance)
+        # Set its boot title
+        self._set_instance_title(self.target_boot_instance)
+        # Set up bootenv.rc console properties on the target instance
+        if self.arch == 'i386':
+            self._set_instance_bootenv(
+                instance=self.target_boot_instance,
+                mountpoint=self.boot_target[BOOT_ENV].mountpoint)
 
     def build_custom_entries(self):
         """ Currently only consumed by AI installer app. GUI & Text do not
