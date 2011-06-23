@@ -243,13 +243,13 @@ class FdiskPanel(object):
                     primary=True)
 
             if lowest_available_name is not None:
-                if int(part.name) > lowest_available_name:
+                if int(part.name) > int(lowest_available_name):
                     LOGGER.debug("Renaming partition %s to %s" % \
                         (part.name, lowest_available_name))
 
                     # We can't just change the partition name - we must
                     # add a new one and delete the old one.
-                    self._disk.add_partition(str(lowest_available_name),
+                    self._disk.add_partition(lowest_available_name,
                         part.start_sector, part.size.sectors,
                         size_units=Size.sector_units,
                         partition_type=part.part_type,
