@@ -37,6 +37,7 @@ from lxml import etree
 from solaris_install.manifest import ManifestError
 from solaris_install.manifest.parser import ManifestParser
 from xml.dom import minidom
+from StringIO import StringIO
 
 
 ATTRIBUTE_ACTION = "action"
@@ -93,8 +94,12 @@ ELEMENT_VDEV = "vdev"
 ELEMENT_ZPOOL = "zpool"
 ELEMENT_ZVOL = "zvol"
 
+ARCH_X86 = "x86"
+ARCH_SPARC = "sparc"
+ARCH_GENERIC = "generic"
+
 # The ai manifest to merge our changes into
-DEFAULT_AI_FILENAME = "/usr/share/auto_install/default.xml"
+DEFAULT_AI_FILENAME = "/usr/share/auto_install/manifest/default.xml"
 DEFAULT_AI_DTD_FILENAME = "/usr/share/install/ai.dtd"
 DEFAULT_SC_PROFILE_DTD_FILENAME = "/usr/share/lib/xml/dtd/service_bundle.dtd.1"
 RULES_FILENAME = "rules"
@@ -145,6 +150,15 @@ def pretty_print(tree):
     # a bunch of unwanted blank lines.  Strip them out.   This will have
     # the side effect of stripping out any blank lines in the comment sections
     return os.linesep.join([s for s in rough_string.splitlines() if s.strip()])
+
+
+def tree_copy(tree):
+    """Return a copy of the passed in xml tree"""
+    #
+    # Ideally we'd use deepcopy() and make a copy of the tree.
+    # deepcopy however, does not preserve the DOCTYPE entry
+    copy = pretty_print(tree)
+    return etree.parse(StringIO(copy))
 
 
 def write_xml_data(xml_tree, dest_dir, filename):
@@ -231,16 +245,6 @@ def validate(profile_name, manifest_path, manifest_filename, dtd_filename,
                                          "logf": log_file}))
 
     return is_valid
-
-
-class ConversionError(Exception):
-    """Custom exception used to identify a conversion error"""
-
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return self.message
 
 
 class ProfileData(object):

@@ -23,7 +23,7 @@
 
 import unittest
 import test_js2ai
-import test_js2ai_conv
+import test_conv
 import test_common
 import test_conv_sysidcfg
 
@@ -33,7 +33,7 @@ def test_suite():
     test_loader = unittest.TestLoader()
 
     suite = test_loader.loadTestsFromModule(test_js2ai)
-    suite.addTests(test_loader.loadTestsFromModule(test_js2ai_conv))
+    suite.addTests(test_loader.loadTestsFromModule(test_conv))
     suite.addTests(test_loader.loadTestsFromModule(test_conv_sysidcfg))
     suite.addTests(test_loader.loadTestsFromModule(test_common))
     runner = unittest.TextTestRunner(verbosity=2)

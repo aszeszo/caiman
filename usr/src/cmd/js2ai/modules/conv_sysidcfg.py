@@ -27,7 +27,6 @@ new Solaris installer
 """
 import common
 import logging
-import os.path
 import re
 import sys
 
@@ -100,18 +99,18 @@ class XMLSysidcfgData(object):
         self._keyboard_layout = None
         self._hostname = None
         self._name_service = None
-        self._root_prop_group = None
+        self._root_passwd = None
         self._service_bundle = None
         self._service_profile = None
         self._terminal = None
         self._timeserver = None
         self._timezone = None
-
+        self._tree = None
         self._svc_install_config = None
         self._svc_system_keymap = None
         self._svc_network_physical = None
 
-        self.__parse_SC_profile(sc_profile_filename)
+        self.__parse_sc_profile(sc_profile_filename)
         self.__process_sysidcfg()
 
     def __check_payload(self, line_num, keyword, payload):
@@ -156,7 +155,7 @@ class XMLSysidcfgData(object):
         #
         # <service name='system/keymap' version='1' type='service'>
         #   <instance name='default' enabled="true">
-        #       <property_group name='keymap' type='system'>
+        #       <property_group name='keymap' type='application'>
         #           <propval name='layout' type='astring' value='Czech' />
         #       </property_group>
         #   </instance>
@@ -170,22 +169,10 @@ class XMLSysidcfgData(object):
             self.__invalid_syntax(line_num, keyword)
             return
 
-        self._keyboard_layout = values[0]
-        svc_system_keymap = \
-            fetch_xpath_node(self._service_bundle,
-                             "./service[@name='system/keymap']")
-        # Does the default xml have an existing entry that we need to replace
-        if svc_system_keymap is not None:
-            self.__remove_children(svc_system_keymap)
-        else:
-            svc_system_keymap = \
-                self.__create_service_node(self._service_bundle,
-                                           "system/keymap")
-        instance = self.__create_instance_node(svc_system_keymap)
-        prop_group = self.__create_propgrp_node(instance,
-                                                "keymap", TYPE_SYSTEM)
-        self.__create_propval_node(prop_group, "layout",
-                                   TYPE_ASTRING, self._keyboard_layout)
+        self._keyboard_layout = \
+            self.__create_service("system/keymap",
+                                  "keymap", TYPE_APPLICATION,
+                                  "layout", values[0])
 
     def __convert_hostname(self, line_num, hostname):
         """Convert the hostname specified in the sysidcfg statement to the
@@ -212,16 +199,18 @@ class XMLSysidcfgData(object):
             self._report.add_conversion_error()
             return
 
-        other_sc_params = \
-            self.__fetch_sys_install_config_prpgrp("other_sc_params")
-        self._hostname = \
-            fetch_xpath_node(other_sc_params,
-                             "propval[@name='hostname']")
-        if self._hostname is not None:
-            self._hostname.set(common.ATTRIBUTE_VALUE, hostname)
-        else:
-            self.__create_propval_node(other_sc_params, "hostname",
-                                       TYPE_ASTRING, hostname)
+        #
+        # <service name="system/identity" version="1" type="service">
+        #   <instance name="default" enabled="true">
+        #       <property_group name="config" type="application">
+        #           <propval name="nodename" type="astring" value="solaris"/>
+        #       </property_group>
+        #    </instance>
+        # </service>
+        #
+        self._hostname = self.__create_service("system/identity",
+                                               "config", TYPE_APPLICATION,
+                                               "nodename", hostname)
 
     def __convert_name_service_dns(self, line_num, keyword, payload):
         """Convert the DNS name service specified in the sysidcfg statement
@@ -274,9 +263,7 @@ class XMLSysidcfgData(object):
         #   </instance>
         # </service>
 
-        self._name_service = \
-            fetch_xpath_node(self._service_bundle,
-                             "./service[@name='network/dns/install']")
+        self._name_service = self.__fetch_service("network/dns/install")
         if self._name_service is not None:
             self.__remove_children(self._name_service)
         else:
@@ -505,21 +492,12 @@ class XMLSysidcfgData(object):
                                             "/network/*/install")
             function_to_call(self, line_num, keyword, payload)
 
-    def __configure_network_interface_none(self, line_num, payload):
+    def __config_net_interface_none(self, line_num, payload):
         """Configure the network interface to None"""
         # output form:
         #
         # network_interface=None {hostname=hostname}
         #
-        # <service name="system/install/config" version="1" type="service">
-        #   <instance name="default" enabled="true">
-        #   ..
-        #     <property_group name="other_sc_params" type="application">
-        #       <propval name="hostname" type="astring" value="opensolaris"/>
-        #     </property_group>
-        #   </instance>
-        # </service>
-
         # <service name='network/physical' version='1' type='service'>
         #   <instance name='default' enabled='true'/>
         #   <instance name='nwam' enabled='false'/>
@@ -530,7 +508,7 @@ class XMLSysidcfgData(object):
         # installer does today one selects 'None' on Network screen.
         #
 
-        self.__create_network_interface(nwam_setting=False,
+        self.__create_net_interface(nwam_setting=False,
                                         default_setting=True)
 
         # Are there any more keys left in the dictionary that we need to flag
@@ -546,7 +524,7 @@ class XMLSysidcfgData(object):
                                  "lineno": network[0]})
             self._report.add_process_error()
 
-    def __configure_network_interface_primary(self, line_num, payload):
+    def __config_net_interface_primary(self, line_num, payload):
         """Converts the network_interface keyword/values from the sysidcfg into
         the appropriate equivalent Solaris xml configuration
 
@@ -556,7 +534,7 @@ class XMLSysidcfgData(object):
         # The only support we can provide in Solaris for PRIMARY is
         # via nwam and DHCP.  Not a perfect match but it's the best fit
         #
-        self.__create_network_interface(nwam_setting=True,
+        self.__create_net_interface(nwam_setting=True,
                                         default_setting=False)
 
         # Do we have a payload to configure
@@ -631,7 +609,7 @@ class XMLSysidcfgData(object):
                                  "lineno": line_num})
             self._report.add_process_error()
 
-    def __configure_network_physical_ipv4(self, line_num, interface, payload):
+    def __config_net_physical_ipv4(self, line_num, interface, payload):
         """Configures the IPv4 interface for the interface specified by the
         user by generating the proper xml structure used by the Solaris
         auto installer
@@ -736,7 +714,7 @@ class XMLSysidcfgData(object):
             self.__create_propval_node(ipv4_network, "default_route",
                                         TYPE_NET_ADDRESS_V4, default_route)
 
-    def __configure_network_interface_dhcp(self, line_num, interface, payload):
+    def __config_net_interface_dhcp(self, line_num, interface, payload):
         """Configures the specified interface as dhcp for ipv4 and ipv6 (if
         specified)
 
@@ -783,7 +761,7 @@ class XMLSysidcfgData(object):
         # if ipv6 was specified add it
         ipv6 = payload.pop("protocol_ipv6", "no")
         if ipv6.lower() == "yes":
-            self.__configure_network_physical_ipv6(interface, True)
+            self.__config_net_physical_ipv6(interface, True)
         if len(payload) != 0:
             self.logger.error(_("%(file)s: line %(lineno)d: unexpected "
                                 "option(s) specified. If you are using the "
@@ -795,10 +773,10 @@ class XMLSysidcfgData(object):
             return
 
         # Create default network
-        self.__create_network_interface(nwam_setting=False,
+        self.__create_net_interface(nwam_setting=False,
                                         default_setting=True)
 
-    def __configure_network_physical_ipv6(self, interface, dhcp=False):
+    def __config_net_physical_ipv6(self, interface, dhcp=False):
         """Configures the IPv6 interface for the interface specified by the
         user by generating the proper xml structure used by the Solaris
         auto installer
@@ -842,7 +820,7 @@ class XMLSysidcfgData(object):
         self.__create_propval_node(ipv6_interface, "stateful",
                                     TYPE_ASTRING, "yes")
 
-    def __configure_network_interface(self):
+    def __config_net_interface(self):
         """Converts the network_interface keyword/values from the sysidcfg into
         the new xml format
 
@@ -857,7 +835,7 @@ class XMLSysidcfgData(object):
                                  "./service[@name='network/physical']")
             if svc_network_physical is None:
                 # Create NWAM network
-                self.__create_network_interface(nwam_setting=True,
+                self.__create_net_interface(nwam_setting=True,
                                                 default_setting=False)
             return
 
@@ -876,10 +854,10 @@ class XMLSysidcfgData(object):
             if hostname is not None:
                 self.__convert_hostname(line_num, hostname)
         if interface == "none":
-            self.__configure_network_interface_none(line_num, payload)
+            self.__config_net_interface_none(line_num, payload)
             return
         elif interface == "primary":
-            self.__configure_network_interface_primary(line_num, payload)
+            self.__config_net_interface_primary(line_num, payload)
             return
         if payload is None or len(payload) == 0:
             self.logger.error(_("%(file)s: line %(lineno)d: unsupported  "
@@ -889,21 +867,19 @@ class XMLSysidcfgData(object):
                                  "lineno": line_num})
             self._report.add_unsupported_item()
             # Create NWAM network
-            self.__create_network_interface(nwam_setting=True,
+            self.__create_net_interface(nwam_setting=True,
                                             default_setting=False)
             return
         else:
             dhcp = payload.pop("dhcp", None)
             if dhcp is not None:
-                self.__configure_network_interface_dhcp(line_num, interface,
-                                                        payload)
+                self.__config_net_interface_dhcp(line_num, interface, payload)
                 return
             ipv6 = payload.pop("protocol_ipv6", "no")
             if ipv6.lower() == "yes":
-                self.__configure_network_physical_ipv6(interface)
+                self.__config_net_physical_ipv6(interface)
 
-            self.__configure_network_physical_ipv4(line_num, interface,
-                                               payload)
+            self.__config_net_physical_ipv4(line_num, interface, payload)
 
             # Are there any more keys left in the dict that we need to flag
             self.__check_payload(line_num, "network_interface", payload)
@@ -926,11 +902,11 @@ class XMLSysidcfgData(object):
         if self._default_network is None:
             # Nothing is configured, which means the users choices errored out
             # Since we always want a network configured, we configure for NWAM
-            self.__create_network_interface(nwam_setting=True,
+            self.__create_net_interface(nwam_setting=True,
                                             default_setting=False)
         else:
             # Configure for default network
-            self.__create_network_interface(nwam_setting=False,
+            self.__create_net_interface(nwam_setting=False,
                                             default_setting=True)
 
     def __convert_nfs4_domain(self, line_num, keyword, values):
@@ -961,7 +937,7 @@ class XMLSysidcfgData(object):
         #
         # convert to:
         #
-        # <service name="system/install/config" version="1" type="service">
+        # <service name="system/config" version="1" type="service">
         #   <instance name="default" enabled="true">
         #       <property_group name="root_account" type="application">
         #           <propval name="password" type="astring"
@@ -969,7 +945,7 @@ class XMLSysidcfgData(object):
         #       </property_group>
         #   </instance>
         # </service>
-        if self._root_prop_group is not None:
+        if self._root_passwd is not None:
             # Generate duplicate keyword
             self.__duplicate_keyword(line_num, keyword, values)
             return
@@ -978,12 +954,10 @@ class XMLSysidcfgData(object):
             self.__invalid_syntax(line_num, keyword)
             return
 
-        self._root_prop_group = \
-            self.__fetch_sys_install_config_prpgrp("root_account")
-        for child in self._root_prop_group:
-            self._root_prop_group.remove(child)
-        self.__create_propval_node(self._root_prop_group, "password",
-                                   TYPE_ASTRING, values[0])
+        self._root_passwd = \
+            self.__create_service("system/config",
+                                  "root_account", TYPE_APPLICATION,
+                                  "password", values[0])
 
     def __convert_security_policy(self, line_num, keyword, values):
         """Converts the security_policy keyword/values from the sysidcfg into
@@ -1112,23 +1086,9 @@ class XMLSysidcfgData(object):
             self.__invalid_syntax(line_num, keyword)
             return
 
-        svc_console_login = \
-            fetch_xpath_node(self._service_bundle,
-                             "./service[@name='system/console-login']")
-        if svc_console_login is None:
-            svc_console_login = \
-                self.__create_service_node(self._service_bundle,
-                                           "system/console-login")
-        prp_group = fetch_xpath_node(svc_console_login,
-                                     "./property_group[@name='ttymon']")
-        if prp_group is None:
-            prp_group = self.__create_propgrp_node(svc_console_login,
-                                                   "ttymon", TYPE_APPLICATION)
-        self._terminal = \
-            fetch_xpath_node(prp_group, "propval[@name='terminal_type']")
-        if self._terminal is None:
-            self.__create_propval_node(prp_group, "terminal_type",
-                                       TYPE_ASTRING, values[0])
+        self._timezone = self.__create_service("system/timezone",
+                                               "ttymon", TYPE_APPLICATION,
+                                               "terminal_type", values[0])
 
     def __convert_timeserver(self, line_num, keyword, values):
         """Converts the timeserver keyword/values from the sysidcfg into
@@ -1139,18 +1099,6 @@ class XMLSysidcfgData(object):
         #   timeserver=localhost
         #   timeserver=hostname
         #   timeserver=ip_address
-        #
-        # Timezone is part of the install config service.  Convert to:
-        #
-        # <service name="system/install/config" version="1" type="service">
-        #   ....
-        #   <instance name="default" enabled="true">
-        #     <property_group name="other_sc_params" type="application">
-        #       <propval name="timeserver" type="astring" value="hostname"/>
-        #       ....
-        #     </property_group>
-        #   </instance>
-        # </service>
         #
 
         if self._timeserver is not None:
@@ -1179,16 +1127,14 @@ class XMLSysidcfgData(object):
         # sysidcfg format:
         #   timezone=timezone
         #
-        # Timezone is part of the install config service.  Convert to:
+        # Convert to:
         #
-        # <service name="system/install/config" version="1" type="service">
-        #   ....
-        #   <instance name="default" enabled="true">
-        #     <property_group name="other_sc_params" type="application">
-        #       <propval name="timezone" type="astring" value="GMT"/>
-        #       ....
-        #     </property_group>
-        #   </instance>
+        # <service name='system/timezone' version='1'>
+        #    <instance name='default' enabled='true'>
+        #      <property_group name='timezone' type="application">
+        #         <propval name='localtime' value='UTC'/>
+        #      </property_group>
+        #    </instance>
         # </service>
         #
 
@@ -1200,17 +1146,9 @@ class XMLSysidcfgData(object):
             self.__invalid_syntax(line_num, keyword)
             return
 
-        other_sc_params = \
-            self.__fetch_sys_install_config_prpgrp("other_sc_params")
-        self._timezone = \
-            fetch_xpath_node(other_sc_params, "propval[@name='timezone']")
-        if self._timezone is not None:
-            self._timezone.set(common.ATTRIBUTE_VALUE, values[0])
-        else:
-            self._timezone = self.__create_propval_node(other_sc_params,
-                                                        "timezone",
-                                                        TYPE_ASTRING,
-                                                        values[0])
+        self._timezone = self.__create_service("system/timezone",
+                                               "timezone", TYPE_APPLICATION,
+                                               "localtime", values[0])
 
     def __create_instance_node(self, parent, name="default",
                                enabled_state="true"):
@@ -1224,7 +1162,7 @@ class XMLSysidcfgData(object):
         node.set(common.ATTRIBUTE_ENABLED, enabled_state)
         return node
 
-    def __create_network_interface(self, nwam_setting, default_setting):
+    def __create_net_interface(self, nwam_setting, default_setting):
         """Create the nwam and default network node settings
 
         <service name='network/physical' version='1' type='service'>
@@ -1252,7 +1190,8 @@ class XMLSysidcfgData(object):
         """
         node = etree.SubElement(parent, common.ELEMENT_PROPERTY)
         node.set(common.ATTRIBUTE_NAME, name)
-        node.set(common.ATTRIBUTE_TYPE, prop_type)
+        if prop_type is not None:
+            node.set(common.ATTRIBUTE_TYPE, prop_type)
         return node
 
     def __create_propgrp_node(self, parent, name, propgrp_type):
@@ -1263,7 +1202,8 @@ class XMLSysidcfgData(object):
         """
         node = etree.SubElement(parent, common.ELEMENT_PROPERTY_GROUP)
         node.set(common.ATTRIBUTE_NAME, name)
-        node.set(common.ATTRIBUTE_TYPE, propgrp_type)
+        if propgrp_type is not None:
+            node.set(common.ATTRIBUTE_TYPE, propgrp_type)
         return node
 
     def __create_propval_node(self, parent, name, propval_type, value):
@@ -1277,6 +1217,45 @@ class XMLSysidcfgData(object):
         node.set(common.ATTRIBUTE_TYPE, propval_type)
         node.set(common.ATTRIBUTE_VALUE, value)
         return node
+
+    def __create_service(self, service_label, propgrp_name, propgrp_type,
+                         prop_name, prop_value):
+        """
+        Create a service node entry that conforms to the following layout.
+        If the service exists add the property group to the default instance
+        deleting an existing property group by that name.
+
+        <service name="${service_label}" version="1" type="service">
+          <instance name="default" enabled="true">
+            <property_group name="${propgrp_name}" type="${propgrp_type}">
+                <propval name="${prop_name}" type="astring"
+                 value="${prop_val}"/>
+            </property_group>
+          </instance>
+        </service>
+        """
+        service = self.__fetch_service(service_label)
+        if service is None:
+            # Create the service node
+            service = \
+                self.__create_service_node(self._service_bundle,
+                                           service_label)
+
+        instance = fetch_xpath_node(service, "./instance[@name='default']")
+        if instance is None:
+            instance = self.__create_instance_node(service, "default")
+            prp_group = None
+        else:
+            xpath = _("./property_group[@name='%{name}s']"
+                      "[type='%{type}s']") % \
+                      {"name": propgrp_name, "type": propgrp_type}
+            prp_group = fetch_xpath_node(instance, xpath)
+        if prp_group is None:
+            prp_group = self.__create_propgrp_node(instance, propgrp_name,
+                                                   propgrp_type)
+        self.__create_propval_node(prp_group, prop_name,
+                                   TYPE_ASTRING, prop_value)
+        return service
 
     def __create_service_node(self, parent, name, version="1",
                               service_type=TYPE_SERVICE):
@@ -1306,40 +1285,12 @@ class XMLSysidcfgData(object):
                              "key": keyword})
         self._report.add_process_error()
 
-    def __fetch_sys_install_config_instance(self):
-        """Fetch system install config node from tree if it exist, otherwise
-        create it.
-
-        <service name="system/install/config" type="service" version="1">
+    def __fetch_service(self, name):
+        """Fetch the service with the specified name
 
         """
-        if self._svc_install_config is None:
-            xpath = ("./service[@name='system/install/config']"
-                     "[@type='service'][@version='1']")
-            self._svc_install_config = \
-                fetch_xpath_node(self._service_bundle, xpath)
-        if self._svc_install_config is None:
-            self._svc_install_config = \
-                self.__create_service_node(self._service_bundle,
-                                           "system/install/config")
-        instance = fetch_xpath_node(self._svc_install_config,
-                                          "./instance[@name='default']")
-        if instance is None:
-            instance = self.__create_instance_node(self._svc_install_config)
-        return instance
-
-    def __fetch_sys_install_config_prpgrp(self, name):
-        """From the system/install/config service fetch the property group
-        specified by 'name'
-
-        """
-        instance = self.__fetch_sys_install_config_instance()
-        xpath = "./property_group[@name='{grp_name}']".format(grp_name=name)
-        other = fetch_xpath_node(instance, xpath)
-        if other is None:
-            other = self.__create_propgrp_node(instance, name,
-                                               TYPE_APPLICATION)
-        return other
+        xpath = "./service[@name='%s'][@version='1']" % name
+        return fetch_xpath_node(self._service_bundle, xpath)
 
     def __invalid_syntax(self, line_num, keyword):
         """Generate an invalid syntax error"""
@@ -1399,7 +1350,7 @@ class XMLSysidcfgData(object):
         for entry in entries:
             parent.remove(entry)
 
-    def __store_network_interface(self, line_num, keyword, values):
+    def __store_net_interface(self, line_num, keyword, values):
         """Store the network interface information for later processing"""
         # sysidcfg syntax:
         #
@@ -1473,7 +1424,7 @@ class XMLSysidcfgData(object):
         "keyboard": __convert_keyboard,
         "name_service": __convert_name_service,
         "nfs4_domain": __unsupported_keyword,
-        "network_interface": __store_network_interface,
+        "network_interface": __store_net_interface,
         "root_password": __convert_root_password,
         "security_policy": __convert_security_policy,
         "service_profile": __convert_service_profile,
@@ -1505,7 +1456,7 @@ class XMLSysidcfgData(object):
             raise ValueError(_("<service_bundle type='profile'> not found: "
                                "%(filename)s does not conform to the expected "
                                "layout of:\n\n%(layout)s") %
-                               {"filename": default_xml_filename, \
+                               {"filename": SYSIDCFG_FILENAME, \
                                 "layout": expected_layout})
 
         keys = sorted(self.sysidcfg_dict.keys())
@@ -1527,9 +1478,9 @@ class XMLSysidcfgData(object):
                 function_to_call(self, line_num, keyword, value)
 
         # All the elements have been processed at this point in time.
-        self.__configure_network_interface()
+        self.__config_net_interface()
 
-    def __parse_SC_profile(self, filename):
+    def __parse_sc_profile(self, filename):
         """Read in the SC xml profile for AI"""
         parser = etree.XMLParser()
         if filename is None:

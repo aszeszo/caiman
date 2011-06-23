@@ -31,7 +31,6 @@ import sys
 
 from common import _
 from common import fetch_xpath_node
-from common import pretty_print as pretty_print
 from lxml import etree
 from StringIO import StringIO
 
@@ -98,11 +97,3 @@ class XMLDefaultData(object):
     def tree(self):
         """The xml tree that represents this object"""
         return self._tree
-
-    def tree_copy(self):
-        """Return a copy of this xml tree"""
-        #
-        # Ideally we'd use deepcopy() and make a copy of the tree.
-        # deepcopy however, does not preserve the DOCTYPE entry
-        tree_copy = pretty_print(self._tree)
-        return etree.parse(StringIO(tree_copy))

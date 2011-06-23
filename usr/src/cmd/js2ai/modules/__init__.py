@@ -745,6 +745,31 @@ def convert_rule(rule_data, rule_num, profile_name, conversion_report,
         write_xml_data(root, prof_path, filename)
 
 
+def output_profile(tree, prof_path, profile_name, arch, skip_validation,
+                   conversion_report, verbose):
+        """Output the profile for the specified xml tree.  If skip_validation
+           is set to False,  validate the xml tree and recorded any errors in
+           the conversion report
+
+        """
+        # Write out the xml document
+        prof_file = "%(name)s.%(arch)s.xml" % \
+                    {"name": profile_name,
+                     "arch": arch}
+        if verbose:
+            print _("Generating %(arch)s manifest for: %(profile)s" %
+                    {"arch": arch,
+                     "profile": profile_name})
+        write_xml_data(tree, prof_path, prof_file)
+        if skip_validation:
+            conversion_report.validation_errors = None
+        else:
+            # Perform a validation
+            validate(profile_name, prof_path, prof_file,
+                     DEFAULT_AI_DTD_FILENAME,
+                     conversion_report, verbose)
+
+
 def convert_profile(profile_data, dest_dir, default_xml,
                     local, skip_validation, verbose):
     """Take the profile_data dictionary and output it in the jumpstart 11
@@ -778,20 +803,32 @@ def convert_profile(profile_data, dest_dir, default_xml,
                                       profile_data.conversion_report,
                                       default_xml, local, LOGGER)
 
-    tree = xml_profile_data.tree
-    if tree is not None:
+    if xml_profile_data.tree is not None:
         # Write out the xml document
         prof_path = fetch_AI_profile_dir(dest_dir, profile_name)
-        prof_file = profile_name + ".xml"
-        if verbose:
-            print _("Generating manifest for : %s" % profile_name)
-        write_xml_data(tree, prof_path, prof_file)
-        if skip_validation:
-            profile_data.conversion_report.validation_errors = None
+        if xml_profile_data.architecture is None:
+            # If the architecture is NONE then this implies the
+            # profile is not architecture specific.  As such we'll have
+            # to generate a profile for both x86 and for sparc
+            output_profile(xml_profile_data.fetch_tree(common.ARCH_X86),
+                           prof_path, profile_name,
+                           common.ARCH_X86,
+                           skip_validation,
+                           profile_data.conversion_report,
+                           verbose)
+            output_profile(xml_profile_data.fetch_tree(common.ARCH_SPARC),
+                           prof_path, profile_name,
+                           common.ARCH_SPARC,
+                           skip_validation,
+                           profile_data.conversion_report,
+                           verbose)
         else:
-            validate(profile_name, prof_path, prof_file,
-                     DEFAULT_AI_DTD_FILENAME,
-                     profile_data.conversion_report, verbose)
+            # The architecture is specified.  Only output one profile manifest
+            output_profile(xml_profile_data.tree, prof_path, profile_name,
+                           xml_profile_data.architecture,
+                           skip_validation,
+                           profile_data.conversion_report,
+                           verbose)
     else:
         profile_data.conversion_report.validation_errors = None
 

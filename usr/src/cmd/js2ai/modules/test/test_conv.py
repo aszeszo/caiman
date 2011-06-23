@@ -28,9 +28,11 @@ import unittest
 
 import solaris_install.js2ai as js2ai
 
+from solaris_install.js2ai.common import ARCH_GENERIC, ARCH_SPARC, ARCH_X86
 from solaris_install.js2ai.common import ConversionReport
 from solaris_install.js2ai.common import KeyValues
 from solaris_install.js2ai.common import DEFAULT_AI_FILENAME
+from solaris_install.js2ai.common import fetch_xpath_node
 from solaris_install.js2ai.common import pretty_print
 from solaris_install.js2ai.common import write_xml_data
 from solaris_install.js2ai.conv import XMLProfileData
@@ -76,6 +78,110 @@ class Test_Profile(unittest.TestCase):
             rbuffer += "\n\n" + pretty_print(xml_profile_data.tree)
         rbuffer += "\n\n\n" + failure_report(report, self.log_file)
         return rbuffer
+
+    def test_arch_conflict(self):
+        """Test for conversion error when x86 and sparc ops mixed"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("boot_device", ["c2t0d0s1"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("fdisk", ["c3t0d0", "solaris", "all"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report, xml_data.conversion_report)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        # We get 2 conflict errors here instead of 1.
+        # 1 is for architecture conflict while the other is for the
+        # fdisk.  We use fdisk and boot_device to set the value to use
+        # for rootdisk.
+        self.assertEquals(report.conversion_errors, 2,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_arch_sparc(self):
+        """Make sure arch type for profile is SPARC when sparc op used"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("boot_device", ["c2t0d0s1"], 2)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report, xml_data.conversion_report)
+        self.assertEquals(report.has_errors(), False,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(ARCH_SPARC, xml_data.architecture)
+
+    def test_arch_x86(self):
+        """Make sure arch type for profile is X86 when x86 op used"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("boot_device", ["c2t0d0"], 2)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report, xml_data.conversion_report)
+        self.assertEquals(report.has_errors(), False,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(ARCH_X86, xml_data.architecture)
+
+    def test_arch_generic(self):
+        """Ensure arch type for prof is generic when no sparc/x86 is op used"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("pool",
+                              ["newpool", "auto", "auto", "auto", "any"], 2)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report, xml_data.conversion_report)
+        self.assertEquals(report.has_errors(), False,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(ARCH_GENERIC, xml_data.architecture)
+
+    def test_arch_none(self):
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c0t0d0s0", "40", "/"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report, xml_data.conversion_report)
+        self.assertEquals(report.has_errors(), False,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(None, xml_data.architecture)
+
+        # Fetch x86 and sparc versions of the manifest xml tree
+        x86_tree = xml_data.fetch_tree(ARCH_X86)
+        sparc_tree = xml_data.fetch_tree(ARCH_SPARC)
+
+        # Test to make sure that the <partition> node exists in the x86
+        # tree but not in the sparc tree
+        xpath = "/auto_install/ai_instance/target/disk/partition"
+        partition = fetch_xpath_node(x86_tree, xpath)
+        self.assertNotEquals(None, partition,
+                             "<partition> not found in x86 tree")
+
+        partition = fetch_xpath_node(sparc_tree, xpath)
+        self.assertEquals(None, partition,
+                          "<partition> found in sparc tree")
 
     def test_boot_device_entry1(self):
         """Tests boot_device <device> where device is a disk"""
@@ -1087,14 +1193,7 @@ class Test_Profile(unittest.TestCase):
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
                                   self.default_xml, True, None)
-        self.assertEquals(report.has_errors(), True)
-        self.assertEquals(report.process_errors, 1,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.conversion_errors, 0,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.unsupported_items, 0,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.validation_errors, 0,
+        self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry31(self):

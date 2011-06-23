@@ -153,7 +153,6 @@ class XMLRuleData(object):
             return
         self.__convert_common(line_num, keyword, values)
 
-
     def __convert_common(self, line_num, keyword, values):
         """Converts the specified keyword and value from a line in the
         rules file into the xml format for outputting into the
@@ -304,7 +303,7 @@ class XMLProfileData(object):
         if default_xml is None:
             default_tree = etree.parse(StringIO(DEFAULT_XML_EMPTY))
         else:
-            default_tree = default_xml.tree_copy()
+            default_tree = common.tree_copy(default_xml.tree)
         self._tree = default_tree
         self._root = self._tree.getroot()
 
@@ -348,7 +347,8 @@ class XMLProfileData(object):
         self._rootdisk_size = None
         self._root_pool = None
         self._root_pool_create_via_keyword = None
-        self._root_pool_name = None
+        self._root_pool_name = DEFAULT_POOL_NAME
+        self._arch = common.ARCH_GENERIC
         self.__process_profile()
 
     def __device_name_conversion(self, device):
@@ -485,6 +485,37 @@ class XMLProfileData(object):
     def conversion_report(self):
         """Return the converstion report associated with this object"""
         return self._report
+
+    @property
+    def architecture(self):
+        """Return the architecture for this profile.  A value of NONE
+        indicates the architecture is unknown.  If known a value of
+        common.ARCH_X86 or common.ARCH_SPARC will be returned"""
+        return self._arch
+
+    def __change_arch(self, arch, line_num):
+        """Change the architecture setting that this profile is
+           being generated for.  Check for the one possible conflict
+           condition and update error report appropriately
+
+        """
+        if self._arch == common.ARCH_GENERIC:
+            self._arch = arch
+        elif arch == self._arch:
+            # Already set
+            pass
+        else:
+            # Error we've got a profile that is mixing x86 and sparc syntax
+            # There only one way this can happen.
+            self.logger.error(_("%(file)s: line %(linenum)d: architecuture "
+                "conflict detected. fdisk is an x86 only keyword operation. "
+                "This conflicts with 'boot_device %(dev)s' which was "
+                "specified using the SPARC device syntax instead of the x86 "
+                "device syntax of cwtxdy or cxdy") % \
+                {"file": self.profile_name,
+                "linenum": line_num,
+                "dev": self._boot_device})
+            self._report.add_conversion_error()
 
     def __invalid_syntax(self, line_num, keyword):
         """Generate invalid keyword error"""
@@ -636,14 +667,6 @@ class XMLProfileData(object):
             elif use == "dump":
                 logical.set(common.ATTRIBUTE_NODUMP, "false")
 
-    def __fetch_slice_node(self, disk, slice_name):
-        """Returns the slice node with the name 'slice_name' that is a child of
-           disk"""
-        for disk_slice in disk.findall(common.ELEMENT_SLICE):
-            if disk_slice.get(common.ATTRIBUTE_NAME, "") == slice_name:
-                return disk_slice
-        return None
-
     def __fetch_diskname_node(self, disk_name):
         """Returns the diskname node with the disk_name of 'disk_name'
 
@@ -656,18 +679,17 @@ class XMLProfileData(object):
         """Create the diskname node with the name 'disk_name'
 
         """
-        disk = self._target.find(common.ELEMENT_DISK)
-        if disk is None:
+        diskname_node = self.__fetch_diskname_node(disk_name)
+        if diskname_node is None:
             disk = etree.Element(common.ELEMENT_DISK)
             self._target.insert(0, disk)
-        node = self.__fetch_diskname_node(disk_name)
-        if node is None:
-            node = etree.SubElement(disk, common.ELEMENT_DISK_NAME)
-            node.set(common.ATTRIBUTE_NAME, disk_name)
-            node.set(common.ATTRIBUTE_NAME_TYPE, "ctd")
-        return node
+            diskname_node = etree.SubElement(disk, common.ELEMENT_DISK_NAME)
+            diskname_node.set(common.ATTRIBUTE_NAME, disk_name)
+            diskname_node.set(common.ATTRIBUTE_NAME_TYPE, "ctd")
+        return diskname_node
 
-    def __add_device(self, device, size=None, in_pool=DEFAULT_POOL_NAME,
+    def __add_device(self, line_num, device, size=None,
+                     in_pool=DEFAULT_POOL_NAME,
                      in_vdev=DEFAULT_VDEV_NAME, is_swap=None):
         """Added device to the target xml hierachy
         device - the device/slice to add to the pool.  "any" may be specified
@@ -679,21 +701,57 @@ class XMLProfileData(object):
             # This tells the AI to automatically discover the root disk to use
             return
         try:
-            disk_name, disk_slice = device.split("s")
+            disk_name, slice_num = device.split("s")
         except ValueError:
             disk_name = device
-            disk_slice = None
-        disk_node = self.__create_diskname_node(disk_name)
-        partition_node = self.__add_partition(disk_node.getparent())
+            # For Solaris 11 we default to s0 if no slice is specified
+            slice_num = "0"
+        diskname_node = self.__create_diskname_node(disk_name)
         if size == "all":
             size = None
-        if disk_slice is None:
-            # For Solaris 11 we default to s0 if no slice is specified
-            disk_slice = "0"
-        self.__add_slice(partition_node, disk_slice, size, in_pool,
-                         in_vdev, is_swap)
 
-        return disk_node
+        if self._arch == common.ARCH_GENERIC:
+            # The architecture of the manifest represented by the xml tree
+            # associated with this object is currently set as GENERIC.
+            # The Jumpstart profile operation (via keyword) now being processed
+            # cannot be performed in a generic fashion.  As such when completed
+            # it will be necessary to generate 2 different manifests.  One for
+            # SPARC and one for x86.  We accomplish this by setting the _arch
+            # flag to None and then internally generating the manifest as an
+            # x86 tree. The None value for architecture returned via
+            # conv.arch() tells the caller (in this case, __init__.py
+            # convert_profile()) that a call to fetch both trees (x86, SPARC)
+            # via fetch_tree(arch) will be necessary
+            self._arch = None
+        if self._arch == common.ARCH_SPARC:
+            slice_parent_node = diskname_node.getparent()
+        else:
+            slice_parent_node = self.__add_partition(diskname_node.getparent())
+
+        if not self.__slice_exists_check(line_num, slice_parent_node,
+                                         device, slice_num):
+            self.__add_slice(slice_parent_node, slice_num, size,
+                             in_pool, in_vdev, is_swap)
+
+    def __slice_exists_check(self, line_num, slice_node_parent,
+                            device, slice_num):
+        """Checks whether the specified slice can be added to structure
+        If the slice already exists and error will be outputed
+
+        """
+        xpath = "./slice[@name='%s']" % slice_num
+        slice_node = fetch_xpath_node(slice_node_parent, xpath)
+        if slice_node is not None:
+            # Slice already exists
+            self.logger.error(_("%(file)s: line %(lineno)d: "
+                                "%(device)ss%(slice)s already exists") %
+                                {"file": self.profile_name,
+                                 "lineno": line_num,
+                                 "device": device,
+                                 "slice": slice_num})
+            self._report.add_conversion_error()
+            return True
+        return False
 
     def __valid_to_add_slice(self, line_num, device, size):
         """Perform some basic checks to prevent an invalid manifest from
@@ -704,27 +762,26 @@ class XMLProfileData(object):
         diskname_node = self.__fetch_diskname_node(disk_name)
         if diskname_node is None:
             return True
-        partition = diskname_node.getparent().find(common.ELEMENT_PARTITION)
-        if partition is None:
-            return True
 
-        xpath = "./slice[@name='%s']"
-        slice_node = fetch_xpath_node(partition, xpath % slice_num)
-        if slice_node is not None:
-            # Slice already exists
-            self.logger.error(_("%(file)s: line %(lineno)d: "
-                                "%(device)ss%(slice)s already exists") %
-                                {"file": self.profile_name,
-                                 "lineno": line_num,
-                                 "device": disk_name,
-                                 "slice": slice_num})
-            self._report.add_conversion_error()
+        if self._arch is None or self._arch == common.ARCH_X86:
+            # partition node node is only present on x86
+            slice_node_parent = \
+                diskname_node.getparent().find(common.ELEMENT_PARTITION)
+            if slice_node_parent is None:
+                return True
+        else:
+            slice_node_parent = diskname_node
+
+        if self.__slice_exists_check(line_num, slice_node_parent,
+                                     disk_name, slice_num):
             return False
 
         # 2. If we are creating adding a slice to a disk with an
         #    existing slice make sure the slice size specification is
-        #    compatible with the existing slice definition
-        slice_node = partition.find(common.ELEMENT_SLICE)
+        #    compatible with the existing slice definition.  All though
+        #    there may be multiple slices the 1st slice will give us
+        #    all the data we need
+        slice_node = slice_node_parent.find(common.ELEMENT_SLICE)
         if slice_node is not None:
             size_node = slice_node.find(common.ELEMENT_SIZE)
             if  size_node is None:
@@ -799,7 +856,7 @@ class XMLProfileData(object):
         return partition_node
 
     def __fetch_solaris_software_node(self):
-
+        """Fetch the software publisher node instance in the xml tree"""
         xpath = "./software/source/publisher[@name='solaris']"
         publisher = fetch_xpath_node(self._ai_instance, xpath)
         if publisher is not None:
@@ -817,8 +874,8 @@ class XMLProfileData(object):
 
         # No match found create it
         software = etree.SubElement(self._ai_instance,
-                                        common.ELEMENT_SOFTWARE)
-        software.set(ATTRIBUTE_TYPE, "IPS")
+                                    common.ELEMENT_SOFTWARE)
+        software.set(common.ATTRIBUTE_TYPE, "IPS")
         return software
 
     def __add_software_data(self, line_num, package, action):
@@ -840,8 +897,8 @@ class XMLProfileData(object):
         pkg_query = ":legacy:legacy_pkg:" + package
         query = [api.Query(pkg_query, False, True)]
         gettext.install("pkg", "/usr/share/locale")
-        search_remote = api_inst.remote_search(query, servers=None, \
-             prune_versions=True)
+        search_remote = api_inst.remote_search(query, servers=None,
+                                               prune_versions=True)
         search_local = api_inst.local_search(query)
         pkg_name = None
         # Remote search is the default since this will often have a more
@@ -1113,14 +1170,6 @@ class XMLProfileData(object):
                 _("filesys keyword not supported when partition_type is "
                   "set to 'existing'"))
             return
-        if self._partitioning == "default":
-            self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                "syntax, partitioning previously set to"
-                                "'default'") % \
-                                {"file": self.profile_name, \
-                                 "lineno": line_num})
-            self._report.add_process_error()
-            return
 
         # filesys                 any 60 swap
         # filesys                 s_ref:/usr/share/man - /usr/share/man ro
@@ -1323,7 +1372,7 @@ class XMLProfileData(object):
         self.__create_vdev(zpool, redundancy)
 
         if mirror:
-            self.__add_device(device2, size)
+            self.__add_device(line_num, device2, size, self._root_pool_name)
         elif self._rootdisk is None:
             # How JumpStart Determines a System's Root Disk
             # 3. If rootdisk is not set and a filesys cwtxdysz size / entry
@@ -1333,7 +1382,7 @@ class XMLProfileData(object):
             self._rootdisk = self._root_device
             self._rootdisk_set_by_keyword = keyword
 
-        self.__add_device(device1, size)
+        self.__add_device(line_num, device1, size, self._root_pool_name)
 
     def __create_filesys_swap_entry(self, line_num, mirror,
                                     size, device1, device2):
@@ -1370,7 +1419,8 @@ class XMLProfileData(object):
             else:
                 zpool = self.__create_root_pool(self._rootdisk_set_by_keyword)
                 self.__create_vdev(zpool)
-                self.__add_device(self._rootdisk, self._rootdisk_size)
+                self.__add_device(line_num, self._rootdisk,
+                                  self._rootdisk_size, self._root_pool_name)
         else:
             if self._rootdisk == "any":
                 self.logger.error(_("%(file)s: line %(lineno)d: unable to "
@@ -1391,10 +1441,12 @@ class XMLProfileData(object):
                 return
 
         # Root pool exists.  We can add swap entry now
-        self.__add_device(device=device1, size=size, in_pool=None,
+        self.__add_device(line_num=line_num, device=device1, size=size,
+                          in_pool=self._root_pool_name,
                           in_vdev=None, is_swap="true")
         if mirror:
-            self.__add_device(device=device2, size=size, in_pool=None,
+            self.__add_device(line_num=line_num, device=device2, size=size,
+                              in_pool=self._root_pool_name,
                               in_vdev=None, is_swap="true")
 
         self.__create_zvol(parent=self._root_pool, name="swap", use="swap",
@@ -1441,7 +1493,7 @@ class XMLProfileData(object):
                                      SOFTWARE_UNINSTALL)
 
     def __convert_pool_entry(self, line_num, keyword, values):
-        """Converts the partition keyword/values from the profile into
+        """Converts the pool keyword/values from the profile into
         the new xml format
 
         """
@@ -1471,6 +1523,8 @@ class XMLProfileData(object):
                                 "pool": pool_name})
             self._report.add_conversion_error()
             return
+        # Update the name that we are using for the root pool
+        self._root_pool_name = pool_name
 
         pool_size = values[1].lower()
         match_pattern = SIZE_PATTERN.match(pool_size)
@@ -1599,10 +1653,12 @@ class XMLProfileData(object):
             # We already outputed a warning message
             self.__rootdisk_slice_conflict_check(line_num, keyword, devices[0])
 
-        zpool = self.__create_root_pool(keyword, pool_name, noswap, nodump)
+        zpool = self.__create_root_pool(keyword, self._root_pool_name,
+                                        noswap, nodump)
         self.__create_vdev(zpool, redundancy)
         for device in devices:
-            self.__add_device(device, pool_size, pool_name)
+            self.__add_device(line_num, device, pool_size,
+                              self._root_pool_name)
 
         if swap_size is not None and swap_size != "auto":
             self.__create_zvol(parent=zpool, name="swap", use="swap",
@@ -1666,22 +1722,25 @@ class XMLProfileData(object):
             self.__unsupported_value(line_num, _("<device>"), device)
             return
 
-        if device != "any" and not self.__is_valid_device_name(device) and \
-           not self.__is_valid_slice(device):
-            self.logger.error(_("%(file)s: line %(lineno)d: invalid device "
-                                "specified: %(device)s") % \
-                                {"file": self.profile_name, \
-                                 "lineno": line_num, \
-                                 "device": device})
-            self._report.add_conversion_error()
-            return
+        if device != "any":
+            if not self.__is_valid_device_name(device) and \
+               not self.__is_valid_slice(device):
+                self.logger.error(_("%(file)s: line %(lineno)d: invalid "
+                                    "device specified: %(device)s") % \
+                                    {"file": self.profile_name, \
+                                    "lineno": line_num, \
+                                    "device": device})
+                self._report.add_conversion_error()
+                return
 
-        # NOTE: If "any" is specified for the boot device
-        # we have to specify xml output to be
-        #
-        # <disk>
-        #   <disk_keyword key="boot_disk" />
-        # </disk>
+            # The device specified is valid.  Set the architecure for the
+            # device based on the device value specified. If a valid slice is
+            # specified for boot device the architecuture is SPARC.
+            # Otherwise it's x86
+            if self.__is_valid_slice(device):
+                self.__change_arch(common.ARCH_SPARC, line_num)
+            else:
+                self.__change_arch(common.ARCH_X86, line_num)
 
         if length == 2:
             eeprom = values[1].lower()
@@ -1862,7 +1921,7 @@ class XMLProfileData(object):
         "locale": __unsupported_keyword,
         "num_clients": __unsupported_keyword,
         "package": __convert_package_entry,
-        "partitioning": None,
+        "partitioning": __store_partitioning_entry,
         "pool": __convert_pool_entry,
         "root_device": None,
         "system_type": __convert_system_type_entry,
@@ -1874,12 +1933,80 @@ class XMLProfileData(object):
         """Returns the xml tree associated with this object"""
         return self._tree
 
-    def __process_profile(self):
-        """Process the profile by taking all keyword/values pairs and
-        generating the associated xml for the key value pairs
+    def fetch_tree(self, arch):
+        """Convert the current tree to the specified architecute
+
+        Supported architecutres are:
+            common.ARCH_GENERIC
+            common.ARCH_SPARC
+            common.ARCH_X86
+
+        Conversion not support:
+            SPARC to X86
 
         """
+        if arch not in [common.ARCH_GENERIC, common.ARCH_X86,
+                         common.ARCH_SPARC]:
+            # Programming error
+            raise ValueError(-("unsupported architecture specified"))
+        if arch == self._arch or self._arch == common.ARCH_GENERIC:
+            # Tree is in the proper format for the architecture requested
+            return self._tree
+        if arch == common.ARCH_X86:
+            if self._arch in [None, common.ARCH_X86]:
+                # Tree is in the proper format for the architecture requested
+                return self._tree
+        if arch == common.ARCH_SPARC:
+            if self._arch in [None, common.ARCH_X86]:
+                # Tree is not in the proper format.  A conversion is necessary
+                return self.__fetch_sparc_from_x86_tree(self._tree)
 
+        # Programming error
+        raise ValueError(_("Conversion from architecute %(req_arch) to "
+                           "%(cur_arch)s is not supported") %
+                               {"req_arch": arch,
+                                "cur_arch": self._arch})
+
+    def __fetch_sparc_from_x86_tree(self, tree):
+        """Converts a x86 manifest xml tree to a sparc manifest xml tree"""
+        clone = common.tree_copy(tree)
+        # The only difference between an x86 based xml tree and a sparc
+        # tree is currently the <partition> node.  Look for the
+        # <partition> node and remove it, if it exists.
+        xpath = "/auto_install/ai_instance/target"
+        target = fetch_xpath_node(clone, xpath)
+        for disk in target.findall(common.ELEMENT_DISK):
+            # To convert a x86 manifest profile to a sparc we're simply
+            # going to take the children slices of the partition and move
+            # them up as a child of <disk> and then delete the <partition>
+            # node
+            partition = disk.find(common.ELEMENT_PARTITION)
+            if partition is not None:
+                for slice_node in partition.findall(common.ELEMENT_SLICE):
+                    partition.remove(slice_node)
+                    disk.append(slice_node)
+                disk.remove(partition)
+        return clone
+
+    def __fetch_keys(self):
+        """Fetch the keys that we need to process from the profile dictionary
+
+        """
+        if self.prof_dict is None:
+            keys = {}
+        else:
+            # Sort the keys based on the line #
+            keys = sorted(self.prof_dict.keys())
+        if len(keys) == 0:
+            # There's nothing to convert.  This is a valid condition if
+            # the file couldn't of been read for example
+            self._report.conversion_errors = None
+            self._report.unsupported_items = None
+            return None
+        return keys
+
+    def __find_xml_entry_points(self):
+        """Find and set the global xml entry points"""
         self._target = self._ai_instance.find(common.ELEMENT_TARGET)
         if self._target is not None:
             # Delete the target entry from the default manifest
@@ -1890,20 +2017,19 @@ class XMLProfileData(object):
         self._target = etree.Element(common.ELEMENT_TARGET)
         self._ai_instance.insert(0, self._target)
 
+    def __process_profile(self):
+        """Process the profile by taking all keyword/values pairs and
+        generating the associated xml for the key value pairs
+
+        """
+
+        keys = self.__fetch_keys()
+        if keys is None:
+            return
+
         check_for_install_type = True
         pool_obj = None
         line_num = 0
-        if self.prof_dict is None:
-            keys = {}
-        else:
-            keys = sorted(self.prof_dict.keys())
-        if len(keys) == 0:
-            # There's nothing to convert.  This is a valid condition if
-            # the file couldn't of been read for example
-            self._report.conversion_errors = None
-            self._report.unsupported_items = None
-            return
-        # Sort the keys based on the line #
         #
         # The keywords for the profile are processed in 3 different phases.
         #
@@ -1980,6 +2106,14 @@ class XMLProfileData(object):
             elif keyword == "usedisk":
                 self.__store_usedisk_entry(line_num, keyword, values)
                 del self.prof_dict[key]
+            elif keyword == "fdisk":
+                self.__change_arch(common.ARCH_X86, line_num)
+
+        self.__find_xml_entry_points()
+
+        if self._rootdisk is None and len(self._usedisk) > 0:
+            self._rootdisk = self._usedisk.pop(0)
+            self._rootdisk_set_by_keyword = "usedisk"
 
         # Next create the zfs pool if the pool keyword was encountered
         # With the new installer we only support creating a single zfs
@@ -1987,23 +2121,7 @@ class XMLProfileData(object):
         # settings the user may have made
         if pool_obj is not None:
             self.__convert_pool_entry(pool_obj.line_num, pool_obj.key,
-                                     pool_obj.values)
-        elif self._partitioning is not None:
-            # If the user specified partitioning default then go ahead and
-            # create the zpool entry.  If a root_device or boot_device
-            # was specified use that device.  Otherwise use the device(s)
-            # specified by usedisk.  If no device specified tell AI to
-            # choose the disk via "any"
-            if self._partitioning == "default":
-                zpool = self.__create_root_pool("partitioning")
-                self.__create_vdev(zpool)
-                if self._rootdisk:
-                    self.__add_device(self._rootdisk, self._rootdisk_size)
-                elif len(self._usedisk) == 0:
-                    self.__add_device("any")
-                else:
-                    for device in self._usedisk:
-                        self.__add_device(device)
+                                      pool_obj.values)
 
         # Now process the remaining keys
         keys = sorted(self.prof_dict.keys())
@@ -2023,11 +2141,30 @@ class XMLProfileData(object):
         # If the user specified a root_device or boot_disk but didn't create a
         # root pool via filesys, fdisk or pool create one now and add the
         # specified root_device as that disk for that pool
-        if self._rootdisk and self._root_pool is None:
+        if self._root_pool is None:
+            if self._rootdisk is not None:
+                zpool = self.__create_root_pool(self._rootdisk_set_by_keyword)
+                self.__create_vdev(zpool)
+                self.__add_device(line_num, self._rootdisk,
+                                  self._rootdisk_size, self._root_pool_name)
 
-            zpool = self.__create_root_pool(self._rootdisk_set_by_keyword)
-            self.__create_vdev(zpool)
-            self.__add_device(self._rootdisk, self._rootdisk_size)
+        if self._partitioning is not None:
+            if self._partitioning == "default":
+                if self._root_pool is None:
+                    # Root pool doesn't exist.  User specified partitioning
+                    # default.  Go ahead and create it now
+                    zpool = self.__create_root_pool("partitioning")
+                    self.__create_vdev(zpool)
+                    if len(self._usedisk) == 0:
+                        # No usedisk entries where specified.  Add device
+                        # based on "any"
+                        self.__add_device(line_num, "any")
+
+                # Add any additional disks that the user may of told use to
+                # use to the root pool
+                for device in self._usedisk:
+                    self.__add_device(line_num, device, None,
+                                      self._root_pool_name)
 
         # Check to determine if we have any children nodes
         # If we don't and we have errors then clear the xml
