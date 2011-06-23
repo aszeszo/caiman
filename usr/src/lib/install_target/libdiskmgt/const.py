@@ -559,3 +559,6 @@ TARGET = "target"
 
 DRIVE_UP   = 1
 DRIVE_DOWN = 0
+
+# USB floppy drive di_prop string
+DI_FLOPPY = "usbif,class8.4"

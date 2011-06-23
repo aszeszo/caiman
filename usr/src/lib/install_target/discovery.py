@@ -36,6 +36,8 @@ import re
 
 import solaris_install.target.vdevs as vdevs
 
+from bootmgmt.pysol import di_find_prop
+
 from solaris_install import CalledProcessError, Popen
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
@@ -184,7 +186,12 @@ class TargetDiscovery(Checkpoint):
             new_disk.receptacle = self.cro_dict[new_disk.ctd][2]
 
         # walk the media node to extract partitions and slices
-        if drive_media is not None:
+        if drive_media is None:
+            # since the drive has no media, we can't determine any attributes
+            # about it (geometry, slices, partitions, etc.) so simply return
+            # None
+            return None
+        else:
             # store the attributes locally so libdiskmgt doesn't have to keep
             # looking them up
             drive_media_attributes = drive_media.attributes
@@ -251,7 +258,7 @@ class TargetDiscovery(Checkpoint):
                         drive_media_attributes.blocksize)
                     new_disk.insert_children(new_slice)
 
-        return new_disk
+            return new_disk
 
     def set_geometry(self, dma, new_disk):
         """ set_geometry() - method to set the geometry of the Disk DOC object
@@ -458,7 +465,7 @@ class TargetDiscovery(Checkpoint):
                     name, ds_type, ds_size, mountpoint = dataset.split(None, 3)
                 except ValueError as err:
                     # trap on ValueError so any inconsistencies are captured
-                    self.logger.debug("Unable to process dataset: %r" % 
+                    self.logger.debug("Unable to process dataset: %r" %
                                       dataset)
                     self.logger.debug(str(err))
                     continue
@@ -586,10 +593,32 @@ class TargetDiscovery(Checkpoint):
             else:
                 # extract every drive on the given controller
                 for drive in controller.drives:
+                    # skip USB floppy drives
+                    if controller.attributes is not None and \
+                       controller.attributes.type == const.CTYPE_USB:
+                        try:
+                            di_props = di_find_prop("compatible",
+                                                    controller.name)
+                        except Exception:
+                            di_props = list()
+
+                        if const.DI_FLOPPY in di_props:
+                            self.logger.debug("skipping USB drive at: "
+                                "%s" % new_disk.devpath)
+                            continue
+
+                    # query libdiskmgt for the drive's information
                     new_disk = self.discover_disk(drive)
 
+                    # skip drives that do not have media attributes
+                    if new_disk is None:
+                        continue
+
                     # skip CDROM drives
-                    if not new_disk.iscdrom and add_physical:
+                    if new_disk.iscdrom:
+                        continue
+
+                    if add_physical:
                         self.root.insert_children(new_disk)
 
     def setup_iscsi(self):
@@ -725,7 +754,9 @@ class TargetDiscovery(Checkpoint):
                     (self.search_name, err))
 
             # insert the drive information into the tree
-            self.root.insert_children(self.discover_disk(drive))
+            new_disk = self.discover_disk(drive)
+            if new_disk is not None:
+                self.root.insert_children(new_disk)
 
         elif self.search_type == ZPOOL_SEARCH_NAME:
             self.discover_entire_system(add_physical=False)

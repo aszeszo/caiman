@@ -475,8 +475,9 @@ def di_find_prop(propname, root):
         # To pull out each string, we cast the c_void_p to a c_char_p, which
         # automatically gets us the first string (ctypes extracts it for us)
         # To get subsequent strings, we need to manually index the pointer,
-        # adding the length of the previous string + 2 (one to get us to the
-        # NUL and one more to get us past it).
+        # adding the length of the previous string + 1 (since len() includes
+        # the NUL and one to get us past it).
+
         value = pointer(c_void_p())
         rv = di_prop_lookup_strings(DDI_DEV_T_ANY, hdl, propname,
                                     value)
@@ -488,9 +489,8 @@ def di_find_prop(propname, root):
             propval = [stringvalue.value]
             rv -= 1
             while rv > 0:
-                stringvalue = cast(c_voidp(value.contents.value +
-                                           stringlen + 2),
-                                   c_char_p)
+                value.contents.value += stringlen + 1
+                stringvalue = cast(value.contents, c_char_p)
                 propval.append(stringvalue.value)
                 stringlen = len(stringvalue.value)
                 rv -= 1
