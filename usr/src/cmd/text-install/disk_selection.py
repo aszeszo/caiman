@@ -151,6 +151,7 @@ class DiskScreen(BaseScreen):
         self.tc = target_controller
         self._target_discovery_completed = False
         self._target_discovery_status = InstallEngine.EXEC_SUCCESS
+        self._image_size = None
     
     def determine_minimum(self):
         '''Returns minimum install size, fetching first if needed'''
@@ -227,22 +228,13 @@ class DiskScreen(BaseScreen):
 
     def _td_callback(self, status, errsvc):
         '''Callback function for Target Discovery checkpoint execution.
-           If there's no error from executing the checkpoint,
-           this will call the _display_disks() function to display disk
-           information.
+           The status value is saved to be interpreted later.
+           This function sets the self._target_discovery_completed 
+           value to true so the wait_for_disks() function will know
+           to stop displaying the spinner.
  
         '''
 
-        try:
-            image_size = Size(str(get_image_size(LOGGER)) + Size.mb_units)
-            LOGGER.debug("Image_size: %s", image_size)
-        except:
-            # Unable to get the image size for some reason, allow
-            # the target controller to use it's default size.
-            LOGGER.debug("Unable to get image size") 
-            image_size = FALLBACK_IMAGE_SIZE
-
-        self.tc.initialize(image_size=image_size)
         self._target_discovery_status = status
         self._target_discovery_completed = True
 
@@ -269,6 +261,27 @@ class DiskScreen(BaseScreen):
             self.center_win.add_paragraph(DiskScreen.NO_TARGETS, 1, 1,
                                           max_x=(self.win_size_x - 1))
             return
+
+
+        if self._image_size is None:
+            try:
+                self._image_size = Size(str(get_image_size(LOGGER)) + \
+                    Size.mb_units)
+                LOGGER.debug("Image_size: %s", self._image_size)
+            except:
+                # Unable to get the image size for some reason, allow
+                # the target controller to use it's default size.
+                LOGGER.debug("Unable to get image size") 
+                self._image_size = FALLBACK_IMAGE_SIZE
+
+        # initialize the target controller so the min/max size for
+        # the installation can be calculated.  Explicitly do not
+        # want to select an initial disk at this time in case
+        # none of the disks discovered is usable.  The target controller
+        # initialization needs to be done everytime we show the disk selection
+        # screen so the desired target node in the DOC can be re-populated
+        # with information from target discovery.
+        self.tc.initialize(image_size=self._image_size, no_initial_disk=True)
          
         # Go through all the disks found and find ones that have
         # enough space for installation.  At the same time, see if any
