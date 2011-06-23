@@ -19,37 +19,36 @@
 #
 # CDDL HEADER END
 #
-
-#
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 """
 Common Python Objects for Installadm Commands
 """
-
-import StringIO
-import copy
 import gettext
 import logging
 import os
 import re
 import stat
-import subprocess
+import StringIO
 import sys
 import time
 
-from solaris_install import Popen
-import osol_install.libaiscf as smf
+from osol_install.libaimdns import getifaddrs, getboolean_property, \
+    getstrings_property
+from solaris_install import Popen, CalledProcessError
 
 
 _ = gettext.translation('AI', '/usr/share/locale', fallback=True).gettext
 
+
+LOG_FORMAT = ("%(filename)s:%(lineno)d %(message)s")
+XDEBUG = 5
+logging.addLevelName("xdebug", XDEBUG)
+logging.addLevelName(XDEBUG, "xdebug")
+
 #
 # General constants below
 #
-
-# SPARC netboot constant
-NETBOOT = '/etc/netboot'
 
 # service type, private
 REGTYPE = '_OSInstall._tcp'
@@ -74,29 +73,29 @@ DEFAULT_PORT = 5555
 WANBOOTCGI = 'cgi-bin/wanboot-cgi'
 
 # Directory for per service information
-AI_SERVICE_DIR_PATH = '/var/ai/'
+AI_SERVICE_DIR_PATH = '/var/ai/service'
+
+# Default image path parent directory
+IMAGE_DIR_PATH = '/export/auto_install/'
+
+BOOT_DIR = '/etc/netboot'
 
 # Script paths and arguments
 AIWEBSERVER = "aiwebserver"
-CHECK_IMAGE_VERSION = "check_image_version"
 CHECK_SETUP_SCRIPT = "/usr/lib/installadm/check-server-setup"
-DHCP_ASSIGN = "assign"
-DHCP_CLIENT = "client"
-DHCP_MACRO = "macro"
-DHCP_SERVER = "server"
 IMAGE_CREATE = "create"
 SERVICE_DISABLE = "disable"
 SERVICE_LIST = "list"
+SERVICE_CREATE = "create"
 SERVICE_REGISTER = "register"
-SETUP_DHCP_SCRIPT = "/usr/lib/installadm/setup-dhcp"
 SETUP_IMAGE_SCRIPT = "/usr/lib/installadm/setup-image"
 SETUP_SERVICE_SCRIPT = "/usr/lib/installadm/setup-service"
 SETUP_SPARC_SCRIPT = "/usr/lib/installadm/setup-sparc"
-SETUP_TFTP_LINKS_SCRIPT = "/usr/lib/installadm/setup-tftp-links"
 SPARC_SERVER = "server"
-TFTP_SERVER = "server"
 
-# Needed for the is_multihomed()
+WEBSERVER_DOCROOT = "/var/ai/image-server/images"
+
+# Needed for the is_multihomed() function
 INSTALLADM_COMMON_SH = "/usr/lib/installadm/installadm-common"
 KSH93 = "/usr/bin/ksh93"
 VALID_NETWORKS = "valid_networks"
@@ -109,116 +108,66 @@ MULTIHOMED_TEST = ("/usr/bin/test `%(ksh93)s -c 'source %(com-script)s;"
                     "valid_net": VALID_NETWORKS, "wc": WC})
 
 
+_IS_MULTIHOMED = None
+
+
 def is_multihomed():
     ''' Determines if system is multihomed
     Returns True if multihomed, False if not
 
     '''
+    global _IS_MULTIHOMED
+    if _IS_MULTIHOMED is None:
+        logging.debug("is_multihomed(): Calling %s", MULTIHOMED_TEST)
+        _IS_MULTIHOMED = Popen(MULTIHOMED_TEST, shell=True).wait()
+    return (_IS_MULTIHOMED != 0)
 
-    logging.debug("is_multihomed(): Calling %s", MULTIHOMED_TEST)
-    multihomed = Popen(MULTIHOMED_TEST, shell=True).wait()
-    return (multihomed != 0)
+
+def setup_logging(log_level):
+    '''Initialize the logger, logging to stderr at log_level,
+       log_level defaults to warn
+    
+    Input:
+        Desired log level for logging
+    Return:
+        None
+    '''
+    logging.basicConfig(stream=sys.stderr, level=log_level, format=LOG_FORMAT)
 
 
-def get_image_arch(path):
-    ''' get architecture of image
+if "PYLOG_LEVEL" in os.environ:
+    try:
+        setup_logging(int(os.environ["PYLOG_LEVEL"]))
+    except (TypeError, ValueError):
+        pass
 
-        Input: Path to image
-        Returns: 'sparc' or 'x86'
-        Raises: ValueError if unable to determine architecture of image
+
+def ask_yes_or_no(prompt):
+    ''' Prompt user if it is ok to do something.
+        Input: prompt - question to ask user
+        Returns: True - if user agrees 
+                 False otherwise (default)
+        Raises: KeyboardInterrupt if user hits ctl-c
 
     '''
-    sparc_path = os.path.join(path, "platform/sun4v")
-    x86_path = os.path.join(path, "platform/i86pc")
-    if os.path.exists(sparc_path):
-        return "sparc"
-    elif os.path.exists(x86_path):
-        return "x86"
-    else:
-        raise ValueError(_("Unable to determine Oracle Solaris install "
-                           "image type."))
+    yes_set = set(['yes', 'y', 'ye'])
+    no_set = set(['no', 'n', ''])
+    while True:
+        try:
+            choice = raw_input(prompt).lower()
+        except EOFError:    # ctrl-D
+            return False
+        if choice in yes_set:
+            return True
+        elif choice in no_set:
+            return False
+        else:
+            sys.stdout.write(_("Please respond with 'yes' or 'no'"))
 
 
 #
 # General classes below
 #
-
-class AIImage(object):
-    """
-    Class to hold Auto Installer boot image properties and functions
-    """
-    def __init__(self, dir_path=None):
-        if dir_path:
-            # store an absolute path
-            self._dir_path = os.path.abspath(dir_path)
-            # store the path handed in for error reporting
-            self._provided_path = dir_path
-        else:
-            raise AssertionError("ERROR:\tA directory path is "
-                                 "required.")
-        # _arch holds the cached image architecture
-        self._arch = None
-        # check validity of image handed in
-        self._check_image()
-
-    def _check_image(self):
-        """
-        Check that the image exists and appears valid (has a solaris.zlib file)
-        Raises: AIImage.AIImageError if path checks fail
-        Pre-conditions: Expects self.path to return a valid image_path
-        Returns: None
-        """
-        # check image_path exists
-        if not os.path.isdir(self.path):
-            raise AIImage.AIImageError(_("Error:\tThe image_path (%s) is not "
-                                         "a directory. Please provide a "
-                                         "different image path.\n") %
-                                       self._provided_path)
-        # check that the image_path has a solaris.zlib file
-        if not os.path.exists(os.path.join(self.path, "solaris.zlib")):
-            raise AIImage.AIImageError(_("Error:\tThe path (%s) is not "
-                                         "a valid image.\n") %
-                                       self._provided_path)
-
-    class AIImageError(Exception):
-        """
-        Class to report various AI image related errors
-        """
-        pass
-
-    @property
-    def path(self):
-        """
-        Returns the image path
-        """
-        # we should have a dir path, simply return it
-        return self._dir_path
-
-    @property
-    def arch(self):
-        """
-        Provide the image's architecture (and caches the answer)
-        Raises: AssertionError if the image does not have a /platform [sun4u,
-                sun4v, i86pc, amd64]
-        Pre-conditions: Expects self.path to return a valid image path
-        Returns: "SPARC" or "X86" as appropriate
-        """
-        # check if we have run before
-        if self._arch is not None:
-            return(self._arch)
-        # check if sun4u or sun4v
-        if os.path.isdir(os.path.join(self.path, "platform", "sun4u")) or \
-           os.path.isdir(os.path.join(self.path, "platform", "sun4v")):
-            self._arch = "SPARC"
-            return self._arch
-        # check if i86pc or amd64
-        if os.path.isdir(os.path.join(self.path, "platform", "i86pc")) or \
-           os.path.isdir(os.path.join(self.path, "platform", "amd64")):
-            self._arch = "X86"
-            return self._arch
-        raise AIImage.AIImageError(_("Error:\tUnable to determine "
-                                     "architecture of image.\n"))
-
 
 class FileMethods(object):
     """
@@ -239,7 +188,7 @@ class FileMethods(object):
                             "booleans accepted.")
 
         # store lines in a list
-        lines = []
+        lines = list()
 
         # build a function for removing newlines or not
         if remove_newlines is True:
@@ -360,7 +309,7 @@ class FileMethods(object):
             self.write(data)
             self.truncate()
             self.flush()
-        except IOError, msg:
+        except IOError as msg:
             raise IOError("Unable to write to file %s: %s\n" %
                           (self.file_name, msg))
     # provide the raw text of file as a property
@@ -474,14 +423,14 @@ class DBBase(dict):
         obj.isupper() and obj.startswith("_") and (locals()[obj] is not None)]
     # the order of headers from the file needs to be recorded (should be a list
     # of _FIELD1, _FIELD2, ...
-    _headers = []
+    _headers = list()
 
     def __init__(self, **kwargs):
         """
         Open file and read it in. Will throw exceptions when errors are
         encountered. Expected arguments of a string for a StringIO backed store
         or file_name and mode for a file backed store; e.g.:
-        file_foo = DBBase(file_name="/etc/vfstab", mode="w")
+        file_foo = DBBase(file_name="/etc/mnttab", mode="w")
         string_foo = DBBase(big_string_of_databasy-ness)
         """
         # run the generic dict() init first
@@ -528,7 +477,7 @@ class DBBase(dict):
         self.mtime = self.file_obj.last_update
 
         # store the intermediate split fields
-        fields = []
+        fields = list()
 
         # now produce a list of lists for each field:
         # [[field1] [field2] [field3]]
@@ -696,35 +645,6 @@ class DBBase(dict):
         __setitem__ = None
 
 
-class INETd_CONF(DBBase):
-    """
-    Allow OO access to the /etc/inet/inetd.conf file. All DBBase methods are
-    available.
-    """
-
-    # field variables
-    _SERVICE_NAME = "service-name"
-    _ENDPOINT_TYPE = "endpoint-type"
-    _PROTOCOL = "protocol"
-    _WAIT_STATUS = "wait-status"
-    _UID = "uid"
-    _SERVER_PROGRAM = "server-program"
-    _SERVER_ARGUMENTS = "server-arguments"
-
-    # the attribute accessor names (all capital variables of the class with
-    # their leading underscore stripped) should be stored for building a list
-    # of field names
-    _fields = [obj.lstrip("_") for obj in locals().keys()
-        if obj.isupper() and locals()[obj] is not None]
-
-    # the order of headers from the file needs to be recorded
-    _headers = [_SERVICE_NAME, _ENDPOINT_TYPE, _PROTOCOL, _WAIT_STATUS, _UID,
-        _SERVER_PROGRAM, _SERVER_ARGUMENTS]
-
-    def __init__(self, file_name="/etc/inet/inetd.conf", mode="r"):
-        super(INETd_CONF, self).__init__(file_name=file_name, mode=mode)
-
-
 class MNTTab(DBBase):
     """
     Implements object oriented access to the /etc/mnttab file. One can query
@@ -761,46 +681,6 @@ class MNTTab(DBBase):
 
     def __init__(self, file_name="/etc/mnttab", mode="r"):
         super(MNTTab, self).__init__(file_name=file_name, mode=mode)
-
-
-class VFSTab(DBBase):
-    """
-    Implements object oriented access to the /etc/vfstab file. One can query
-    fields through dictionary style key look-ups (i.e. vfstab_obj['DEVICE']) or
-    attribute access such as vfstab_obj.fields.DEVICE both return lists which
-    are indexed so that a line from the file can be reconstructed as
-    vfstab_obj[device][idx]\tvfstab_obj[fsckDevice]...
-    Otherwise, one can read and write the entire file via
-    vfstab_obj.file_obj.raw.
-
-    For accessing fields it is recommended one not use the direct strings
-    (i.e. 'device', 'fsckDev', etc.) but using the attribute,
-    etc. to allow the implementation to evolve, if necessary.
-
-    One can remove a record in the file by ruining:
-    del(vfstab_obj.fields.FIELD[idx])
-    """
-    # field variables
-    _DEVICE = "device to mount"
-    _FSCK_DEVICE = "device to fsck"
-    _MOUNT_POINT = "mount point"
-    _FS_TYPE = "FS type"
-    _FSCK_PASS = "fsck pass"
-    _MOUNT_AT_BOOT = "mount at boot"
-    _FS_OPTS = "mount options"
-
-    # the order of headers from the file needs to be recorded
-    _headers = [_DEVICE, _FSCK_DEVICE, _MOUNT_POINT, _FS_TYPE, _FSCK_PASS,
-        _MOUNT_AT_BOOT, _FS_OPTS]
-
-    # the attribute accessor names (all capital variables of the class with
-    # their leading underscore stripped) should be stored for building a list
-    # of field names
-    _fields = [obj.lstrip("_") for obj in locals().keys()
-        if obj.isupper() and locals()[obj] is not None]
-
-    def __init__(self, file_name="/etc/vfstab", mode="r"):
-        super(VFSTab, self).__init__(file_name=file_name, mode=mode)
 
 
 class MACAddress(list):
@@ -869,423 +749,6 @@ class MACAddress(list):
         return "".join(self)
 
 
-class GrubMenu(DBBase):
-    """
-    Class to handle opening and reading GRUB menu, see
-    http://www.gnu.org/software/grub/manual/grub.html for more on GRUB menu
-    format
-    Keys will be the grub menu entries and key "" will be the general commands
-    which begins the menu before the first title
-    """
-
-    # field variables
-    _TITLE = "title"
-
-    # the order of headers from the file needs to be recorded
-    _headers = [_TITLE]
-
-    # the attribute accessor names (all capital variables of the class with
-    # their leading underscore stripped) should be stored for building a list
-    # of field names
-    _fields = [obj.lstrip("_") for obj in locals().keys()
-        if obj.isupper() and locals()[obj] is not None]
-
-    # overload the _Result class to be a dictionary instead of the default list
-    class _Result(dict):
-        """
-        Wrap dict class to ignore the parent reference passed to the _Result
-        class (which would normally be used for updating the backing store of a
-        DBBase() instance)
-        """
-        def __init__(self, parent, key):
-            # store what we are representing (initialize a dictionary with the
-            # data to store)
-            super(GrubMenu._Result, self).__init__(
-                super(DBBase, parent).get(key))
-
-    def __init__(self, file_name="/boot/grub/menu.lst", mode="r"):
-        super(GrubMenu, self).__init__(file_name=file_name, mode=mode)
-
-    def _load_data(self):
-        """
-        Load each entry and the keys for each grub menu entry (such as module,
-        kernel$, splashimage, etc. lines)
-        Miscellaneous note: the module and kernel lines may have a '$' after
-        them or not, consumer beware
-        """
-        # see if the file has changed since last read
-        if self.mtime == self.file_obj.last_update:
-            return
-
-        # file has changed since last read
-        file_data = self.file_obj.read_all()
-
-        # update the file mtime to keep track
-        self.mtime = self.file_obj.last_update
-
-        # need to clear current entries
-        super(DBBase, self).clear()
-
-        # the menu begins with general commands. The keyword "title" must
-        # begin boot entries and they are either terminated by other title
-        # entries or the end of the file. Split on the title keyword as such
-        # (first "entry" from the split contains the general commands and is
-        # not an actual entry therefore, but prepend a "\n" in case we have no
-        # general commands)
-        entries = re.compile("\n\s*title\s*").split("\n" + file_data)
-        # check that we got a general commands section and at least one title
-        # if not, return an empty dictionary
-        if len(entries) < 2:
-            return {}
-
-        # parse each entry splitting title and data off - expecting all title
-        # lines to be followed by at least one line of keyword data
-        # produces a list of lists: [entry title, [entry lines]]
-        entry_data = [[entry.split('\n', 1)[0], entry.split('\n')[1:]] for
-            entry in entries]
-
-        # add to self a list of [entry title, dictionary]
-        # with the dictionary containing GRUB keywords as keys and the
-        # values of those keys being the keyword arguments
-        for (title, entry) in entry_data:
-
-            # hold key/value tags in a dictionary for this entry
-            entry_dict = {}
-
-            # iterate over all lines
-            for line in entry:
-                # skip empty lines or comments
-                if not line.strip() or line.lstrip().startswith("#"):
-                    continue
-                # some GRUB menus have things like
-                # timeout = 30 opposed to timeout 30, replace the = with a
-                # space
-                line = re.sub('^(?P<key>[^\s=]*?)=', '\g<key> ', line)
-                entry_dict.update([line.lstrip().split(None, 1)])
-
-            # add this GRUB entry to the GrubMenu object's dict
-            # key is the entry's title and entry_dict is its object
-            super(DBBase, self).update({title: entry_dict})
-
-    # provide the entries of the grub menu as a property
-    @property
-    def entries(self):
-        """
-        Return a list of all Grub title entries in the GRUB menu
-        """
-        # need to return all keys except "" which are the general menu commands
-        return [key for key in self.keys() if key]
-
-    # do not support writing to the GRUB menu yet
-    __setitem__ = None
-    __delitem__ = None
-
-
-class LOFI(DBBase):
-    """
-    Implements object oriented access to lofiadm(1). One can query
-    fields through dictionary style key look-ups (i.e. lofi_obj['DEVICE']) or
-    attribute access such as lofi_obj.fields.DEVICE both return lists which
-    are indexed so that a line from the file can be reconstructed as
-    lofi_obj[device][idx]\tlofi_obj[file]...
-    Otherwise, one can add and remove lofi devices via
-    lofi_obj.add(path), lofi_obj.remove(lofi # or path).
-
-    For accessing fields it is recommended one not use the direct strings
-    (i.e. 'Block Device', 'File', etc.) but using the attribute,
-    etc. to allow the implementation to evolve, if necessary.
-    """
-    # field variables
-    _DEVICE = "Block Device"
-    _FILE = "File"
-    _OPTIONS = "Options"
-
-    # command interface
-    _lofi_state = {"cmd": ["/usr/sbin/lofiadm"]}
-
-    # single class instance
-    _instance = None
-
-    # the order of headers from the file needs to be recorded
-    _headers = [_DEVICE, _FILE, _OPTIONS]
-
-    # the attribute accessor names (all capital variables of the class with
-    # their leading underscore stripped) should be stored for building a list
-    # of field names
-    _fields = [obj.lstrip("_") for obj in locals().keys()
-        if obj.isupper() and locals()[obj] is not None]
-
-    def __new__(cls):
-        """
-        Upon class instantion return the one class object (make class a
-        singleton)
-        """
-        if not cls._instance:
-            # create the instance object
-            cls._instance = super(LOFI, cls).__new__(cls)
-            # initialize the instance object
-            cls._instance.__init__()
-        else:
-            # refresh the already existing instance object
-            cls._instance._load_data()
-        return cls._instance
-
-    def add(self, path, device=None):
-        """
-        Add a file to the lofi system
-        arguments: file path to create a loop-back mount on
-        returns: lofidevice path (i.e. /dev/lofi/1)
-        raises: SystemExit if lofiadm(1) returns an error (passed from
-                run_cmd())
-        """
-        # copy the path to lofiadm(1)
-        cmd = {'cmd': copy.copy(self._lofi_state['cmd'])}
-        # add the a option and file path
-        cmd['cmd'].extend(["-a", path])
-        if device:
-            cmd['cmd'].extend(device)
-        cmd = run_cmd(cmd)
-        # return the /dev/lofi device returned (with trailing \n striped)
-        return cmd['out'].strip()
-
-    def remove(self, path):
-        """
-        Remove a lofi device from the system
-        arguments: path to remove /dev/lofi/ device or filepath mounted
-        returns: nothing
-        raises: SystemExit if lofiadm(1) returns an error (passed from
-                run_cmd())
-        """
-        # copy the path to lofiadm(1)
-        cmd = {'cmd': copy.copy(self._lofi_state['cmd'])}
-        # add the a option and file path
-        cmd['cmd'].extend(["-d", path])
-        cmd = run_cmd(cmd)
-
-    def _load_data(self):
-        """
-        Private method to refresh the LOFI object
-        pre-conditions: class has an initialized instance
-        post-conditions: the class dictionary _lofi_state['out'] object will
-                         contain the current output of "/usr/sbin/lofiadm"
-                         (i.e. added lofi mounts)
-        """
-        # run lofiadm(1) to get a list output (store this once across all
-        # instances since lofi(7) is kernel wide)
-        self.__class__._lofi_state = run_cmd(self._lofi_state)
-        # note index will throw a value error if it can not find a newline,
-        # however, if lofiadm(1) works at all we should have at least headers
-        # and a newline
-        self._lofi_state['out'] = \
-            self._lofi_state['out'][self._lofi_state['out'].index("\n") + 1:]
-        # update the file_obj backing store
-        self.file_obj = StringIO_(self._lofi_state['out'])
-        # reparse the output
-        super(LOFI, self)._load_data()
-
-
-class DHCPData:
-    """
-    Class to query Solaris DHCP server configuration material
-    """
-
-    def __init__(self):
-        """
-        No state stored and this is server wide data, so do not make an
-        instance of this class
-        """
-        raise NotImplementedError("class does not support "
-                                  "creating an instance.")
-
-    class DHCPError(Exception):
-        """
-        Class to report various DHCP related errors
-        """
-        pass
-
-    @staticmethod
-    def networks():
-        """
-        Return a list of networks configured on the DHCP server, if any error
-        is generated raise it as a DHCPError.
-        """
-        # first get a list of networks served
-        try:
-            data = run_cmd({"cmd": ["/usr/sbin/pntadm", "-L"]})
-        except SystemExit, e:
-            # return a DHCPError on failure
-            raise DHCPData.DHCPError(e)
-
-        # produce a list of networks like
-        # ["172.20.24.0",
-        #  "172.20.48.0"]
-        return data["out"].split()
-
-    @staticmethod
-    def macros():
-        """
-        Returns a dictionary of macros and symbols with keys: Name, Type and
-        Value. In case of an error raises a DHCPError
-        """
-        # get a list of all server macros
-        try:
-            macro = run_cmd({"cmd": ["/usr/sbin/dhtadm", "-P"]})
-        # if run_cmd errors out we should too
-        except SystemExit, e:
-            raise DHCPData.DHCPError(e)
-
-        # produce a list like:
-        # ['Name", "Type", "Value",
-        #  "==================================================",
-        #  "0100093D143663", "Macro",
-        #  ":BootSrvA=172.20.25.12:BootFile="0100093D143663":"]
-
-        # split into fields
-        macro["data"] = [ln.split(None, 2) for ln in macro["out"].split("\n")]
-
-        # headers will consist of "Name", "Type", "Value"
-        # (will be the first line)
-        headers = macro["data"][0]
-
-        # remove the headers, line of ='s and trailing newline
-        # (first three lines)
-        del(macro["data"][0:2])
-        # strip the trailing newline
-        del(macro["data"][-1])
-
-        # build a dict with each header a key to a list built of each row
-        macro['macros'] = dict(zip(headers, [[row[i] for row in macro['data']]
-                               for i in range(0, len(headers))]))
-        return (macro["macros"])
-
-    @staticmethod
-    def clients(net):
-        """
-        Return a dictionary with keys 'Client ID', 'Flags', 'Client IP',
-        'Server IP', 'Lease Expiration', 'Macro', 'Comment', on error raise a
-        DHCPError
-        """
-        # iterate over the networks looking for clients
-        # keep state in the dictionary so initialize it out side the loop
-        systems = {}
-        systems['cmd'] = ["/usr/sbin/pntadm", "-P", net]
-        try:
-            systems = run_cmd(systems)
-        # if run_cmd errors out we should too
-        except SystemExit, e:
-            raise DHCPData.DHCPError(e)
-
-        # use split to produce a list like:
-        # ['Client ID', 'Flags', 'Client IP', 'Server IP',
-        #  'Lease Expiration', 'Macro', 'Comment']
-        # ['']
-        # ['01001B21361F85', '00', '172.20.24.228', '172.20.25.12',
-        #  '08/21/2009', 'dhcp_macro_clay_ai_x86', '']
-        # ['0100093D1432AD', '01', '172.20.24.214', '172.20.25.12',
-        #  '08/21/2009', 'dhcp_macro_clay_ai_sparc', '']
-        # ['01002128262DD2', '00', '172.20.24.215', '172.20.25.12',
-        #  '08/21/2009', 'install', '']
-        # ['']
-
-        # split on newlines, then split on tabs (for a maximum of 7 fields)
-        systems['out'] = [ln.split("\t", 6) for
-            ln in systems["out"].split("\n")]
-
-        # the first line will be the headers
-        headers = systems['out'][0]
-        # strip white space
-        headers = [obj.strip() for obj in headers]
-
-        # strip headers, intermediate blank and footer blank
-        # (the first three lines)
-        del(systems['out'][0:2])
-        # strip the trailing newline
-        del(systems['out'][-1])
-
-        # build a dict with each header a key to a list built of each row
-        systems['data'] = dict(zip(headers, [[row[i] for row in systems['out']]
-                               for i in range(0, len(headers))]))
-
-        # strip white space in data
-        for key in systems['data']:
-            systems['data'][key] = [obj.strip() for
-                obj in systems['data'][key]]
-        return (systems['data'])
-
-#
-# General functions below
-#
-
-
-def run_cmd(data):
-    r"""
-    Run a command given by a dictionary and run the command, check for stderr
-    output, return code, and populate stdout and stderr. One can check the
-    return code, if catching SystemExit, via data["subproc"].returncode.
-    Raises: SystemExit if command errors in any way (i.e. a non-zero return
-            code or anything in standard error). OSError if command is not
-            found or cannot be executed.
-    >>> test={"cmd": ["/bin/true"]}
-    >>> test=run_cmd(test)
-    >>> test={"cmd": ["/usr/bin/echo", "python"]}
-    >>> run_cmd(test) # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
-    {'cmd': ['/usr/bin/echo', 'python'],
-     'subproc': <subprocess.Popen object at 0x...>,
-     'err': '',
-     'out': 'python\n'}
-    >>> import gettext
-    >>> gettext.install("")
-    >>> test={"cmd": ["/bin/false"]}
-    >>> try:
-    ...  run_cmd(test)
-    ... except SystemExit, msg:
-    ...  print msg
-    ...
-    Failure running subcommand /bin/false result 255
-    <BLANKLINE>
-    >>> test={"cmd": ["/bin/ksh","-c", "print -nu2 foo"]}
-    >>> try:
-    ...  run_cmd(test)
-    ... except SystemExit, msg:
-    ...  print msg
-    ...
-    Failure running subcommand /bin/ksh -c print -nu2 foo.
-    Got output:
-    foo
-    >>> test['err']
-    'foo'
-    >>> run_cmd({"cmd": ["/does_not_exist"]}) # doctest:+ELLIPSIS
-    Traceback (most recent call last):
-                    ...
-    OSError: Failure executing subcommand /does_not_exist:
-    [Errno 2] No such file or directory
-    <BLANKLINE>
-    """
-    try:
-        data["subproc"] = subprocess.Popen(data["cmd"],
-                                           stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE)
-    # unable to find command will result in an OSError
-    except OSError, e:
-        raise OSError(_("Failure executing subcommand %s:\n%s\n") %
-                           (" ".join(data["cmd"]), str(e)))
-
-    # fill data["out"] with stdout and data["err"] with stderr
-    data.update(zip(["out", "err"], data["subproc"].communicate()))
-
-    # if we got anything on stderr report it and exit
-    if(data["err"]):
-        raise SystemExit(_("Failure running subcommand %s.\n" +
-                           "Got output:\n%s") %
-                           (" ".join(data["cmd"]), data["err"]))
-    # see if command returned okay, if not then there is not much we can do
-    if(data["subproc"].returncode):
-        raise SystemExit(_("Failure running subcommand %s result %s\n") %
-                           (" ".join(data["cmd"]),
-                           str(data["subproc"].returncode)))
-    return data
-
-
 def validate_service_name(svcname):
     ''' Validate service name
 
@@ -1315,62 +778,174 @@ def validate_service_name(svcname):
         raise ValueError(error)
 
 
-def find_TFTP_root():
+def _convert_ipv4(ip):
+    '''Converts an IPv4 address into an integer
+       Args:
+            ip - IPv4 address to convert
+
+       Returns:
+            an integer of the converted IPv4 address
+
+       Raises:
+            None
     '''
-    Uses svcprop on the service svc:/network/tftp/udp6 to get
-    tftp root directory via the property inetd_start/exec.
-    The svcprop command is either (stdout):
+    seg = ip.split('.')
+    return (int(seg[3]) << 24) + (int(seg[2]) << 16) + \
+            (int(seg[1]) << 8) + int(seg[0])
 
-        /usr/sbin/in.tftpd -s /tftpboot\n
 
-    Or (stderr):
+def _convert_cidr_mask(cidr_mask):
+    '''Converts a CIDR mask into an IPv4 mask
+        Args:
+            cidr_mask - CIDR mask number
 
-        svcprop: Pattern 'tftp/udp6' doesn't match any entities
+        Returns:
+            IPv4 mask address
 
-    Args
-        None
-
-    Returns
-        directory name (type string) - default /tftpboot
-
-    Throws
-        None
+        Raises:
+            None
     '''
-    # default tftpboot dir
-    defaultbasedir = "/tftpboot"
+    mask_tuple = (0, 128, 192, 224, 240, 248, 252, 254, 255)
 
-    # baseDir is set to the root of in.tftpd
-    basedir = ""
+    # edge cases
+    if cidr_mask > 32:
+        return None
+    if cidr_mask == 0:
+        return '0.0.0.0'
 
-    svclist = ["/usr/bin/svcprop", "-p", "inetd_start/exec", "tftp/udp6"]
-    try:
-        pipe = subprocess.Popen(svclist,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
-        stdout, stderr = pipe.communicate()
-    except (OSError, ValueError):
-        sys.stderr.write(_('%s: error: retrieving SMF service '
-                           'key property for tftp/udp6 service\n') %
-                           os.path.basename(sys.argv[0]))
-        return defaultbasedir
+    mask = ['255'] * (cidr_mask // 8)
 
-    # check for stderr output
-    if stderr:
-        sys.stderr.write(_('%s: warning: unable to locate SMF service '
-                           'key property inetd_start/exec for '
-                           'tftp/udp6 service. Using default value.\n') %
-                           os.path.basename(sys.argv[0]))
-        basedir = defaultbasedir
+    if len(mask) != 4:
+        # figure out the partial octets
+        index = cidr_mask % 8
+        mask.append(str(mask_tuple[index]))
+
+    if len(mask) != 4:
+        mask.extend(['0'] * (3 - (cidr_mask // 8)))
+
+    # join the mask array together and return it
+    return '.'.join(mask)
+
+
+def ipv4_equal(ipv4_one, ipv4_two):
+    '''Compares two IPv4 address for equality
+       Args:
+           ipv4_one - IPv4 address, can contain CIDR mask
+           ipv4_two - IPv4 address, can contain CIDR mask
+
+       Returns:
+           True if ipv4_one equals ipv4_two else
+           False
+
+       Raises:
+           None
+    '''
+    # ensure there is no '/' (slash) in the first address,
+    # effectively ignoring the CIDR mask.
+    slash = ipv4_one.find('/')
+    if '/' in ipv4_one:
+        ipv4_one = ipv4_one[:slash]
+    ipv4_one_num = _convert_ipv4(ipv4_one)
+
+    # convert ipv4_two taking into account the possible CIDR mask
+    if '/' not in ipv4_two:
+        mask_two = _convert_cidr_mask(0)
+        ipv4_two_num = _convert_ipv4(ipv4_two)
     else:
-        # svcprop returns "<tftpd command>\ -s\ <directory>\n"
-        # split the line up around " -s\ ".
-        svcprop_out = stdout.partition(" -s\ ")
-        # be sure to remove the '\n' character.
-        basedir = svcprop_out[2].rstrip("\n")
-        if not basedir:
-            basedir = defaultbasedir
+        mask_two = _convert_cidr_mask(int(ipv4_two.split('/')[-1]))
+        if not mask_two:
+            return False  # invalid mask
+        ipv4_two_num = _convert_ipv4(ipv4_two.split('/')[0])
+    mask_two_num = _convert_ipv4(mask_two)
 
-    return basedir
+    if '/' in ipv4_two and \
+         mask_two_num & ipv4_two_num == mask_two_num & ipv4_one_num:
+        return True
+    elif ipv4_one_num == ipv4_two_num:
+        return True
+
+    return False
+
+
+def in_networks(inter_ipv4, networks):
+    '''Description:
+        Checks to see if a single IPv4 address is in the list of
+        networks
+
+    Args:
+        inter_ipv4 - an interface IPv4 address
+        networks   - a list of networks from the SMF property networks
+
+    Returns:
+        True if the interface's IPv4 address is in the network -- OR --
+        False if it is not
+
+    Raises:
+        None
+    '''
+    # iterate over the network list
+    for network in networks:
+        # check if the interface's IPv4 address is in the network
+        if ipv4_equal(inter_ipv4, network):
+            return True
+    return False
+
+
+def get_valid_networks():
+    '''Description:
+        Gets the valid networks taking into account the all_services/networks
+        and all_services/exclude_networks service properties.
+
+    Args:
+        None
+
+    Returns:
+        a set of valid networks.
+
+    Raises:
+        None
+    '''
+    # get the currently configured interfaces
+    interfaces = getifaddrs()
+    # get the exclude and networks service property values
+    exclude = getboolean_property(SRVINST, EXCLPROP)
+    networks = getstrings_property(SRVINST, NETSPROP)
+
+    valid_networks = set()
+    for inf in interfaces:
+        # check the interface IP address against those listed in
+        # the AI service SMF networks property.  Our logic for the
+        # SMF exclude_networks and SMF networks list is:
+        #
+        #   IF ipv4 is in networks and
+        #      SMF exclude_networks == false
+        #   THEN include ipv4
+        #   IF ipv4 is not in_networks and
+        #      SMF exclude_network == true
+        #   THEN include ipv4
+        #   IF ipv4 is in_networks and
+        #      SMF exclude_networks == true
+        #   THEN exclude ipv4
+        #   IF ipv4 is not in_networks and
+        #      SMF exclude_network == false
+        #   THEN exclude ipv4
+        #
+        # Assume that it is excluded and check the first 2 conditions only
+        # as the last 2 conditions are covered by the assumption.
+        in_net = in_networks(interfaces[inf], networks)
+        include_it = False
+        if (in_net and not exclude) or (not in_net and exclude):
+            include_it = True
+
+        if not include_it:
+            continue
+
+        mask = interfaces[inf].find('/')
+        if mask == -1:
+            mask = len(interfaces[inf])
+        valid_networks.add(interfaces[inf][:mask])
+
+    return valid_networks
 
 
 if __name__ == "__main__":

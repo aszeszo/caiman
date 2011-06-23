@@ -33,6 +33,7 @@ install:=	TARGET=	install
 PYMODULES=	AI_database.py \
 		common_profile.py \
 		create_profile.py \
+		data_files.py \
 		delete_manifest.py \
 		delete_profile.py \
                 export.py \

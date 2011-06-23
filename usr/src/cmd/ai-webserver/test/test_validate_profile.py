@@ -36,6 +36,7 @@ import os
 import lxml.etree
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.common_profile as sc
+import osol_install.auto_install.data_files as df
 import osol_install.auto_install.validate_profile as validate_profile
 
 
@@ -125,7 +126,7 @@ class ValidateProfile(unittest.TestCase):
         os.close(tfp)
         #these tests should succeed for both string and file
         self.assertTrue(sc.validate_profile_string(prof_str))
-        self.assertTrue(validate_profile.validate_file(fname, fname))
+        self.assertTrue(df.validate_file(fname, fname))
         os.unlink(fname)
         prof_str += 'should cause failure'
         (tfp, fname) = tempfile.mkstemp()
@@ -134,7 +135,7 @@ class ValidateProfile(unittest.TestCase):
         #these tests should fail for both string and file
         self.assertRaises(lxml.etree.XMLSyntaxError,
                           sc.validate_profile_string, prof_str)
-        self.assertFalse(validate_profile.validate_file(fname, fname))
+        self.assertFalse(df.validate_file(fname, fname))
         os.unlink(fname)
 
 class ParseOptions(unittest.TestCase):

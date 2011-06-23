@@ -38,6 +38,7 @@ import unittest
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.create_profile as create_profile
 import osol_install.auto_install.publish_manifest as publish_manifest
+import osol_install.auto_install.service_config as config
 import osol_install.libaiscf as smf
 
 
@@ -156,6 +157,14 @@ class MockAIRoot(object):
     def find(self, *args, **kwargs):
         return self.root
 
+class MockIsService(object):
+    '''Class for mock is_service '''
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, name):
+        return True
+
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''
 
@@ -202,6 +211,17 @@ class ParseOptions(unittest.TestCase):
 
 class CriteriaToDict(unittest.TestCase):
     '''Tests for criteria_to_dict'''
+    def setUp(self):
+        '''unit test set up'''
+        self.config_is_service = config.is_service
+        config.is_service = MockIsService
+
+    def tearDown(self):
+        '''unit test tear down
+        Functions originally saved in setUp are restored to their
+        original values.
+        '''
+        config.is_service = self.config_is_service
 
     def test_case_conversion(self):
         '''Ensure keys converted to lower case, values kept as input'''

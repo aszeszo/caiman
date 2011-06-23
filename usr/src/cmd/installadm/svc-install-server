@@ -45,18 +45,22 @@ GREP=/bin/grep
 KILL=/usr/bin/kill
 HTTPD=/usr/apache2/2.2/bin/httpd
 INSTALLADM=/usr/sbin/installadm
-MV=/usr/bin/mv
 PS=/usr/bin/ps
 PGREP=/usr/bin/pgrep
-RM=/usr/bin/rm
+PYTHON=/usr/bin/python2.6
+SVC_MODULE=/usr/lib/python2.6/vendor-packages/osol_install/auto_install/service.py
+SVC_CFG_MODULE=/usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.py
 SVCCFG=/usr/sbin/svccfg
 SVCPROP=/usr/bin/svcprop
+UPGRADE_SCRIPT=/usr/sbin/installadm-convert
 
 # Automated Install SMF variables
 PORT='all_services/port'
+DEBUG_PROP='install/debug'
 
 # Global SMF property values
 SMF_PORT=$($SVCPROP -p $PORT $SMF_FMRI 2>/dev/null)
+export PYLOG_LEVEL=$($SVCPROP -p $DEBUG_PROP $SMF_FMRI 2>/dev/null)
 
 #
 # setup_compatibility_file
@@ -72,57 +76,12 @@ SMF_PORT=$($SVCPROP -p $PORT $SMF_FMRI 2>/dev/null)
 #		0 - New ${COMPATIBILITY_PORTS} file has been put into place.
 #		1 - Existing ${COMPATIBILITY_PORTS} file was not touched.
 #
-function setup_compatibility_file
-{
-	typeset work_file="/system/volatile/$(basename ${COMPATIBILITY_PORTS}).$$"
+function setup_compatibility_file {
+	# Ensure that the apache webserver services old clients by creating
+	# a compatibilitly file with the ports from the old services.
+	$PYTHON $SVC_CFG_MODULE create-compatibility-file ${SMF_PORT}
 
-	${CAT} <<- COMPAT_EOF > ${work_file}
-	#
-	# Do not edit by hand.
-	# This file is created by the svc:/system/install/server method script
-	# and is Included in the AI webserver configuration file.
-	#
-	COMPAT_EOF
-
-	# Get the list of unique and sorted IP addresses of the
-	# network interfaces on this system that AI has been
-	# configured to use.
-	ips=$(valid_networks true)
-
-	# add the necessary ports from the old services
-	SMF_PGS=$(${SVCCFG} -s ${SMF_FMRI} listpg | ${AWK} '{print $1}' | \
-		  ${GREP} "^AI")
-	for pg in ${SMF_PGS} ; do
-		status=$(${SVCPROP} -p ${pg}/status ${SMF_FMRI})
-		if [ "X${status}" != "X" -a "${status}" == "on" ] ; then
-			port=$(${SVCPROP} -cp ${pg}/txt_record ${SMF_FMRI} 2>/dev/null | \
-				   ${CUT} -f 2 -s -d':')
-			if [ "X${port}" != "X" -a  "${port}" != "${SMF_PORT}" ]; then
-				for ip in ${ips} ; do
-					echo "Listen" ${ip}:${port} >> ${work_file}
-				done
-			elif [ "X${port}" == "X" ]; then
-				service=$(echo ${pg} | ${CUT} -c3-)
-				echo "The port is not set in the txt_record for ${service}"
-				exit $SMF_EXIT_ERR_CONFIG
-			fi
-		fi
-	done
-
-	# If the file exists and is identical to the new file,
-	# no need to touch the existing file.
-        if [[ -f ${COMPATIBILITY_PORTS} ]] ; then
-		if $DIFF ${COMPATIBILITY_PORTS} ${work_file} \
-		    > /dev/null 2>&1 ; then
-			${RM} ${work_file}
-			return 1
-		fi
-	fi
-
-        ${CP} ${work_file} ${COMPATIBILITY_PORTS}
-        ${RM} ${work_file}
-
-        return 0
+    return $?
 }
 
 #
@@ -137,160 +96,36 @@ function setup_compatibility_file
 #		LISTEN_ADDRESSES - Location of the file to set up.
 #	Returns
 #		0 - New ${LISTEN_ADDRESSES} file has been put into place.
-#               1 - Existing ${LISTEN_ADDRESSES} file was not touched.
+#       1 - Existing ${LISTEN_ADDRESSES} file was not touched.
 #
 function setup_main_ports
 {
-	typeset work_file="/system/volatile/$(basename ${LISTEN_ADDRESSES}).$$"
+	$PYTHON $SVC_CFG_MODULE create-main-ports-file ${SMF_PORT}
 
-	${CAT} <<- LISTEN_EOF > ${work_file}
-	#
-	# Do not edit by hand.
-	# This file is created by the svc:/system/install/server method script
-	# and is Included in the AI webserver configuration file.
-	#
-	LISTEN_EOF
-
-	# Get the list of unique and sorted IP addresses of the
-	# network interfaces on this system that AI has been
-	# configured to used.
-	for ip in $(valid_networks true) ;
-	do
-		echo "Listen\t${ip}:${SMF_PORT}" >> ${work_file}
-	done
-
-	# If the file exists and is identical to the new file,
-	# no need to touch the existing file.
-	if [[ -f ${LISTEN_ADDRESSES} ]] ; then
-		if $DIFF ${LISTEN_ADDRESSES} ${work_file} > /dev/null 2>&1; then
-			${RM} ${work_file}
-			return 1
-		fi
-	fi
-
-	${CP} ${work_file} ${LISTEN_ADDRESSES}
-	${RM} ${work_file}
-
-	return 0
+    return $?
 }
 
-#
-# upgrade_svc_vers_0_to_1
-#	Re-registers any existing default manifests managed in the old style
-#	to be handled the new way.
-#
-#	Args:
-#		None
-#
-function upgrade_svc_vers_0_to_1
-{
-	AI_SERVICE_VERSION=1
-	do_refresh=n
-	SMF_PGS=$(${SVCCFG} -s ${SMF_FMRI} listpg | ${AWK} '{print $1}' | \
-	    ${GREP} "^AI")
-	for service in ${SMF_PGS} ; do
-
-		# Version 0 may not have "version" property.
-		version=$(${SVCPROP} -cp ${service}/version ${SMF_FMRI} \
-		    2>/dev/null)
-		if [ $? -eq 0 -a \
-		    "${version}" -ge "${AI_SERVICE_VERSION}" ]; then
-			continue
-		fi
-                errors=n
-
-		service_name=$(${SVCPROP} -cp \
-		    ${service}/service_name ${SMF_FMRI})
-		if [[ $? -ne 0 ]]; then
-			echo "Error getting service_name property " \
-			    "from ${service}"
-			continue
-		fi
-
-		do_refresh=y
-		echo "Upgrading service ${service_name} to " \
-		    "version ${AI_SERVICE_VERSION}"
-
-		# See if default-manifest property exists for this AI service.
-		${SVCPROP} -q -p ${service}/default-manifest ${SMF_FMRI}
-		if [[ $? -ne 0 ]]; then
-			echo "default-manifest property doesn't exist..."
-	
-			mfest_dir=/var/ai/${service_name}/AI_data
-			echo "Checking whether manifest directory " \
-			    "$mfest_dir exists..."
-			if [ ! -d $mfest_dir ]; then
-				echo "No... Checking port compatibility " \
-				    "directory instead..."
-				port=$(${SVCPROP} -cp \
-				    ${service}/txt_record ${SMF_FMRI} \
-				    2>/dev/null | \
-				    ${CUT} -f 2 -s -d':')
-				if [ "X${port}" != "X" -a  \
-				    "${port}" != "${SMF_PORT}" ]; then
-					mfest_dir=/var/ai/${port}/AI_data
-				fi
-			fi
-
-			default_file=${mfest_dir}/default.xml
-			echo "Looking for default file ${default_file}"
-			if [ -f ${default_file} ] ; then
-				echo "Default file found.  Upgrading service."
-				# Default file found.  Install the new way.
-				${MV} ${default_file} ${default_file}.$$
-				${INSTALLADM} add-manifest \
-				    -n ${service_name} -d -f ${default_file}.$$
-				if [[ $? -eq 0 ]]; then
-					${RM} ${default_file}.$$
-				else
-					${MV} ${default_file}.$$ \
-					     ${default_file}
-					errors=y
-					echo "Error running installadm."
-				fi
-
-			else
-				errors=y
-				echo "Unable to find default manifest for " \
-				    "install service ${service_name}"
-			fi
-		fi
-
-		if [ $errors = "n" ] ; then
-			# Install version for this AI service
-			${SVCCFG} -s ${SMF_FMRI} setprop ${service}/version = \
-			    astring: \"${AI_SERVICE_VERSION}\"
-			if [[ $? -ne 0 ]]; then
-				echo "Error running svccfg to " \
-				    "update service version."
-				errors=y
-			fi
-		fi
-
-		if [ $errors = "y" ] ; then
-			echo "Upgrade of service " \
-			    "${service_name} not completed."
-		fi
-	done
-
-	if [ $do_refresh = "y" ] ; then
-		echo "refreshing..."
-		${SVCCFG} -s ${SMF_FMRI} refresh
-	fi
-}
 
 case "$1" in
 'start')
 	# Code to execute on start
+	
+	# Ensure that no old, incompatible services exist
+	old_services=$(${SVCCFG} -s ${SMF_FMRI} listpg | ${GREP} "^AI" | ${SED} 's#AI\(.*\) .*#\1#')
+	if [ ! -z "$old_services" ]; then
+		echo "The following services are incompatible with this"
+		echo "version of $SMF_FMRI:"
+		echo $old_services
+		echo "Please run $UPGRADE_SCRIPT to upgrade them"
+		exit $SMF_EXIT_ERR_FATAL
+	fi
 
+	
 	# ensure that the default port is set
 	if [ "X${SMF_PORT}" == "X" ]; then
 		echo "The default port is not set for the service."
 		exit ${SMF_EXIT_ERR_CONFIG}
 	fi
-
-        # Check if services need to be upgraded.
-	upgrade_svc_vers_0_to_1
 
 	# First run aimdns daemon to register mDNS records for every
 	# service that is listed as enabled. 
@@ -319,6 +154,7 @@ case "$1" in
 				"config file ${AI_HTTPD_CONF}"
 		exit $SMF_EXIT_ERR_CONFIG
 	fi
+	$PYTHON $SVC_MODULE mount-all || exit $SMF_EXIT_ERR_FATAL
 	;;
 
 'stop')
@@ -345,10 +181,11 @@ case "$1" in
 				"config file ${AI_HTTPD_CONF}"
 		exit $SMF_EXIT_ERR_CONFIG
 	fi
+	$PYTHON $SVC_MODULE unmount-all || exit $SMF_EXIT_ERR_FATAL
 	;;
 
 refresh)
-	# ensure that the default port  is set
+	# ensure that the default port is set
 	if [ "X${SMF_PORT}" == "X" ]; then
 		echo "The default port is not set for the service."
 		exit ${SMF_EXIT_ERR_CONFIG}
@@ -360,6 +197,9 @@ refresh)
 	else
 		$AIMDNSD &
 	fi
+	
+	# Mount services in /etc/netboot as needed
+	$PYTHON $SVC_MODULE mount-all || exit $SMF_EXIT_ERR_FATAL
 
 	setup_main_ports
 	typeset -i ret1=$?
@@ -373,12 +213,12 @@ refresh)
 			"webserver."
 	fi
 	;;
-	
+
 *)
 	echo "Usage: $0 { start | stop | refresh }"
-	exit 1 
+	exit 1
 	;;
 
 
 esac
-exit 0
+exit $SMF_EXIT_OK

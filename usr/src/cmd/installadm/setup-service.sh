@@ -36,14 +36,10 @@ PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 
 . /usr/lib/installadm/installadm-common
 
-IMG_AI_DEFAULT_MANIFEST="/auto_install/manifest/default.xml"
-OLD_IMG_AI_DEFAULT_MANIFEST="/auto_install/default.xml"
-SYS_AI_DEFAULT_MANIFEST="/usr/share/auto_install/manifest/default.xml"
 AI_SETUP_WS=/var/installadm/ai-webserver
 AI_WS_CONF=$AI_SETUP_WS/ai-httpd.conf
-VARAI=/var/ai
+AI_SERVICE_DIR_PATH=/var/ai/service
 AIWEBSERVER="aiwebserver"
-PUBLISH_MANIFEST="/usr/sbin/ai_publish_manifest"
 ret=0
 
 #
@@ -81,32 +77,30 @@ lookup_service()
 # not a fatal error, as mDNS is not required for an installation service
 # to function.
 #
-# This method expects the service to be properly enabled/configured in
-# its smf properties; improperly configured services will cause this
-# function to return an error.
+# This method expects the service to be properly enabled/configured;
+# improperly configured services will cause this function to return an error.
 #
 # Arguments:
 #	$1 - Service Name (for example my_install)
 #
 # Returns:
-#	0 - If the service is properly configured in SMF.
-#	1 - If the service is improperly configured or not enabled in SMF.
+#	0 - If the service is properly configured.
+#	1 - If the service is improperly configured or not enabled.
 #
 refresh_smf_and_verify_service()
 {
 	name=$1
 
+
 	# check webserver port and that the service is enabled
-	port=$($SVCPROP -cp AI${name}/txt_record ${SMF_INST_SERVER} \
-	    2>/dev/null | $CUT -f 2 -d':')
+	port=$($PYTHON $SVC_CFG_MODULE listprop ${name} txt_record | $CUT -f 2 -d':')
 	if (( port <= 0 )); then
 		print "The service ${name} does not have a valid webserver" \
 		    "port set"
 		return 1
 	fi
 
-	if [[ "$($SVCPROP -cp AI${name}/status ${SMF_INST_SERVER} \
-	    2>/dev/null)" != "on" ]]; then
+	if [[ "$($PYTHON $SVC_CFG_MODULE listprop ${name} status)" != "on" ]]; then
 		print "The service ${name} is not enabled"
 		return 1
 	fi
@@ -151,10 +145,9 @@ disable_service()
 		# We will be terminating the process
 		print "Stopping the service ${name}"
 
-		# Stop the webserver corresponding to this service
-		$SVCCFG -s ${SMF_INST_SERVER} setprop AI${name}/status = "off"
-
-		# refresh the service to de-register all disabled services
+		# The status of the install service property should already
+		# be off. Refresh the service to de-register all disabled
+		# services.
 		$SVCADM refresh ${SMF_INST_SERVER}
 	else
 		ret=1
@@ -186,11 +179,7 @@ setup_data_dir()
 	# Get the configured service port
 	http_port=$($SVCPROP -cp all_services/port $SMF_INST_SERVER)
 
-	if (( port == http_port )); then
-		data_dir=$VARAI/$svcname
-	else
-		data_dir=$VARAI/$port
-	fi
+	data_dir=$AI_SERVICE_DIR_PATH/$svcname
 
 	$MKDIR -p $data_dir
 
@@ -199,62 +188,14 @@ setup_data_dir()
 	$FIND . -depth -print | $CPIO -pdmu ${data_dir} >/dev/null 2>&1
 	cd $current_dir
 
-	#
-	# Set up the default manifest for this service.
-	#
-	setup_default_manifest $svcname $data_dir $imagepath
+	# make compatibility symlink
+	if (( port != http_port )); then
+		$LN -s $data_dir $AI_SERVICE_DIR_PATH/$port 2>/dev/null
+	fi
+
 	if (( $? != 0 )); then
 		return 1
 	fi
-
-	return 0
-}
-
-#
-# Set up the default manifest for a service by using the default.xml
-# file from the service's image.  A service's manifests are internally
-# kept as files in the service's webserver ${data_dir}/AI_data directory,
-# so we simply copy the file to that directory.
-#
-# If a default.xml doesn't exist in the service's image, fall back to
-# using the default.xml on the running system.
-#
-# Arguments:
-#	$1 - The service name.
-#	$2 - The data directory for the AI webserver associated with
-#	     the service.
-#	$3 - The target imagepath directory for the service being set up.
-#
-setup_default_manifest()
-{
-	svcname=$1
-	data_dir=$2
-	imagepath=$3
-
-	if [[ -f ${imagepath}${IMG_AI_DEFAULT_MANIFEST} ]]; then
-		default_manifest_src=${imagepath}${IMG_AI_DEFAULT_MANIFEST}
-        elif [[ -f ${imagepath}${OLD_IMG_AI_DEFAULT_MANIFEST} ]]; then
-                # Support older service images by checking for the
-                # default manifest at the previous location.
-		default_manifest_src=${imagepath}${OLD_IMG_AI_DEFAULT_MANIFEST}
-	elif [[ -f ${SYS_AI_DEFAULT_MANIFEST} ]]; then
-		print "Warning: Using default manifest <" \
-		      "${SYS_AI_DEFAULT_MANIFEST}>"
-		default_manifest_src=${SYS_AI_DEFAULT_MANIFEST}
-	else
-		print "Failed to find a default manifest."
-		return 1
-	fi
-
-        ${PUBLISH_MANIFEST} -n ${svcname} -f ${default_manifest_src} \
-	    -m "orig_default" -d
-	if (( $? != 0)); then
-		return 1
-	fi
-
-	docroot=$($GREP ^DocumentRoot $AI_WS_CONF 2>/dev/null | \
-		  $AWK '{print $2}' | $CUT -d'"' -f2)
-	$LN -s $data_dir/AI_data $docroot/$svcname 2>/dev/null
 
 	return 0
 }
@@ -270,22 +211,35 @@ if (( $# < 2 )); then
 	exit 1
 fi
 
-if [[ "$1" == "register" ]]; then
+if [[ "$1" == "create" ]]; then
 	if (( $# < 4 )); then
-		print "Install Service Registration requires four arguments"
+		print "Install service creation requires four arguments"
 		exit 1
 	fi
 
 	service_name=$2
 	service_record=$3
 	service_imagepath=$4
+
+	status=0
+	# Setup the AI webserver using the servicename and image path
+	setup_data_dir $service_name $service_record $service_imagepath
+	status=$?
+elif [[ "$1" == "register" ]]; then
+	if (( $# < 3 )); then
+		print "Install service registration requires three arguments"
+		exit 1
+	fi
+
+	service_name=$2
+	service_record=$3
 	port=$(print $service_record | $GREP $AIWEBSERVER | $CUT -f2 -d'=' | $CUT -f2 -d':')
 
 	status=0
-	if [[ ! -e /var/ai/$service_name && ! -e /var/ai/$port ]] ; then
-		# Setup the AI webserver using the servicename and image path
-		setup_data_dir $service_name $service_record $service_imagepath
-		status=$?
+	if [[ ! -e $AI_SERVICE_DIR_PATH/$service_name && ! -e $AI_SERVICE_DIR_PATH/$port ]] ; then
+		# Should already be created, give error if not found
+		print "Install Service register expects existing /var/ai/service directory"
+		exit 1
 	fi
 	if (( status == 0 )); then
 		refresh_smf_and_verify_service $service_name
@@ -293,7 +247,7 @@ if [[ "$1" == "register" ]]; then
 	fi
 elif [[ "$1" == "disable" ]]; then
 	if (( $# < 2 )); then
-		print "Install Service Disabling requires two arguments"
+		print "Install service disabling requires two arguments"
 		exit 1
 	fi
 

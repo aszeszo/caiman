@@ -8,141 +8,151 @@ NAME
 SYNOPSIS
      /usr/sbin/installadm
 
-     installadm create-service [-b <property>=<value>,...]
-     [-f <bootfile>] [-n <svcname>] [-i <dhcp_ip_start> 
-     -c <count_of_ipaddr>] [-s <srcimage>] <targetdir>
+     installadm create-service
+         [-n|--service <svcname>]
+         [-t|--aliasof <existing_service>]
+         [-s|--source <srcimage>]
+         [-b|--boot-args <boot property>=<value>,...]
+         [-i|--ip-start <dhcp_ip_start>]
+         [-c|--ip-count <count_of_ipaddr>]
+         [-B|--bootfile-server <server_ipaddr>]
+         [-d|--imagepath <imagepath>]
+         [-y|--noprompt]
 
-     installadm delete-service [-x] <svcname>
+     installadm set-service
+         -o|--option <prop>=<value> <svcname>
+         prop=value can be:
+                 aliasof=<existing_service>
+                 default-manifest=<manifest/script name>
 
-     installadm list [-n <svcname>] [-c] [-m] [-p]
+     installadm rename-service <svcname> <newsvcname>
+
+     installadm delete-service 
+         [-r|--autoremove] [-y|--noprompt] <svcname>
+
+     installadm list
+         [-n|--service <svcname>]
+         [-c|--client] [-m|--manifest] [-p|--profile]
 
      installadm enable <svcname>
 
      installadm disable <svcname>
 
-     installadm add-manifest -n <svcname>
-          -f <manifest_file>  [-m <manifest_name>]
-          [-c <criteria=value|list|range> ... | -C <criteria.xml>]
+     installadm add-manifest -n|--service <svcname>
+         -f|--file <manifest_file/script file> 
+         [-m|--manifest <manifest/script name>]
+         [-c|--criteria <criteria=value|list|range> ... | 
+         -C|--criteria-file <criteria.xml>]  
+         [-d|--default]
 
-     installadm delete-manifest -m <manifest_name> -n <svcname>
+     installadm delete-manifest
+         -m|--manifest <manifest/script name> 
+         -n|--service <svcname>
 
-     installadm set-criteria -n <svcname>
-          -m <manifest_name> | -p <profile_name> ...
-          -a|-c <criteria=value|list|range> ... | -C <criteria.xml>
+     installadm set-criteria -m|--manifest <manifest/script name>
+         -p|--profile <profile_name> ...
+         -n|--service <svcname>
+         -c|--criteria <criteria=value|list|range> ... |
+         -C|--criteria-file <criteria.xml> |
+         -a|--append-criteria <criteria=value|range> ... 
 
-     installadm create-client [-b <property>=<value>,...] 
-          [-t <imagepath>] -e <macaddr> -n <svcname> 
+     installadm create-client
+         [-b|--boot-args <property>=<value>,...] 
+         -e|--macaddr <macaddr> -n|--service <svcname>
 
      installadm delete-client <macaddr>
 
-     installadm create-profile -n <svcname>  
-         -f <profile_file> ... 
-         [-p <profile_name>]
-         [-c <criteria=value|list|range> ... | 
-          -C <criteria.xml>]
+     installadm create-profile -n|--service <svcname>
+         -f|--file <profile_file>... 
+         [-p|--profile <profile_name>]
+         [-c|--criteria <criteria=value|list|range> ...] | 
+         [-C|--criteria-file <criteria_file>]
 
-     installadm delete-profile -n <svcname> -p <profile_name> ...
+     installadm delete-profile -p|--profile <profile_name> ...
+         -n|--service <svcname>
 
-     installadm export -n <svcname> -p <profile_name> ...
+     installadm export -n|--service <svcname>
+         -m|--manifest <manifest/script name> ...
+         -p|--profile <profile name> ...
+         -o|--output <pathname>
 
-     installadm validate
-         -P <profile_file> ... | 
-         -n <svcname> -p <profile_name> ...
+     installadm validate -n|--service <svcname>
+         -P|--profile-file <profile_path> ... |
+         -p|--profile <profile_name> ...
 
      installadm help [<subcommand>] 
 
 
 DESCRIPTION
 
-     The automated installer (AI) is used to automate the 
-     installation of the Oracle Solaris OS on one or more 
-     SPARC and x86 systems over a network. The 
-     installations can differ in architecture, packages 
-     installed, disk capacity, and other parameters. 
+    The automated installer (AI) is used to automate the
+     installation of the Oracle Solaris OS on one or more
+     SPARC and x86 systems over a network.
 
-     The minimal configuration necessary to use the 
-     automated installer is to have one system as the 
-     server and one client on which to install. On the 
-     server, you set up an installation service, which 
-     is associated with manifests, or specifications, 
-     for specific x86 installations or SPARC installations.
+     The machine topography necessary to employ AI over the
+     network is to have an install server, a DHCP server
+     (this can be the same system as the install server),
+     and the installation clients.  On the install server,
+     installation services are set up to contain an AI
+     boot image, which is provided to the clients in order
+     for them to boot over the network, AI manifests, one
+     of which will be selected for the client, and SMF
+     configuration profiles, zero or more of which will be
+     selected for the client.
 
-     Manifests can include information such as a target 
-     device, additional packages, partition information, 
-     and other parameters. When the client boots, a  
-     search is initiated for a manifest that matches the
-     client's machine specifications. When a matching 
-     manifest is found, the client is installed with the 
-     Oracle Solaris release according to the specifications 
-     in the manifest file.
+     The AI boot image content is available as an AI ISO
+     image which is unpacked by the create-service subcommand
+     into the installation service's image area. 
 
-     System configuration profiles are complementary to manifests
-     in that they also contain specifications for an 
+     Installation services are created with a default AI
+     manifest, but customized manifests can be added to an
+     installation service by using the add-manifest
+     subcommand.  The add-manifest subcommand also allows
+     criteria to be specified, which are used to determine
+     which manifest should be selected for an installation
+     client.  Criteria already associated with a manifest
+     can be modified using the set-criteria subcommand.
+
+     Manifests can include information such as a target device,
+     partition information, a list of packages, and other
+     parameters (see ai_manifest(4)).  When the client boots,
+     a search is initiated for a manifest that matches the
+     client's machine criteria. When a matching manifest is
+     found, the client is installed with the Oracle Solaris
+     release according to the specifications in the manifest
+     file.
+
+     System configuration profiles are complementary to
+     manifests in that they also contain specifications for an 
      installation. In particular, profiles are used to specify 
      configuration information such as user name, user password,
      timezone, hostname, and ip address.  System configuration
      profiles are processed by smf(5) and conform to document
      format service_bundle(4).
 
-     Use the installadm create-service command to set up 
-     an install server and create an install service. 
-     
-     An install service is a network entity that specifies 
-     the parameters for a particular type of installation. 
-     These specifications are defined in XML manifest 
-     files. 
-     
-     The automated installer uses AI ISO images to create 
-     the install services. An AI ISO image is a collection 
-     of software in a single file. This image is unpacked 
-     when an install service is created and used to create 
-     a net image that enables client installations.
-
-     Once an install server and an installation service are 
-     set up, you can install the Oracle Solaris release to a 
-     client on the network, per the default specifications 
-     in the install service, by booting the client system.
-
-     If you want to perform various types of installations 
-     in a network, you can create and manage additional 
-     install services tailored for each type of 
-     installation by using the installadm create-service 
-     command. For example, you can set up an install 
-     service that installs the Oracle Solaris OS to x86 
-     clients and a service that installs the Oracle Solaris
-     OS to SPARC clients.
-
-     If you have clients with varying machine specifications,
-     you can manually create or modify manifests so that the
-     manifests cover those specific machine specifications.
-     Then, you can use the installadm add-manifest command
-     to add your new manifests to an install service. You can
-     also use add-manifest to specify criteria to be used in
-     determining which manifest should be selected for an
-     installation. You can change criteria already associated
-     with a manifest with the installadm set-criteria command.
-
-     If you want a specific client to use a specific 
-     install service, you can associate a service to a 
-     client by using the installadm create-client command.
+     If you want a specific client to use a specific installation
+     service, you can associate that client with the service by
+     using the installadm create-client subcommand. You can also
+     use create-client to modify an existing client.
 
      The installadm utility can be used to accomplish the 
      following tasks:
-     - Set up install services
+     - Set up installation services and aliases
      - Set up installation images
-     - Set up or remove clients
+     - Set up or delete clients
      - Add or delete manifests
      - Specify or modify criteria for a manifest
      - Add or delete system configuration profiles
      - Validate profiles
      - Add or modify criteria for a manifest or profile
      - Export profiles
-     - Enable or disable install services
-     - List install services
-     - List manifests for an install service
-     - List profiles for an install service
+     - Enable or disable installation services
+     - List installation services
+     - List clients for an installation service
+     - List manifests for an installation service
+     - List profiles for an installation service
 
-     
+
 SUBCOMMANDS AND OPTIONS
      The installadm command has the subcommands and options 
      listed below. Also, see EXAMPLES below.
@@ -152,177 +162,230 @@ SUBCOMMANDS AND OPTIONS
 
           Displays command usage.
 
-
     
-     installadm create-service [-b <property>=<value>,...]
-     [-f <bootfile>] [-n <svcname>] [-i <dhcp_ip_start> 
-     -c <count_of_ipaddr>] [-s <srcimage>] <targetdir>
+     installadm create-service
+         [-n|--service <svcname>]
+         [-t|--aliasof <existing_service>]
+         [-s|--source <srcimage>]
+         [-b|--boot-args <boot property>=<value>,...]
+         [-i|--ip-start <dhcp_ip_start>]
+         [-c|--ip-count <count_of_ipaddr>]
+         [-B|--bootfile-server <server_ipaddr>]
+         [-d|--imagepath <imagepath>]
+         [-y|--noprompt]
 
-          Creates an install service. 
-    
-          The command provides the following functionality:    
-          - Takes an AI ISO image (<srcimage>), unpacks it, 
-            and sets up a net image in a target directory
-            (<targetdir>. The net image enables client 
-            installations.
-          - Creates an install service and makes it 
-            available on the network.
+         This command sets up a network boot image (net image)
+         in the specified imagepath directory, and creates an
+         installation service that specifies how a client booted
+         from the net image is installed.
+
+         The AI boot image content is provided as an image ISO
+         file, whose location is specified by with the -s option.
+         The resulting net image is eventually located in
+         <imagepath>.  The net image enables client
+         installations.
    
-          Note the following specifications:
-          - For SPARC install services, the first install 
-            service created on an install server is the 
-            service that will be used for all client 
-            installations that use the install server. If 
-            you want a client to use a different 
-            install service from this install server, you 
-            must use the installadm create-client command 
-            to create a client-specific configuration. 
-          - By default, both a net image and an install  
-            service are created. 
-          - If an existing install service name is provided, 
-            that existing service is used.
-          - If the -s option is not used, and the 
-            <targetdir> contains a valid net image, then a 
-            new install service is created with the 
-            existing net image.
-          - If the -i option and the -c option are used, 
-            and a DHCP server is not yet configured, a DHCP 
-            server is configured. 
-          - If an already-configured DHCP server exists, 
-            that DHCP server is updated.
+         Note the following specifications:
+         - When the first installation service of a given
+           architecture is created on an install server, an alias
+           of that service, 'default-i386' or 'default-sparc',
+           is automatically created. This default service will be
+           used for all client installations of that architecture
+           that use the install server. To change the service
+           aliased by the default-<arch> service, use the
+           installadm set-service command.
+         - If you want a client to use a different installation
+           service than the default for that architecture, you
+           must use the installadm create-client command to
+           create a client-specific configuration. 
+         - If the -i option and the -c option are used, 
+           and a DHCP server is not yet configured, a DHCP 
+           server is configured. 
+         - If an already-configured DHCP server exists, 
+           that DHCP server is updated.
+         - If the IP range requested is not on a subnet that the
+           install server has direct connectivity to and the
+           install server is multihomed, the -B option is used to
+           provide the address of the bootfile server (usually an
+           IP address on this system). This should only be
+           necessary when multiple IP addresses are configured on
+           the install server and DHCP relays are employed. In
+           all other configurations, the software can determine
+           this automatically.
 
-     -b   <property>=<value>,...
-          For x86 clients only, sets a property value
-          in the service-specific menu.lst file in /tftpboot.
-          Use this option to set boot properties that are
-          specific to this service. This option can accept
-          multiple property=value pairs.
+         -n|--name   <svcname>
+             Optional: Uses this installation service name
+             instead of a system-generated service name. 
 
-     -f   <bootfile>  
-          Uses this boot file for the install service. If 
-          boot file doesn't exist, it is created. If this 
-          option is not specified, a boot file is created 
-          with a default name.
+             If -n option is not specified, a service name is
+             generated automatically. 
 
-     -n   <svcname>
-          Uses this install service name instead of default 
-          service name.  The service name must contain only
-          alphanumeric characters, "_" and "-" and be shorter
-          then 64 characters in length.
+         -t|--aliasof   <existing_service>
+             Optional: Specifies that alias is to be created of
+             <existing_service>, providing an alternate name for
+             a service. 
 
-          Note: If the -n option is not used, a unique name 
-          for the install service is automatically assigned
-          using the format, 
-          "_install_service_<number>" or 
-          "_install_service_<port_number>" for older install
-          images. 
+         -s|--source   <srcimage>
+             Optional: Specifies path to an AI ISO image, which
+             is the data source for the net image.
 
-          For example, if the -n option was not used to 
-          provide a custom name, the previous number that 
-          installadm selected for an install service is 10 
-          and the install image is a newer image, then the
-          install service name will be "_install_service_11".
-          If the -n option was not used, the install image
-          is an older image, and the port number that installadm
-          selected for an install service is 46510, then the
-          install service name will be "_install_service_46510." 
+         -b|--boot-args   <boot property>=<value>,...
+             Optional: For x86 clients only, sets a property
+             value in the service-specific menu.lst file in the
+             service image.  Use this option to set boot
+             properties that are specific to this service. This
+             option can accept multiple property=value pairs.
 
-     -i   <dhcp_ip_start>
-          Sets up a new DHCP server. The IP addresses, 
-          starting from dhcp_address_start, are set up.
+         -i|--ip-start   <dhcp_ip_start>
+             Optional: Sets up a new DHCP server. The IP
+             addresses, starting from dhcp_ip_start, are set up.
+             The number of IP addresses is provided by the -c
+             option.
 
-     -c   <count_of_ipaddr>
-          Sets up a total number of IP addresses in the 
-          DHCP table equal to the value of the 
-          count_of_ipaddr. The first IP address is the 
-          value of dhcp_ip_start that is provided by the 
-          -i option.  
+         -c|--ip-count   <dhcp_ip_cont>
+             Optional: Sets up a total number of IP addresses in
+             the DHCP configuration equal to the value of the 
+             dhcp_ip_count.  The first IP address is the 
+             value of dhcp_ip_start that is provided by the 
+             -i option.  
 
-     -s   <srcimage>
-          Specifies location of AI ISO image to use for 
-          setting up the install service.
+         -B|--bootfile-server <server_ipaddr>
+             Optional: Used to provide the IP address of the boot
+             server from which clients should request bootfiles.
+             Only required if this IP address cannot be determined
+             by other means.
 
-     <targetdir>   
-            
-           Required: Specifies location to set up net image.
+         -d|--imagepath   <imagepath>
+             Optional: Specifies path at which to create the net
+             image. If not specified, the default location, 
+             /export/auto_install/<svcname>, will be used; a 
+             confirmation prompt is displayed unless -y is also 
+             specified.
+
+         -y|--noprompt
+             Optional: Suppresses any confirmation prompts and
+             proceeds with service creation using the supplied
+             options and any default values (see "-d").
 
 
     
-     installadm delete-service [-x] <svcname>
-
-           Deletes an install service. Accomplishes the 
-           following:
-           - Removes install service from the network.
-           - Stops the web server that is running for this 
-             install service. 
-           - Removes the manifest files and web server 
-             configuration for this install service.   
-         
-     -x    Deletes the install service and also removes the 
-           associated target net image.  
-
-     <svcname>
+     installadm set-service -o <prop>=<value> <svcname>
+       
+         Sets a property of a service to a specified value.
      
-           Required: Specifies the install service name.
+         -o|--option   <prop>=<value>
+            Specifies the property and value to set.
+
+            prop=value can be:
+                 aliasof=<existing_service>
+                 default-manifest=<manifest/script name>
+
+            - aliasof=<existing_service>
+              Used to modify the alias, svcname, to be an alias
+              of <existing_service>.
+
+            - default-manifest=<manifest/script name>
+              The default manifest of a service may not have
+              criteria actively associated with it while it is 
+              the default. If one uses installadm set-service 
+              to make a manifest the default, then its 
+              associated criteria become "inactive", and are 
+              not considered during manifest selection. 
+              Inactive criteria are clearly indicated by the 
+              installadm list command. If a different manifest
+              is later made the default, the criteria of the
+              formerly default manifest becomes active again. 
+
+         <svcname>
+              Required: Specifies the name of the installation
+              service whose property is being set.
 
 
-    
-     installadm list [-n <svcname>] [-c] [-m] [-p]
+     installadm delete-service 
+         [-r|--autoremove] [-y|--noprompt] <svcname>
 
-         Lists all enabled install services on a server.
+          Deletes an installation service. Accomplishes the 
+          following:
+          - Removes the installation service from the DHCP 
+            configuration.
+          - Deletes the manifest, profiles, client configuration
+            files, and web server configuration for this
+            installation service.   
+          - Deletes the pkg image used to instantiate the
+            service.
 
-         -c
-             Lists the clients of the install services on a local
-             server.
+         -r|--autoremove <svcname>
+            If specified, any clients assigned to this service,
+            and any services aliased to this service, are also
+            removed.
 
-         -m
-             Lists the manifests associated with the install ser-
-             vices on a local server.
+         -y|--noprompt
+             Suppresses any confirmation prompts and proceeds 
+             with service deletion. 
 
-         -n <svcname>
-             Lists information about the specific install service
-             on a local server. Or:
-               - if the -c option is specified, lists the client 
-                 information associated with the install service. 
-               - if the -m option is specified, lists the 
-                 manifests associated with the install service. 
-               - if the -p option is specified, lists the 
-                 profiles associated with the install service.
-
-         -p 
-             Lists the profiles associated with the install ser-
-             vices on a local server.
+         <svcname>
+             Required: Specifies the installation service name 
+             to delete.
 
 
      installadm enable <svcname>
 
-          Enables a specified install service. Also,
-          enables the web server associated with the
-          service.
+          Enables a specified installation service. Also, enables
+          the web server associated with the service.
 
-     <svcname>
-
-           Required: Specifies the name of the install
-           service to be enabled.
-
+         <svcname>
+            Required: Specifies the name of the installation
+            service to be enabled.
 
 
      installadm disable <svcname>
 
-          Disables a specified install service. Also, 
-          disables the web server associated with the 
-          service.
+          Disables a specified installation service. Also, 
+          disables the web server associated with the service.
 
-     <svcname>
-     
-          Required: Specifies the name of the install 
-          service to be disabled.
+         <svcname>
+            Required: Specifies the name of the installation
+            service to be disabled.
+
+    
+     installadm list
+         [-n|--service <svcname>]
+         [-c|--client] [-m|--manifest] [-p|--profile]
+
+         Lists all enabled installation services on a server.
+
+         -n|--service <svcname>
+             Optional: Lists information about the specific
+             installation service on a local server. Or:
+               - if the -c option is specified, lists the client 
+                 information associated with the installation 
+                 service. 
+               - if the -m option is specified, lists the 
+                 manifests associated with the installation 
+                 service. 
+               - if the -p option is specified, lists the 
+                 profiles associated with the installation 
+                 service.
+
+         -c|--client
+             Optional: Lists the clients of the installation
+             services on a local server.
+
+         -m|--manifest
+             Optional: Lists the manifests associated with the 
+             installation services on a local server.
+
+         -p|--profile 
+             Optional: Lists the profiles associated with the 
+             installation services on a local server.
 
 
-
-     installadm add-manifest -n <svcname>
-     -f <manifest_file>  [-m <manifest_name>]
-     [-c <criteria=value|list|range> ... | -C <criteria.xml>]
+     installadm add-manifest -n|--service <svcname>
+         -f|--file <manifest_file/script file> 
+         [-m|--manifest <manifest/script name>]
+         [-c|--criteria <criteria=value|list|range> ... | 
+         -C|--criteria-file <criteria.xml>]  
+         [-d|--default]
 
           Associates manifests with a specific install 
           service, thus making the manifests available on 
@@ -337,56 +400,68 @@ SUBCOMMANDS AND OPTIONS
           2) manifest name attribute, if present
           3) manifest filename
 
-     -f   <manifest_file> 
-          Required: Specifies the path name of the manifest
-          to add.
+         -n|--service   <svcname>
+              Required: Specifies the name of the install 
+              service this manifest is to be associated with.
 
-     -n   <svcname>
-          Required: Specifies the name of the install 
-          service this manifest is to be associated with.
+         -f|--file   <manifest_file> 
+              Required: Specifies the path name of the manifest
+              to add.
 
-     -m   <manifest_name> 
-          Optional: Specifies the name of the AI manifest.
+             services on a local server.
+         -m|--manifest   <manifest_name> 
+              Optional: Specifies the name of the AI manifest.
     
-     -c   <-c <criteria=value|list|range> ...> 
-          Optional: Specifies criteria to be associated with the
-          added non-default manifest. When publishing a default
-          manifest, criteria must not be specified. When 
-          publishing a non-default manifest, criteria must be
-          specified.
+         -c|--criteria   <-c <criteria=value|list|range> ...> 
+              Optional: Specifies criteria to be associated with
+              the added non-default manifest. When publishing a
+              default manifest, criteria must not be specified.
+              When publishing a non-default manifest, criteria
+              must be specified.
 
-     -C   <criteria.xml> 
-          Optional: Specifies the path name of a criteria 
-          XML file containing criteria to be associated with the
-          added non-default manifest. When publishing a default
-          manifest, criteria must not be specified. When 
-          publishing a non-default manifest, criteria must be 
-          specified.
+         -C|--criteria-file   <criteria.xml> 
+              Optional: Specifies the path name of a criteria 
+              XML file containing criteria to be associated with
+              the added non-default manifest. When publishing a
+              default manifest, criteria must not be specified.
+              When publishing a non-default manifest, criteria
+              must be specified.
+
+         -d|--default
+              Optional: Specifes that this manifest is the
+              new default manifest for the service. Any criteria
+              associated with the manifest are immediately 
+              inactive.
+    
 
 
-     installadm delete-manifest -m <manifest_name> -n <svcname>
+     installadm delete-manifest
+         -m|--manifest <manifest/script name> 
+         -n|--service <svcname>
 
           Deletes a manifest that was published with a 
-          specific install service.
+          specific installation service.
 
-     -m   <manifest_name> 
+     -m|--manifest   <manifest_name> 
           Required: Specifies the name of an AI manifest 
           as output by installadm list with -n option.
 
-     -n   <svcname>
+     -n|--service   <svcname>
           Required: Specifies the name of the install 
           service this manifest is associated with.
 
     
-     installadm create-profile -n <svcname>  
-           -f <profile_file> ... -p <profile_name>
-          [-c <criteria=value|list|range> ... | -C <criteria.xml>]
+     installadm create-profile -n|--service <svcname>
+         -f|--file <profile_file>... 
+         [-p|--profile <profile_name>]
+         [-c|--criteria <criteria=value|list|range> ...] | 
+         [-C|--criteria-file <criteria_file>]
 
-         Associates profiles with a specific install service. 
-         Criteria can optionally be associated with a profile by 
-         either entering them on the command line (-c) or via a 
-         criteria XML file (-C).  Profiles created without 
-         criteria are associated with all clients of the 
+         Associates profiles with a specific installation
+         service. Criteria can optionally be associated with a
+         profile by either entering them on the command line (-c)
+         or via a criteria XML file (-C).  Profiles created
+         without criteria are associated with all clients of the
          service.
 
          The name of the profile is derived from (in order):
@@ -399,46 +474,50 @@ SUBCOMMANDS AND OPTIONS
          option is invalid and the names of the profiles
          are derived from their filenames.
 
-         -c   <criteria=value|list|range> ... 
-              Specifies criteria to be associated with the
-              profile(s).
+         -n|--service   <svcname>
+              Required: Specifies the name of the installation
+              service of the profile being updated.
 
-         -C   <criteria.xml> 
-              Specifies the path name of a criteria XML file
-              containing criteria to be associated with the
-              specified profile(s). 
-
-         -f   <profile> 
-              Specifies the path name of the file with which to 
-              add the profile. Multiple profiles may be 
+         -f|--file   <profile_file> 
+              Required: Specifies the path name of the file with
+              which to add the profile. Multiple profiles may be 
               specified. 
     
-         -n   <svcname>
-              Specifies the name of the install service of the 
-              profile being updated.
+         -p|--profile   <profile_name> 
+              Optional: Specifies the name of the profile being
+              created. Valid only for single profile creation.
 
-         -p   <profile_name> 
-              Specifies the name of the profile being created. 
-              Valid only for single profile creation.
+         -c|--criteria   <criteria=value|list|range> ... 
+              Optional: Specifies criteria to be associated
+              with the profile(s).
+
+         -C|--criteria_file   <criteria.xml> 
+              Optional: Specifies the path name of a criteria
+              XML file containing criteria to be associated
+              with the specified profile(s). 
 
 
-     installadm delete-profile -n <svcname> -p <profile_name> ...
+     installadm delete-profile -p|--profile <profile_name> ...
+         -n|--service <svcname>
 
          Deletes a profile that is associated with a specific 
-         install service.
+         installation service.
     
-         -n   <svcname>
-              Specifies the name of the install service of the 
-              profile being deleted.
+         -p|--profile   <profile_name> 
+              Required: Specifies the name of the profile to
+              delete.
 
-         -p   <profile_name> 
-              Specifies the name of the profile to delete.
+         -n|--service   <svcname>
+              Required: Specifies the name of the installation
+              service of the profile being deleted.
 
 
-     installadm set-criteria  -n <svcname> 
-         [-m <manifest_name>] [-p <profile_name> ...]
-         {-a|-c <criteria=value|list|range> ... } |
-         { -C <criteria.xml> }
+     installadm set-criteria -m|--manifest <manifest/script name>
+         -p|--profile <profile_name> ...
+         -n|--service <svcname>
+         -c|--criteria <criteria=value|list|range> ... |
+         -C|--criteria-file <criteria.xml> |
+         -a|--append-criteria <criteria=value|list|range> ... 
 
          Updates criteria of an already published manifest,
          profile, or both. Criteria can be specified via the 
@@ -449,79 +528,84 @@ SUBCOMMANDS AND OPTIONS
          Valid criteria are described under the add-manifest
          subcommand.
 
-         -a   <criteria=value|list|range> 
-              Specifies criteria to be appended to the existing 
-              criteria for the manifest or profile. If the
-              criteria specified already exists, the
-              value/list/range of that criteria is replaced by
-              the specified value/list/range.
+         -m|--manifest   <manifest_name> 
+              Specifies the name of a manifest.
 
-         -c   <criteria=value|list|range>  
+         -p|--profile   <profile_name> 
+              Specifies the name of a profile.  Any number
+              of profiles can be specified.
+
+         -n|--service   <svcname>
+              Required: Specifies the name of the installation
+              service associated with this manifest or profile.
+
+         -c|--criteria   <criteria=value|list|range>  
               Specifies criteria to replace all existing 
               criteria for the manifest or profile.
 
-         -C   <criteria.xml> 
+         -C|--criteria-file   <criteria.xml> 
               Specifies the path name of a criteria XML file 
               containing criteria to replace all existing 
               criteria for the manifest or profile.
 
-         -m   <manifest_name> 
-              Specifies the name of a manifest.
-
-         -n   <svcname>
-              Specifies the name of the install service this 
-              manifest or profile is associated with.
-
-         -p   <profile_name> 
-              Specifies the name of a profile.  Any number
-              of profiles can be specified.
+         -a|--append-criteria   <criteria=value|list|range> 
+              Specifies criteria to be appended to the existing 
+              criteria for the manifest or profile. If the
+              criteria specified already exists, the 
+              value/list/range of that criteria is replaced by 
+              the specified value/list/range.
 
 
-
-     installadm export -n <svcname> -p <profile_name> ...
+     installadm export -n|--service <svcname>
+         -m|--manifest <manifest/script name> ...
+         -p|--profile <profile name> ...
+         -o|--output <pathname>
 
          Displays (exports) specified profiles belonging to a
          service to stdout.
 
+         -n|--service   <svcname>
+              Required: Specifies the installation service 
+              associated with the profile to export.
+   
+         -m|--manifest   <manifest_name> 
+              Specifies the name of a manifest.
 
-     -n   <svcname>
-          Required: Specifies the install service associated
-          with the profile to export.
+         -p|--profile   <profile_name>
+              Required: Specifies the name of the profile to
+              export. Any number of profiles can be specified.
    
-     -p   <profile_name>
-          Required: Specifies the name of the profile to export.
-          Any number of profiles can be specified.
+         -o|--output   <pathname>
+              Optional: Specifies the pathname of output
+              file.
    
-     installadm create-client [-b <property>=<value>,...] 
-     [-t <imagepath>] -e <macaddr> -n <svcname> 
+
+     installadm create-client
+         [-b|--boot-args <property>=<value>,...] 
+         -e|--macaddr <macaddr> -n|--service <svcname>
 
           Accomplishes optional setup tasks for a specified 
-          client, in order to provide custom client 
-          settings that vary from the default settings used 
-          by the installadm create-service command. Enables 
-          user to specify a non-default service name and 
-          image path for a client:
-          - Specifies installation service for that client.
-          - Sets up DHCP macro, if it doesn't exist.
+          client, in order to provide custom client settings
+          that vary from the default settings used by the
+          installadm create-service command. Enables user to 
+          specify a non-default service name and boot arguments
+          for a client. Can also be used to modify an existing
+          client.
     
-     -b   <property>=<value>,...
-          For x86 clients only, sets a property value 
-          in the client-specific menu.lst file in /tftpboot.  
-          Use this option to set boot properties that are 
-          specific to this client. This option can accept
-          multiple property=value pairs.
+          -b|--boot-args   <property>=<value>,...
+              Optional: For x86 clients only, sets a property 
+              value in the client-specific menu.lst file in
+              /etc/netboot. Use this option to set boot
+              properties that are specific to this client. This
+              option can accept multiple property=value pairs.
 
-     -e   <macaddr>
-          Required: Specifies a MAC address for the client.
+          -e|--macaddr   <macaddr>
+              Required: Specifies a MAC address for the client.
     
-     -n   <svcname>
-          Required: Specifies the install service for client 
-          installation.
+          -n|--service   <svcname>
+              Required: Specifies the installation service for
+              client installation.
    
-     -t   <imagepath>
-          Specifies the path of the net image to be used with 
-          automated installer.
-    
 
      installadm delete-client <macaddr>
 
@@ -529,14 +613,14 @@ SUBCOMMANDS AND OPTIONS
           information that was previously set up using the 
           installadm create-client command.
 
-     <macaddr>
-     
-          Required: Specifies a MAC address for the client.
+          <macaddr>
+              Required: Specifies the MAC address of the client
+              to delete.
 
 
-     installadm validate
-         -n <svcname> 
-         -p|--profile <profile_name> ... | -P <profile_file> ... |
+     installadm validate -n|--service <svcname>
+         -P|--profile-file <profile_path> ... |
+         -p|--profile <profile_name> ...
 
           Validates specified profile(s).  The validate
           subcommand can be used to either validate
@@ -544,14 +628,14 @@ SUBCOMMANDS AND OPTIONS
           profiles while they are being developed before
           their entry into the database (-P).
 
-         -n   <svcname>
-              Specifies the service with which the profile(s)
-              are associated.
+         -n|--service   <svcname>
+              Required: Specifies the service with which the
+              profile(s) are associated.
 
-         -P   <profile_file> 
+         -P|--profile-file   <profile_file> 
               Specifies an external profile file to validate.
 
-         -p   <profile_name> 
+         -p|--profile   <profile_name> 
               Specifies the name of the profile to validate.
 
 
@@ -657,125 +741,92 @@ CRITERIA FILES
 EXAMPLES
 
 
-     Example 1: Set up an install server and an install 
-     service for the first time. The command includes a 
-     starting IP address and total count of IP addresses, 
-     in order to configure the DHCP server.
+     Example 1: Set up an install server and an x86 installation
+     service for the first time. The command includes a starting
+     IP address and total count of IP addresses, in order to
+     configure the DHCP server.
 
-     Example% # installadm create-service -n 0906x86 \ 
-     -i 10.6.68.201 -c 5 -s \
-     /export/aiimages/osol-0906-ai-x86.iso \
-     /export/aiserver/osol-0906-ai-x86
-
-
-     In this example, the terminal displays the progress 
-     as follows:
-
-     Setting up the target image at 
-     /export/aiserver/osol-0906-ai-x86 ...
-     Registering the service 0906x86._OSInstall._tcp.local
-     Creating DHCP Server
-     Created DHCP configuration file.
-     Created dhcptab.
-     Added "Locale" macro to dhcptab.
-     Added server macro to dhcptab - line1-x4100.
-     DHCP server started.
-     Added network macro to dhcptab - 10.0.0.0.
-     Created network table.
-     copying boot file to 
-     /tftpboot/pxegrub.I86PC.Solaris-1
-     Service discovery fallback mechanism set up
-
-     The AI ISO image is at 
-     /export/aiimages/osol-0906-ai-x86.iso. The command 
-     sets up a net image and an install service that is 
-     based on the AI ISO image.
-
-     The installation net image is created in the 
-     /export/aiserver/osol-0906-ai-x86 target directory. 
-     This net image enables client installations.
-
-     The progress display shows that the install service, 
-     named 0906x86, is created. 
-
-     A boot file is created, also named 0906x86, 
-     under /tftpboot. The client will get this file name 
-     through DHCP. The command also creates a link from 
-     the net image at /export/aiserver/osol-0906-ai-x86 
-     to a web server that is running on port 5555.
-    
-     The DHCP server and macro is created. The starting 
-     IP address is 0.6.68.201. Five IP addresses are 
-     allocated for clients. The command results 
-     identify the macro as dhcp_macro_0906x86.
+     # installadm create-service -n sol-11-i386-svc
+       -s /export/isos/sol-11-i386.iso 
+       -i 172.0.0.10 -c 10 -d /export/images/soli386
 
 
+     The AI ISO image is at /export/isos/sol-11-i386.iso.
+     The command sets up a net image and an installation service
+     that is based on the AI ISO image,
+     at /export/images/soli386.  This net image enables client
+     installations.
 
-     Example 2: Use the following sample command to set 
-     up a client that references a specific install service 
-     and a specific net image location.
+     The DHCP server is created. The starting IP address is
+     172.0.0.10 and ten IP addresses are allocated for clients.
 
-     The install service and net image should already exist. 
+     Because this is the first i386 service created, the
+     default-i386 service, is automatically created and aliased
+     to this service. The default-i386 alias is operational and
+     a client booted via PXE will boot and install from the
+     default-i386 service.
 
-     # installadm create-client -b "console=ttya" \
-     -e 0:e0:81:5d:bf:e0 -t \
-     /export/aiserver/osol-0906-ai-x86 -n 0906x86
 
-     In this example, the terminal displays the 
-     following output:
+     Example 2: Set up a SPARC installation service for the first
+     time. 
 
-     ---
-     Setting up X86 client...
-     Service discovery fallback mechanism set up
+     # installadm create-service -n sol-11-sparc-svc
+       -s /export/isos/sol-11-sparc.iso 
+       -d /export/images/solsparc
 
-     Detected that DHCP is not set up on this server.
-     If not already configured, please create a DHCP macro
-     named 0100E0815DBFE0 with:
-     Boot server IP (BootSrvA) : 10.6.68.29
-     Boot file      (BootFile) : 0100E0815DBFE0
-     If you are running the Solaris DHCP Server, use the 
-     following command to add the DHCP macro, 
-     0100E0815DBFE0:
-     /usr/sbin/dhtadm -g -A -m 0100E0815DBFE0 -d \    
-     :BootSrvA=10.6.68.29:BootFile=0100E0815DBFE0:\
-     GrubMenu=menu.lst.0100E0815DBFE0:
 
-     Note: Be sure to assign client IP address(es) if needed
-     (e.g., if running the Solaris DHCP Server, run pntadm(1M)).
-     ----
+     The AI ISO image is at /export/isos/sol-11-sparc.iso.
+     The command sets up a net image and an installation service
+     that is based on the AI ISO image, at
+     /export/images/solsparc.  This net image enables client
+     installations.
 
-     In this example, the command creates a 
-     client-specific setup for the system with MAC address 
-     of 0:e0:81:5d:bf:e0. 
-     
-     This client will use the install service previously 
-     set up, named 0906x86, and the net image at 
-     /export/aiserver/osol-0906-ai-x86.
+     Because this is the first SPARC service created, the
+     default-sparc service, is automatically created and aliased
+     to this service. The default-sparc alias is operational and
+     a SPARC client will boot and install from the default-sparc
+     service.
 
-     Using the -b option, the command sets the console 
-     value, <console=ttya>, in the client-specific 
-     menu.lst file in /tftpboot.
+
+     Example 3: Use the following sample command to set 
+     up a client that references a specific installation service.
+     The installation service should already exist. 
+
+     # installadm create-client -b "console=ttya"
+     -e 0:e0:81:5d:bf:e0 -n my-i386-service
+
+     In this example, the command creates a client-specific setup
+     for the system with MAC address of 0:e0:81:5d:bf:e0. This
+     client will use the installation service previously set up,
+     named my-i386-service, and that service's associated net
+     image. The command sets the boot property, console=ttya, in
+     the client-specific menu.lst file in /etc/netboot.
  
-     As shown above, this command outputs the name of 
-     the client-specific macro, 0100E0815DBFE0,
-     and its values that need to be added to the DHCP 
-     server. If you have a Sun DHCP server, create the 
-     above macro on your DHCP server by running the dhtadm 
-     command from the output on your DHCP server.
 
-     The pntadm(1M) command may need to be called if you 
-     set up a Sun DHCP server and client IP addresses 
-     need to be assigned.  See the pntadm(1M) manpage for 
-     more information.
+     Example 4: Use the following sample command to add a new
+     service named my-sparc-service, retaining existing services,
+     and leaving the existing default unchanged:
 
-     On systems which support graphic interfaces, the 
-     DHCP Manager may be used instead of the dhtadm or 
-     pntadm commands. See the dhcpmgr(1M) manpage for more 
-     information.
+     # installadm create-service -n my-sparc-service
+       -s /export/isos/mysparc.iso 
+       -d /export/ai/mysparc-image
 
-     
-     Example 3: Use the following sample command to replace
-     the default manifest for an existing install service,
+
+     Example 5: Use the following two sample commands to add a
+     new service named my-sparc-service, retaining existing
+     services, and making the new service the default for 
+     SPARC clients:
+
+     # installadm create-service -n my-sparc-service
+       -s /export/isos/mysparc.iso 
+       -d /export/ai/mysparc-image
+
+     # installadm set-service
+       -o aliasof=my-sparc-service default-sparc
+
+
+     Example 6: Use the following sample command to replace
+     the default manifest for an existing installation service,
      service_092910, with a custom manifest, my_manifest.xml.
      The manifest contains a name attribute, name="default",
      which designates it as the default manifest, i.e.:
@@ -785,8 +836,8 @@ EXAMPLES
      -n service_092910
 
 
-     Example 4: Use the following  sample  command  to  list  the
-     install services on a local server:
+     Example 7: Use the following sample command to list the
+     installation services on a local server:
 
          # installadm list
 
@@ -795,37 +846,39 @@ EXAMPLES
 .sp
 .in +9
 .nf
-Service Name Status       Arch  Port  Image Path
------------- ------       ----  ----  ----------
-svc-2008-11  off          x86   45602 /export/server/osol-0811-ai-x86
-svc-2009-06  on           x86   45601 /export/server/osol-0906-ai-x86
-svc-bld-127  on           x86   45603 /export/server/osol-b127-ai-x86
+Service Name     Alias Of         Status  Arch  Image Path 
+------------     --------         ------  ----  ---------- 
+default-i386     sol-11-i386-svc  on      x86   /export/images/soli386
+default-sparc*   sol-11-sparc-svc on      Sparc /export/images/solsparc
+sol-11-i386-svc  -                on      x86   /export/images/soli386
+sol-11-sparc-svc -                on      Sparc /export/images/solsparc
 .fi
 .in -9
 .sp
 
-     Example 5: Use the following  sample  command  to  list  the
-     clients for a specific install service of a local server:
+     Example 8: Use the following sample command to list the
+     clients of a specific installation service on a local
+     server:
 
-         # installadm list -c -n svc-2009-06
+         # installadm list -c -n my-x86-service
 
      In this example, the terminal displays the following output:
 
 .sp
 .in +9
 .nf
-Service Name Client Address    Arch  Image Path
------------- --------------    ----  ----------
-svc-2009-06  01:C2:52:E6:4B:E1 x86   /export/server/osol-0906-ai-x86
+Service Name   Client Address    Arch  Image Path 
+------------   --------------    ----  ---------- 
+my-x86-service 01:C2:52:E6:4B:E1 i386  /export/images/myimage
 .fi
 .in -9
 .sp
 
-     Example 6: Use the following sample command to list the man-
-     ifests associated with a specific install service on a local
-     server:
+     Example 9: Use the following sample command to list the 
+     manifests associated with a specific installation service on
+     a local server:
 
-         # installadm list -m -n svc-2009-06
+         # installadm list -m -n my-x86-service
 
      In this example, the terminal displays the following output:
 
@@ -842,7 +895,7 @@ devpublisher.xml  arch     = i86pc
 .in -9
 .sp
 
-     Example 7: Use the following sample command to list the 
+     Example 10: Use the following sample command to list the 
      profiles on a local server:
 
          # installadm list -p
@@ -865,7 +918,8 @@ svc0819      profile4.xml
 .in -9
 .sp
 
-     Example 8: Use the following sample command to add the
+
+     Example 11: Use the following sample command to add the
      manifest in /export/my_manifest to svc1 with a criterion of
      MAC address equaling "aa:bb:cc:dd:ee:ff":
 
@@ -888,7 +942,7 @@ my_manifest       mac      = AA:BB:CC:DD:EE:FF
 .sp
 
 
-     Example 9: Use the following sample command to add the 
+     Example 12: Use the following sample command to add the 
      manifest in /export/my_manifest to svc1 with the criterion
      of IPv4 range between 10.0.2.100 to 10.0.2.199:
 
@@ -910,7 +964,7 @@ chosen_name       ipv4 = 10.0.2.100 - 10.0.2.199
 .in -9
 .sp
 
-     Example 10: Use the following sample command to add the
+     Example 13: Use the following sample command to add the
      manifest in /export/manifest3 to svc1 with criteria of
      2048MB memory or greater and an architecture of i86pc:
 
@@ -933,7 +987,7 @@ my_name           arch = i86pc
 .in -9
 .sp
 
-     Example 11: Use the following sample command to add the
+     Example 14: Use the following sample command to add the
      profile in /export/profile4 to svc1 with criteria of
      any of the hostnames 'myhost1', 'host3', or 'host6':
 
@@ -951,14 +1005,14 @@ profile4         hostname = myhost1 host3 host6
 .in -9
 .sp
 
-     Example 12: Use the following sample command to append to
+     Example 15: Use the following sample command to append to
      the criteria of manifest2 of svc1, a criterion of 4096MB
      memory or greater:
 
          # installadm set-criteria -m manifest2 -n svc1
            -a MEM="4096-unbounded"
      
-     Example 13: Use the following sample command to replace the
+     Example 16: Use the following sample command to replace the
      criteria of manifest2 of svc1 with the criteria specified by 
      the file, /tmp/criteria.xml:
 
@@ -968,17 +1022,18 @@ profile4         hostname = myhost1 host3 host6
      See the CRITERIA FILES section for more information on the
      contents of the criteria xml file.
 
-     Example 14:  Use the following sample command to validate
+     Example 17:  Use the following sample command to validate
      the profiles stored in the file myprofdir/myprofile.xml 
      and herprofdir/herprofile.xml during their development:
 
-         # installadm validate -P myprofdir/myprofile.xml \
+         # installadm validate -P myprofdir/myprofile.xml 
             -P herprofdir/herprofile.xml -n svc1
 
-     Example 15:  Use the following sample command to export 
+     Example 18:  Use the following sample command to export 
      the profile, myprofile.xml in service, svc1:
 
          # installadm export -p myprofile.xml -n svc1
+
 
 ATTRIBUTES
      See attributes(5) for descriptions of the  following  attri-
@@ -993,7 +1048,7 @@ ATTRIBUTES
 
 
 SEE ALSO
-     pntadm(1M), dhcpmgr(1M), smf(5), service_bundle(4), attributes(5)
+     dhcpd.conf(5), isc-dhcp(5), smf(5), service_bundle(4), attributes(5)
 
      Oracle Solaris Automated Installer Guide on
      http://docs.sun.com/

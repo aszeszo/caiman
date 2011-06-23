@@ -21,131 +21,24 @@
 #
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
-''' Auto Installer mDNS and DNS Service Discovery class and application.
+'''
+Auto Installer mDNS and DNS Service Discovery class and application.
 '''
 import gettext
-import pybonjour as pyb
 import select
 import signal
 import sys
+
+import pybonjour as pyb
+
 import osol_install.auto_install.installadm_common as common
+import osol_install.auto_install.service_config as config
 import osol_install.libaimdns as libaimdns
 import osol_install.libaiscf as smf
 import osol_install.netif as netif
 
-# location of the process ID file
-MASK_TUPLE = (0, 128, 192, 224, 240, 248, 252, 254, 255)
 
-
-def _convert_ipv4(ip):
-    '''Converts an IPv4 address into an integer
-       Args:
-            ip - IPv4 address to convert
-
-       Returns:
-            an integer of the converted IPv4 address
-
-       Raises:
-            None
-    '''
-    seg = ip.split('.')
-    return (int(seg[3]) << 24) + (int(seg[2]) << 16) + \
-            (int(seg[1]) << 8) + int(seg[0])
-
-
-def _convert_cidr_mask(cidr_mask):
-    '''Converts a CIDR mask into an IPv4 mask
-        Args:
-            cidr_mask - CIDR mask number
-
-        Returns:
-            IPv4 mask address
-
-        Raises:
-            None
-    '''
-    # edge cases
-    if cidr_mask > 32:
-        return None
-    if cidr_mask == 0:
-        return '0.0.0.0'
-
-    mask = ['255'] * (cidr_mask // 8)
-
-    if len(mask) != 4:
-        # figure out the partial octets
-        index = cidr_mask % 8
-        mask.append(str(MASK_TUPLE[index]))
-
-    if len(mask) != 4:
-        mask.extend(['0'] * (3 - (cidr_mask // 8)))
-
-    # join the mask array together and return it
-    return '.'.join(mask)
-
-
-def compare_ipv4(ipv4_one, ipv4_two):
-    '''Compares two IPv4 address
-       Args:
-           ipv4_one - IPv4 address, can contain CIDR mask
-           ipv4_two - IPv4 address, can contain CIDR mask
-
-       Returns:
-           True if ipv4_one equals ipv4_two else
-           False
-
-       Raises:
-           None
-    '''
-    # ensure there is no '/' (slash) in the first address,
-    # effectively ignoring the CIDR mask.
-    slash = ipv4_one.find('/')
-    if '/' in ipv4_one:
-        ipv4_one = ipv4_one[:slash]
-    ipv4_one_num = _convert_ipv4(ipv4_one)
-
-    # convert ipv4_two taking into account the possible CIDR mask
-    if '/' not in ipv4_two:
-        mask_two = _convert_cidr_mask(0)
-        ipv4_two_num = _convert_ipv4(ipv4_two)
-    else:
-        mask_two = _convert_cidr_mask(int(ipv4_two.split('/')[-1]))
-        if not mask_two:
-            return False  # invalid mask
-        ipv4_two_num = _convert_ipv4(ipv4_two.split('/')[0])
-    mask_two_num = _convert_ipv4(mask_two)
-
-    if '/' in ipv4_two and \
-         mask_two_num & ipv4_two_num == mask_two_num & ipv4_one_num:
-        return True
-    elif ipv4_one_num == ipv4_two_num:
-        return True
-
-    return False
-
-
-def in_networks(inter_ipv4, networks):
-    '''Description:
-        Checks to see if a single IPv4 address is in the list of
-        networks
-
-    Args:
-        inter_ipv4 - an interface IPv4 address
-        networks   - a list of networks from the SMF property networks
-
-    Returns:
-        True if the interface's IPv4 address is in the network -- OR --
-        False if it is not
-
-    Raises:
-        None
-    '''
-    # iterate over the network list
-    for network in networks:
-        # check if the interface's IPv4 address is in the network
-        if compare_ipv4(inter_ipv4, network):
-            return True
-    return False
+_ = common._
 
 
 class AIMDNSError(Exception):
@@ -168,7 +61,7 @@ class AImDNS(object):
 
     # mDNS record resolved variable, used as a stack to indicate that the
     # service has been found, private
-    _resolved = []
+    _resolved = list() 
 
     def __init__(self, servicename=None, domain='local', comment=None):
         '''Method: __init__, class private
@@ -186,7 +79,7 @@ class AImDNS(object):
         # find sdref handle
         self._find = None
         self._lookup = False
-        self.services = {}
+        self.services = dict()
         self.servicename = servicename
         self.domain = domain
         self.txt = comment
@@ -197,7 +90,7 @@ class AImDNS(object):
         self.done = False
         self.count = 0
 
-        self.sdrefs = {}
+        self.sdrefs = dict()
 
         self.interfaces = libaimdns.getifaddrs()
 
@@ -219,8 +112,6 @@ class AImDNS(object):
         self.done = True
         self.clear_sdrefs()
 
-    # pylint: disable-msg=W0613
-    # disabled for sdref, flags
     def _resolve_callback(self, sdref, flags, interfaceindex, errorcode,
                           fullname, hosttarget, port, txtrecord):
         '''Method: _resolve_callback, class private
@@ -257,21 +148,18 @@ class AImDNS(object):
             interface = netif.if_indextoname(interfaceindex)
             # interested in the service name and the domain only
             parts = fullname.split('.')
-            service = {}
+            service = dict()
             service['flags'] = not (flags & pyb.kDNSServiceFlagsAdd)
             service['hosttarget'] = hosttarget
             service['servicename'] = parts[0]
             service['domain'] = parts[-2]
             service['port'] = port
             service['comments'] = str(pyb.TXTRecord.parse(txtrecord))[1:]
-            self.services.setdefault(interface, []).append(service)
+            self.services.setdefault(interface, list()).append(service)
 
             # update the resolve stack flag
             self._resolved.append(True)
-    # pylint: enable-msg=W0613
 
-    # pylint: disable-msg=W0613
-    # disabled for sdref, flags
     def _browse_callback(self, sdref, flags, interfaceindex, errorcode,
                          servicename, regtype, replydomain):
         '''Method: _browse_callback, class private
@@ -312,7 +200,7 @@ class AImDNS(object):
         try:
             while not self._resolved:
                 try:
-                    ready = select.select([resolve_sdref], [], [],
+                    ready = select.select([resolve_sdref], list(), list(),
                                            self.timeout)
                 except select.error:
                     # purposely ignore errors.
@@ -323,7 +211,7 @@ class AImDNS(object):
                     # simply warn that the mDNS service record needed
                     # additional time to process and do not issue an
                     # exception.
-                    sys.stderr.write(_('warning:unable to resolve "%s", '
+                    sys.stderr.write(_('warning: unable to resolve "%s", '
                                        'try using a longer timeout\n') %
                                        servicename)
                     break
@@ -335,7 +223,6 @@ class AImDNS(object):
         finally:
             # clean up when there is no exception
             resolve_sdref.close()
-    # pylint: enable-msg=W0613
 
     def _handle_events(self):
         ''' Method: __handle_events, class private
@@ -372,10 +259,10 @@ class AImDNS(object):
             #
             # This must be converted to a simple list of sdrefs for the
             # select() call.
-            therefs = []
+            therefs = list()
             # iterate through the dictionary
             for srv in self.sdrefs:
-                for refs in self.sdrefs.get(srv, []):
+                for refs in self.sdrefs.get(srv, list()):
                     if refs is not None:
                         therefs.append(refs)
 
@@ -390,7 +277,8 @@ class AImDNS(object):
                 try:
                     # process the appropriate service reference
                     try:
-                        ready = select.select(therefs, [], [], self.timeout)
+                        ready = select.select(therefs, list(), list(),
+                                              self.timeout)
                     except select.error:
                         continue
 
@@ -416,8 +304,6 @@ class AImDNS(object):
                 except KeyboardInterrupt:
                     self.done = True
 
-    # pylint: disable-msg=W0613
-    # disabled for sdref, flags
     def _register_callback(self, sdref, flags, errorcode, name,
                            regtype, domain):
         '''Method: _register_callback, private to class
@@ -448,7 +334,6 @@ class AImDNS(object):
             print _('\tname    = %s') % name
             print _('\tregtype = %s') % regtype
             print _('\tdomain  = %s') % domain
-    # pylint: enable-msg=W0613
 
     def _register_a_service(self, name, interfaces=None, port=0,
                             comments=None):
@@ -483,67 +368,41 @@ class AImDNS(object):
 
         smf_port = None
         # if port is 0 then processing an AI service
-        if port is 0:
-            try:
-                serv = smf.AIservice(self.instance, name)
-            except KeyError:
-                raise AIMDNSError(_('error:aiMDNSError:no such install '
+        if port == 0:
+            serv = config.get_service_props(name)
+            if not serv:
+                raise AIMDNSError(_('error: aiMDNSError: no such installation '
                                     'service "%s"') % name)
 
             # ensure the service is enabled
-            if 'status' not in serv.keys():
-                raise AIMDNSError(_('error:aiMDNSError:SMF service key '
-                                    '"status" property does not exist'))
+            if config.PROP_STATUS not in serv:
+                raise AIMDNSError(_('error: aiMDNSError: installation service '
+                                    'key "status" property does not exist'))
 
-            if serv['status'] != 'on':
-                print _('warning:Install service "%s" is not enabled') % name
+            if serv[config.PROP_STATUS] != config.STATUS_ON:
+                print(_('warning: Installation service "%s" is not enabled') %
+                      name)
                 return None
-
-            # get the port number for the service, will change with the
-            # new AI Webserver design.
-            if 'txt_record' not in serv.keys():
-                raise AIMDNSError(_('error:aiMDNSError:SMF service key '
-                                    '"txt_record" property does not exist'))
-
-            # serv['txt_record'] = aiwebserver=<host>:<port>
-            # for port split at ':'
-            if serv['txt_record'].startswith('aiwebserver='):
-                smf_port = serv['txt_record'].split(':')[-1]
-            else:
+            
+            smf_port = config.get_service_port(name)
+            if not smf_port:
                 try:
                     smf_port = libaimdns.getinteger_property(common.SRVINST,
                                                              common.PORTPROP)
                     smf_port = str(smf_port)
                 except libaimdns.aiMDNSError, err:
-                    raise AIMDNSError(_('error:aiMDNSError:port property '
+                    raise AIMDNSError(_('error: aiMDNSError: port property '
                                         'failure (%s)') % err)
 
         # iterate over the interfaces saving the service references
-        list_sdrefs = []
+        list_sdrefs = list()
+        valid_networks = common.get_valid_networks()
         for inf in interfaces:
-            # check the interface IP address against those listed in
-            # the AI service SMF networks property.  Our logic for the
-            # SMF exclude_networks and SMF networks list is:
-            #
-            #   IF ipv4 is in networks and
-            #      SMF exclude_networks == false
-            #   THEN include ipv4
-            #   IF ipv4 is not in_networks and
-            #      SMF exclude_network == true
-            #   THEN include ipv4
-            #   IF ipv4 is in_networks and
-            #      SMF exclude_networks == true
-            #   THEN exclude ipv4
-            #   IF ipv4 is not in_networks and
-            #      SMF exclude_network == false
-            #   THEN exclude ipv4
-            #
-            # Assume that it is excluded and check the first 2 conditions only
-            # as the last 2 conditions are covered by the assumption.
-            in_net = in_networks(interfaces[inf], self.networks)
             include_it = False
-            if (in_net and not self.exclude) or (not in_net and self.exclude):
-                include_it = True
+            for ip in valid_networks:
+                if interfaces[inf].startswith(ip):
+                    include_it = True
+                    break
 
             if not include_it:
                 continue
@@ -554,7 +413,7 @@ class AImDNS(object):
 
             if smf_port is not None:
                 # comments are part of the service record
-                commentkey = serv['txt_record'].split('=')[0]
+                commentkey = serv[config.PROP_TXT_RECORD].split('=')[0]
                 commenttxt = interfaces[inf].split('/')[0] + ':' + smf_port
                 text = pyb.TXTRecord({commentkey: commenttxt})
                 try:
@@ -624,7 +483,7 @@ class AImDNS(object):
         try:
             self.instance = smf.AISCF(FMRI="system/install/server")
         except SystemError:
-            raise SystemError(_("error:the system does not have the "
+            raise SystemError(_("error: the system does not have the "
                                 "system/install/server SMF service"))
 
         # use the interfaces within the class if none are passed in
@@ -640,11 +499,9 @@ class AImDNS(object):
             self.sdrefs[servicename] = sdrefs
             self._handle_events()
         else:
-            raise AIMDNSError(_('error:aiMDNSError:mDNS ad hoc registration '
+            raise AIMDNSError(_('error: aiMDNSError: mDNS ad hoc registration '
                                 'failed for "%s" service') % self.servicename)
 
-    # pylint: disable-msg=W0613
-    # disabled for signum, frame
     def _signal_hup(self, signum, frame):
         '''Method: _signal_hup, class private
         Description:
@@ -661,7 +518,7 @@ class AImDNS(object):
             None
         '''
         # get the new service keys and iterate over them
-        services = self.instance.services.keys()
+        services = config.get_all_service_names()
         for srv in services:
             # is this service already registered
             if srv not in self.instance_services or srv not in self.sdrefs:
@@ -685,12 +542,12 @@ class AImDNS(object):
         for srv in self.instance_services:
             # get the service (srv) from the instance
             try:
-                serv = smf.AIservice(self.instance, srv)
+                serv = config.get_service_props(srv)
             except KeyError:
                 # not a catastrophic error for the class as additional
                 # services can still be processed.  This error will be
                 # caught in the service log file.
-                sys.stderr.write(_('warning:No such Automated Install service '
+                sys.stderr.write(_('warning: No such installation service, '
                                    '%s\n') % srv)
 
                 # remove the service references for the now non-existent
@@ -706,7 +563,8 @@ class AImDNS(object):
 
             # was the service removed or disabled
             if (srv not in services) or \
-               (srv in self.sdrefs and serv['status'] == 'off'):
+               (srv in self.sdrefs and
+                serv[config.PROP_STATUS] == config.STATUS_OFF):
 
                 if self.verbose:
                     print _('Unregistering %s') % srv
@@ -721,7 +579,6 @@ class AImDNS(object):
 
         # save the new services list
         self.instance_services = services
-    # pylint: enable-msg=W0613
 
     def register_all(self, interfaces=None):
         '''Method: register_all
@@ -750,9 +607,9 @@ class AImDNS(object):
         try:
             self.instance = smf.AISCF(FMRI="system/install/server")
         except SystemError:
-            raise SystemError(_("error:the system does not have the "
+            raise SystemError(_("error: the system does not have the "
                                 "system/install/server SMF service"))
-        self.instance_services = self.instance.services.keys()
+        self.instance_services = config.get_all_service_names()
 
         # use interfaces within the class if none are passed
         if interfaces is None:
@@ -789,28 +646,18 @@ class AImDNS(object):
         Raises
             AImDNSError - if there are no service references available
         '''
-        self.sdrefs = {}
+        self.sdrefs = dict()
         self._found = False
-        self._resolved = []
+        self._resolved = list()
 
-        # figure out how many possible services, so that we have an idea
-        # how many times to process the browse requests
+        # figure out how many enabled/registerd services, so that we have
+        # an idea of how many times to process the browse requests
         self.count = 0
-        try:
-            inst = smf.AISCF(FMRI="system/install/server")
-            for service in inst.services.keys():
-                service_instance = smf.AIservice(inst, service)
-                if 'status' in service_instance.keys():
-                    self.count += 1
-        except SystemError:
-            pass
+        for svc_name in config.get_all_service_names():
+            if config.is_enabled(svc_name):
+                self.count += 1
 
-        interface_count = 0
-        for inf in self.interfaces:
-            in_net = in_networks(self.interfaces[inf], self.networks)
-            if (in_net and not self.exclude) or (not in_net and self.exclude):
-                interface_count += 1
-
+        interface_count = len(common.get_valid_networks())
         if interface_count:
             self.count *= interface_count
 
@@ -832,7 +679,7 @@ class AImDNS(object):
         if sdref:
             self.sdrefs['browse'] = [sdref]
         else:
-            raise AIMDNSError(_('error:aiMDNSError:mDNS browse failed'))
+            raise AIMDNSError(_('error: aiMDNSError: mDNS browse failed'))
 
         # cause the event loop to loop only 5 times
         self._do_lookup = True
@@ -852,35 +699,31 @@ class AImDNS(object):
             Raises:
                 AImDNSError - if there are no service references available
         '''
-        self.sdrefs = {}
+        self.sdrefs = dict()
         self._found = False
         self._lookup = True
         self.servicename = servicename if servicename else self.servicename
 
-        self.count = 0
-        list_sdrefs = []
+        self.count = len(common.get_valid_networks())
+        list_sdrefs = list()
         for inf in self.interfaces:
-            in_net = in_networks(self.interfaces[inf], self.networks)
-            if (in_net and not self.exclude) or (not in_net and self.exclude):
-                self.count += 1
+            # register the service on the appropriate interface index
+            try:
+                interfaceindex = netif.if_nametoindex(inf)
+            except netif.NetIFError, err:
+                raise AIMDNSError(err)
 
-                # register the service on the appropriate interface index
-                try:
-                    interfaceindex = netif.if_nametoindex(inf)
-                except netif.NetIFError, err:
-                    raise AIMDNSError(err)
+            sdref = pyb.DNSServiceResolve(0, interfaceindex,
+                                          servicename,
+                                          regtype=common.REGTYPE,
+                                          domain=common.DOMAIN,
+                                          callBack=self._resolve_callback)
+            list_sdrefs.append(sdref)
 
-                sdref = pyb.DNSServiceResolve(0, interfaceindex,
-                                              servicename,
-                                              regtype=common.REGTYPE,
-                                              domain=common.DOMAIN,
-                                              callBack=self._resolve_callback)
-                list_sdrefs.append(sdref)
-
-        if list_sdrefs != []:
+        if list_sdrefs:
             self.sdrefs['find'] = list_sdrefs
         else:
-            raise AIMDNSError(_('error:aiMDNSError:mDNS find failed'))
+            raise AIMDNSError(_('error: aiMDNSError: mDNS find failed'))
 
         if self.verbose:
             print _('Finding %s...') % self.servicename
@@ -969,7 +812,7 @@ class AImDNS(object):
             None
         '''
         self._find = None
-        self.services = {}
+        self.services = dict()
         self.servicename = None
         self.domain = 'local'
         self.txt = None
@@ -998,4 +841,4 @@ class AImDNS(object):
         for srv in self.sdrefs.keys():
             for sdref in self.sdrefs[srv]:
                 sdref.close()
-        self.sdrefs = {}
+        self.sdrefs = dict()

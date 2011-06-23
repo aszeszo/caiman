@@ -33,19 +33,18 @@ import gettext
 import logging
 from optparse import OptionParser, OptionValueError
 import os
-import socket
-import sys
 
 import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.installadm_common as com
-import osol_install.libaimdns as libaimdns
-import osol_install.libaiscf as libaiscf
-
-from solaris_install import CalledProcessError, Popen
+import osol_install.auto_install.service_config as config
+from osol_install.auto_install.service import AIService, AIServiceError, \
+    DEFAULT_ARCH, MountError, UnsupportedAliasError
+from osol_install.auto_install.image import is_iso, InstalladmIsoImage
+from solaris_install import Popen, CalledProcessError
 
 
 _ = com._
-BASE_DEF_SVC_NAME = "_install_service_"
+BASE_DEF_SVC_NAME = "install_service"
 
 
 def check_ip_address(option, opt_str, value, parser):
@@ -62,83 +61,81 @@ def check_ip_address(option, opt_str, value, parser):
             segment = int(segment)
             if segment < 0 or segment > 255:
                 raise OptionValueError(_("Malformed IP address: '%s'") % value)
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             raise OptionValueError(_("Malformed IP address: '%s'") % value)
     setattr(parser.values, option.dest, value)
 
 
-def check_targetdir(srcimage, targetdir):
+def check_imagepath(imagepath):
     '''
-    Check if target dir exists.  If it exists, check whether it has 
+    Check if image path exists.  If it exists, check whether it has 
     a valid net image. An empty dir is ok.
 
-    Raises: ValueError if a problem exists with targetdir
+    Raises: ValueError if a problem exists with imagepath
 
     '''
-    req_file = os.path.join(targetdir, com.AI_NETIMAGE_REQUIRED_FILE)
-    
-    if srcimage:
-        # targetdir must not exist, or must be empty
-        if os.path.exists(targetdir):
-            try:
-                dirlist = os.listdir(targetdir)
-            except OSError as err:
-                raise ValueError(err)
-            
-            if dirlist:
-                if com.AI_NETIMAGE_REQUIRED_FILE in dirlist:
-                    raise ValueError(_("There is a valid image at (%s). "
-                                       "Please delete the image and try "
-                                       "again.") % targetdir)
-                else:
-                    raise ValueError(_("Target directory is not empty."))
-    else:
-        if not os.path.exists(targetdir):
-            raise ValueError(_("The specified target, %s, does not exist") %
-                             targetdir)
-        if not os.path.exists(req_file):
-            raise ValueError(_("The specified target, %s, does not contain"
-                               " a valid existing image.") % targetdir)
+    # imagepath must not exist, or must be empty
+    if os.path.exists(imagepath):
+        try:
+            dirlist = os.listdir(imagepath)
+        except OSError as err:
+            raise ValueError(err)
+        
+        if dirlist:
+            if com.AI_NETIMAGE_REQUIRED_FILE in dirlist:
+                raise ValueError(_("There is a valid image at (%s). "
+                                   "\nPlease delete the image and try "
+                                   "again.") % imagepath)
+            else:
+                raise ValueError(_("Target directory is not empty."))
 
 
 def get_usage():
     ''' get usage for create-service'''
     return(_(
-        'create-service\t[-b|--boot-args <boot property>=<value>,...] \n'
-        '\t\t[-f|--bootfile <bootfile>] \n'
+        'create-service\n'
         '\t\t[-n|--service <svcname>] \n'
-        '\t\t[-c|--ip-count <count_of_ipaddr>] \n'
+        '\t\t[-t|--aliasof <existing_service>] \n'
+        '\t\t[-s|--source <ISO>] \n'
+        '\t\t[-b|--boot-args <boot property>=<value>,...] \n'
         '\t\t[-i|--ip-start <dhcp_ip_start>] \n'
-        '\t\t[-s|--source <srcimage>] \n'
-        '\t\t<targetdir>'))
+        '\t\t[-c|--ip-count <count_of_ipaddr>] \n'
+        '\t\t[-B|--bootfile-server <server_ipaddr>] \n'
+        '\t\t[-d|--imagepath <imagepath>]\n'
+        '\t\t[-y|--noprompt]'))
 
 
 def parse_options(cmd_options=None):
     '''
     Parse and validate options
-    Args: sub-command, target directory
     
     Returns: An options record containing
+        aliasof
         bootargs
-        bootfile
         dhcp_ip_count
         dhcp_ip_start
+        dhcp_bootserver
+        noprompt
         srcimage
         svcname
-        targetdir
+        imagepath 
     
     '''
-    logging.debug('**** START installadm.create_service.parse_options ****\n')
+    logging.log(com.XDEBUG, '**** START installadm.create_service.'
+                'parse_options ****\n')
     
     usage = '\n' + get_usage()
     description = _('Establishes an Automated Install network service.')
     parser = OptionParser(usage=usage, prog="create-service",
                           description=description)
     parser.add_option('-b', '--boot-args', dest='bootargs', action='append',
-                      default=[],
+                      default=list(),
                       help=_('Comma separated list of <property>=<value>'
                              ' pairs to add to the x86 Grub menu entry'))
-    parser.add_option('-f', '--bootfile', dest='bootfile', help=_('boot file'))
+    parser.add_option('-d', '--imagepath', dest='imagepath', default=None,
+                      help=_("Path at which to create the net image"))
+    parser.add_option('-t', '--aliasof', dest='aliasof', default=None,
+                      help=_("Service being created is alias of this serivce"))
     parser.add_option('-n', '--service', dest='svcname',
                       help=_('service name'))
     parser.add_option('-i', '--ip-start', dest='dhcp_ip_start', type='string',
@@ -146,18 +143,20 @@ def parse_options(cmd_options=None):
                       callback=check_ip_address)
     parser.add_option('-c', '--ip-count', dest='dhcp_ip_count',
                       type='int', help=_('DHCP Count of IP Addresses'))
-    parser.add_option('-s', '--source', dest='srcimage', type='string',
-                      help=_('Image ISO file'))
+    parser.add_option('-B', '--bootfile-server', dest='dhcp_bootserver',
+                      type='string', help=_('DHCP Boot Server Address'),
+                      action="callback", callback=check_ip_address)
+    parser.add_option('-s', '--source', dest='srcimage',
+                      help=_('Auto Install ISO'))
+    parser.add_option('-y', "--noprompt", action="store_true",
+                      dest="noprompt", default=False,
+                      help=_('Suppress confirmation prompts and proceed with '
+                      'service creation using default values'))
     
     options, args = parser.parse_args(cmd_options)
     
-    # check that we have a target dir
-    if not args:
-        parser.error(_("Missing required argument, <targetdir>"))
-    elif len(args) > 1:
-        parser.error(_('Too many arguments: %s') % args)
-    
-    options.targetdir = args[0]
+    if args:
+        parser.error(_('Unexpected argument(s): %s') % args)
     
     # if service name provided, validate it
     if options.svcname:
@@ -165,15 +164,35 @@ def parse_options(cmd_options=None):
             com.validate_service_name(options.svcname)
         except ValueError as err:
             parser.error(err)
-
-        # Give error is service already exists
-        if aismf.is_pg(options.svcname):
+        
+        # Give error if service already exists
+        if config.is_service(options.svcname):
             parser.error(_('Service already exists: %s') % options.svcname)
+    
+    # If creating an alias, only allow additional options -n, -b, 
+    # and -y
+    if options.aliasof:
+        if (options.dhcp_ip_start or options.dhcp_ip_count or 
+            options.imagepath or options.srcimage):
+            parser.error(_('\nOnly options -n|--service, -b|--boot-args, '
+                           'and -y|--noprompt\nmay be specified with '
+                           '-t|--aliasof.'))
+        if not options.svcname:
+            parser.error(_('\nOption -n|--service is required with the '
+                            '-t|--aliasof option'))
+    else:
+        if not options.srcimage:
+            parser.error(_("-s|--source or -t|--aliasof is required"))
+        name = options.svcname
+        if name in DEFAULT_ARCH:
+            raise SystemExit(_('Default services must be created as aliases. '
+                               ' Use -t|--aliasof.'))
 
     # check dhcp related options
-    # don't allow DHCP setup if multihomed
     if options.dhcp_ip_start or options.dhcp_ip_count:
         if com.is_multihomed():
+            # don't allow DHCP setup if multihomed
+            # XXX remove this restriction
             msg = _('DHCP server setup is not available on machines '
                     'with multiple network interfaces (-i and -c options '
                     'are disallowed).')
@@ -190,295 +209,262 @@ def parse_options(cmd_options=None):
         # Confirm count of ip addresses is positive
         if options.dhcp_ip_count < 1:
             parser.error('"-c <count_of_ipaddr>" must be greater than zero.')
+
+    if options.dhcp_bootserver:
+        # Confirm if the -B is provided, that -i/-c are also
+        if options.dhcp_ip_count is None:
+            parser.error(_('If -B option is provided, -i option must '
+                           'also be provided'))
     
-    # Make sure targetdir meets requirements
-    try:
-        check_targetdir(options.srcimage, options.targetdir)
-    except ValueError as error:
-        raise SystemExit(error)
+    # Make sure imagepath meets requirements
+    if options.imagepath:
+        options.imagepath = options.imagepath.strip()
+    if options.imagepath:
+        if not options.imagepath == '/':
+            options.imagepath = options.imagepath.rstrip('/')
+        try:
+            check_imagepath(options.imagepath)
+        except ValueError as error:
+            raise SystemExit(error)
     
     return options
 
 
-def setup_dhcp_server(ip_start, ip_count, dhcp_macro, dhcpbfile, arch):
-    '''Set-up DHCP server for given AI service, IP addresses and clients'''
-    
-    # dhcp setup script calls ripped from C implementation of create-service
-    
-    logging.debug("setup_dhcp_server: ip_start=%s, ip_count=%s, "
-                  "dhcp_macro=%s, dhcpbfile=%s, arch=%s" % 
-                  (ip_start, ip_count, dhcp_macro, dhcpbfile, arch))
-    if ip_count:
-        logging.debug("Calling %s %s %s %s", com.SETUP_DHCP_SCRIPT,
-                      com.DHCP_SERVER, ip_start, str(ip_count))
-        # The setup-dhcp server call takes care of printing output for
-        # the user so there is no need to check the result. If the call
-        # returns an error code, an exception is thrown, which the caller
-        # of this function should handle.
-        Popen.check_call([com.SETUP_DHCP_SCRIPT, com.DHCP_SERVER, ip_start,
-                         str(ip_count)])
-    
-    # The setup-dhcp macro call takes care of printing output for the
-    # user so there is no need to check the result.
-    logging.debug("Calling %s %s %s %s %s", com.SETUP_DHCP_SCRIPT,
-                  com.DHCP_MACRO, arch, dhcp_macro, dhcpbfile)
-    Popen([com.SETUP_DHCP_SCRIPT, com.DHCP_MACRO, arch, dhcp_macro,
-           dhcpbfile]).wait()
-    
-    if ip_count:
-        logging.debug("Calling %s %s %s %s %s", com.SETUP_DHCP_SCRIPT,
-                      com.DHCP_ASSIGN, ip_start, str(ip_count), dhcp_macro)
-        # The setup-dhcp assign call takes care of printing output for
-        # the user. A failure is not considered fatal, so just print an
-        # additional message for the user.
-        try:
-            Popen.check_call([com.SETUP_DHCP_SCRIPT, com.DHCP_ASSIGN, ip_start,
-                             str(ip_count), dhcp_macro])
-        except CalledProcessError:
-            print >> sys.stderr, _("Failed to assign DHCP macro to IP "
-                                   "address. Please assign manually.\n")
+def default_path_ok(svc_name, image_path=None):
+    ''' check if default path for service image is available
 
-
-def get_default_service_name():
-    ''' get default service name
-
-        Returns: default name for service, _install_service_<num>
+    Returns: True if default path is ok to use (doesn't exist)
+             False otherwise
 
     '''
+    # if image_path specified by the user, we won't be
+    # using the default path, so no need to check
+    if image_path:
+        return True
+
+    def_imagepath = os.path.join(com.IMAGE_DIR_PATH, svc_name)
+    if os.path.exists(def_imagepath):
+        return False
+    return True
+
+
+def get_default_service_name(image_path=None):
+    ''' get default service name
+    
+    Returns: default name for service, _install_service_<num>
+    
+    '''
     count = 1
-    svc_name = BASE_DEF_SVC_NAME + str(count)
-    while aismf.is_pg(svc_name):
+    basename = BASE_DEF_SVC_NAME
+    svc_name = basename + "_" + str(count)
+    
+    while (config.is_service(svc_name) or 
+        not default_path_ok(svc_name, image_path)):
         count += 1
-        svc_name = BASE_DEF_SVC_NAME + str(count)
+        svc_name = basename + "_" + str(count)
     return svc_name
 
 
-def get_a_free_tcp_port(service_instance, hostname):
-    ''' get next free tcp port 
+def do_alias_service(options):
+    ''' Create an alias of a service
 
-        Looks for next free tcp port number, starting from 46501
-
-        Input: smf install server instance, hostname
-        Returns: next free tcp port number if one found or 
-                 None if no free port found
-             
     '''
-    # determine ports in use by other install services
-    existing_ports = set()
-    for name in service_instance.services:
-        service = libaiscf.AIservice(service_instance, name)
-        svckeys = service.keys()
-        if aismf.PROP_TXT_RECORD in svckeys:
-            port = service[aismf.PROP_TXT_RECORD].split(':')[-1]
-            existing_ports.add(int(port))
+    # Ensure that the base service is a service
+    if not config.is_service(options.aliasof):
+        raise SystemExit(_("Service does not exist: %s") % options.aliasof)
 
-    logging.debug("get_a_free_tcp_port, existing_ports=%s", existing_ports)
+    basesvc = AIService(options.aliasof)
 
-    starting_port = 46501
-    ending_port = socket.SOL_SOCKET  # last socket is 65535
-    mysock = None
-    for port in xrange(starting_port, ending_port):
-        try:
-            # skip ports of existing install services
-            if port in existing_ports:
-                continue
-            mysock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            mysock.bind((hostname, port))
-        except socket.error: 
-            continue
-        else: 
-            logging.debug("found free tcp port: %s" % port)
-            mysock.close()
-            break
-    else:
-        logging.debug("no available tcp port found")
-        return None
-            
-    return port
+    # Ensure that the base service is not an alias
+    if basesvc.is_alias():
+        raise SystemExit(_("Error: Cannot create alias of another alias."))
 
+    logging.debug("Creating alias of service %s", options.aliasof)
 
-def _get_image_version(targetdir):
-    ''' extract image version from version file rooted at target directory
-        returns image version as float
-    '''
-    version = 0.0
+    image = basesvc.image
+
+    print _("Creating alias %s") % options.svcname
+
+    logging.debug("Creating AIService aliasname %s base svc=%s, bootargs=%s",
+                  options.svcname, options.aliasof, options.bootargs)
     try:
-        with open(os.path.join(targetdir, "auto_install/version")) as vfile:
-            for line in vfile:
-                key, did_split, version = line.partition("=")
-                if did_split and key.strip() == "IMAGE_VERSION":
-                    version = float(version)
-    except (IOError, OSError, ValueError, TypeError):
-        version = 0.0
-    return version
+        service = AIService.create(options.svcname, image,
+                                   alias=options.aliasof,
+                                   bootargs=options.bootargs)
+    except AIServiceError as err:
+        raise SystemExit(err)
+
+    # if recreating default-sparc alias, recreate symlinks
+    if service.is_default_arch_service() and image.arch == 'sparc':
+        logging.debug("Recreating default-sparc symlinks")
+        service.do_default_sparc_symlinks(options.svcname)
+
+    # Register & enable service
+    # (Also enables system/install/server, as needed)
+    try:
+        service.enable()
+    except (aismf.ServicesError, config.ServiceCfgError, MountError) as err:
+        raise SystemExit(err)
 
 
-def do_create_service(cmd_options=None):
+def should_be_default_for_arch(newservice):
+    '''
+    Determine if newservice should be the baseservice of default-<arch>
+    (i.e., first service of architecture and aliasable)
+
+    Input: service object for newly created service
+    Returns: True if default-<arch> alias should be created
+             False otherwise
+
+    '''
+    if newservice.image.version < 3:
+        return False
+    services = config.get_all_service_names()
+    make_default = True
+    for service in services:
+        if service == newservice.name:
+            continue
+        svc = AIService(service)
+        if svc.arch == newservice.arch and svc.image.version >= 3:
+            make_default = False
+            break
+
+    logging.debug("should_be_default_for_arch service %s, arch=%s, returns %s",
+                  newservice.name, newservice.arch, make_default)
+    return make_default
+
+
+def do_create_baseservice(options):
     '''
     This method sets up the install service by:
-        - checking the network configuration
         - creating the target image directory from an iso
         - creating the smf property group
         - enabling tftp service or configuring wanboot
         - configuring dhcp if desired
     
     '''
+    if is_iso(options.srcimage):
+        # get default service name, if needed
+        if not options.svcname:
+            options.svcname = get_default_service_name(options.imagepath)
+
+        # If imagepath not specified, verify that default image path is
+        # ok with user
+        if not options.imagepath:
+            defaultdir = com.IMAGE_DIR_PATH
+            if options.svcname:
+                imagepath = os.path.join(defaultdir, options.svcname)
+                prompt = (_("OK to use default image path: %s? [y/N]: " %
+                          imagepath))
+            else:
+                prompt = (_("OK to use subdir of %s to store image? [y/N]: " %
+                          defaultdir))
+            try:
+                if not options.noprompt:
+                    if not com.ask_yes_or_no(prompt):
+                        raise SystemExit(_('\nPlease re-enter command with '
+                                           'desired --imagepath'))
+            except KeyboardInterrupt:
+                raise SystemExit(1)
+
+            options.imagepath = os.path.join(com.IMAGE_DIR_PATH,
+                                             options.svcname)
+            try:
+                check_imagepath(options.imagepath)
+            except ValueError as error:
+                raise SystemExit(error)
+            logging.debug('Using default image path: %s', options.imagepath)
+
+        print _("Creating service: %s") % options.svcname
+        logging.debug("Creating ISO based service '%s'", options.svcname)
+        try:
+            image = InstalladmIsoImage.unpack(options.srcimage,
+                                              options.imagepath)
+        except CalledProcessError as err:
+            raise SystemExit(err.popen.stderr)
+    else:
+        raise SystemExit(_("Source image is not a valid ISO file"))
+
+    if options.dhcp_ip_start:
+        service = AIService.create(options.svcname, image,
+                                   options.dhcp_ip_start,
+                                   options.dhcp_ip_count,
+                                   options.dhcp_bootserver,
+                                   bootargs=options.bootargs)
+    else:
+        service = AIService.create(options.svcname, image,
+                                   bootargs=options.bootargs)
+    
+    # Register & enable service
+    # (Also enables system/install/server, as needed)
+    try:
+        service.enable()
+    except (aismf.ServicesError, config.ServiceCfgError, MountError) as err:
+        raise SystemExit(err)
+    
+    # create default-<arch> alias if this is the first aliasable
+    # service of this architecture
+    if should_be_default_for_arch(service):
+        defaultarch = 'default-' + image.arch
+        print (_("Creating %s alias.") % defaultarch)
+        try:
+            defaultarchsvc = AIService.create(defaultarch, image,
+                                              bootargs=options.bootargs,
+                                              alias=options.svcname)
+        except UnsupportedAliasError as err:
+            # Print the error, but have installadm exit successfully.
+            # Since the user did not explicitly request this alias,
+            # it's not a problem if an alias can't be made for this service
+            print err
+            return 0
+
+        # For sparc, create symlinks for default sparc service
+        if image.arch == 'sparc':
+            logging.debug("Creating default-sparc symlinks")
+            defaultarchsvc.do_default_sparc_symlinks(defaultarch)
+
+        # Register & enable default-<arch> service
+        try:
+            defaultarchsvc.enable()
+        except (aismf.ServicesError, config.ServiceCfgError,
+                MountError) as err:
+            raise SystemExit(err)
+
+
+def do_create_service(cmd_options=None):
+    ''' Create either a base service or an alias '''
+
     # check that we are root
     if os.geteuid() != 0:
         raise SystemExit(_("Error: Root privileges are required"
                            " for this command."))
 
-    logging.debug('**** START do_create_service ****')
-
-    # make sure we have the installadm smf service
-    try:
-        inst = libaiscf.AISCF(FMRI="system/install/server")
-    except KeyError:
-        raise SystemExit(_("Error: The system does not have the "
-                           "system/install/server SMF service"))
+    logging.log(com.XDEBUG, '**** START do_create_service ****')
 
     options = parse_options(cmd_options)
 
     logging.debug('options: %s', options)
     
-    # Verify that the server settings are not obviously broken
-    # (i.e., check for things which will definitely cause failure).
+    # Check the network configuration. Verify that the server settings
+    # are not obviously broken (i.e., check for things which will definitely
+    # cause failure).
     logging.debug('Check if the host server can support AI Install services.')
-    cmd = [com.CHECK_SETUP_SCRIPT, 
+    cmd = [com.CHECK_SETUP_SCRIPT,
            options.dhcp_ip_start if options.dhcp_ip_start else '']
     logging.debug('Calling %s', cmd)
     if Popen(cmd).wait():
         raise SystemExit(1)
     
-    # Obtain the host server hostname and IP address
-    options.server_hostname = socket.gethostname()
-    logging.debug("options.server_hostname=%s", options.server_hostname)
-
-    if com.is_multihomed():
-        options.server_ip = "$serverIP"
+    # convert options.bootargs to a string
+    if options.bootargs:
+        options.bootargs = ",".join(options.bootargs) + ","
     else:
-        options.server_ip = socket.gethostbyname(options.server_hostname)
-    
-    logging.debug("options.server_ip=%s", options.server_ip)
+        options.bootargs = ''
 
-    options.status = aismf.STATUS_ON
-    
-    # Setup the image
-    # If the targetdir doesn't exist, the script creates it
-    if options.srcimage:
-        cmd = [com.SETUP_IMAGE_SCRIPT, com.IMAGE_CREATE, options.srcimage,
-               options.targetdir]
-        logging.debug('Calling %s', cmd)
-        if Popen(cmd).wait():
-            raise SystemExit(1)
-    
-    # Check for compatibility with old service setup
-    image_vers = _get_image_version(options.targetdir)
-    logging.debug('Image version %s' % image_vers)
-    if image_vers < 1:
-        compatibility_port = True
+    if options.aliasof:
+        return(do_alias_service(options))
     else:
-        compatibility_port = False
-
-    logging.debug("compatibility port=%s", compatibility_port)
-
-    # Check whether image is sparc or x86 by checking existence
-    # of key directories
-    try:
-        image_arch = com.get_image_arch(options.targetdir)
-    except ValueError as err:
-        raise SystemExit(err)
-    logging.debug("image_arch=%s", image_arch)
-    
-    # Determine port information
-    http_port = libaimdns.getinteger_property(com.SRVINST, com.PORTPROP)
-
-    if compatibility_port:
-        port = get_a_free_tcp_port(inst, options.server_hostname)
-        if not port:
-            raise SystemExit(_("Cannot find a free port to start the "
-                               "web server."))
-    else:
-        port = http_port
-
-    # set text record to:
-    #   (if multihomed)   "aiwebserver=$serverIP:<port>"
-    #   (if single-homed) "aiwebserver=<server hostname>:<port>"
-    options.txt_record = '%s=%s:%u' % (com.AIWEBSERVER,
-                                       options.server_hostname,
-                                       port)
-
-    logging.debug("options.txt_record=%s", options.txt_record)
-
-    # get default service name, if needed
-    if not options.svcname:
-        options.svcname = get_default_service_name()
-
-    logging.debug("options.svcname=%s", options.svcname)
-
-    # Save location of service in format <server_ip_address>:<port>
-    # It will be used later for setting service discovery fallback
-    # mechanism. For multihomed, options.server_ip is: "$serverIP"
-    srv_address = '%s:%u' % (options.server_ip, port)
-
-    logging.debug("srv_address=%s", srv_address)
-
-    # if no bootfile provided, use the svcname
-    if not options.bootfile:
-        options.bootfile = options.svcname
-    
-    # Configure SMF
-    service_data = {aismf.PROP_SERVICE_NAME: options.svcname,
-                    aismf.PROP_IMAGE_PATH: options.targetdir,
-                    aismf.PROP_BOOT_FILE: options.bootfile,
-                    aismf.PROP_TXT_RECORD: options.txt_record,
-                    aismf.PROP_STATUS: aismf.STATUS_ON}
-    logging.debug("service_data=%s", service_data)
-    aismf.create_pg(options.svcname, service_data)
-    
-    # Register & enable service
-    # (Also enables system/install/server, as needed)
-    try:
-        aismf.enable_install_service(options.svcname)
-    except aismf.InstalladmAISmfServicesError as err:
-        raise SystemExit(err)
-
-    if image_arch == 'sparc':
-        # Always use $serverIP keyword as setup-dhcp will
-        # substitute in the correct IP addresses. 
-        dhcpbfile = 'http://%s:%u/%s' % ("$serverIP", http_port,
-                                         com.WANBOOTCGI)
-    else:
-        dhcpbfile = options.bootfile
-    
-    # Configure DHCP
-    if options.srcimage:
-        dhcp_macro = 'dhcp_macro_' + options.bootfile
-        logging.debug('Calling setup_dhcp_server %s %s %s %s %s', 
-                       options.dhcp_ip_start, options.dhcp_ip_count,
-                       dhcp_macro, dhcpbfile, image_arch)
-        try:
-            setup_dhcp_server(options.dhcp_ip_start, options.dhcp_ip_count,
-                              dhcp_macro, dhcpbfile, image_arch)
-        except CalledProcessError:
-            raise SystemExit(1)
-    
-    # Setup wanboot for SPARC or TFTP for x86
-    if image_arch == 'sparc':
-        cmd = [com.SETUP_SPARC_SCRIPT, com.SPARC_SERVER, options.targetdir,
-               options.svcname, srv_address]
-        logging.debug('Calling %s', cmd)
-        if Popen(cmd).wait():
-            raise SystemExit(1)
-    else:
-        if not options.bootargs:
-            options.bootargs.append("null")
-        cmd = [com.SETUP_TFTP_LINKS_SCRIPT, com.TFTP_SERVER, options.svcname,
-               options.targetdir, options.bootfile]
-        cmd.extend(options.bootargs)
-        logging.debug('Calling %s', cmd)
-        if Popen(cmd).wait():
-            raise SystemExit(1)
+        return(do_create_baseservice(options))
 
 
 if __name__ == '__main__':

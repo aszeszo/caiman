@@ -20,25 +20,21 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
-
 '''
 
 AI Database Routines
 
 '''
 
-# Eventually rename variables to convention
-# pylint: disable-msg=C0103
-
 import Queue
-from sqlite3 import dbapi2 as sqlite
 import threading
 import sys
 
-from solaris_install import _
+from osol_install.auto_install.installadm_common import _
+from sqlite3 import dbapi2 as sqlite
 
-MANIFESTS_TABLE = 'manifests'  # DB table name for manifests
-PROFILES_TABLE = 'profiles'  # DB table name for profiles
+MANIFESTS_TABLE = 'manifests' # DB table name for manifests
+PROFILES_TABLE = 'profiles' # DB table name for profiles
 
 # Defined list of criteria that we treat as case sensitive.
 CRIT_LIST_CASE_SENSITIVE = ['zonename']
@@ -61,7 +57,7 @@ class DB:
         return self._requests
 
     def verifyDBStructure(self):
-        ''' Ensures reasonable DB schema and columns or else
+        '''Ensures reasonable DB schema and columns or else
         raises a SystemExit
         '''
         # get the names of each table in the database
@@ -115,7 +111,7 @@ class DBrequest(object):
         return "\n".join(result)
 
     def needsCommit(self):
-        ''' Use needsCommit() to determine if the query needs to
+        '''Use needsCommit() to determine if the query needs to
         be committed.
         '''
         return(self._committable)
@@ -147,7 +143,7 @@ class DBrequest(object):
             print >> sys.stderr, _("Value not yet set")
 
     def isFinished(self):
-        ''' isFinished() is similar to getResponse(), allowing one to
+        '''isFinished() is similar to getResponse(), allowing one to
         determine if the DBrequest has been handled
         '''
         return(self._e.isSet())
@@ -160,8 +156,8 @@ class DBrequest(object):
 
 
 class DBthread(threading.Thread):
-    ''' Class to interface with SQLite as the provider is single threaded '''
-
+    '''Class to interface with SQLite as the provider is single threaded'''
+    
     def __init__(self, db, queue, commit):
         ''' Here we create a new thread object, create a DB connection object,
         keep track of the DB filename and track the request queue to run on.
@@ -179,7 +175,7 @@ class DBthread(threading.Thread):
             self._con.close()
 
     def run(self):
-        ''' Here we simply iterate over the request queue executing queries
+        '''Here we simply iterate over the request queue executing queries
         and reporting responses. Errors are set as strings for that DBrequest.
         '''
         try:
@@ -218,7 +214,7 @@ class DBthread(threading.Thread):
                     try:
                         self._cursor.execute(request.getSql())
                         self._con.commit()
-                    except StandardError, ex:
+                    except StandardError as ex:
                         # save error string for caller to trigger
                         request.setResponse(_("Database failure with "
                                               "SQL: %s") % request.getSql() +
@@ -230,7 +226,7 @@ class DBthread(threading.Thread):
                 elif not request.needsCommit():
                     try:
                         self._cursor.execute(request.getSql())
-                    except StandardError, ex:
+                    except StandardError as ex:
                         # save error string for caller to trigger
                         request.setResponse(_("Database failure with "
                                               "SQL: %s") % request.getSql() +
@@ -249,23 +245,23 @@ class DBthread(threading.Thread):
                     # ensure we do not continue processing this request
                     continue
                 request.setResponse(self._cursor.fetchall())
-#
-# Functions below here
-#
+
 
 def is_in_list(crit_name, value, value_list, list_separator=None):
     ''' All non-range type criteria fields will be considered as a
         separated list of values.  This function will be registered
         as a user-defined function to be used as a comparator in
-        selection queries for non-range criteria fields.
+        selection queries for non-range criteria fields.  Since it is
+        used as a callback by the sql query, the return values are
+        1 and 0, rather than True and False.
 
         Parameters: crit_name      - name of criteria being evaluated
                     value          - string to find in value_list
                     value_list     - string of separated values
                     list_separator - separator used in value_list
 
-        Returns: True  - if value is in value_list
-                 False - otherwise
+        Returns: 1 - if value is in value_list
+                 0 - otherwise
     '''
     if value is None or value_list is None:
         return 0
@@ -273,7 +269,7 @@ def is_in_list(crit_name, value, value_list, list_separator=None):
     # Because we use this function as a callback from sqlite, we can't
     # get it to pass a None object as an argument for the list separator.
     # We specially look for the string 'None' to mean the None object.
-    if list_separator is not None and list_separator == 'None':
+    if list_separator == 'None':
         list_separator = None
 
     # If the criteria being evaluated is in the list of criteria we've
@@ -334,7 +330,6 @@ def numNames(queue, dbtable):
     # AI service pre-dates profiles
     if not tableExists(queue, dbtable):
         return 0
-
     query = DBrequest('SELECT COUNT(DISTINCT(name)) FROM ' + dbtable)
     queue.put(query)
     query.waitAns()
@@ -350,7 +345,7 @@ def getManNames(queue):
 
 
 def getNames(queue, dbtable):
-    ''' Create generator which provides the names of manifests/profiles in DB
+    '''Create generator which provides the names of manifests/profiles in DB
     '''
     # Whether the DBrequest should be in or out of the for loop depends on if
     # doing one large SQL query and iterating the responses (but holding the
@@ -381,7 +376,7 @@ def tableExists(queue, dbtable):
 def getSpecificCriteria(queue, criteria, criteria2=None,
                         provideManNameAndInstance=False,
                         excludeManifests=None):
-    ''' Returns the criteria specified as an iterable list (can provide a
+    '''Returns the criteria specified as an iterable list (can provide a
     second criteria to return a range (i.e. MIN and MAX memory).  The
     excludeManifests argument filters out the rows with the manifest names
     given in that list.
@@ -510,7 +505,7 @@ def isRangeCriteria(queue, name, table=MANIFESTS_TABLE):
 
 def getManifestCriteria(name, instance, queue, humanOutput=False,
                         onlyUsed=True):
-    ''' Returns the criteria (as a subset of used criteria) for a particular
+    '''Returns the criteria (as a subset of used criteria) for a particular
     manifest given (human output returns HEX() for mac opposed to byte output)
 
     Returns None if no criteria exist for a given manifest.
@@ -520,7 +515,7 @@ def getManifestCriteria(name, instance, queue, humanOutput=False,
 
 
 def getProfileCriteria(name, queue, humanOutput=False, onlyUsed=True):
-    ''' Returns the criteria (as a subset of used criteria) for a particular
+    '''Returns the criteria (as a subset of used criteria) for a particular
     profile given (human output returns HEX() for mac opposed to byte output)
 
     Returns None if no criteria exist for a given profile.
@@ -545,7 +540,7 @@ def getTableCriteria(name, instance, queue, table, humanOutput=False,
             query_str += "HEX(" + str(crit) + ") AS " + str(crit) + ", "
         else:
             query_str += str(crit) + ", "
-
+    
     # Now narrow down to the desired manifest.
     if found_crit:
         query_str = query_str[:-2]
@@ -560,7 +555,7 @@ def getTableCriteria(name, instance, queue, table, humanOutput=False,
 
 
 def findManifest(criteria, db):
-    ''' Used to find a non-default manifest.
+    '''Used to find a non-default manifest.
     Provided a criteria dictionary, findManifest returns a query
     response containing a single manifest (or None if there are no matching
     manifests).  Manifests with no criteria set (as they are either
@@ -674,8 +669,8 @@ def build_query_str(criteria, criteria_set_in_db, all_criteria_in_db):
                     #    crit IS NULL OR \
                     #        is_in_list('crit', 'value', crit, 'None') == 1
                     query_str += "(" + crit + " IS NULL OR is_in_list('" + \
-                                 crit + "', '" + sanitizeSQL(criteria[crit]) + \
-                                 "', " + crit + ", 'None') == 1) AND "
+                        crit + "', '" + sanitizeSQL(criteria[crit]) + "', " + \
+                        crit + ", 'None') == 1) AND "
                 else:
                     query_str += "(" + crit + " IS NULL) AND "
 
@@ -704,6 +699,7 @@ def build_query_str(criteria, criteria_set_in_db, all_criteria_in_db):
                   "platform desc, arch desc, cpu desc, "
                   "net_val desc, mem_val desc LIMIT 1")
     return query_str
+
 
 def formatValue(key, value):
     ''' Format and stringify database values.

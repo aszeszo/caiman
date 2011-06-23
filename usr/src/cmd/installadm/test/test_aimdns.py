@@ -253,7 +253,6 @@ class TestRegCallback(unittest.TestCase):
     regtype = 'nonsense-regtype'
     domain = 'nonsense-domain'
 
-
     def test_registration_callback(self):
         '''test registration callback output
         '''
@@ -347,16 +346,16 @@ class TestCompareIPv4(unittest.TestCase):
             ip1 = self.tests[i]['ip1']
             ip2 = self.tests[i]['ip2']
             result = self.tests[i]['result']
-            assert aimdns.compare_ipv4(ip1, ip2) == result, \
+            assert common.compare_ipv4(ip1, ip2) == result, \
                     "compare_ipv4 failed %s test" % self.tests[i]['name']
 
-            assert not aimdns.compare_ipv4('10.0.100.1', '10.0.15.5/48'), \
+            assert not common.compare_ipv4('10.0.100.1', '10.0.15.5/48'), \
                     "compare_ipv4 failed for invalid CIDR mask"
 
-            assert aimdns.compare_ipv4('10.0.15.10', '10.0.15.10/32'), \
+            assert common.compare_ipv4('10.0.15.10', '10.0.15.10/32'), \
                     "compare_ipv4 failed for & mask"
 
-            assert aimdns.compare_ipv4('10.0.15.10', '10.0.15.10'), \
+            assert common.compare_ipv4('10.0.15.10', '10.0.15.10'), \
                     "compare_ipv4 failed for identical IP address"
 
     def test_in_network(self):
@@ -366,19 +365,19 @@ class TestCompareIPv4(unittest.TestCase):
             ip1 = self.tests[i]['ip1']
             ip2 = self.tests[i]['ip2']
             result = self.tests[i]['result']
-            assert aimdns.in_networks(ip1, [ip2]) == result, \
+            assert common.in_networks(ip1, [ip2]) == result, \
                     "in_network failed %s test" % self.tests[i]['name']
 
     def test_convert_cidr_mask(self):
         '''test _convert_cidr_mask returns something reasonable
         '''
-        assert not aimdns._convert_cidr_mask(48), \
+        assert not common._convert_cidr_mask(48), \
                 "_convert_cidr_mask failed for edge case cidr > 32"
-        assert aimdns._convert_cidr_mask(0) == '0.0.0.0', \
+        assert common._convert_cidr_mask(0) == '0.0.0.0', \
                 "_convert_cidr_mask failed for 0 cidr mask"
-        assert aimdns._convert_cidr_mask(24) == '255.255.255.0', \
+        assert common._convert_cidr_mask(24) == '255.255.255.0', \
                 "_convert_cidr_mask failed for 24 cidr mask"
-        assert aimdns._convert_cidr_mask(8) == '255.0.0.0', \
+        assert common._convert_cidr_mask(8) == '255.0.0.0', \
                 "_convert_cidr_mask failed for 8 cidr mask"
 
 

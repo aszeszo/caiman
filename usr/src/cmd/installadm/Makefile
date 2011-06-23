@@ -32,10 +32,8 @@ install:=	TARGET=	install
 SCRIPTS	=	check-server-setup \
 		installadm-common \
 		setup-image \
-		setup-dhcp \
 		setup-service \
-		setup-sparc \
-		setup-tftp-links
+		setup-sparc
 
 CONF	=	ai-httpd.conf
 
@@ -46,18 +44,24 @@ SVCMETHODSRC =	svc-install-server
 PYMODULES=	__init__.py \
 		ai_smf_service.py \
 		aimdns_mod.py \
+		client_control.py \
 		create_client.py \
 		create_service.py \
 		delete_client.py \
 		delete_service.py \
+		dhcp.py \
+		grub.py \
+		image.py \
 		installadm_common.py \
 		list.py \
-                properties.py \
-                set_service.py
+		rename_service.py \
+		service.py \
+		service_config.py \
+		set_service.py
 
 PYTHON_MODULES=	aimdns.py aimdnsd.py
 
-PYTHON_EXECS =	installadm
+PYTHON_EXECS =	installadm installadm-convert
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
@@ -91,6 +95,9 @@ python:
 
 installadm:	installadm.py
 		cp installadm.py installadm
+
+installadm-convert:	installadm-convert.py
+		cp installadm-convert.py installadm-convert
 
 msgs: ${MSG_DOMAIN}.po
 

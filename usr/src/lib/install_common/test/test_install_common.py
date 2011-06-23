@@ -23,13 +23,16 @@
 #
 
 
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import test.test_subprocess
 import time
 import unittest
 
-from solaris_install import Popen, CalledProcessError
+from solaris_install import Popen, CalledProcessError, force_delete
 
 
 class MockLogger(object):
@@ -232,3 +235,76 @@ class TestInstallPopenCompatible(test.test_subprocess.ProcessTestCase):
     def tearDown(self):
         subprocess.Popen = self.__Popen
         super(TestInstallPopenCompatible, self).tearDown()
+
+
+class TestForceDelete(unittest.TestCase):
+    
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+    
+    def tearDown(self):
+        shutil.rmtree(self.dir)
+    
+    def test_basic_file(self):
+        '''Test that force_delete handles normal files'''
+        handle, filename = tempfile.mkstemp('.file', '', self.dir)
+        os.close(handle)
+        force_delete(filename)
+        self.assertFalse(os.path.exists(filename),
+                         "File %s was not deleted" % filename)
+    
+    def test_empty_dir(self):
+        '''force_delete removes empty directories'''
+        dir = tempfile.mkdtemp(".dir", '', self.dir)
+        force_delete(dir)
+        self.assertFalse(os.path.exists(dir),
+                         "Directory %s was not deleted" % dir)
+    
+    def test_full_dir(self):
+        '''force_delete removes directories with files'''
+        dir = tempfile.mkdtemp(".dir", '', self.dir)
+        tempfile.mkstemp('.file', '', self.dir)
+        force_delete(dir)
+        self.assertFalse(os.path.exists(dir),
+                         "Directory %s was not deleted" % dir)
+    
+    def test_dangling_symlink(self):
+        '''force_delete removes dangling symlinks'''
+        # mktemp (not mkstemp) used, so that the file is NOT created
+        random_name = tempfile.mktemp()
+        symlink_path = tempfile.mktemp('.symlink', '', self.dir)
+        os.symlink(random_name, symlink_path)
+        force_delete(symlink_path)
+        self.assertFalse(os.path.exists(symlink_path),
+                         "Symlink %s was not deleted" % symlink_path)
+    
+    def test_symlink_dir(self):
+        '''force_delete removes symlinks to directories'''
+        dir = tempfile.mkdtemp(".dir", '', self.dir)
+        symlink_path = tempfile.mktemp('.symlink', '', self.dir)
+        os.symlink(dir, symlink_path)
+        force_delete(symlink_path)
+        self.assertFalse(os.path.exists(symlink_path),
+                         "Symlink %s was not deleted" % symlink_path)
+        self.assertTrue(os.path.exists(dir),
+                        "force_delete removed the directory target, %s" % dir)
+    
+    def test_symlink_file(self):
+        '''force_delete removes symlinks to files'''
+        handle, filename = tempfile.mkstemp('.file', '', self.dir)
+        os.close(handle)
+        symlink_path = tempfile.mktemp('.symlink', '', self.dir)
+        os.symlink(filename, symlink_path)
+        force_delete(symlink_path)
+        self.assertFalse(os.path.exists(symlink_path),
+                         "Symlink %s was not deleted" % symlink_path)
+        self.assertTrue(os.path.exists(filename),
+                        "force_delete removed the file target, %s" % filename)
+    
+    def test_nonexistent_file(self):
+        '''force_delete does NOT fail on nonexistent paths'''
+        path = tempfile.mktemp('.noexist', '', self.dir)
+        try:
+            force_delete(path)
+        except (OSError, IOError) as err:
+            self.fail(err)

@@ -21,23 +21,20 @@
 #
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 """
-
 AI delete-manifest
-
 """
-
 import gettext
 import logging
 import os
 import sys
 
+import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.service_config as config
+
 from optparse import OptionParser
 
-import osol_install.auto_install.AI_database as AIdb
-
-from osol_install.auto_install.installadm_common import validate_service_name
-from osol_install.auto_install.properties import get_default, get_service_info
-from solaris_install import AI_DATA, _
+from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.service import AIService
 
 
 def get_usage():
@@ -74,16 +71,11 @@ def parse_options(cmd_options=None):
     if args:
         parser.error(_("Unexpected argument(s): %s" % args))
 
-    # validate service name and get its directory
-    try:
-        validate_service_name(options.service_name)
-        options.svcdir_path, dummy, dummy = get_service_info(
-                                                         options.service_name)
-    except ValueError as err:
-        parser.error(err)
-
+    if not config.is_service(options.service_name):
+        raise SystemExit(_("Not a valid service: %s") % options.service_name)
+    
+    options.svcdir_path = AIService(options.service_name).config_dir
     logging.debug("options = %s", options)
-
     return options
 
 
@@ -102,11 +94,11 @@ def delete_manifest_from_db(db, manifest_instance, service_name, data_loc):
                              manifest_instance[0]))
     else:
         man_name = manifest_instance[0]
-
+    
+    service = AIService(service_name)
     # Do not delete if this manifest is set up as the default.
-    default = get_default(service_name)
-    if (default == man_name):
-        raise SystemExit(_("Error:\tCannot delete default manifest %s .") %
+    if man_name == service.get_default_manifest():
+        raise ValueError(_("Error:\tCannot delete default manifest %s.") %
                          man_name)
 
     # if we do not have an instance remove the entire manifest
@@ -121,7 +113,7 @@ def delete_manifest_from_db(db, manifest_instance, service_name, data_loc):
 
         # clean up file on file system
         try:
-            os.remove(os.path.join(data_loc, AI_DATA, man_name))
+            os.remove(os.path.join(service.manifest_dir, man_name))
         except OSError:
             print >> sys.stderr, _("Warning:\tUnable to find file %s for " +
                                    "removal!") % man_name
@@ -166,7 +158,7 @@ def delete_manifest_from_db(db, manifest_instance, service_name, data_loc):
         # remove file if manifest is no longer in database
         if man_name not in AIdb.getManNames(db.getQueue()):
             try:
-                os.remove(os.path.join(data_loc, AI_DATA, man_name))
+                os.remove(os.path.join(service.manifest_dir, man_name))
             except OSError:
                 print >> sys.stderr, _("Warning: Unable to find file %s for " +
                                        "removal!") % man_name
@@ -189,8 +181,13 @@ def do_delete_manifest(cmd_options=None):
 
     aisql = AIdb.DB(os.path.join(options.svcdir_path, 'AI.db'), commit=True)
     aisql.verifyDBStructure()
-    delete_manifest_from_db(aisql, (options.manifest_name, options.instance),
-                            options.service_name, options.svcdir_path)
+    try:
+        delete_manifest_from_db(aisql,
+                                (options.manifest_name, options.instance),
+                                options.service_name,
+                                options.svcdir_path)
+    except ValueError as error:
+        raise SystemExit(error)
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")

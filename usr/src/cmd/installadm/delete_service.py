@@ -21,756 +21,220 @@
 #
 # Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 '''
-
 AI delete-service
-
 '''
-
 import gettext
 import logging
 import os
-import shutil
-import stat
 import sys
+
+import osol_install.auto_install.client_control as clientctrl
+import osol_install.auto_install.dhcp as dhcp
+import osol_install.auto_install.installadm_common as com
+import osol_install.auto_install.service_config as config
+import osol_install.libaiscf as libaiscf
 
 from optparse import OptionParser
 
-import osol_install.auto_install.AI_database as AIdb
-import osol_install.auto_install.installadm_common as com
-import osol_install.libaiscf as smf
-
-from osol_install.auto_install.ai_smf_service import PROP_IMAGE_PATH, \
-    PROP_STATUS
-from osol_install.auto_install.properties import get_service_info
-from solaris_install import _
-
-# Eventually bring variable names into convention.
-# pylint: disable-msg=C0103
-
-
-class Client_Data(object):
-    '''
-    A class to hold client data and interoperate with an AIservice class.
-    '''
-
-    def __init__(self, mac):
-        # service name will be the client's identifier
-        # add a 01 to MAC to make a DHCP style client ID
-        self.serviceName = "01" + str(mac).upper()
-
-        # values can store anything similar to AIservice() object as necessary
-        self.values = {}
-
-    def __getitem__(self, key):
-        return self.values[key]
-
+from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.service import AIService, DEFAULT_ARCH
+    
 
 def get_usage():
     ''' get usage for delete-service'''
-    return(_('delete-service [-x|--delete-image] <svcname>]'))
-
+    return(_('delete-service [-r|--autoremove] [-y|--noprompt] <svcname>]'))
+ 
 
 def parse_options(cmd_options=None):
     '''
     Parse and validate options when called as delete-service
     Args: None
-    Returns: A tuple of an AIservice object representing service to delete
-             and an options object
-
+    Returns: A tuple of a dictionary of service properties of service
+             to delete and an options object
+    
     '''
     usage = '\n' + get_usage()
     parser = OptionParser(usage=usage)
-    parser.add_option("-x", "--delete-image", dest="deleteImage",
+    parser.add_option("-r", "--autoremove", dest="autoremove",
                       action="store_true",
                       default=False,
-                      help=_("Remove service image if not otherwise in use"))
-    (options, args) = parser.parse_args(cmd_options)
+                      help=_("Request removal of dependent alias services "
+                             "and clients"))
+    parser.add_option('-y', "--noprompt", action="store_true",
+                      dest="noprompt", default=False,
+                      help=_('Suppress confirmation prompts and proceed with '
+                      'service deletion'))
 
+    (options, args) = parser.parse_args(cmd_options)
+    
     # Confirm install service's name was passed in
     if not args:
         parser.error(_("Missing required argument, <svcname>"))
     elif len(args) > 1:
         parser.error(_("Too many arguments: %s") % args)
-
+    
     service_name = args[0]
-
+    
     # validate service name
-    try:
-        com.validate_service_name(service_name)
-    except ValueError as err:
-        raise SystemExit(err)
-
-    logging.debug("service_name = %s", service_name)
-    logging.debug("options = %s", options)
-
-    # check that the system has the AI install SMF service available
-    try:
-        smf_instance = smf.AISCF(FMRI="system/install/server")
-    except KeyError:
-        raise SystemExit(_("Error:\tThe system does not have the " +
-                         "system/install/server SMF service"))
-
-    # check that the service exists
-    if not service_name in smf_instance.services.keys():
+    if not config.is_service(service_name):
         raise SystemExit(_("Error: The specified service does "
                            "not exist: %s") % service_name)
+    
+    # add service_name to the options
+    options.service_name = service_name
+    logging.debug("options = %s", options)
+    
+    return options
 
-    # return the AIservice object
-    return ((smf.AIservice(smf_instance, service_name)), options)
 
-
-def stop_service(service):
+def remove_dhcp_configuration(service):
     '''
-    Sets service state flag to off and restarts the AutoInstaller SMF
-    service, killing all processes.
-    Args: AIservice object
-    Returns: None
+    Determines if a local DHCP server is running and if this service's bootfile
+    is set as the architecture's default boot service. If it is, we'll unset it
+    as we're deleting the service. If the DHCP configuration isn't local,
+    inform the end-user that the DHCP configuration should not reference this
+    bootfile any longer.
     '''
+    server = dhcp.DHCPServer()
+    if server.is_configured():
+        # Server is configured. Regardless of it's current state, check for
+        # this bootfile in the service's architecture class. If it is set as
+        # the default for this architecture, unset it.
+        try:
+            arch_class = dhcp.DHCPArchClass.get_arch(server, service.arch)
+        except dhcp.DHCPServerError as err:
+            print >> sys.stderr, _("Unable to access DHCP configuration: "
+                                   "%s" % err)
+            return
 
-    try:
-        service[PROP_STATUS] = "off"
-    except KeyError:
-        sys.stderr.write(_("SMF data for service %s is corrupt, trying to " +
-                         " continue.\n") % service.serviceName)
+        if (service.arch != 'sparc' and arch_class is not None and 
+            arch_class.bootfile == service.dhcp_bootfile):
+            try:
+                arch_class.unset_bootfile()
+            except dhcp.DHCPServerError as err:
+                print >> sys.stderr, _("Unable to unset this service's "
+                                       "bootfile in the DHCP "
+                                       "configuration: %s" % err)
+                return
 
-
-def remove_DHCP_macro(service):
-    '''
-    Checks for existence of DHCP macro
-    Checks for and prints warning for clients using DHCP macro
-    Prints command to remove DHCP macro
-    Args:   AIservice object
-    Returns: None
-    '''
-
-    # if we are handed a Client_Data object instance macro name is just a MAC
-    # address otherwise prepend "dhcp_macro_"
-    if isinstance(service, Client_Data):
-        macro_name = service.serviceName
+            if server.is_online():
+                try:
+                    server.control('restart')
+                except dhcp.DHCPServerError as err:
+                    print >> sys.stderr, _("Unable to restart the DHCP "
+                                           "SMF service: %s" % err)
+                    return
     else:
-        # if we have a boot_file use it instead of serviceName for paths
-        try:
-            macro_name = "dhcp_macro_" + service['boot_file']
-        except KeyError:
-            macro_name = "dhcp_macro_" + service.serviceName
-
-    # command to remove DHCP macro
-    cmd = ["/usr/sbin/dhtadm", "-D", "-m", macro_name]
-
-    # ensure we are a DHCP server
-    if not (smf.AISCF(FMRI="network/dhcp-server").state == "online"):
-        print (_("Detected that DHCP is not set up on this machine. To " +
-               "delete the DHCP macro, run the following on your " +
-               "DHCP server:\n%s\n") %
-               " ".join(cmd))
-        return
-
-    # if the macro is not configured return
-    try:
-        if macro_name not in com.DHCPData.macros()['Name']:
-            return
-    except com.DHCPData.DHCPError, err:
-        sys.stderr.write(str(err) + "\n")
-        return
-
-    # if configured with macro see if any clients would be orphaned
-    try:
-        nets = com.DHCPData.networks()
-    except com.DHCPData.DHCPError, err:
-        sys.stderr.write(str(err) + "\n")
-        return
-
-    # store a list of clients using this macro
-    systems = []
-    for net in nets:
-        # check if any machines use the macro we are removing
-        try:
-            # get a dictionary of the form:
-            # Client ID', 'Flags', 'Client IP', 'Server IP',
-            # 'Lease Expiration', 'Macro', 'Comment'
-            clients = com.DHCPData.clients(net)
-        except com.DHCPData.DHCPError, err:
-            sys.stderr.write(str(err) + "\n")
-            continue
-        if macro_name in clients['Macro']:
-            # store IP addresses for later print out (assumes clients['Client
-            # IP'] and clients['Macro'] to be equal length, which they should
-            # be)
-            systems.append([(clients['Client IP'][idx]) for idx in
-                             range(0, len(clients['Client IP'])) if
-                             macro_name in clients['Macro'][idx]])
-
-    if len(systems) > 1:
-        sys.stderr.write(_("Warning:\tThe following IP addresses are "
-                          "configured to use the macro %s:\n%s") %
-                          (macro_name, "\n".join(systems)))
-        return
-
-    # tell user to remove DHCP macro
-    print (_("To delete DHCP macro, run the following command:\n%s\n") %
-           " ".join(cmd))
-    return
+        # The local DHCP server isn't configured, so inform the end-user that
+        # they need to remove this service from the DHCP configuration.
+        print _("Detected that DHCP is not set up on this machine. Please "
+                "ensure that the\nservice being deleted is not in use in the "
+                "DHCP configuration by removing\nany references to its "
+                "bootfile. Please see dhcpd(8) for further information.")
 
 
-def remove_files(service, removeImageBool):
+def delete_specified_service(service_name, auto_remove, noprompt):
+    ''' Delete the specified Automated Install Service
+    Input: service_name - service name
+           auto_remove - boolean, True if dep. aliases and clients should
+                         be removed, False otherwise
+           noprompt - boolean, True if warning about removing
+                           default-<arch> service should be suppressed
     '''
-    Removes /var/ai/<service-name> or <port number>
+    logging.debug("delete_specified_service %s %s %s", service_name,
+                  auto_remove, noprompt)
 
-    If requested for removal and not in use:
-        Removes image
-        Unmounts directory pointed to by /tftpboot/<service name> and
-            removes /etc/vfstab entry for mount point
-        Removes directory for mount point pointed to by
-            /tftpboot/<service name>
+    # get service properties
+    svcprops = config.get_service_props(service_name)
+    service = AIService(service_name)
+    
+    # If the '-r' option has not been specified, look for all
+    # dependent aliases and clients
+    all_aliases = config.get_aliased_services(service_name, recurse=True)
+    if not auto_remove:
+        all_clients = config.get_clients(service_name).keys()
+        for ale in all_aliases:
+            all_clients.extend(config.get_clients(ale).keys())
 
-    Calls /tftpboot/rm.<service name>
-        Removes /tftpboot/<service name>
-        Removes /tftpboot/menu.lst.<service name>
-    Removes /tftpboot/rm.<service name>
+        # if any aliases or clients are dependent on this service, exit
+        if all_aliases or all_clients:
+            raise SystemExit(_("Error: The following aliases and/or clients "
+                               "are dependent on this service:\n%s\nPlease "
+                               "update or delete them prior to deleting "
+                               "this service or rerun this command using "
+                               "the -r|--autoremove option to have them "
+                               "automatically removed.\n") %
+                               '\n'.join(all_aliases + all_clients))
 
-    Removes /etc/netboot/serviceName (if exists)
-    Removes /etc/netboot/wanboot.conf symlink (if dangling)
-
-    Args:   AIservice object, image directory removal boolean
-    Returns: None
-    Raises: SystemExit if any subcommand reports an error
-    '''
-
-    def removeFile(filename):
-        '''
-        Determines file type and removes file as appropriate (handles regular
-        files (which symlinks fall under) and directories)
-        '''
-        def handleError(function, path, excinfo):
-            '''
-            Handle errors from shutil.rmtree. Function is one of:
-            os.path.islink(), os.listdir(), os.remove() or os.rmdir()
-            Path is the path being removed. Excinfo is the exception info.
-            '''
-            exc_info_err_val = excinfo[1]
-            sys.stderr.write(_("Function %s, erred on file:\n%s\n" +
-                              "With error: %s\n") %
-                              (function, path, exc_info_err_val))
-        # ensure file exists
-        if not os.path.lexists(filename):
-            sys.stderr.write(_("Unable to find path %s\n") % filename)
-        elif os.path.isdir(filename):
-            # run rmtree on filename (really a directory) and do not stop on
-            # errors (False), while passing errors to handleError for user
-            # output
-            shutil.rmtree(filename, False, handleError)
-        elif os.path.isfile(filename) or os.path.islink(filename):
-            try:
-                os.remove(filename)
-            except OSError, err:
-                sys.stderr.write(_("Unable to remove path %s:\n%s\n") %
-                                  (filename, err))
+    # Prompt user if they are deleting the default-sparc or default-i386 alias
+    if not noprompt:
+        sname = None
+        if service_name in DEFAULT_ARCH:
+            sname = service_name
         else:
-            sys.stderr.write(_("Unknown file type, path %s\n") %
-                              (filename))
-        return
+            default_alias = set(DEFAULT_ARCH) & set(all_aliases)
+            if default_alias:
+                sname = ''.join(default_alias)
+        if sname:
+            arch = sname.split('default-')[1]
+            prompt = \
+                (_('\nWARNING: The service you are deleting, or a dependent '
+                   'alias, is the alias for the default %(arch)s service.\n'
+                   '\nWithout the %(name)s service, clients will fail to boot '
+                   'unless explicitly assigned to a service using the '
+                   'create-client command.\n'
+                   '\nAre you sure you want to delete alias, '
+                   '%(name)s? [y/N]: ') % {'arch': arch, 'name': sname})
+            if not com.ask_yes_or_no(prompt):
+                raise SystemExit(1)
 
-    # pylint: disable-msg=W0613
-    # Disable msg for ununsed argument "service"
-    def check_wanboot_conf(service):
-        '''
-        Checks to see if /etc/netboot/wanboot.conf is a dangling symlink and if
-        so returns its path. Further, if removing the last entry under
-        /etc/netboot, also return /etc/netboot. All of these paths are
-        compiled into a list.  Otherwise, returns None
-        '''
-        netboot = '/etc/netboot/'
-        wanbootConf = 'wanboot.conf'
-        # see if wanboot.conf is dangling but the symlink still exists
-        if not os.path.exists(os.path.join(netboot, wanbootConf)) and \
-            os.path.lexists(os.path.join(netboot, wanbootConf)):
-            files = [os.path.join(netboot, wanbootConf)]
-            # add to deletion list empty directories
-            # (i.e. /etc/netboot/172.20.24.0) under /etc/netboot
-            # (and /etc/netboot itself, if emptied)
+    # If there are dependent aliases or clients, then remove these first
+    aliases = config.get_aliased_services(service_name)
+    for dependent in aliases:
+        logging.debug("recursively calling delete_specified_service for %s",
+                       dependent)
+        delete_specified_service(dependent, True, True)
+    
+    clients = config.get_clients(service_name).keys()
+    for dependent in clients:
+        logging.debug("calling remove_client for %s", dependent)
+        clientctrl.remove_client(dependent)
+    
+    logging.debug("now deleting service %s", service_name)
 
-            # iterate over all directories in netboot
-            for directory in filter(os.path.isdir,
-                                    # specify a full path for the entry
-                                    [os.path.join(netboot, entry) for entry in
-                                    # get a list of all entries in netboot
-                                    os.listdir(netboot)]):
+    # remove DHCP bootfile configuration for this service, if set
+    remove_dhcp_configuration(service)
 
-                # if directory is empty add it to the files to remove list
-                if len(os.listdir(directory)) == 0:
-                    files.append(directory)
-
-            # if everything in /etc/netboot is slated to be removed just use
-            # the path for netboot
-            if len(os.listdir(netboot)) == len(files):
-                return netboot
-            else:
-                return files
-        # return none if /etc/netboot/wanboot.conf is still valid
-        return
-
-    def find_service_directory(service):
-        '''
-        Returns path to AI service directory parsing service txt_record SMF
-        property, returns None if a failure occurs or we are not handed an
-        AIservice instance
-        '''
-        # no need to find a service directory for a delete_client run,
-        # return since this is not applicable
-        if isinstance(service, Client_Data):
-            return None
-
-        try:
-            service_dir, dummy, dummy = get_service_info(service.serviceName)
-        except KeyError:
-            service_dir = None
-        return service_dir
-
-    def find_image_path(service):
-        '''
-        Handles finding image, ensuring image is not in use other than current
-        service being removed and returns image path, as well as, the longest
-        empty path to the image-server image.
-        Will return, if not handed an AIservice instance.
-        '''
-        # check if we are tasked with removing the image
-        if not removeImageBool:
-            return
-
-        # first, ensure the image_path property exists
-        try:
-            image_path = service[PROP_IMAGE_PATH]
-        except KeyError:
-            sys.stderr.write(_("Image-path record for service %s is " +
-                              "missing.\n") % service.serviceName)
-            return
-
-        # next, ensure no other service uses the same image
-        # avoid doing this in list comprehension so we can continue through
-        # KeyErrors
-        # dependent_services will be a list of all the services using this
-        # image
-        dependent_services = []
-
-        # iterate over a list of AIservice objects. Get the SMF instance object
-        # of the service which will then provide a dictionary of services via
-        # the services property (we just need the service names which are the
-        # values of the dictionary)
-        for serv in (service.instance.services.values()):
-            try:
-                if serv[PROP_IMAGE_PATH] == image_path:
-                    dependent_services.append(serv.serviceName)
-            # if the service doesn't have a valid image-path (or the service
-            # has been removed since we got the handle) ignore that service
-            except KeyError:
-                pass
-
-        # lastly, if the image is found to be used more than once,
-        # warn and return
-        if len(dependent_services) > 1:
-            sys.stderr.write(_("Not removing image path; %s is used by " +
-                              "services:\n") % image_path)
-            # print service names
-            for svc in dependent_services:
-                # filter out service we are deleting
-                if svc != service.serviceName:
-                    sys.stderr.write(svc + "\n")
-            return
-
-        # lastly, all is good, return the image and image-server path
-        else:
-            # find the longest empty path leading up to webserver image path
-            files = [image_path,
-                     # must strip the leading path separator from image_path as
-                     # os.join won't concatenate two absolute paths
-                     os.path.join('/var/ai/image-server/images/',
-                                  image_path.lstrip(os.sep))]
-            # the webserver image path will remain at index 1 in the files list
-            webServerImagePathIdx = 1
-            # if webserver image path is non-existent return now
-            # yes return the non-existent webserver path to raise the issue to
-            # the user
-            if not os.path.lexists(files[webServerImagePathIdx]):
-                return files
-            # get the parent dir of the webserver path
-            directory = os.path.dirname(files[webServerImagePathIdx])
-
-            # iterate up the directory structure (toward / from the
-            # image server's image path) adding empty directories
-            while len(os.listdir(directory)) == 1:
-                # stop at /var/ai/image-server/images,
-                # if we have gotten that far in the traversal
-                if directory == "/var/ai/image-server/images":
-                    break
-                files.append(directory)
-                directory = os.path.dirname(directory)
-            return files
-
-    def removeBootArchiveFromVFSTab(boot_archive):
-        '''
-        Remove boot_archive file system from vfstab
-        '''
-        try:
-            vfstabObj = com.VFSTab(mode="r+")
-        except IOError, err:
-            sys.stderr.write(str(err) + "\n")
-            return
-        # look for filesystem in /etc/vfstab
-        try:
-            # calculate index for mount point
-            idx = vfstabObj.fields.MOUNT_POINT.index(boot_archive)
-            try:
-                # remove line containing boot archive (updates /etc/vfstab)
-                del(vfstabObj.fields.MOUNT_POINT[idx])
-            except IOError, err:
-                sys.stderr.write(str(err) + "\n")
-        # boot archive was not found in /etc/vfstab
-        except (ValueError, IndexError):
-            sys.stderr.write(_("Boot archive (%s) for service %s " +
-                              "not in vfstab.\n") %
-                              (boot_archive, service.serviceName))
-        return
-
-    def removeTFTPBootFiles(service):
-        '''
-        Handle file removal in /tftpboot by building a list of files to remove:
-        First, adds pxegrub.<directory pointed to by /tftpboot/<service
-         name> i.e. pxegrub.I86PC.Solaris-1
-        Unmounts directory which is boot archive (will be something like
-         I86PC.Solaris-4) and removes /etc/vfstab entry for mount point
-
-        Calls /tftpboot/rm.<service name> which should remove:
-            /tftpboot/<service name>
-            /tftpboot/menu.lst.<service name>
-            (if the above aren't removed by the rm.<service name> script they
-             are added to the remove list)
-        Adds /tftpboot/rm.<service name>
-
-        Returns: If unable to find tftp root - None
-                 Success - A list of file paths to remove
-        '''
-        # store files to pass back for removal
-        files = []
-
-        # check that we have a valid tftpboot directory and set baseDir to it
-        baseDir = com.find_TFTP_root()
-        if not baseDir:
-            sys.stderr.write(_("Unable to remove the grub executable, boot " +
-                              "archive, or menu.lst file\nwithout a valid " +
-                              "tftp root directory.\n"))
-            return
-
-        # if we have a boot_file use it instead of serviceName for paths
-        try:
-            service_name = service['boot_file']
-        except KeyError:
-            service_name = service.serviceName
-
-        # see if the directory pointed to by /tftpboot/<service name> exists
-        curPath = os.path.join(baseDir, service_name)
-        if not os.path.exists(curPath):
-            sys.stderr.write(_("The grub executable %s " +
-                              "for service %s is missing.\n") %
-                              (curPath, service.serviceName))
-        else:
-            # find the target of the sym link for /tftpboot/<service name>
-            pxe_grub = os.readlink(curPath)
-            # see if the target still exists
-            if os.path.exists(os.path.join(baseDir, pxe_grub)):
-                # get a list of all symlinks in /tftpboot, and then resolve
-                # their target path
-
-                # get all files in baseDir
-                baseDirFiles = [os.path.join(baseDir, f) for f in
-                    os.listdir(baseDir)]
-                # get all links in baseDir
-                links = filter(os.path.islink, baseDirFiles)
-                # get all paths in baseDir
-                paths = [os.readlink(l) for l in links]
-                # there's only one symlink pointing to our boot archive,
-                # it is fine to remove it
-                if paths.count(pxe_grub) == 1:
-                    pxe_grub = os.path.join(baseDir, pxe_grub)
-                    files.append(pxe_grub)
-
-        # Use GRUB menu to check for boot_archive, see that it exists
-        grub_menu_prefix = "menu.lst."
-        grub_menu = grub_menu_prefix + service_name
-        if not os.path.exists(os.path.join(
-                              baseDir, grub_menu)):
-            sys.stderr.write(_("Unable to find GRUB menu at %s, and thus " +
-                              "unable to find boot archive.\n") % grub_menu)
-        else:
-            # check the menu.lst file for the boot archive(s) in use
-            menu_lst = com.GrubMenu(file_name=os.path.join(baseDir, grub_menu))
-
-            # iterate over both module and module$ of the service's grub menus
-            # looking for boot_archive
-            for boot_archive in set(menu_lst[entry].get('module') or
-                                    menu_lst[entry].get('module$') for
-                                    entry in menu_lst.entries):
-
-                # iterate over all grub menus to see if this boot_archive
-                # is in use by another service
-                inUse = []
-                # build a list of grub menus from baseDir
-                menus = [filename for filename in os.listdir(baseDir) if
-                    # only select files which start with grub menu prefix
-                    filename.startswith(grub_menu_prefix) and
-                    # do not select the menu file the service uses
-                    filename != os.path.basename(menu_lst.file_obj.file_name)]
-                # iterate over all menus except the current service's
-                for menuName in menus:
-                    otherMenu = com.GrubMenu(file_name=os.path.join(baseDir,
-                                                                    menuName))
-
-                    # iterate over all entries looking for boot_archive
-                    if boot_archive in [otherMenu[entry].get('module') or
-                                        otherMenu[entry].get("module$") for
-                                        entry in otherMenu.entries]:
-                    # boot_archive was in use add service/client name
-                        inUse.append(menuName.partition(grub_menu_prefix)[2])
-
-                # if this boot_archive is in use, skip it (but explain why)
-                if inUse:
-                    sys.stderr.write(_("Not removing boot archive %s.\n"
-                                       "Boot archive is in use by "
-                                       "service/clients:\n") % boot_archive)
-                    for obj in inUse:
-                        print obj
-                    continue
-
-                # boot_archive will be relative to /tftpboot so will appear to
-                # be an absolute path (i.e. will have a leading slash) and will
-                # point to the RAM disk
-                boot_archive = baseDir + "/" + \
-                               boot_archive.split(os.path.sep, 2)[1]
-
-                # see if it is a mount point
-                # os.path.ismount() doesn't work for a lofs FS so use
-                # /etc/mnttab instead
-                if boot_archive in com.MNTTab().fields.MOUNT_POINT:
-                    # unmount filesystem
-                    try:
-                        com.run_cmd({"cmd": ["/usr/sbin/umount",
-                                             boot_archive]})
-                    # if run_cmd errors out we should continue
-                    except SystemExit, err:
-                        sys.stderr.write(str(err) + "\n")
-
-                # boot archive directory not a mountpoint
-                else:
-                    sys.stderr.write(_("Boot archive %s for service is " +
-                                      "not a mountpoint.\n") %
-                                      os.path.join(baseDir,
-                                      boot_archive))
-                removeBootArchiveFromVFSTab(boot_archive)
-                files.append(boot_archive)
-
-        # call /tftpboot/rm.<service name> which should remove:
-        # /tftpboot/menu.lst.<service name>
-        # /tftpboot/<service name>
-        rmCMD = os.path.join(baseDir, "rm." + service_name)
-        # ensure /tftpboot/rm.<service name> exists
-        if os.path.exists(rmCMD):
-            try:
-                # make the rm script rwxr--r--
-                os.chmod(rmCMD,
-                         stat.S_IRUSR | stat.S_IWUSR | stat.S_IRWXU |
-                         stat.S_IRGRP | stat.S_IROTH)
-                com.run_cmd({"cmd": [rmCMD]})
-
-            # if run_cmd errors out we should continue
-            except (IOError, SystemExit, OSError), err:
-                sys.stderr.write(str(err) + "\n")
-
-        # check that files which should have been removed, were and if not
-        # append them for removal from this script:
-
-        # check remove script (/tftpboot/rm.<service name>) removed itself
-        if os.path.exists(rmCMD):
-            files.append(rmCMD)
-
-        # check GRUB menu (/tftpboot/menu.lst.<service name>)
-        if os.path.exists(os.path.join(baseDir, grub_menu)):
-            files.append(os.path.join(baseDir, grub_menu))
-
-        # check GRUB executable (/tftpboot/<service name>)
-        if os.path.exists(os.path.join(baseDir, service_name)):
-            files.append(os.path.join(baseDir, service_name))
-
-        return files
-
-    #
-    # Begin actual remove_files() code below
-    #
-
-    # All files to remove are specified by a path or a callable function
-    # (which returns None or a list of file paths). (The filesToRemove list is
-    # a fantastic tool for debugging to watch the order in which files are
-    # added and which function is adding which files)
-    filesToRemove = [
-                     find_service_directory,  # /var/ai/<service-name>|<port>
-                     find_image_path          # image path
-                    ]
-    # try to determine if we are a SPARC or X86 image.
-    # first see if the image_path property exists.
-    arch = None
+    # stop the service first (avoid pulling files out from under programs)
     try:
-        image_path = service[PROP_IMAGE_PATH]
-        # see if we have an X86 service
-        if os.path.exists(os.path.join(image_path, "platform", "i86pc")):
-            arch = "X86"
-        # see if we have a SPARC service
-        elif (os.path.exists(os.path.join(image_path, "platform", "sun4u")) or
-             os.path.exists(os.path.join(image_path, "platform", "sun4v"))):
-            arch = "SPARC"
-            # /etc/netboot/<service name>
-            filesToRemove.append("/etc/netboot/" + service.serviceName)
-    except KeyError:
-        # os.walk returns files in the 3rd index of its tuple return
-        osWalkDirIdx = 1
-        # if we have an /etc/netboot entry then we should be SPARC
-        if os.path.exists("/etc/netboot/" + service.serviceName):
-            arch = "SPARC"
-            # /etc/netboot/<service name>
-            filesToRemove.append("/etc/netboot/" + service.serviceName)
-        # if the client's ID is a file under /etc/netboot add it
-        elif True in [service.serviceName in file_[osWalkDirIdx] for file_ in
-                      os.walk("/etc/netboot")]:
-            arch = "SPARC"
-            # add to the deletion list each entry under /etc/netboot which
-            # appears with this client ID
-            # pylint: disable-msg=W0612
-            # Disable msg for unused variable files.
-            for (path, dirs, files) in os.walk("/etc/netboot"):
-                if service.serviceName in dirs:
-                    # this may match more than once if there are multiple
-                    # entries for the machine add them all
-                    filesToRemove.append(os.path.join(path,
-                                         service.serviceName))
-        else:
-            # No SMF properties found, nor files to identify this arch as
-            # SPARC; so, try looking for X86 files.
-            # If /tftpboot/<service_name> exists, we know it's X86
-            # architecture.
-            tftpDir = com.find_TFTP_root()
-            if tftpDir:
-                if os.path.exists(os.path.join(tftpDir, service.serviceName)):
-                    arch = "X86"
+        service.delete()
+    except StandardError as err:
+        # Bail out if the service could not be unmounted during the disable,
+        # as it won't be possible to delete necessary files.
+        print >> sys.stderr, _("Service could not be deleted.")
+        raise SystemExit(err)
 
-    if arch == "SPARC":
-        # see if /etc/netboot/wanboot.conf is left dangling and if so clean
-        # it up too
-        filesToRemove.append(check_wanboot_conf)
-    elif arch == "X86":
-        # /etc/tftpboot files
-        filesToRemove.append(removeTFTPBootFiles)
-    # if arch was never set we can not figure out what to delete
-    # error and return now
-    else:
-        sys.stderr.write(_("Unable to find service or client %s.\n") %
-                          (service.serviceName))
-        return
-
-    # iterate over all paths to remove (detect their type dynamically)
-    for obj in filesToRemove:
-        # see if we have a None
-        if not obj:
-            continue
-        # see if we have a function
-        # (which will return a list of files to remove)
-        elif callable(obj):
-            result = obj(service)
-            # check if we get a string back
-            if isinstance(result, basestring):
-                removeFile(result)
-            # check if we get a string back
-            elif isinstance(result, list):
-                for item in result:
-                    removeFile(item)
-            # check if we get a None back
-            elif not result:
-                pass
-            # error, as what is this?
-            else:
-                raise TypeError(_("Error:\tUnexpected data: %s\n") % result)
-        # this should be a single file, hand it to removeFile for removal
-        else:
-            removeFile(obj)
-
-
-def remove_service(service):
-    '''
-    Removes service from the AutoInstaller SMF service
-    Args: AIservice object
-    Returns:
-    '''
-
-    # if we are the instance's last service, transition the SMF instance to
-    # maintenance
-    if len(service.instance.services) <= 1:
-        service.instance.state = "MAINTENANCE"
-
-    # remove the service
-    try:
-        service.instance.del_service(service.serviceName)
-    # if the service can not be found a KeyError will be raised
-    except KeyError:
-        pass
+    # if this was the last service, go to maintenance
+    config.check_for_enabled_services()
 
 
 def do_delete_service(cmd_options=None):
     '''
-    Delete the specified Automated Install Service
+    Entry point for delete_service
 
     '''
     # check that we are root
     if os.geteuid() != 0:
         raise SystemExit(_("Error: Root privileges are required for "
                            "this command."))
-
+    
     # parse server options
-    (service, options) = parse_options(cmd_options)
-
-    # stop the service first (avoid pulling files out from under programs)
-    stop_service(service)
-
-    # everything should be down, remove files
-    remove_profiles(service)
-    remove_files(service, options.deleteImage)
-
-    # check if this machine is a DHCP server
-    remove_DHCP_macro(service)
-
-    # remove the service last
-    remove_service(service)
-
-
-def remove_profiles(service):
-    ''' delete profile files from internal database
-    Arg: service - object of service to delete profile files for
-    Effects: all internal profile files for service are deleted
-    Exceptions: OSError logged only, considered non-critical
-    Note: database untouched - assumes that database file will be deleted
-    '''
-    svc_info = get_service_info(service.serviceName)
-    dbn = AIdb.DB(svc_info[1])
-    query = AIdb.DBrequest("SELECT file FROM " + AIdb.PROFILES_TABLE)
-    dbn.getQueue().put(query)
-    query.waitAns()
-    for row in iter(query.getResponse()):
-        filename = row['file']
-        try:
-            if os.path.exists(filename):
-                os.unlink(filename)
-        except OSError, emsg:
-            logging.warn(_("Could not delete profile %s: %s") %
-                         (filename, emsg))
+    options = parse_options(cmd_options)
+    delete_specified_service(options.service_name, options.autoremove,
+                             options.noprompt)
 
 
 if __name__ == "__main__":
-
     # initialize gettext
     gettext.install('ai', '/usr/lib/locale')
 

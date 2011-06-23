@@ -21,17 +21,24 @@
 #
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
-''' Auto Installer mDNS and DNS Service Discovery class and application.
+'''
+Auto Installer mDNS and DNS Service Discovery class and application.
 '''
 import atexit
 import gettext
-from optparse import OptionParser
+import linecache
 import os
-import pybonjour as pyb
 import signal
-import subprocess
 import sys
+
+import pybonjour as pyb
+
 import osol_install.auto_install.aimdns_mod as aimdns
+
+from optparse import OptionParser
+
+from osol_install.auto_install.installadm_common import _
+from solaris_install import Popen
 
 # location of the process ID file
 PIDFILE = '/var/run/aimdnsd'
@@ -101,37 +108,32 @@ def store_pid():
     Raises
         None
     '''
-    # pylint: disable-msg=W0603
-    # modifying the REMOVE_PID global
     global REMOVE_PID
-    # pylint: enable-msg=W0603
 
     # ensure that the PIDFILE is removed
     REMOVE_PID = True
 
     if os.path.exists(PIDFILE):
-        with open(PIDFILE, 'r') as pidfile:
-            # get the pid from the file
-            try:
-                pid = int(pidfile.read().strip('\n'))
-                # see if aimdns is still running via pgrep
-                proc = subprocess.Popen(["/usr/bin/pgrep", "aimdns"],
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
-                (stdout, stderr) = proc.communicate()
-
-                if stderr:
-                    print stderr
-                else:
-                    for pgrep_pid in str(stdout).split('\n')[:-1]:
-                        runpid = int(pgrep_pid)
-                        if runpid == pid:
-                            sys.stderr.write(_('error:aimdns already running '
-                                               '(pid %d)\n') % pid)
-                            sys.exit(1)
-            except ValueError:
-                # var/run/aimdns file left over, truncate via open it.
-                pass
+        try:
+            linecache.checkcache(PIDFILE)
+            pid = int(linecache.getline(PIDFILE, 1).strip('\n'))
+            # see if aimdns is still running via pgrep
+            cmd = ["/usr/bin/pgrep", "aimdns"]
+            pgrep_proc = Popen.check_call(cmd, stdout=Popen.STORE,
+                                          stderr=Popen.STORE,
+                                          check_result=Popen.ANY)
+            if pgrep_proc.stderr:
+                print pgrep_proc.stderr
+            else:
+                for pgrep_pid in pgrep_proc.stdout.split('\n')[:-1]:
+                    runpid = int(pgrep_pid)
+                    if runpid == pid:
+                        sys.stderr.write(_('error:aimdns already running '
+                                           '(pid %d)\n') % pid)
+                        sys.exit(1)
+        except ValueError:
+            # var/run/aimdns file left over, truncate via open it.
+            pass
 
     with open(PIDFILE, 'w+') as pidfile:
         mystr = str(os.getpid()) + '\n'
@@ -160,8 +162,6 @@ def remove_pid():
             os.remove(PIDFILE)
 
 
-# pylint: disable-msg=W0613
-# disabled for frame
 def on_exit(signum=0, frame=None):
     '''Callback invoked when SIGTERM is received,
        or when the program is exiting
@@ -183,7 +183,6 @@ def on_exit(signum=0, frame=None):
     AIMDNS.clear_sdrefs()
     if signum == signal.SIGTERM:
         sys.exit(0)
-# pylint: enable-msg=W0613
 
 
 def main(mdns):

@@ -21,16 +21,12 @@
 #
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 """
-
 A/I Verify Manifest
-
 """
-
 # Eventually bring names into convention.
-# pylint: disable-msg=C0103
+import os.path
 
 import lxml.etree
-import os.path
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.installadm_common as com
@@ -65,7 +61,6 @@ def verifyDTDManifest(xml_dtd, data):
     if dtd.validate(root):
         return root, None
     else:
-        # pylint: disable-msg=E1101
         for err in dtd.error_log.filter_from_errors():
             result.append(err.message)
         return None, result
@@ -94,7 +89,6 @@ def verifyRelaxNGManifest(schema_f, data):
     logging.debug('validate')
     if relaxng.validate(root):
         return root, None
-    # pylint: disable-msg=E1101
     logging.debug('error')
     return None, relaxng.error_log.last_error
 

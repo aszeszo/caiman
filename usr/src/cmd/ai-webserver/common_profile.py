@@ -19,24 +19,31 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
-
 '''
 Contains routines and definitions for any script involving profiles
 '''
+import grp
 import os
+import pwd
 import sys
-from string import Template
 import tempfile
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.verifyXML as verifyXML
+
+from string import Template
+
 from osol_install.auto_install.installadm_common import _
 from solaris_install import Popen
 
-INTERNAL_PROFILE_DIRECTORY = '/var/ai/profile'  # work directory for profiles
-AI_MANIFEST_ATTACHMENT_NAME = 'manifest.xml'  # MIME attachment manifest name
-WEBSERVD_UID = 80 # user ID of webserver daemon
-WEBSERVD_GID = 80 # group ID of webserver daemon
+# profiles stored here internally
+INTERNAL_PROFILE_DIRECTORY = '/var/ai/profile'
+# MIME attachment name for manifest
+AI_MANIFEST_ATTACHMENT_NAME = 'manifest.xml'
+
+WEBSERVD_UID = pwd.getpwnam('webservd').pw_uid
+WEBSERVD_GID = grp.getgrnam('webservd').gr_gid
+
 TEMPLATE_VARIABLES = [
             'AI_ARCH',
             'AI_CID',
@@ -80,7 +87,8 @@ def perform_templating(profile_str, validate_only=True):
         profile string with any templating substitution performed
     Exceptions:
         KeyError when template variable missing when it is
-            absolutely needed; e.g. install time, installadm for static profile
+            absolutely needed; e.g., install time, installadm
+            for static profile
         ValueError when environment variable format is invalid
     '''
     template_dict = dict()
@@ -289,7 +297,7 @@ def validate_profile_string(profile_str, image_dir=None, resolve_entities=True,
     dtd_file = os.path.join(image_dir, 'auto_install', 'service_bundle.dtd.1')
     # if warning only on DTD missing, and DTD is indeed missing
     if root.docinfo.system_url is not None and warn_if_dtd_missing and \
-            not os.path.exists(dtd_file):
+        not os.path.exists(dtd_file):
         print >> sys.stderr, _(
             "Warning:  DTD %s not found.  Cannot validate completely.") % \
             dtd_file

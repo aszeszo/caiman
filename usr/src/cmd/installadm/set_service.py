@@ -20,23 +20,24 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
-
 """
 AI set-service
 """
-
 import gettext
 import logging
 import os
+import sys
+
+import osol_install.auto_install.service as svc
+import osol_install.auto_install.service_config as config
 
 from optparse import OptionParser
 
-from osol_install.auto_install.properties import set_default, \
-    get_service_info, DEFAULT_MANIFEST_PROP
-from osol_install.auto_install.installadm_common import validate_service_name
-from solaris_install import AI_DATA, _
+from osol_install.auto_install.installadm_common import _, \
+    validate_service_name
 
-SERVICE_PROPS = [DEFAULT_MANIFEST_PROP]
+
+SERVICE_PROPS = [config.PROP_DEFAULT_MANIFEST, 'aliasof']
 
 
 def get_usage():
@@ -44,11 +45,9 @@ def get_usage():
     get usage for set-service
     """
     usage = _(
-        'set-service\t-o|--option <prop>=<value> ... <svcname>\n'
+        'set-service\t-o|--option <prop>=<value> <svcname>\n'
         '\t\tprop=value can be:\n'
-#        '\t\t\tglobal-menu=true|false\n'
-#        '\t\t\tname=<new_svcname>\n'
-#        '\t\t\talias=<alias_name>\n'
+        '\t\t\taliasof=<existing_service>\n'
         '\t\t\tdefault-manifest=<manifest/script name>')
     return(usage)
 
@@ -72,9 +71,10 @@ def parse_options(cmd_options=None):
     # Check for correct number of args
     if len(args) != 1:
         if not len(args):
-            parser.error(_("Missing required argument, <svcname>"))
+            err_msg = _("Missing required argument, <svcname>")
         else:
-            parser.error(_("Unexpected argument(s): %s") % args[1:])
+            err_msg = _("Unexpected argument(s): %s") % args[1:]
+        parser.error(err_msg)
 
     # Check that we have a property/value
     if not options.propval:
@@ -118,19 +118,65 @@ def do_set_service_default_manifest(options):
     '''
     Handle default_manifest property processing.
     '''
+    service = svc.AIService(options.svcname)
     try:
-        service_dir, dummy, dummy = get_service_info(options.svcname)
-    except StandardError, err:
-        raise SystemExit(str(err))
+        service.set_default_manifest(options.value)
+    except ValueError as error:
+        raise SystemExit(error)
 
-    mfest_file = "/".join([service_dir, AI_DATA, options.value])
-    if not os.path.exists(mfest_file):
-        raise SystemExit(_("Manifest \"%s\" is not registered "
-                           "with service") % options.value)
+
+def set_aliasof(options):
+    '''Change a service's base service'''
+    logging.debug("set alias %s's basesvc to %s",
+                  options.svcname, options.value)
+    basesvcname = options.value
+    aliasname = options.svcname
+
+    if not config.is_service(basesvcname):
+        raise SystemExit(_('Error: Service does not exist: %s ') %
+                         basesvcname)
+
+    if not config.is_service(aliasname):
+        raise SystemExit(_('Error: Alias does not exist: %s ') % aliasname)
+
+    if aliasname == basesvcname:
+        raise SystemExit(_('Error: Alias name same as service name: %s ') %
+                         aliasname)
+
+    aliassvc = svc.AIService(aliasname)
+    if not aliassvc.is_alias():
+        raise SystemExit(_('Error: Service exists, but is not an '
+                           'alias: %s ') % aliasname)
+
+    basesvc_arch = svc.AIService(basesvcname).arch
+    aliassvc_arch = aliassvc.arch
+    if basesvc_arch != aliassvc_arch:
+        raise SystemExit(_("Error: Architectures of service and alias "
+                           "are different."))
+
+    if aliassvc.is_aliasof(basesvcname): 
+        raise SystemExit(_("Error: %s is already an alias of %s") %
+                         (aliasname, basesvcname))
+
+    if svc.AIService(basesvcname).is_alias():
+        raise SystemExit(_("Error: Cannot alias to another alias."))
+
+    # Make sure we aren't creating inter dependencies
+    all_aliases = config.get_aliased_services(aliasname, recurse=True)
+    if basesvcname in all_aliases:
+        raise SystemExit(_("Error: %s can not be made an alias of %s because "
+                           "%s is dependent on %s") %
+                        (aliasname, basesvcname, basesvcname, aliasname))
     try:
-        set_default(options.svcname, options.value)
-    except StandardError, err:
-        raise SystemExit(str(err))
+        aliassvc.update_basesvc(basesvcname)
+    except (OSError, config.ServiceCfgError) as err:
+        raise SystemExit(_("Failed to set 'aliasof' property of : %s") %
+                         aliasname)
+    except svc.MountError as err:
+        print >> sys.stderr, _("Failed to enable alias")
+        raise SystemExit(err)
+    except svc.UnsupportedAliasError as err:
+        raise SystemExit(err)
 
 
 def do_set_service(cmd_options=None):
@@ -150,18 +196,18 @@ def do_set_service(cmd_options=None):
     except ValueError as err:
         raise SystemExit(str(err))
 
-    logging.debug("options %s" % options)
+    logging.debug("options %s", options)
 
     if options.prop == "default-manifest":
         do_set_service_default_manifest(options)
-
-    # XXX Future services can go here in an "else" clause...
+    elif options.prop == "aliasof":
+        return set_aliasof(options)
+    # Future set-service options can go here in an "else" clause...
 
 
 if __name__ == '__main__':
-    import sys
     gettext.install("ai", "/usr/lib/locale")
 
     # If invoked from the shell directly, mostly for testing,
     # attempt to perform the action.
-    do_set_service(sys.argv)
+    do_set_service()

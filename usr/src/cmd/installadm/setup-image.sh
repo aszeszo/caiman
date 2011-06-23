@@ -38,7 +38,6 @@ APACHE2=/usr/apache2/2.2/bin/apachectl
 AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
 RUN_DIR=/var/run/installadm
 MOUNT_DIR=${RUN_DIR}/installadm_image.$$
-DOCROOT=/var/ai/image-server/images
 VERSION_FILE=/usr/share/auto_install/version
 AI_NETIMAGE_REQUIRED_FILE="solaris.zlib"
 DF="/usr/sbin/df"
@@ -113,7 +112,7 @@ cleanup_and_exit()
 #
 usage()
 {
-	print "setup_image [create <source> <destination>]"
+	print "setup_image create <source> <destination>"
 	cleanup_and_exit 1
 }
 
@@ -275,7 +274,7 @@ create_image()
 	check_target $target
 
 	#
-	# Check for space to create image and in /tftpboot
+	# Check for space to create image
 	#
 	space_reqd=$(du -ks ${src_dir} | ( read size name; print $size ))
 	# copy the whole CD to disk except Boot image
@@ -301,18 +300,6 @@ create_image()
 	# directory which has build specific AI files in it.
 	check_auto_install_dir $target
 
-	# Check whether the AI imageserving webserver is running. If not
-	# start the webserver
-	$PGREP -f ai-httpd.conf > /dev/null 2>&1
-	if [ $? -ne 0 ]; then
-		${APACHE2} -f ${AI_HTTPD_CONF} -k start
-	fi
-
-	# Create a link from the AI webserver so that it can accessed by the client
-	target_path=$($DIRNAME $target)
-
-	$MKDIR -p ${DOCROOT}/$target_path
-	$LN -s $target ${DOCROOT}/$target
 	return 0
 }
 

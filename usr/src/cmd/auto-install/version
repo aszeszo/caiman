@@ -26,4 +26,4 @@
 #
 
 # Boot image version
-IMAGE_VERSION=2.0
+IMAGE_VERSION=3.0

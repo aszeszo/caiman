@@ -30,6 +30,8 @@ import sys
 import unittest
 
 import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.service as service
+import osol_install.auto_install.service_config as config
 import osol_install.libaiscf as smf
 import osol_install.libaimdns as libaimdns
 
@@ -181,41 +183,49 @@ class MockDataFiles(object):
         self.database = MockDataBase()
 
 
+class MockGetAllServiceNames(object):
+    '''Class for mock get_all_service_names'''
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self):
+        return ['aservice']
+
+
+class MockGetServicePort(object):
+    '''Class for mock get_service_port'''
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, service):
+        return 5555
+
+
+class MockVersion(object):
+    '''Class for mock version '''
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self):
+        return service.AIService.EARLIEST_VERSION
+
+
+class MockAIService(object):
+    '''Class for mock AIService '''
+    def __init__(self):
+        self.database_path = ""
+
+    def version(self):
+        return 3
+
+
 class MockAISCF(object):
     '''Class for mock AISCF class'''
-    def __init__(self, services):
-        self.themockservices = services
-
-    @property
-    def services(self):
-        return self.themockservices
+    def __init__(self):
+        pass
 
     def __call__(self, FMRI):
         return self
-
-
-class MockAIservice(object):
-    '''Class for mock AIservice class'''
-    def __init__(self, services=None):
-        self.services = services
-
-    def __call__(self, inst, key):
-        self.inst = inst
-        self.key = key
-
-        return self
-
-    def __getitem__(self, key):
-        if key == 'service_name':
-            return self.services
-        if key == 'txt_record':
-            return 'aiwebserver=192.168.168.100:46502'
-
-    def values(self):
-        return ['values']
-
-    def keys(self):
-        return ['service_name', 'txt_record']
 
 
 class MockGetInteger(object):
@@ -319,14 +329,6 @@ class testSendCriteria(unittest.TestCase):
         AIdb.DBrequest = self.mockquery
         self.files = MockDataFiles()
 
-        self.aiscf_orig = smf.AISCF
-        self.mockaiscf = MockAISCF(services={self.SERVICE: 'stuff'})
-        smf.AISCF = self.mockaiscf
-
-        self.aiserv_orig = smf.AIservice
-        self.mockaiserv = MockAIservice()
-        smf.AIservice = self.mockaiserv
-
         self.redirected = RedirectedOutput()
         self.stdout_orig = sys.stdout
         sys.stdout = self.redirected
@@ -337,8 +339,6 @@ class testSendCriteria(unittest.TestCase):
         original values.
         '''
         AIdb.DBrequest = self.aidb_DBrequest
-        smf.AISCF = self.aiscf_orig
-        smf.AIservice = self.aiserv_orig
         sys.stdout = self.stdout_orig
 
     def test_send_needed_criteria(self):
@@ -360,13 +360,14 @@ class testListCriteria(unittest.TestCase):
         AIdb.DBrequest = self.mockquery
         self.files = MockDataFiles()
 
-        self.aiscf_orig = smf.AISCF
-        self.mockaiscf = MockAISCF(services={self.SERVICE: 'stuff'})
-        smf.AISCF = self.mockaiscf
+        self.config_get_all_service_names = config.get_all_service_names
+        config.get_all_service_names = MockGetAllServiceNames()
+        self.config_get_service_port = config.get_service_port
+        config.get_service_port = MockGetServicePort()
 
-        self.aiserv_orig = smf.AIservice
-        self.mockaiserv = MockAIservice()
-        smf.AIservice = self.mockaiserv
+        self.aiscf_orig = smf.AISCF
+        self.mockaiscf = MockAISCF()
+        smf.AISCF = self.mockaiscf
 
         self.getint_orig = libaimdns.getinteger_property
         self.getinteger_property = MockGetInteger
@@ -382,13 +383,14 @@ class testListCriteria(unittest.TestCase):
         original values.
         '''
         AIdb.DBrequest = self.aidb_DBrequest
-        smf.AISCF = self.aiscf_orig
-        smf.AIservice = self.aiserv_orig
         sys.stdout = self.stdout_orig
         libaimdns.getinteger_property = self.getint_orig
+        config.get_all_service_names = self.config_get_all_service_names
+        config.get_service_port = self.config_get_service_port 
 
     def test_list_manifests(self):
         '''validate list_manifests test'''
+
         cgi_get_manifest.list_manifests(self.SERVICE)
         sys.stdout = self.stdout_orig
 
@@ -413,13 +415,14 @@ class testSendManifest(unittest.TestCase):
         AIdb.DBrequest = self.mockquery
         self.files = MockDataFiles()
 
-        self.aiscf_orig = smf.AISCF
-        self.mockaiscf = MockAISCF(services={self.SERVICE: 'stuff'})
-        smf.AISCF = self.mockaiscf
+        self.aiservice = service.AIService
+        self.AIService = MockAIService()
+        service.AIService.version = MockVersion()
 
-        self.aiserv_orig = smf.AIservice
-        self.mockaiserv = MockAIservice()
-        smf.AIservice = self.mockaiserv
+        self.config_get_all_service_names = config.get_all_service_names
+        config.get_all_service_names = MockGetAllServiceNames()
+        self.config_get_service_port = config.get_service_port
+        config.get_service_port = MockGetServicePort()
 
         self.stdout_orig = sys.stdout
         self.redirected = RedirectedOutput()
@@ -431,9 +434,10 @@ class testSendManifest(unittest.TestCase):
         original values.
         '''
         AIdb.DBrequest = self.aidb_DBrequest
-        smf.AISCF = self.aiscf_orig
-        smf.AIservice = self.aiserv_orig
+        service.AIService = self.aiservice
         sys.stdout = self.stdout_orig
+        config.get_all_service_names = self.config_get_all_service_names
+        config.get_service_port = self.config_get_service_port 
 
     def test_send_manifest(self):
         '''validate send_manifest test'''

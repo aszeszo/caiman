@@ -25,3 +25,4 @@
 
 <transform file path=var/svc/manifest/.*\.xml -> add restart_fmri svc:/system/manifest-import:default>
 <transform file path=lib/svc/manifest/.*\.xml -> add restart_fmri svc:/system/manifest-import:default>
+<transform file path=lib/svc/method/svc-install-server -> add restart_fmri svc:/system/install/server:default>

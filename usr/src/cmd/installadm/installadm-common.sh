@@ -22,14 +22,11 @@
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 # Description:
-#       It contains common functions used by create-client and
-#	setup-tftp-links, which is used by when the user issues
-#	installadm create-service.
+#       It contains common functions used by installadm subcommands
 #
 # Files potentially changed on server:
-# /etc/inetd.conf - to turn on tftpboot daemon
-# /etc/vfstab - Entry added to mount the image as a lofs device
-# /tftpboot/menu.lst - menu.lst file corresponding to the service/client
+# /etc/inetd.conf - to turn on tftp daemon
+# /etc/netboot/menu.lst - menu.lst file corresponding to the service/client
 
 AIMDNS=/usr/lib/installadm/aimdns.py
 AWK=/bin/awk
@@ -53,10 +50,12 @@ MV=/bin/mv
 NAWK=/bin/nawk
 PGREP=/bin/pgrep
 PS=/bin/ps
+PYTHON=/usr/bin/python2.6
 RM=/bin/rm
 SED=/bin/sed
 SORT=/bin/sort
 SVCADM=/usr/sbin/svcadm
+SVC_CFG_MODULE=/usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.py
 SVCCFG=/usr/sbin/svccfg
 SVCPROP=/bin/svcprop
 SVCS=/bin/svcs
@@ -77,7 +76,6 @@ GRUB_DO_SAFE_DEFAULT="GRUB_DO_SAFE_DEFAULT"
 NO_INSTALL_GRUB_MENU="NO_INSTALL_GRUB_TITLE"
 NETBOOTDIR="/etc/netboot"
 WANBOOT_CONF_FILE="wanboot.conf"
-SPARC_INSTALL_CONF="install.conf"
 WANBOOT_CONF_SPEC="${NETBOOTDIR}/${WANBOOT_CONF_FILE}"
 SMF_SERVICE="svc:/system/install/server"
 SMF_INST_SERVER="${SMF_SERVICE}:default"
@@ -87,8 +85,6 @@ SERVICE_ADDRESS_UNKNOWN="unknown"
 # question-marks ? or 0.0.0.0 (both in progress of getting a DHCP
 # lease), or -> (IP tunnels)
 IPADM_GREP_STRING='\\:|\?|^0.0.0.0|[0-9]->[0-9]'
-INETD_CONF_TFTP_COMMENT="# TFTPD - tftp server (primarily used for booting)"
-INETD_CONF_TFTP_ENTRY="tftp\tdgram\tudp6\twait\troot\t/usr/sbin/in.tftpd\tin.tftpd -s /tftpboot"
 
 #
 # get_http_port()
@@ -256,63 +252,6 @@ get_ip_netmask()
 }
 
 #
-# get_image_type
-#
-# Purpose : Determine if image is sparc or x86
-#
-# Arguments : 
-#	$1 - path to image
-#
-# Returns: "sparc_image" or "x86_image"
-#
-get_image_type()
-{
-	image_path=$1
-	if [[ -d ${image_path}/platform/sun4v ]]; then
-		image_type="${SPARC_IMAGE}"
-	elif [[ -d ${image_path}/platform/i86pc ]]; then
-		image_type="${X86_IMAGE}"
-	else 
-                print "Unable to determine Oracle Solaris install image type"
-		exit 1
-	fi
-	print "$image_type"
-}
-
-#
-# clean_entry
-#
-# Purpose : Cleanup the /tftpboot files corresponding to the entry
-#	    we are trying to create for this service/ethernet address
-#
-# Arguments : 
-#	$1 - client or server
-#	$2 - Boot File Name
-#
-clean_entry()
-{
-	type=$1
-	bname=$2
-	# See if there's a cleanup file corresponding to the passed 
-	# boot file 
-	#
-	if [[ -n "${bname}" && -f "${Bootdir}/rm.${bname}" ]]; then
-        	CLEAN=${Bootdir}/rm.${bname}
-	fi
-
-	# If a cleanup file exists, source it
-	#
-	if [[ -f ${CLEAN} ]]; then
-		if [[ "${type}" == "client" ]]; then
-		    print "Cleaning up existing install client \"${bname}\""
-		fi
-		. ${CLEAN}
-	fi
-
-	rm -f ${CLEAN}
-}
-
-#
 # get_grub_title
 #
 # Purpose: Get the line used in the title line of the grub menu.
@@ -469,7 +408,7 @@ get_grub_text_mode_menu()
 # get_service_address
 #
 # Purpose: Get the service location (machine ip and port number) for a given
-#          service name. The AI service's SMF property group is consulted
+#          service name. The AI service's install properties are consulted
 #          for this information.
 #
 # Arguments: 
@@ -490,8 +429,8 @@ get_service_address()
 	# txt_record: aiwebserver=<machine_hostname>:<machine_port>
 	# ...
 	#
-	srv_location=$($SVCCFG -s $SMF_INST_SERVER listprop \
-	    AI$1/txt_record)
+	svcname=$1
+	srv_location=$($PYTHON $SVC_CFG_MODULE listprop ${svcname} txt_record)
 	srv_location="${srv_location#*=}"
 
 	# if location of service can't be obtained, return with "unknown"
@@ -950,352 +889,6 @@ function calculate_net_addr
 	return
 }
 
-
-#
-# create_menu_lst_file
-#
-# Purpose : Create the menu.lst file so that the x86 client can get the
-#	    information about the netimage and download the necessary files.
-#	    It also adds location of the kernel, boot_archive and other options.
-#
-# Arguments : 
-#	None, but it is expected that:
-#		$Menufile is set to the correct file.
-#		$IMAGE_PATH is set to the absolute path of the image.
-#		$SERVICE_NAME is set to the service name.
-#		$SERVICE_ADDRESS is set to the location of given service.
-#		$IMAGE_IP is set to the IP of the server hosting the image.
-#		$BARGLIST is set to the comma separated list of boot properties
-#
-create_menu_lst_file()
-{
-
-	# temporary variables used to create separate entries
-	#
-	typeset tmpent1=""
-	typeset tmpent2=""
-
-	print "default=0" > ${Menufile}
-	print "timeout=30" >> ${Menufile}
-
-	# get min_mem64 entry
-	typeset min_mem64=$(get_grub_min_mem64 "$IMAGE_PATH")
-	if [[ ! -z "$min_mem64" ]] ; then
-		print "min_mem64=$min_mem64" >> ${Menufile}
-	fi
-
-	# get release info and strip leading spaces
-	typeset grub_title_string=$(get_grub_title ${IMAGE_PATH})
-	typeset title="title ${grub_title_string//  /}"
-	typeset text_title_string=$(get_grub_text_mode_menu ${IMAGE_PATH})
-	typeset text_title="title ${text_title_string//  /}"
-
-	# get flag indicating whether or not to create a safe default
-	# entry in the menu (i.e. a default entry that does not start
-	# an automated install)
-	typeset grub_do_safe_default=$(get_grub_do_safe_default ${IMAGE_PATH})
-
-	if [ "$grub_do_safe_default" = "true" ]; then
-		typeset ENT_FILES="tmpent1 tmpent2"
-	else
-		typeset ENT_FILES="tmpent2"
-	fi
-
-	if [ "$grub_do_safe_default" = "true" ] ; then
-		# title and kernel lines for safe default entry.
-		tmpent1+="${text_title}\n"
-		tmpent1+="\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}"
-
-		# append to automated install entry.
-		title+=" Automated Install"
-	fi
-
-	# title and kernel lines for the automated install entry.
-	tmpent2+="${title}\n"
-	tmpent2+="\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}"
-
-	# add the install bootarg, only to the automated install entry.
-	tmpent2+="install=true,"
-
-	get_http_port
-	if [ $? -ne 0 ] ; then
-		print "Warning: Unable to determine the service's default port"
-		print "         Using 5555 as the service's port"
-		HTTP_PORT=5555
-	fi
-
-	# remaning common lines.
-	for ent in ${ENT_FILES} ; do
-		# add install media path and service name
-		typeset -n menu_entry="$ent"
-		menu_entry+="install_media="
-		menu_entry+="http://${IMAGE_IP}:${HTTP_PORT}"
-		menu_entry+="${IMAGE_PATH}"
-
-		menu_entry+=",install_service="
-		menu_entry+="${SERVICE_NAME}"
-
-		#
-		# add service location
-		# it can be either provided by the caller or set to "unknown"
-		#
-		# If set to "unknown", try to look up this information
-		# in service configuration database right now
-		#
-		[[ "$SERVICE_ADDRESS" == "$SERVICE_ADDRESS_UNKNOWN" || \
-		    -z "$SERVICE_ADDRESS" ]] && \
-		    SERVICE_ADDRESS=$(get_service_address $SERVICE_NAME)
-
-		if [[ "$SERVICE_ADDRESS" != "$SERVICE_ADDRESS_UNKNOWN" ]]; then
-			print "Service discovery fallback mechanism set up"
-
-			menu_entry+=",install_svc_address="
-			menu_entry+="$SERVICE_ADDRESS"
-		else
-			print "Could not determine service location, " \
-			    "fallback mechanism will not be available"
-		fi
-
-		menu_entry+="\n"
-
-		#
-		# for backwards compatibility, inspect layout of boot archive
-		# and generate GRUB 'module' entry accordingly. Two scenarios
-		# are covered:
-		#
-		# [1] combined boot archive (contains both 32 and 64 bit stuff)
-		#     <ai_image>/boot/x86.microroot
-		# [2] separate 32 and 64 bit boot archives
-		#     <ai_image>/platform/i86pc/$ISADIR/boot_archive
-		#
-		if [ -f ${IMAGE_PATH}/boot/x86.microroot ]; then
-			menu_entry+="\tmodule /${BootLofs}/x86.microroot"
-		else
-			menu_entry+="\tmodule\$ /${BootLofs}/platform/i86pc/\$ISADIR/boot_archive"
-		fi
-	done
-
-	if [ "$grub_do_safe_default" = "true" ] ; then
-		print "${tmpent1}" >> ${Menufile}
-	fi
-	print "${tmpent2}" >> ${Menufile}
-
-        return 0
-}
-
-#
-# mount_lofs_boot
-#
-# Purpose : Create the loopback mount of the boot directory of the netimage
-#	    under /tftpboot. Also updates /etc/vfstab so that they are always
-#	    mounted.
-#
-# Arguments : 
-#	None. But it is expected that $IMAGE_PATH is set to the netimage
-#	and $Bootdir is set to /tftpboot
-#
-#
-mount_lofs_boot()
-{
-	# lofs mount /boot directory under /tftpboot
-	# First, check if it is already in the vfstab
-	#
-	IMAGE_BOOTDIR=${IMAGE_PATH}/boot
-	# see if mount point exists
-	line=$($GREP "^${IMAGE_BOOTDIR}[ 	]" /etc/vfstab)
-	if (( $? == 0 )); then
-		# already exists in vfstab, now check if its actually mounted
-		mountpt=$(print $line | $CUT -d ' ' -f3)
-		BootLofs=$($BASENAME "${mountpt}")
-		BootLofsdir=$($DIRNAME "${mountpt}")
-		if [ ${BootLofsdir} != ${Bootdir} ]; then
-			printf "Error: ${IMAGE_BOOTDIR} set to be mounted"
-			printf " at ${mountpt}\n"
-			printf "   Retry after unmounting and deleting"
-			printf " the entry from /etc/vfstab\n"
-			exit 1
-		fi
-
-		# Check to see if its already mounted according to mnttab.
-		# If it is not, then mount it.
-		while read special mountpoint fstype mntopts mnttime; do
-			[ "x$special" == "x$IMAGE_BOOTDIR" ] && break
-		done < /etc/mnttab
-
-		if [ -z "$special" ]; then
-			# It's not in mnttab, so mount it.
-			mount $mountpt
-		elif [ "$mountpoint" != "$mountpt" ]; then
-			# It is in mnttab, but mounted somewhere else.
-			# Unmount it, and mount it at the expected
-			# mountpoint.
-			printf "Warning: ${IMAGE_BOOTDIR} is already mounted"
-			printf " at ${mountpoint}\n"
-			printf "   Remounting it at ${mountpt}\n"
-			umount $mountpoint
-			mount $mountpt
-		fi
-	else
-		# Not in vfstab. Get a new directory name and
-		# mount IMAGE_BOOTDIR, and add it to the vfstab.
-		max=0
-		for i in ${Bootdir}/I86PC.${VERSION}* ; do
-			max_num=$(expr $i : ".*boot.I86PC.${VERSION}-\(.*\)")
-			if [ "$max_num" -gt $max ]; then
-				max=$max_num
-			fi
-		done
-		((max++))
-
-		BootLofs="I86PC.${VERSION}-${max}"
-		$MKDIR -p ${Bootdir}/${BootLofs}
-		$MOUNT -F lofs -o ro ${IMAGE_BOOTDIR} ${Bootdir}/${BootLofs}
-		if [ $? != 0 ]; then
-			print "${myname}: failed to mount ${IMAGE_BOOTDIR} on" \
-			   "${Bootdir}/${BootLofs}"
-			exit 1
-		fi
-		printf "${IMAGE_BOOTDIR} - ${Bootdir}/${BootLofs} " >> /etc/vfstab
-		printf "lofs - yes ro\n" >> /etc/vfstab
-	fi
-}
-
-#
-# start tftpd if needed
-#
-start_tftpd()
-{
-	
-	INETD_CONF="/etc/inetd.conf"
-	TFTPD_SVC="svc:/network/tftp/udp6:default"
-
-	# read in inetd.conf
-	typeset TMP_INETD_CONF=$($CAT ${INETD_CONF})
-	typeset convert=0
-
-	# see if tftp is in the /etc/inetd.conf file. If it is there
-	# and commented out, need to uncomment it. If it isn't there
-	# at all, need to add it.
-	#
-	if ! $EGREP '^tftp[ 	]' ${INETD_CONF} > /dev/null 2>&1 ; then
-		if $EGREP '^#tftp[ 	]' ${INETD_CONF} > /dev/null 2>&1 ; then
-			# Found it commented out, so it must be disabled. Use
-			# sed to uncomment.
-			#
-			print "enabling tftp in /etc/inetd.conf"
-			TMP_INETD_CONF=$($SED '/^#tftp/ s/#//' ${INETD_CONF})
-		else
-			# No entry, so add it.
-			#
-			print "adding tftp to /etc/inetd.conf"
-			TMP_INETD_CONF+="\n${INETD_CONF_TFTP_COMMENT}"
-			TMP_INETD_CONF+="\n${INETD_CONF_TFTP_ENTRY}"
-		fi
-		convert=1
-	fi
-
-	if (( convert == 1 )); then
-		# Overwrite the inetd.conf file with our changes
-		print "${TMP_INETD_CONF}" >| ${INETD_CONF}
-
-		# If the "network/tftp/udp6" service doesn't
-		# already exist, convert it.
-		if ! $SVCS -a $TFTPD_SVC >/dev/null 2>&1; then
-			print "Converting /etc/inetd.conf"
-			/usr/sbin/inetconv >/dev/null 2>&1
-		fi
-	fi
-
-}
-
-#
-# tftp_file_name
-#
-# Purpose : Determine the name to use for installing a file in ${Bootdir}.
-#	    Use an existing file if there is one that matches, otherwise
-#	    make up a new name with a version number suffix.
-#
-# Arguments :
-#   $1 - the file to be installed
-#   $2 - the prefix to use for forming a name
-#
-# Results :
-#   Filename written to standard output.
-#
-tftp_file_name()
-{
-	SRC=$1
-	BASE=$2
-	file_to_use=
-
-	I86PC="I86PC"
-
-	# Determine the name to use for the file in bootdir.
-	# Either use an existing file or make up a new name with a version
-	# number appended.
-	for i in ${Bootdir}/${BASE}.${I86PC}.${VERSION}* ; do
-		#
-		# avoid symbolic links, or we can end up with
-		# inconsistent references
-		#
-		if [[ -L $i ]]; then
-			continue
-		fi
-
-		# compare file $SRC to file $i
-		if /usr/bin/cmp -s $SRC $i; then
-			file_to_use=$i
-			break
-		fi
-	done
-
-	if [[ -n "$file_to_use" ]]; then
-		file_to_use=$($BASENAME $file_to_use)
-	else
-		# Make this name not a subset of the old style names,
-		# so old style cleanup will work.
-
-		max=0
-		for i in ${Bootdir}/${BASE}.${I86PC}.${VERSION}* ; do
-			max_num=$(expr $i : ".*${BASE}.${I86PC}.${VERSION}-\(.*\)")
-
-			if (( max_num > max )); then
-				max=$max_num
-			fi
-		done
-
-		max=$(( max + 1 ))
-
-		file_to_use=${BASE}.${I86PC}.${VERSION}-${max}
-	fi
-	print $file_to_use
-}
-
-#
-# setup_tftp
-#
-# Purpose : Create a link from one filename to another.  Also store a
-#	    command in the cleanup file to remove the created link.
-#
-# Arguments :
-#   $1 - the link target
-#   $2 - the link source
-#
-setup_tftp()
-{
-	target=$1
-	source=$2
-
-	print "rm /tftpboot/${target}" >> ${CLEAN}
-
-	if [ -h /tftpboot/${target} ]; then
-	    # save it, and append the cleanup command
-	    $MV /tftpboot/${target} /tftpboot/${target}-
-	    print "$MV /tftpboot/${target}- /tftpboot/${target}" >> ${CLEAN}
-	fi
-
-	$LN -s ${source} /tftpboot/${target}
-}
 
 #
 # find_network_attr

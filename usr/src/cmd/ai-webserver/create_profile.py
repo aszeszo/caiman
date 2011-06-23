@@ -20,38 +20,39 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
-
 """
 AI create-profile
 """
-# load external modules
 import gettext
-import lxml.etree
 import os.path
 import sys
 import tempfile
 
+import lxml.etree
+
+import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.common_profile as sc
+import osol_install.auto_install.data_files as df
+import osol_install.auto_install.publish_manifest as pub_man
+import osol_install.auto_install.service_config as config
+
 from optparse import OptionParser
 from stat import S_IRWXU
 
-# load Solaris modules
-import osol_install.auto_install.AI_database as AIdb
-import osol_install.auto_install.common_profile as sc
-import publish_manifest as pub_man
-
 from osol_install.auto_install.installadm_common import _, \
     validate_service_name
-from osol_install.auto_install.properties import get_service_info
+from osol_install.auto_install.service import AIService
 
 
 def get_usage():
     '''
     Return usage for create-profile.
     '''
-    return _("create-profile -n|--service <svcname> -f <profile_file>... "
-        "[-p|--profile <profile_name>]\n"
-        "\t\t[-c|--criteria <criteria=value|range> ...] | \n"
-        "\t\t[-C|--criteria-file <criteria_file>]")
+    return _("create-profile -n|--service <svcname> "
+             "-f|--file <profile_file>... \n"
+             "\t\t[-p|--profile <profile_name>]\n"
+             "\t\t[-c|--criteria <criteria=value|range> ...] | \n"
+             "\t\t[-C|--criteria-file <criteria_file>]")
 
 
 def parse_options(cmd_options=None):
@@ -64,10 +65,10 @@ def parse_options(cmd_options=None):
     parser.add_option("-C", "--criteria-file", dest="criteria_file",
                       default='', help=_("Name of criteria XML file."))
     parser.add_option("-c", "--criteria", dest="criteria_c", action="append",
-                      default=[], metavar="CRITERIA",
+                      default=list(), metavar="CRITERIA",
                       help=_("Criteria: <-c criteria=value|range> ..."))
     parser.add_option("-f", "--file", dest="profile_file", action="append",
-                      default=[], help=_("Path to profile file"))
+                      default=list(), help=_("Path to profile file"))
     parser.add_option("-p", "--profile", dest="profile_name",
                       default='', help=_("Name of profile"))
     parser.add_option("-n", "--service", dest="service_name", default="",
@@ -85,10 +86,8 @@ def parse_options(cmd_options=None):
         parser.error(_("If a profile name is specified (-p), only one file "
             "name may be specified (-f)."))
 
-    try:
-        validate_service_name(options.service_name)
-    except ValueError as err:
-        parser.error(err)
+    if not config.is_service(options.service_name):
+        raise SystemExit(_("No such service: %s") % options.service_name)
 
     return options
 
@@ -176,14 +175,17 @@ def do_create_profile(cmd_options=None):
     '''
     options = parse_options(cmd_options)
 
-    # get AI service database name
-    dummy, dbname, image_dir = get_service_info(options.service_name)
+    # get AI service image path and database name
+    service = AIService(options.service_name)
+    image_dir = service.image.path
+    dbname = service.database_path
+    
     # open database
     dbn = AIdb.DB(dbname, commit=True)
     dbn.verifyDBStructure()
     queue = dbn.getQueue()
     root = None
-    criteria_dict = {}
+    criteria_dict = dict()
 
     # Handle old DB versions which did not store a profile.
     if not AIdb.tableExists(queue, AIdb.PROFILES_TABLE):
@@ -191,19 +193,19 @@ def do_create_profile(cmd_options=None):
                            options.service_name)
     try:
         if options.criteria_file:  # extract criteria from file
-            root = pub_man.verifyCriteria(
-                    pub_man.DataFiles.criteriaSchema,
+            root = df.verifyCriteria(
+                    df.DataFiles.criteriaSchema,
                     options.criteria_file, dbn, AIdb.PROFILES_TABLE)
         elif options.criteria_c:
             # if we have criteria from cmd line, convert into dictionary
             criteria_dict = pub_man.criteria_to_dict(options.criteria_c)
-            root = pub_man.verifyCriteriaDict(
-                    pub_man.DataFiles.criteriaSchema,
+            root = df.verifyCriteriaDict(
+                    df.DataFiles.criteriaSchema,
                     criteria_dict, dbn, AIdb.PROFILES_TABLE)
     except ValueError as err:
         raise SystemExit(_("Error:\tcriteria error: %s") % err)
     # Instantiate a Criteria object with the XML DOM of the criteria.
-    criteria = pub_man.Criteria(root)
+    criteria = df.Criteria(root)
     sc.validate_criteria_from_user(criteria, dbn, AIdb.PROFILES_TABLE)
 
     # loop through each profile on command line

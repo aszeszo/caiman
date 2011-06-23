@@ -20,37 +20,37 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
-
 """
 AI set-criteria
 """
-
 import gettext
 import logging
-import lxml.etree
 import os
 import sys
 
-from optparse import OptionParser
+import lxml.etree
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.common_profile as sc
+import osol_install.auto_install.data_files as df
+import osol_install.auto_install.service_config as config
 import osol_install.auto_install.publish_manifest as pub_man
 
-from osol_install.auto_install.installadm_common import validate_service_name
-from osol_install.auto_install.properties import get_service_info
-from solaris_install import AI_DATA, _
+from optparse import OptionParser
+
+from osol_install.auto_install.installadm_common import _, \
+    AI_SERVICE_DIR_PATH, validate_service_name
+from osol_install.auto_install.service import AIService
 
 
 def get_usage():
     ''' get usage for set-criteria'''
-    return(_(
-        'set-criteria\t-m|--manifest <manifest/script name>\n'
-        '\t\t-p|--profile <profile_name> ...\n'
-        '\t\t-n|--service <svcname>\n'
-        '\t\t-c|--criteria <criteria=value|range> ... |\n'
-        '\t\t-C|--criteria-file <criteria.xml> |\n'
-        '\t\t-a|--append-criteria <criteria=value|range> ... '))
+    return _('set-criteria\t-m|--manifest <manifest/script name>\n'
+             '\t\t-p|--profile <profile_name> ...\n'
+             '\t\t-n|--service <svcname>\n'
+             '\t\t-c|--criteria <criteria=value|range> ... |\n'
+             '\t\t-C|--criteria-file <criteria.xml> |\n'
+             '\t\t-a|--append-criteria <criteria=value|range> ... ')
 
 
 def parse_options(cmd_options=None):
@@ -68,12 +68,12 @@ def parse_options(cmd_options=None):
 
     parser = OptionParser(usage=usage)
     parser.add_option("-a", "--append-criteria", dest="criteria_a",
-                      action="append", default=[],
+                      action="append", default=list(),
                       help=_("Specify criteria to append: "
                       "<-a criteria=value|range> ..."),
                       metavar="CRITERIA")
     parser.add_option("-c", "--criteria", dest="criteria_c", action="append",
-                      default=[], help=_("Specify criteria: "
+                      default=list(), help=_("Specify criteria: "
                       "<-c criteria=value|range> ..."),
                       metavar="CRITERIA")
     parser.add_option("-C", "--criteria-file", dest="criteria_file",
@@ -86,7 +86,7 @@ def parse_options(cmd_options=None):
                       default=None, help=_("Specify name of install "
                       "service."))
     parser.add_option("-p", "--profile", dest="profile_name", action="append",
-                      default=[], help=_("Specify name of profile "
+                      default=list(), help=_("Specify name of profile "
                       "to set criteria for."))
 
     # Get the parsed options using parse_args().  We know we don't have
@@ -123,14 +123,14 @@ def parse_options(cmd_options=None):
     return options
 
 
-def check_published_manifest(service_dir, dbn, manifest_name):
+def check_published_manifest(service, dbn, manifest_name):
     """
     Used for checking that a manifest is already published in the
     install service specified.  Checks to make sure manifest
     exists in the install service's DB, and that the manifest also
     exists in the install service's published files area.
     Args:
-          service_dir - config directory of install service to check.
+          service - service object for service
           dbn - dbn object of install service to check against.
           manifest_name - name of manifest to check.
     Postconditions: None
@@ -145,7 +145,7 @@ def check_published_manifest(service_dir, dbn, manifest_name):
         return False
 
     # Check if manifest file exists in the service's published area.
-    published_path = os.path.join(service_dir, AI_DATA, manifest_name)
+    published_path = os.path.join(service.manifest_dir, manifest_name)
 
     if not os.path.exists(published_path):
         print(_("Error: manifest missing from published area: %s") %
@@ -171,7 +171,7 @@ def set_criteria(criteria, iname, dbn, table, append=False):
     # we need to fill in the criteria or NULLs for each criteria the database
     # supports (so iterate over each criteria)
     for crit in AIdb.getCriteria(dbn.getQueue(), table=table, onlyUsed=False,
-            strip=True):
+                                 strip=True):
 
         # Determine if this crit is a range criteria or not.
         is_range_crit = AIdb.isRangeCriteria(dbn.getQueue(), crit)
@@ -205,11 +205,11 @@ def set_criteria(criteria, iname, dbn, table, append=False):
         else:
             # Set the MIN column for this range criteria
             nvpairs.append("MIN" + crit + "=" +
-                    AIdb.format_value(crit, values[0]))
+                           AIdb.format_value(crit, values[0]))
 
             # Set the MAX column for this range criteria
             nvpairs.append("MAX" + crit + "=" +
-                    AIdb.format_value(crit, values[1]))
+                           AIdb.format_value(crit, values[1]))
 
     query = "UPDATE " + table + " SET " + ",".join(nvpairs) + \
             " WHERE name='" + iname + "'"
@@ -235,36 +235,35 @@ def do_set_criteria(cmd_options=None):
 
     options = parse_options(cmd_options)
 
-    # get AI service directory, database name
-    service_dir, database, dummy = get_service_info(options.service_name)
-
-    # Check that the service directory and database exist
-    if not (os.path.isdir(service_dir) and os.path.exists(database)):
-        raise SystemExit("Error: Invalid AI service directory: %s" %
-                         service_dir)
-
+   # Get the install service's properties.
+    if not config.is_service(options.service_name):
+        raise SystemExit(_("Failed to find service %s") % options.service_name)
+    
+    service = AIService(options.service_name)
+    database = service.database_path
+    
     # Open the database
     dbn = AIdb.DB(database, commit=True)
-
+    
     # Check to make sure that the manifest whose criteria we're
     # updating exists in the install service.
-    if options.manifest_name and not check_published_manifest(
-            service_dir, dbn, options.manifest_name):
+    if (options.manifest_name and not
+        check_published_manifest(service, dbn, options.manifest_name)):
         raise SystemExit(1)
 
     # Process and validate criteria from -a, -c, or -C, and store
     # store the criteria in a Criteria object.
     try:
         if options.criteria_file:
-            root = pub_man.verifyCriteria(pub_man.DataFiles.criteriaSchema,
+            root = df.verifyCriteria(df.DataFiles.criteriaSchema,
                     options.criteria_file, dbn, AIdb.MANIFESTS_TABLE)
         elif options.criteria_a:
             criteria_dict = pub_man.criteria_to_dict(options.criteria_a)
-            root = pub_man.verifyCriteriaDict(pub_man.DataFiles.criteriaSchema,
+            root = df.verifyCriteriaDict(df.DataFiles.criteriaSchema,
                     criteria_dict, dbn, AIdb.MANIFESTS_TABLE)
         elif options.criteria_c:
             criteria_dict = pub_man.criteria_to_dict(options.criteria_c)
-            root = pub_man.verifyCriteriaDict(pub_man.DataFiles.criteriaSchema,
+            root = df.verifyCriteriaDict(df.DataFiles.criteriaSchema,
                     criteria_dict, dbn, AIdb.MANIFESTS_TABLE)
         else:
             raise SystemExit("Error: Missing required criteria.")
@@ -275,7 +274,7 @@ def do_set_criteria(cmd_options=None):
         raise SystemExit(_("Error:\tmanifest error: %s") % err)
 
     # Instantiate a Criteria object with the XML DOM of the criteria.
-    criteria = pub_man.Criteria(root)
+    criteria = df.Criteria(root)
 
     if options.manifest_name:
         # Ensure the criteria we're adding/setting for this manifest doesn't
@@ -293,7 +292,7 @@ def do_set_criteria(cmd_options=None):
     for pname in options.profile_name:
         if not sc.is_name_in_table(pname, dbn.getQueue(), AIdb.PROFILES_TABLE):
             raise SystemExit(_("Error:\tservice has no profile named %s." %
-                pname))
+                             pname))
         # Validate profile criteria
         sc.validate_criteria_from_user(criteria, dbn, AIdb.PROFILES_TABLE)
 
@@ -301,9 +300,9 @@ def do_set_criteria(cmd_options=None):
 
     # indicate whether criteria are added or replaced
     if options.criteria_a:
-        append = True  # add new criteria
+        append = True # add new criteria
     else:
-        append = False  # replace any existing criteria with new
+        append = False # replace any existing criteria with new
     if options.manifest_name:
         # Update the criteria for manifest
         set_criteria(criteria, options.manifest_name, dbn,
@@ -314,6 +313,7 @@ def do_set_criteria(cmd_options=None):
         # Update the criteria for profile
         set_criteria(criteria, pname, dbn, AIdb.PROFILES_TABLE, append)
         print >> sys.stderr, _("Criteria updated for profile %s.") % pname
+
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")

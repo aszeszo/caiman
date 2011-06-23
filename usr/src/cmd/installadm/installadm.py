@@ -21,15 +21,16 @@
 #
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
-
 '''
 installadm - administration of AI services, manifests, and clients
 '''
-
 import logging
 import os
 import sys
 import traceback
+
+import osol_install.auto_install.ai_smf_service as aismf
+import osol_install.auto_install.service_config as config
 
 from optparse import OptionParser, SUPPRESS_HELP
 
@@ -43,21 +44,19 @@ from osol_install.auto_install import delete_service
 from osol_install.auto_install import export
 from osol_install.auto_install import list as ai_list
 from osol_install.auto_install import publish_manifest
+from osol_install.auto_install import rename_service 
 from osol_install.auto_install import set_criteria
 from osol_install.auto_install import set_service
 from osol_install.auto_install import validate_profile
-from osol_install.auto_install.ai_smf_service import \
-    PROP_STATUS, STATUS_OFF, InstalladmAISmfServicesError, \
-    check_for_enabled_services, enable_install_service, \
-    get_pg_props, is_pg, set_pg_props
-from osol_install.auto_install.installadm_common import \
-    CHECK_SETUP_SCRIPT, SERVICE_DISABLE, SETUP_SERVICE_SCRIPT, \
-    validate_service_name
-from solaris_install import Popen, _
+from osol_install.auto_install.installadm_common import _, \
+    CHECK_SETUP_SCRIPT, validate_service_name, XDEBUG, setup_logging
+from osol_install.auto_install.service import AIService, MountError, \
+    VersionError, InvalidServiceError
+from solaris_install import Popen, CalledProcessError
 
-DEFAULT_LOG_LEVEL = "warn"
-DEBUG_LOG_LEVEL = "debug"
-LOG_FORMAT = ("%(filename)s:%(lineno)d %(message)s")
+
+DEFAULT_LOG_LEVEL = logging.WARN
+DEBUG_LOG_LEVEL = logging.DEBUG
 
 
 def get_enable_usage():
@@ -68,7 +67,7 @@ def get_enable_usage():
 
 def get_disable_usage():
     ''' get usage for disable'''
-    usage = _('disable\t[-t|--temporary] <svcname>')
+    usage = _('disable\t<svcname>')
     return(usage)
 
 
@@ -76,28 +75,6 @@ def get_help_usage():
     ''' get usage for help'''
     usage = _('help\t[<subcommand>]')
     return(usage)
-
-
-def setup_logging(log_level):
-    '''Initialize the logger, logging to stderr at log_level,
-       log_level defaults to warn
-
-    Input:
-        Desired log level for logging
-    Return:
-        None
-    Raises:
-        IOError if log level invalid
-
-    '''
-    log_level = log_level.upper()
-    if hasattr(logging, log_level):
-        log_level = getattr(logging, log_level.upper())
-    else:
-        raise IOError(2, 'Invalid log-level', log_level.lower())
-
-    # set up logging to stderr
-    logging.basicConfig(stream=sys.stderr, level=log_level, format=LOG_FORMAT)
 
 
 def do_enable_service(cmd_options=None):
@@ -114,7 +91,7 @@ def do_enable_service(cmd_options=None):
         if attempt to enable the service or the smf service fails.
 
     '''
-    logging.debug('**** START do_enable_service ****')
+    logging.log(XDEBUG, '**** START do_enable_service ****')
 
     usage = '\n' + get_enable_usage()
     parser = OptionParser(usage=usage)
@@ -135,25 +112,27 @@ def do_enable_service(cmd_options=None):
 
     svcname = args[0]
 
-    # validate service name
-    try:
-        validate_service_name(svcname)
-    except ValueError as err:
-        raise SystemExit(err)
+    if not config.is_service(svcname):
+        err_msg = _("The service does not exist: %s\n") % svcname
+        parser.error(err_msg)
 
     # Verify that the server settings are not obviously broken.
     # These checks cannot be complete, but do check for things
     # which will definitely cause failure.
-    logging.debug('Calling %s', CHECK_SETUP_SCRIPT)
     ret = Popen([CHECK_SETUP_SCRIPT]).wait()
     if ret:
         return 1
 
-    logging.debug('Enabling install service %s', svcname)
+    logging.log(XDEBUG, 'Enabling install service %s', svcname)
     try:
-        enable_install_service(svcname)
-    except InstalladmAISmfServicesError as err:
+        service = AIService(svcname)
+        service.enable()
+    except (aismf.ServicesError, config.ServiceCfgError, MountError) as err:
         raise SystemExit(err)
+    except InvalidServiceError as err:
+        raise SystemExit(_("This service may not be enabled until all "
+                           " invalid manifests and profiles have been"
+                           " corrected or removed."))
 
 
 def do_disable_service(cmd_options=None):
@@ -161,8 +140,6 @@ def do_disable_service(cmd_options=None):
 
     Disable the specified service and optionally update the service's
     properties to reflect the new status.
-    If the -t flag is specified, the service property group should not
-    be updated to status=off. If -t is not specified, it should be.
 
     Input:
         List of command line options
@@ -171,16 +148,12 @@ def do_disable_service(cmd_options=None):
     Raises:
         SystemExit if missing permissions, invalid service name, or
         if attempt to place smf service in maintenance fails.
-
+    
     '''
     logging.debug('**** START do_disable_service ****')
 
     usage = '\n' + get_disable_usage()
     parser = OptionParser(usage=usage)
-    parser.add_option('-t', '--temporary', dest='temporary',
-                      default=False, action='store_true',
-                      help=_('Don\'t update service property group '
-                               'status to off.'))
 
     (options, args) = parser.parse_args(cmd_options)
 
@@ -203,41 +176,29 @@ def do_disable_service(cmd_options=None):
         validate_service_name(svcname)
     except ValueError as err:
         raise SystemExit(err)
-
-    # Get the service properties.
-    if not is_pg(svcname):
+ 
+    if not config.is_service(svcname):
         err_msg = _("The service does not exist: %s\n") % svcname
         parser.error(err_msg)
 
-    pg_data = get_pg_props(svcname)
+    prop_data = config.get_service_props(svcname)
 
-    if not PROP_STATUS in pg_data.keys():
+    if prop_data and config.PROP_STATUS not in prop_data:
         err_msg = _("The property, status, is missing for %s.\n") % svcname
         parser.error(err_msg)
 
-    if pg_data[PROP_STATUS] == STATUS_OFF:
+    if prop_data[config.PROP_STATUS] == config.STATUS_OFF:
         err_msg = _("The service is not running: %s\n") % svcname
         parser.error(err_msg)
-
-    # Stop the service
-    cmd = [SETUP_SERVICE_SCRIPT, SERVICE_DISABLE, svcname]
-
-    logging.debug("Disabling install service %s", svcname)
-    logging.debug("Calling %s", cmd)
-    ret = Popen(cmd).wait()
-    if ret:
+    
+    try:
+        logging.debug("Disabling install service %s", svcname)
+        service = AIService(svcname)
+        service.disable(force=True)
+    except (config.ServiceCfgError, aismf.ServicesError, MountError) as err:
+        raise SystemExit(err)
+    except CalledProcessError:
         return 1
-
-    # If -t not specified then update the status in service's property group
-    if not options.temporary:
-        props = {PROP_STATUS: STATUS_OFF}
-        set_pg_props(svcname, props)
-        # If no longer needed, put install instance into
-        # maintenance
-        try:
-            check_for_enabled_services()
-        except InstalladmAISmfServicesError as err:
-            raise SystemExit(err)
 
 
 def main():
@@ -247,6 +208,7 @@ def main():
 
     Returns:
         The return from the invoked sub-command.
+        4 if VersionError encountered
 
     '''
     # sub_cmds is a dictionary. The value for each subcommand key
@@ -255,10 +217,12 @@ def main():
     sub_cmds = {
         'create-service':    (create_service.do_create_service,
                               create_service.get_usage()),
-        'set-service':       (set_service.do_set_service,
-                              set_service.get_usage()),
         'delete-service':    (delete_service.do_delete_service,
                               delete_service.get_usage()),
+        'rename-service':    (rename_service.do_rename_service,
+                              rename_service.get_usage()),
+        'set-service':       (set_service.do_set_service,
+                              set_service.get_usage()),
         'list':              (ai_list.do_list,
                               ai_list.get_usage()),
         'enable':            (do_enable_service,
@@ -267,6 +231,8 @@ def main():
                               get_disable_usage()),
         'create-client':     (create_client.do_create_client,
                               create_client.get_usage()),
+        'create-profile':    (create_profile.do_create_profile,
+                              create_profile.get_usage()),
         'delete-client':     (delete_client.do_delete_client,
                               delete_client.get_usage()),
         'add-manifest':      (publish_manifest.do_publish_manifest,
@@ -277,16 +243,14 @@ def main():
                               publish_manifest.get_update_usage()),
         'delete-manifest':   (delete_manifest.do_delete_manifest,
                               delete_manifest.get_usage()),
-        'remove':            (delete_manifest.do_delete_manifest,  # alias
-                              delete_manifest.get_usage()),
-        'create-profile':    (create_profile.do_create_profile,
-                              create_profile.get_usage()),
         'delete-profile':    (delete_profile.do_delete_profile,
                               delete_profile.get_usage()),
-        'set-criteria':      (set_criteria.do_set_criteria,
-                              set_criteria.get_usage()),
         'export':            (export.do_export,
                               export.get_usage()),
+        'remove':            (delete_manifest.do_delete_manifest,  # alias
+                              delete_manifest.get_usage()),
+        'set-criteria':      (set_criteria.do_set_criteria,
+                              set_criteria.get_usage()),
         'validate':          (validate_profile.do_validate_profile,
                               validate_profile.get_usage()),
         'help':              (None, get_help_usage())
@@ -294,11 +258,25 @@ def main():
 
     # cmds is a list of subcommands used to dictate the order of
     # the commands listed in the usage output
-    cmds = ["create-service", "set-service", "delete-service", "list",
-            "enable", "disable", "create-client", "delete-client",
-            "add-manifest", "update-manifest", "delete-manifest",
-            "create-profile", "delete-profile", "set-criteria", "export",
-            "validate", "help"]
+    cmds = ["create-service",
+            "delete-service",
+            "rename-service",
+            "set-service",
+            "list",
+            "enable",
+            "disable",
+            "create-client",
+            "delete-client",
+            "add-manifest",
+            "update-manifest",
+            "delete-manifest",
+            "create-profile",
+            "delete-profile",
+            "export",
+            "validate",
+            "set-criteria",
+            "help",
+            ]
 
     usage_str = "Usage: installadm [options] <subcommand> <args> ..."
     for entry in cmds:
@@ -307,8 +285,8 @@ def main():
 
     # add private debug option, which provides console output that might
     # be useful during development or bug fixing.
-    parser.add_option("-d", "--debug", action="store_true", dest="debug",
-                      default=False, help=SUPPRESS_HELP)
+    parser.add_option("-d", "--debug", action="count", dest="debug",
+                      default=0, help=SUPPRESS_HELP)
 
     # Find subcommand in sys.argv and save index to know which
     # options/args to pass to installadm and which options to
@@ -322,7 +300,7 @@ def main():
 
     # Exit if no subcommand was provided.
     if not sub_cmd:
-        parser.print_help()
+        parser.print_help(file=sys.stderr)
         sys.exit(2)
 
     # Pass arguments up to subcommand to installadm parser
@@ -335,10 +313,12 @@ def main():
         parser.error(_("Unexpected argument(s): %s" % args))
 
     # Set up logging to the specified level of detail
-    if options.debug:
-        options.log_level = DEBUG_LOG_LEVEL
-    else:
+    if options.debug == 0:
         options.log_level = DEFAULT_LOG_LEVEL
+    elif options.debug == 1:
+        options.log_level = DEBUG_LOG_LEVEL
+    elif options.debug >= 2:
+        options.log_level = XDEBUG
     try:
         setup_logging(options.log_level)
     except IOError, err:
@@ -360,6 +340,12 @@ def main():
         sys.exit()
 
     else:
+        # make sure we have the installadm smf service
+        try:
+            aismf.get_smf_instance()
+        except aismf.ServicesError as err:
+            raise SystemExit(err)
+
         # Invoke the function which implements the specified subcommand
         func = sub_cmds[sub_cmd][0]
 
@@ -367,7 +353,10 @@ def main():
                       func.func_name, sys.argv[index + 1:])
         try:
             return func(sys.argv[index + 1:])
-        except StandardError:
+        except VersionError as err:
+            print >> sys.stderr, err
+            return 4
+        except Exception:
             sys.stderr.write(_("%s:\n"
                                "\tUnhandled error encountered:\n") % sub_cmd)
             traceback.print_exc(file=sys.stderr)

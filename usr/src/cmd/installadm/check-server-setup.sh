@@ -38,22 +38,6 @@
 #
 #	- Warn if the svc:/network/dns/multicast:default is not online
 #
-#	- Get IP address via getent host hostname
-#	- Get IP address via ifconfig
-#	- IP addresses have to match and not be a loopback address
-#
-# Additionally, if the server is being set up to be a dhcp server:
-#
-#	- Get netmask for IP address using getent netmasks IP
-#	- Get netmask for IP address via ifconfig
-#	- Netmasks have to match
-#
-#	- Verify /etc/resolv.conf exists
-#	  and has at least one uncommented nameserver entry.
-#	  (Prints a warning and continues if either of these tests fail.)
-#
-#	- Verify that the client being setup is on a configured network path.
-#
 # If anything is found to be incorrect, the script displays a message and
 # returns 1.
 # If all is found to be OK, the script returns 0 silently.
@@ -65,17 +49,9 @@ PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 # Commands
 GETENT="/usr/bin/getent"
 
-# Files
-RESOLV_CONF_FILE="/etc/resolv.conf"
-
-LOOPBACK_IP_A=127
-NAMESERVER_STRING="^nameserver"
-
 MDNS_SVC="svc:/network/dns/multicast:default"
 NWAM_SVC="svc:/network/physical:nwam"
 NDEF_SVC="svc:/network/physical:default"
-
-. /usr/lib/installadm/installadm-common
 
 #
 # Print to stderr
@@ -142,45 +118,7 @@ do_all_service_create_check()
 			print_err "   Installation services will not be" \
 			    "advertised via multicast DNS."
 		fi
-
-		# Get IP address
-		host_ip=$($GETENT hosts $THISHOST)
-		GETENT_IP=$(get_ip_for_net ${host_ip%%[^0-9.]*})
-		if [ $? -ne 0 -o "X$GETENT_IP" == "X" ] ; then
-			print_err "Could not find the IP address for" \
-			    "host $THISHOST"
-			valid="False"
-		fi
 	fi
-
-	# Extract the first number, and compare to loopback value.
-	if [ "$valid" == "True" ] ; then
-		GETENT_IP_A=$(echo $GETENT_IP | $NAWK -F "." '{ print $1 }')
-		if [ "$GETENT_IP_A" == "$LOOPBACK_IP_A" ] ; then
-			print_err "Server hostname $THISHOST resolved as a" \
-			    "loopback IP address."
-			valid="False"
-		fi
-	fi
-
-	if [ "$valid" == "True" ] ; then
-		# Validate IP address and get its ifconfig netmask.
-		netmask=$(get_ip_netmask $GETENT_IP)
-		if [ "X$netmask" == "X" ] ; then
-			print_err "The IP address $GETENT_IP is not assigned" \
-			    "to any of the system's network interfaces."
-			ipaddr=
-			valid="False"
-		else
-			ipaddr=$GETENT_IP
-		fi
-	fi
-
-	# If valid = "True" at this point, the system has a non-loopback IP
-	# address assigned to its hostname, and the IP address shows up via
-	# ifconfig as well.
-
-	return
 }
 
 #
@@ -262,117 +200,6 @@ do_all_services_check()
 	fi
 }
 
-#
-# Check that ifconfig returns same netmask as getent does, for given IP address
-# 
-# Args:
-#   $1 - valid: Global: used to flag a failing check.  This function may set it
-#		to "False".
-#   $2 - ipaddr: Local: IP address to check.
-#   $3 - ifconfig_netmask: Local: Netmask from ifconfig which correlates
-#		to ipaddr.
-#
-# Post-condition:
-#   valid: global is modified.
-# 
-do_netmask_check()
-{
-	# These are actually globals modified by this routine.
-	# Declared here to document them.
-	valid=$1
-
-	# Local variables
-	typeset nc_ipaddr=$2
-	typeset nc_ifconfig_nm=$3
-	typeset nc_decval=
-	typeset hex_getent_nm=
-
-	# Get netmask for IP address using getent
-	getent_nm=$($GETENT netmasks $nc_ipaddr | $NAWK '{ print $2 }')
-	if [ $? -ne 0 ] ; then
-		print_err "The netmask for network $nc_ipaddr is not" \
-		    "configured in the netmasks(4) table."
-		valid="False"
-	else
-
-		nc_decval=$(echo $getent_nm | $NAWK -F "." '{ print $1 }')
-		eval nc_ip_A=$(printf %2.2x nc_decval)
-		nc_decval=$(echo $getent_nm | $NAWK -F "." '{ print $2 }')
-		eval nc_ip_B=$(printf %2.2x nc_decval)
-		nc_decval=$(echo $getent_nm | $NAWK -F "." '{ print $3 }')
-		eval nc_ip_C=$(printf %2.2x nc_decval)
-		nc_decval=$(echo $getent_nm | $NAWK -F "." '{ print $4 }')
-		eval nc_ip_D=$(printf %2.2x nc_decval)
-
-		hex_getent_nm="${nc_ip_A}${nc_ip_B}${nc_ip_C}${nc_ip_D}"
-
-		if [ "$nc_ifconfig_nm" != "$hex_getent_nm" ] ; then
-			print_err "The netmask obtained from netmasks(4)" \
-			    "for network $nc_ipaddr does not equal"
-			print_err "that network interface's configured netmask."
-			valid="False"
-		fi
-	fi
-}
-
-#
-# Perform the extra checks done for dhcp servers.
-# See module header for description of the checks.
-#
-# Args:
-#   $1 - valid: Global: used to flag a failing check.  This function may set it
-#		to "False".
-#   $2 - ipaddr: Local: System's IP address
-#   $3 - netmask: Local: Netmask which correlates to ipaddr.
-#   $4 - client_ipaddr: Local: IP address given to the client being setup.
-#
-# Returns:
-#   valid: global is modified.
-# 
-do_dhcp_service_create_check()
-{
-	# These are actually globals modified by this routine.
-	# Declared here to document them.
-	valid=$1
-
-	# Local variables.
-	typeset ds_ifc_ipaddr=$2
-	typeset ds_ifc_netmask=$3
-	typeset ds_client_ipaddr=$4
-
-	# Check hostname-bound network's netmask from ifconfig vs getent.
-	do_netmask_check $valid $ds_ifc_ipaddr  $ds_ifc_netmask
-
-	# Check that the client being setup is on a configured network path,
-	# and get its network's netmask from ifconfig.
-	ds_client_ifc_ipaddr=$(find_network_baseIP $ds_client_ipaddr)
-	ds_client_ifc_netmask=$(find_network_nmask $ds_client_ipaddr)
-	if [ "X${ds_client_ifc_netmask}" == "X" -o \
-	    "X${ds_client_ifc_ipaddr}" == "X" ] ; then
-		print_err "No configured network path to the client" \
-		    "at $ds_client_ipaddr exists."
-		valid="False"
-	else
-		# Check client network's netmask from ifconfig vs getent.
-		do_netmask_check $valid $ds_client_ifc_ipaddr \
-		    $ds_client_ifc_netmask
-	fi
-
-
-	# Verify /etc/resolv.conf exists and has at least one nameserver entry.
-	# Docs show that a ; or a # in column 1 is a comment.
-	# Other code tests that "nameserver" starts in column 1.  We'll do that.
-	if [ ! -r $RESOLV_CONF_FILE ] ; then
-		print_err "Warning: $RESOLV_CONF_FILE is missing or" \
-		    "inaccessible."
-	else
-		$GREP $NAMESERVER_STRING $RESOLV_CONF_FILE 2>&1 >>/dev/null
-		if [ $? -ne 0 ] ; then
-			print_err "Warning: $RESOLV_CONF_FILE is missing" \
-			    "nameserver entries"
-		fi
-	fi
-}
 
 #
 # Main
@@ -399,14 +226,6 @@ do_all_service_create_check $valid $ipaddr $netmask
 
 # Do checks for all_services SMF property group
 do_all_services_check $valid
-
-# If hostname problem above, ipaddr won't be set.  Don't continue.
-# Also, installadm specifies dhcp server checks by setting client_ipaddr
-if [ "X$ipaddr" != "X" -a "X$client_ipaddr" != "X" ] ; then
-	# Do dhcp server specific checks.  Updates $valid
-	do_dhcp_service_create_check $valid $ipaddr $netmask \
-	    $client_ipaddr
-fi
 
 if [ "$valid" != "True" ] ; then
 	print_err "Automated Installations will not work with the" \

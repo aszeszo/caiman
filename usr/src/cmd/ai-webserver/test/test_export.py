@@ -33,12 +33,44 @@ import gettext
 import unittest
 
 import osol_install.auto_install.export as export
+import osol_install.auto_install.service_config as config
+import osol_install.auto_install.service as service
 
 gettext.install("ai-test")
 
+class MockIsService(object):
+    '''Class for mock is_service '''
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, name):
+        return True
+
+class MockVersion(object):
+    '''Class for mock version '''
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self):
+        return service.AIService.EARLIEST_VERSION
 
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''
+
+    def setUp(self):
+        '''unit test set up'''
+        self.config_is_service = config.is_service
+        config.is_service = MockIsService
+        self.svc_version = service.AIService.version
+        service.AIService.version = MockVersion()
+
+    def tearDown(self):
+        '''unit test tear down
+        Functions originally saved in setUp are restored to their
+        original values.
+        '''
+        config.is_service = self.config_is_service
+        service.AIService.version = self.svc_version
 
     def test_parse_no_options(self):
         '''Ensure no options caught'''

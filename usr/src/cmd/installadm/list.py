@@ -22,40 +22,47 @@
 # Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 """
-
 AI List Services
-
 """
 import gettext
 import os
-import socket
 import sys
+
+import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.service_config as config
 
 from optparse import OptionParser
 
-import osol_install.auto_install.AI_database as AIdb
-import osol_install.auto_install.installadm_common as com
-import osol_install.libaiscf as smf
+from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.service import AIService, VersionError
 
-from osol_install.auto_install.ai_smf_service import PROP_IMAGE_PATH, \
-    PROP_SERVICE_NAME, PROP_STATUS, PROP_TXT_RECORD
-from osol_install.auto_install.properties import get_service_info, get_default
-from solaris_install import _
-
-# FDICT contains the max width of each field that gets printed, plus one space.
-# Note that "print item," adds another space, for a total of 2 between fields.
+# FDICT contains the width of each field that gets printed
 FDICT = {
     'arch': 6,
     'cadd': 18,
     'status': 7,
-    'port': 6
 }
 
 STATUS_WORDS = [_('Status'), _('Default'), _('Inactive')]
-
 DEFAULT = _("Default")
 IGNORED = _("Ignored")
 INACTIVE = _("Inactive")
+
+_WARNED_ABOUT = set()
+
+
+def warn_version(version_err):
+    '''Prints a short warning about version incompatibility to stderr
+    for a given service. For any one invocation of "installadm list"
+    the warning will only be printed once.
+    
+    '''
+    if version_err.service_name not in _WARNED_ABOUT:
+        print >> sys.stderr, version_err.short_str()
+        _WARNED_ABOUT.add(version_err.service_name)
+        return True
+    else:
+        return False
 
 
 def get_usage():
@@ -80,10 +87,10 @@ def parse_options(cmd_options=None):
         None
 
     """
-    desc = _("Lists all enabled install services on a system. "
-             "Or, with -n option, lists a specific install service. "
+    desc = _("Lists all enabled installation services on a system. "
+             "Or, with -n option, lists a specific installation service. "
              "Or, with -c option, lists information about clients "
-             "of install services. "
+             "of installation services. "
              "Or, with -m option, lists the manifest information.")
     usage = '\n' + get_usage()
     parser = OptionParser(usage=usage, description=desc)
@@ -139,19 +146,19 @@ def which_arch(path):
     return arch
 
 
-def print_local_services(sdict, width):
+def print_local_services(sdict, width, awidth):
     """
-    Iterates over the local service dictionary and prints out the
-    service name, status, architecture, port and image path.
-    All fields are left justified according to FDICT[field] or
-    width or simply printed in the case of path.
+    Iterates over the local service dictionary and prints out
+    service name, aliasof, status, architecture, and image path.
+    All fields are left justified according to FDICT[field], width,
+    awidth or simply printed in the case of path.
 
     The service dictionary looks like:
 
         {
             service1:
               [
-                { 'status':on1, 'path':path1, 'arch':arch1, 'port':port1 },
+                { 'status':on1, 'path':path1, 'arch':arch1 },
                 ...
               ],
             ...
@@ -159,7 +166,8 @@ def print_local_services(sdict, width):
 
     Args
         sdict = service dictionary
-        width = length of largest service name
+        width = length of longest service name
+        awidth = length of longest aliasof service name
 
     Returns
         None
@@ -173,287 +181,68 @@ def print_local_services(sdict, width):
         firstone = True
         for info in sdict[aservice]:
             if firstone == True:
-                print aservice.ljust(width + 1),
+                print aservice.ljust(width),
                 firstone = False
             else:
-                print ' '.ljust(width + 1),
+                print ' ' * width
+            print info['aliasof'].ljust(awidth),
             print info['status'].ljust(FDICT['status']),
             print info['arch'].ljust(FDICT['arch']),
-            print info['port'].ljust(FDICT['port']),
             print info['path']
     print
 
 
-def has_key(service, key):
+def find_clients(lservices, sname=None):
     """
-    has_key checks an AIservice for a specific key
-    If the key exists within the SCF AIservice then
-    return True otherwise return False.
-
-    This function is necessary because SCF object does
-    not have the get() and has_key() methods defined.
-    Once these have been defined the has_key(serv, ...)
-    code can be changed to serv.has_key(...).
-
-    Args
-        service = dictionary of services
-        key = key within dictionary
-
-    Returns
-        True if key is in service
-        False if not
-
-    Raises
-        None
-    """
-    return key in service.keys()
-
-
-def find_sparc_clients(lservices, sname=None):
-    """
-    find_sparc_clients() searches /etc/netboot for all clients and
-    returns a dictionary that contains a list of dictionaries.
+    find_clients() returns a dictionary that contains a list of
+    dictionaries.
 
     The service name is the key for the main dictionary and the
-    client and image path are members of the subdictionary.  The
-    dictionary will look something like:
+    client, image path, and arch are members of the subdictionary,
+    as follows:
 
         {
-            'service1': [
-                        { 'ipath':<path1>, 'client':<client1> },
-                        ....
-                        ],
-            ....
+          'service1': [
+                { 'ipath':<path1>, 'client':<client1>, <arch': <arch>},
+                ....
+                      ],
+          ....
         }
 
-    The information is spread out across a couple of different
-    files within the server.  The Client is embedded within a
-    directory path (/etc/netboot/<IP Network>/01<client>).  The
-    Image Path is in the wanboot.conf file pointed to by the
-    Client path.  The Service Name is contained in the install.conf
-    file pointed to by the Image Path.
-
-    We first get the IP addresses for the host.  Then while only
-    using IPv4 address we iterate over the client directories within
-    /etc/netboot/<IP Network> to get the Image Path and Service Name.
-    The client and image path are then added to the named service
-    dictionary list.
-
     Args
-        lservices =
-        sname =
+        lservices = config.get_all_service_props()
+        sname - service name, if only interesetd in clients of a
+                specific service
 
     Returns
         dictionary of a list of dictionaries
 
     Raises
         None
+
     """
-
-    installconf = 'install.conf'
-    wanbootconf = 'wanboot.conf'
-
-    def get_image_path(lpath):
-        """
-        gets the Image Path for the client pointed to by lpath.
-        The Image Path on Sparc is stored in the wanboot.conf file.
-
-        Args
-            lpath = path for directory which contains wanboot.conf file
-
-        Returns
-            image path for client
-
-        Raises
-            None
-        """
-        try:
-            confpath = os.path.join(lpath, wanbootconf)
-            sinfo = os.stat(confpath)
-            with open(confpath) as fp:
-                fstr = fp.read(sinfo.st_size)
-        except (OSError, IOError):
-            sys.stderr.write("Error: while accessing wanboot.conf file "
-                             "(%s/wanboot.conf)\n" % lpath)
-            return
-
-        start = fstr.find('boot_file=') + len('boot_file=')
-        end = fstr[start:].find('/platform')
-
-        return fstr[start:start + end]
-
-    def get_service_name(lpath):
-        """
-        gets the Service Name for the client from the lpath pointed
-        to by the wanboot.conf file.  The Service Name is in the
-        Image Path install.conf file.
-
-        Args
-            lpath = path to directory containing install.conf file
-
-        Returns
-            install service for client
-
-        Raises
-            None
-        """
-        try:
-            confpath = os.path.join(lpath, installconf)
-            sinfo = os.stat(confpath)
-            with open(confpath) as fp:
-                fstr = fp.read(sinfo.st_size)
-        except (OSError, IOError):
-            sys.stderr.write("Error: while accessing "
-                             "install.conf file\n")
-            return
-
-        start = fstr.find('install_service=') + len('install_service=')
-        end = fstr[start:].find('\n')
-
-        return fstr[start:start + end]
-
-    # start of find_sparc_clients
-    if not os.path.exists(com.NETBOOT):
-        return {}
-
-    sdict = {}
-    hostname = socket.getfqdn()
-    ipaddr = socket.gethostbyname(hostname)
-    # get the Network IP path for the host
-    end = ipaddr.rfind('.')
-    compatibility_path = os.path.join(com.NETBOOT, ipaddr[:end] + '.0')
-
-    for path in [compatibility_path, com.NETBOOT]:
-        if not os.path.exists(path) or not os.path.isdir(path):
+    sdict = dict()
+    for servicename in lservices.keys():
+        if sname and sname != servicename:
             continue
-        for clientdir in os.listdir(path):
-            if not clientdir.startswith('01'):
-                continue
-            # strip off the 01 in the clientdir
-            client = AIdb.formatValue('mac', clientdir[2:])
-
-            # get the Image from the clientdir/wanboot.conf file
-            ipath = get_image_path(os.path.join(path, clientdir))
-
-            if not ipath or not os.path.exists(ipath):
-                continue
-
-            # get the service name from the ipath/install.conf file
-            servicename = get_service_name(ipath)
-
-            # Store the client and image path in the dictionary under the
-            # service name.  First, check to see if the service name key
-            # already exists.  If the service name key does not already exist
-            # then add it to the dictionary.  If the service name key does
-            # exist then extend the list and update the dictionary.
-            if servicename in lservices and \
-              (not sname or servicename == sname):
-                tdict = {'client': client, 'ipath': [ipath], 'arch': 'Sparc'}
-                if servicename in sdict:  # existing service name key
-                    slist = sdict[servicename]
-                    slist.extend([tdict])
-                    sdict[servicename] = slist
-                else:  # new service name key
-                    sdict[servicename] = [tdict]
-
-    return sdict
-
-
-def find_x86_clients(lservices, sname=None):
-    """
-    find_x86_clients() searches TFTPDir for all clients and
-    returns a dictionary that contains a list of dictionaries.
-
-    The service name is the key for the main dictionary and the
-    client and image path are members of the subdictionary.  The
-    dictionary will look something like:
-
-        {
-            'service1': [
-                        { 'ipath':<path1>, 'client':<client1> },
-                        ....
-                        ],
-            ....
-        }
-
-    The information is contained within the menu.lst.01<client>
-    file.  Though not the best approach architecturally it is
-    the only method currently available.
-
-    We first get the TFTProot directory.  Then iterate over the
-    files within the TFTProot directory to get the client menu
-    which contains the Image Path and Service Name.  The client
-    and image path are then added to the named service dictionary
-    list.
-    """
-    def get_menu_info(path):
-        """
-        Reads TFTPboot/menu.list file pointed to by 'path' via
-        GrubMenu class in installadm_common.py.  Getting the
-        install path from the install_media field, service name
-        from install_service
-
-        Args
-            path = path for the menu.list.01<client> file.
-
-        Returns
-            a dictionary of services made up of a list of tuples of
-            port, install path
-
-        Raises
-            None
-        """
-        iaddr = 'install_svc_address='
-        iserv = 'install_service='
-        imedia = 'install_media=http://'
-
-        rdict = {}
-        menu = com.GrubMenu(file_name=path)
-        entries = menu.entries[0]
-        if entries:
-            if 'kernel$' in menu[entries]:
-                mdict = menu[entries]['kernel$']
-                start = mdict.find(iserv) + len(iserv)
-                service = mdict[start:].split(',')[0]
-                start = mdict.find(iaddr) + len(iaddr)
-                port = mdict[start:].split(',')[0].split(':')[-1]
-                start = mdict.find(imedia) + len(imedia)
-                pstart = mdict[start:].split(',')[0].find('/')
-                path = mdict[start:].split(',')[0][pstart:]
-                if service in rdict:
-                    tlist = rdict[service]
-                    tlist.extend([(port, path)])
-                    rdict[service] = tlist
-                else:
-                    rdict[service] = [(port, path)]
-
-        return rdict
-
-    # start of find_x86_clients
-    sdict = {}
-    tftp_dir = com.find_TFTP_root()
-    if tftp_dir and os.path.exists(tftp_dir):
-        for filenames in os.listdir(tftp_dir):
-            if filenames.find("menu.lst.01") >= 0:
-                path = os.path.join(tftp_dir, filenames)
-                pservices = get_menu_info(path)
-                tdict = {'client': '', 'ipath': '', 'arch': 'x86'}
-                for servicename in pservices:
-                    if servicename in lservices and \
-                      (not sname or servicename == sname):
-                        client = AIdb.formatValue('mac', filenames[11:])
-                        tdict['client'] = client
-                        # create a list of image_paths for the client
-                        ipath = []
-                        for tup in pservices[servicename]:
-                            ipath.insert(0, tup[1])
-                        tdict['ipath'] = ipath
-                        if servicename in sdict:  # existing service name
-                            slist = sdict[servicename]
-                            slist.extend([tdict])
-                            sdict[servicename] = slist
-                        else:  # new service name key
-                            sdict[servicename] = [tdict]
+        try:
+            service = AIService(servicename)
+        except VersionError as version_err:
+            warn_version(version_err)
+            continue
+        arch = service.arch
+        image_path = [service.image.path]
+        client_info = config.get_clients(servicename)
+        for clientkey in client_info:
+            # strip off the leading '01' and reinsert ':'s
+            client = AIdb.formatValue('mac', clientkey[2:])
+            tdict = {'client': client, 'ipath': image_path, 'arch': arch}
+            if servicename in sdict:  # existing service name
+                slist = sdict[servicename]
+                slist.extend([tdict])
+                sdict[servicename] = slist
+            else:  # new service name key
+                sdict[servicename] = [tdict]
     return sdict
 
 
@@ -495,13 +284,89 @@ def do_header(lol):
     print line
 
 
-def list_local_services(linst, name=None):
+def get_local_services(services, sname=None):
+    """
+    Iterates over the local services on a host creating a dictionary
+    with the service name as the key and status, path, architecture,
+    and aliasof as the value.  If name is not None then it ensures
+    that only the named service is retrieved.
+
+    Args
+        services = config.get_all_service_props()
+        name = service name
+
+    Returns
+        a service dictionary made up of a list of dictionary of services.
+
+        {
+        service1:
+          [
+            {'status':on1, 'path':path1, 'arch':arch1, 'aliasof':aliasof1},
+            ...
+          ],
+        ...
+        }
+
+        the width of the longest service name
+        the width of the longest aliasof name
+
+    Raises
+        None
+    """
+    width = 0
+    aliasofwidth = 1
+    sdict = dict()
+    for akey in services:
+        serv = services[akey]
+        servicename = akey
+        # ensure that the current service has the keys we need.
+        # if not, print error, but continue listing other services
+        try:
+            config.verify_key_properties(akey, serv)
+        except config.ServiceCfgError as err:
+            print >> sys.stderr, err
+            continue
+        try:
+            service = AIService(servicename)
+        except VersionError as err:
+            warn_version(err)
+            continue
+        if config.PROP_ALIAS_OF in serv:
+            image_path = service.image.path
+            serv[config.PROP_IMAGE_PATH] = image_path
+        
+        info = dict()
+        # if a service name is passed in then
+        # ensure it matches the current name
+        if not sname or sname == servicename:
+            width = max(len(servicename), width)
+            info['status'] = serv[config.PROP_STATUS]
+            info['path'] = serv[config.PROP_IMAGE_PATH]
+            info['arch'] = which_arch(info['path'])
+            if config.PROP_ALIAS_OF in serv:
+                # have an alias
+                aliasof = serv[config.PROP_ALIAS_OF]
+            else:
+                aliasof = '-'
+            info['aliasof'] = aliasof
+            aliasofwidth = max(len(aliasof), aliasofwidth)
+            if servicename in sdict:
+                slist = sdict[servicename]
+                slist.extend([info])
+                sdict[servicename] = slist
+            else:
+                sdict[servicename] = [info]
+    
+    return sdict, width, aliasofwidth
+
+
+def list_local_services(services, name=None):
     """
     Lists the local services for a host.  If name is not
     None then it prints only the named service.
 
     Args
-        linst = smf.AISCF()
+        services = config.get_all_service_props()
         name = service name
 
     Returns
@@ -509,88 +374,20 @@ def list_local_services(linst, name=None):
 
     Raises
         None
+    
     """
-
-    def get_local_services(linst, sname=None):
-        """
-        Iterates over the local services on a host creating a dictionary
-        with the service name as the key and status, path, architecture
-        and port as the value.  If name is not None then it ensures that
-        only the named services is retrieved.
-
-        Args
-            linst = smf.AISCF()
-            name = service name
-
-        Returns
-            a service dictionary made up of a list of dictionary of services.
-
-            {
-                service1:
-                  [
-                    { 'status':on1, 'path':path1, 'arch':arch1, 'port':port1 },
-                    ...
-                  ],
-                ...
-            }
-
-            the width of the widest service name
-
-        Raises
-            None
-        """
-        width = 0
-        sdict = {}
-        for akey in linst.services.keys():
-            serv = smf.AIservice(linst, akey)
-            # ensure that the current service has the keys we need.
-            # if not then report the error and exit.
-            if not (has_key(serv, PROP_SERVICE_NAME) and
-                    has_key(serv, PROP_STATUS) and
-                    has_key(serv, PROP_IMAGE_PATH) and
-                    has_key(serv, PROP_TXT_RECORD)):
-                sys.stderr.write(_('Error: SMF service key '
-                                   'property does not exist\n'))
-                sys.exit(1)
-
-            servicename = serv[PROP_SERVICE_NAME]
-            info = {'status': '', 'arch': '', 'port': '', 'path': ''}
-            # if a service name is passed in then
-            # ensure it matches the current name
-            if not sname or sname == servicename:
-                width = max(len(servicename), width)
-                info['status'] = serv[PROP_STATUS]
-                info['path'] = serv[PROP_IMAGE_PATH]
-                info['port'] = serv[PROP_TXT_RECORD].split(':')[-1]
-                info['arch'] = which_arch(info['path'])
-                if servicename in sdict:
-                    slist = sdict[servicename]
-                    slist.extend([info])
-                    sdict[servicename] = slist
-                else:
-                    sdict[servicename] = [info]
-
-        return sdict, width
-
-    # start of list_local_services
-    sdict, width = get_local_services(linst, sname=name)
-    if sdict == {}:
-        if name != None:
-            estr = _('Error: no service named "%s".\n') % name
-        else:
-            estr = _('Error: no local service\n')
-        sys.stderr.write(estr)
-        sys.exit(1)
-
+    sdict, width, awidth = get_local_services(services, sname=name)
+    
     width = max(width, len(_('Service Name')))
-    fields = [[_('Service Name'), width + 1]]
+    awidth = max(awidth, len(_('Alias Of')))
+    fields = [[_('Service Name'), width]]
+    fields.extend([[_('Alias Of'), awidth]])
     fields.extend([[_('Status'), FDICT['status']]])
     fields.extend([[_('Arch'), FDICT['arch']]])
-    fields.extend([[_('Port'), FDICT['port']]])
     fields.extend([[_('Image Path'), len(_('Image Path'))]])
 
     do_header(fields)
-    print_local_services(sdict, width)
+    print_local_services(sdict, width, awidth)
 
 
 def list_local_clients(lservices, name=None):
@@ -599,7 +396,7 @@ def list_local_clients(lservices, name=None):
     if name is not None.
 
     Args
-        inst = smf.AISCF()
+        lservices = config.get_all_service_props()
         service name
 
     Returns
@@ -611,11 +408,11 @@ def list_local_clients(lservices, name=None):
     def get_clients(lservices, sname=None):
         """
         Gets the clients (x86 and Sparc) for the services of a local host.
-        If a service name is passed in the only get the clients for the
+        If a service name is passed in, then only get the clients for the
         named service on the local host.
 
         Args
-            lservices = services on a host
+            lservices = services on a host (config.get_all_service_props())
             sname = a named service
 
         Returns
@@ -635,55 +432,17 @@ def list_local_clients(lservices, name=None):
 
         Raises
             None
+
         """
-        def merge_dictionaries(first, second):
-            """
-            Merges two similar dictionaries and returns the resulting
-            dictionary.  The dictionaries are the same as in get_clients()
-            description.
-            """
-            rdict = {}
-            rdict.update(first)
-            rdict.update(second)
-            for key in set(first.keys()) & set(second.keys()):
-                rdict[key] = first[key] + second[key]
 
-            return rdict
-
-        def calculate_service_name_widths(ldict):
-            """
-            Iterates over the client dictionary calculating the maximum
-            service name length.
-
-            Args
-                ldict = dictionary of clients on a host with the
-                        service name as the dictionary key
-                        (same as in get_clients() description)
-            Returns
-                width of the largest key.
-
-            Raises
-                None
-            """
+        allclients = find_clients(lservices, sname=sname)
+        # get width of largest service name
+        if allclients:
+            width = max(map(len, allclients))
+        else:
             width = 0
-            for akey in ldict:
-                width = max(len(akey), width)
 
-            return width
-
-        sdict = find_sparc_clients(lservices, sname=sname)
-        xdict = find_x86_clients(lservices, sname=sname)
-        botharchs = {}
-        if sdict != {} and xdict != {}:
-            botharchs = merge_dictionaries(sdict, xdict)
-        elif sdict != {}:
-            botharchs = sdict
-        elif xdict != {}:
-            botharchs = xdict
-
-        width = calculate_service_name_widths(botharchs)
-
-        return botharchs, width
+        return allclients, width
 
     def print_clients(width, sdict):
         """
@@ -708,14 +467,14 @@ def list_local_clients(lservices, name=None):
             service_firstone = True
             for aclient in sdict[aservice]:
                 if service_firstone == True:
-                    print aservice.ljust(width + 1),
+                    print aservice.ljust(width),
                     service_firstone = False
                 else:
-                    print ' '.ljust(width + 1),
+                    print ' ' * width,
                 print aclient['client'].ljust(FDICT['cadd']),
                 print aclient['arch'].ljust(FDICT['arch']),
                 path_firstone = True
-                cpaths = []
+                cpaths = list()
                 for cpath in aclient['ipath']:
                     if cpath not in cpaths:
                         if path_firstone == False:
@@ -728,17 +487,16 @@ def list_local_clients(lservices, name=None):
 
     # start of list_local_clients
     sdict, width = get_clients(lservices, sname=name)
-    if sdict == {}:
+    if not sdict:
         if not name:
-            estr = _('Error: no clients for local service\n')
+            print _('There are no clients configured for local services.\n')
         else:
-            estr = _('Error: no clients for local '
-                     'service named "%s".\n') % name
-        sys.stderr.write(estr)
-        sys.exit(1)
+            print _('There are no clients configured for local service, '
+                    '"%s".\n') % name
+        return
 
     width = max(width, len(_('Service Name')))
-    fields = [[_('Service Name'), width + 1]]
+    fields = [[_('Service Name'), width]]
     fields.extend([[_('Client Address'), FDICT['cadd']]])
     fields.extend([[_('Arch'), FDICT['arch']]])
     fields.extend([[_('Image Path'), len(_('Image Path'))]])
@@ -748,13 +506,13 @@ def list_local_clients(lservices, name=None):
     print
 
 
-def get_manifest_or_profile_names(linst, dbtable):
+def get_manifest_or_profile_names(services, dbtable):
     """
-    Iterate through the services from smf.AISCF() retrieving
+    Iterate through the services retrieving
     all the stored manifest or profile names.
 
     Args
-        inst = smf.AISCF()
+        services = dictionary of service properties
         dbtable = database table, distinguishing manifests from profiles
 
     Returns
@@ -774,29 +532,22 @@ def get_manifest_or_profile_names(linst, dbtable):
     """
     swidth = 0
     mwidth = 0
-    sdict = {}
-    lservices = linst.services.keys()
-    lservices.sort()
-    for akey in lservices:
-        serv = smf.AIservice(linst, akey)
-        # ensure that the current service has the keys we need.
-        # if not then continue with the next service.
-        if not (has_key(serv, PROP_SERVICE_NAME) and
-                has_key(serv, PROP_TXT_RECORD)):
-            sys.stderr.write(_('Error: SMF service key '
-                               'property does not exist\n'))
-            sys.exit(1)
-
-        sname = serv[PROP_SERVICE_NAME]
-        dummy, path, dummy = get_service_info(sname)
-
+    sdict = dict()
+    for sname in sorted(services.keys()):
+        try:
+            service = AIService(sname)
+        except VersionError as err:
+            warn_version(err)
+            continue
+        
+        path = service.database_path
+        
         if os.path.exists(path):
             try:
                 maisql = AIdb.DB(path)
                 maisql.verifyDBStructure()
                 aiqueue = maisql.getQueue()
                 swidth = max(len(sname), swidth)
-
                 if not AIdb.tableExists(aiqueue, dbtable):
                     return sdict, swidth, mwidth
                 for name in AIdb.getNames(aiqueue, dbtable):
@@ -831,14 +582,14 @@ def get_manifest_or_profile_names(linst, dbtable):
                         sdict[sname] = slist
                     else:
                         sdict[sname] = [[name, has_criteria]]
-            except StandardError, err:
+            except StandardError as err:
                 sys.stderr.write(_('Error: AI database '
                                    'access error\n%s\n') % err)
-                sys.exit(1)
+                continue
         else:
             sys.stderr.write(_('Error: unable to locate '
-                               'AI database on server\n'))
-            sys.exit(1)
+                               'AI database for "%s" on server\n') % sname)
+            continue
 
     return sdict, swidth, mwidth
 
@@ -865,11 +616,11 @@ def get_criteria_info(crit_dict):
     """
 
     if crit_dict is None:
-        return {}, 0
+        return dict(), 0
+    
     # tdict values are formatted strings, with possible endings
     # such as MB.
-
-    tdict = {}
+    tdict = dict()
 
     crit_width = 0
     for key in crit_dict.keys():
@@ -925,14 +676,14 @@ def get_criteria_info(crit_dict):
     return tdict, crit_width
 
 
-def get_mfest_or_profile_criteria(sname, linst, dbtable):
+def get_mfest_or_profile_criteria(sname, services, dbtable):
     """
     Iterate through all the manifests or profiles for the named service (sname)
     pointed to by the SCF service.
 
     Args
         sname = service name
-        inst = smf.AISCF()
+        services = config.get_all_service_props()
         dbtable = database table, distinguishing manifests from profiles
             Assumed to be one of AIdb.MANIFESTS_TABLE or AIdb.PROFILES_TABLE
 
@@ -961,19 +712,18 @@ def get_mfest_or_profile_criteria(sname, linst, dbtable):
     Raises
         None
     """
-    sdict = {}
+    sdict = dict()
     width = 0
     cwidth = 0
     # ensure the named service is in our service dictionary.
-    lservices = linst.services.keys()
+    lservices = services.keys()
     if sname in lservices:
-        serv = smf.AIservice(linst, sname)
-        if not has_key(serv, PROP_TXT_RECORD):
-            sys.stderr.write(_('Error: SMF service key '
-                               'property does not exist\n'))
-            sys.exit(1)
+        try:
+            path = AIService(sname).database_path
+        except VersionError as version_err:
+            warn_version(version_err)
+            return sdict, width, cwidth
 
-        dummy, path, dummy = get_service_info(sname)
         if os.path.exists(path):
             try:
                 maisql = AIdb.DB(path)
@@ -981,7 +731,7 @@ def get_mfest_or_profile_criteria(sname, linst, dbtable):
                 aiqueue = maisql.getQueue()
                 if dbtable == AIdb.MANIFESTS_TABLE:
                     for name in AIdb.getNames(aiqueue, dbtable):
-                        sdict[name] = []
+                        sdict[name] = list()
                         instances = AIdb.numInstances(name, aiqueue)
                         for instance in range(0, instances):
                             width = max(len(name), width)
@@ -992,10 +742,10 @@ def get_mfest_or_profile_criteria(sname, linst, dbtable):
                             if criteria:
                                 tdict, twidth = get_criteria_info(criteria)
                                 cwidth = max(twidth, cwidth)
-                                sdict[name].extend([tdict])
+                                sdict[name].append(tdict)
                 elif dbtable == AIdb.PROFILES_TABLE:
                     for name in AIdb.getNames(aiqueue, dbtable):
-                        sdict[name] = []
+                        sdict[name] = list()
                         criteria = AIdb.getProfileCriteria(name,
                                         aiqueue,
                                         humanOutput=True,
@@ -1003,12 +753,12 @@ def get_mfest_or_profile_criteria(sname, linst, dbtable):
                         width = max(len(name), width)
                         tdict, twidth = get_criteria_info(criteria)
                         cwidth = max(twidth, cwidth)
-                        sdict[name].extend([tdict])
+
+                        sdict[name].append(tdict)
                 else:
-                    sys.stderr.write(_('Error: Invalid dbtable: %s\n') %
-                                       str(dbtable))
-                    sys.exit(1)
-            except StandardError, err:
+                    raise ValueError("Invalid value for dbtable: %s" % dbtable)
+
+            except StandardError as err:
                 sys.stderr.write(_('Error: AI database access '
                                    'error\n%s\n') % err)
                 sys.exit(1)
@@ -1045,20 +795,20 @@ def print_service_manifests(sdict, sname, width, swidth, cwidth):
         None
     """
     default_mfest = None
-    inactive_mfests = []
-    active_mfests = []
+    inactive_mfests = list()
+    active_mfests = list()
 
     width += 1
     swidth += 1
     cwidth += 1
 
     mnames = sdict.keys()
-    if mnames == []:
+    if not mnames:
         return
     mnames.sort()
 
     try:
-        default_mname = get_default(sname)
+        default_mname = AIService(sname).get_default_manifest()
     except StandardError:
         default_mname = ""
 
@@ -1138,7 +888,7 @@ def print_service_profiles(sdict, width, cwidth):
     cwidth += 1
 
     pnames = sdict.keys()
-    if pnames == []:
+    if not pnames:
         return
     pnames.sort()
 
@@ -1203,9 +953,9 @@ def print_local_manifests(sdict, swidth, mwidth):
     mwidth += 1
     for akey in tkeys:
         default_mfest = ""
-        active_mfests = []
+        active_mfests = list()
         try:
-            default_mname = get_default(akey)
+            default_mname = AIService(akey).get_default_manifest()
         except StandardError:
             default_mname = ""
         for manifest_item in sdict[akey]:
@@ -1255,7 +1005,6 @@ def print_local_profiles(sdict, swidth):
     Raises
         None
     """
-
     tkeys = sdict.keys()
     tkeys.sort()
     swidth += 1
@@ -1271,14 +1020,14 @@ def print_local_profiles(sdict, swidth):
     print
 
 
-def list_local_manifests(linst, name=None):
+def list_local_manifests(services, name=None):
     """
     list the local manifests.  If name is not passed in then
     print all the local manifests.  Otherwise list the named
     service's manifest criteria.
 
     Args
-        inst = smf.AISCF()
+        services = config.get_all_service_props()
         name = service name
 
     Returns
@@ -1289,14 +1038,14 @@ def list_local_manifests(linst, name=None):
     """
     # list -m
     if not name:
-        sdict, swidth, mwidth = get_manifest_or_profile_names(linst,
+        sdict, swidth, mwidth = get_manifest_or_profile_names(services,
                                                      AIdb.MANIFESTS_TABLE)
-        if sdict == {}:
-            estr = _('Error: no manifests for local service(s)\n')
-            sys.stderr.write(estr)
-            sys.exit(1)
+        if not sdict:
+            output = _('There are no manifests configured for local '
+                       'services.\n')
+            sys.stdout.write(output)
+            return
 
-        # Pad swidth and mwidth with 1 extra space.  Status is at the end.
         swidth = max(swidth, len(_('Service Name'))) + 1
         fields = [[_('Service Name'), swidth]]
         mwidth = max(mwidth, len(_('Manifest'))) + 1
@@ -1308,17 +1057,16 @@ def list_local_manifests(linst, name=None):
     # list -m -n <service>
     else:
         sdict, mwidth, cwidth = \
-            get_mfest_or_profile_criteria(name, linst, AIdb.MANIFESTS_TABLE)
-        if sdict == {}:
-            estr = _('Error: no manifests for ' \
-                     'local service named "%s".\n') % name
-            sys.stderr.write(estr)
-            sys.exit(1)
+            get_mfest_or_profile_criteria(name, services, AIdb.MANIFESTS_TABLE)
+        if not sdict:
+            output = _('There are no manifests configured for '
+                       'local service, "%s".\n') % name
+            sys.stdout.write(output)
+            return
 
-        # Pad swidth and stwidth with 1 extra space.  Criteria is at the end.
-        mwidth = max(mwidth, len(_('Manifest'))) + 1
+        mwidth = max(mwidth, len(_('Manifest')))
         fields = [[_('Manifest'), mwidth]]
-        stwidth = max([len(item) for item in STATUS_WORDS]) + 1
+        stwidth = max([len(item) for item in STATUS_WORDS])
         fields.extend([[_('Status'), stwidth]])
         fields.extend([[_('Criteria'), len(_('Criteria'))]])
 
@@ -1346,13 +1094,13 @@ def list_local_profiles(linst, name=None):
     if not name:
         sdict, swidth, mwidth = \
                 get_manifest_or_profile_names(linst, AIdb.PROFILES_TABLE)
-        if sdict == {}:
-            estr = _('Error: no profiles for local service(s)\n')
-            sys.stderr.write(estr)
-            sys.exit(1)
+        if not sdict:
+            output = _('There are no profiles configured for local '
+                       'services.\n')
+            sys.stdout.write(output)
+            return
 
-        # Pad swidth and mwidth with 1 extra space.  Status is at the end.
-        swidth = max(swidth, len(_('Service Name'))) + 1
+        swidth = max(swidth, len(_('Service Name')))
         fields = [[_('Service Name'), swidth]]
         mwidth = max(mwidth, len(_('Profile')))
         fields.extend([[_('Profile'), mwidth]])
@@ -1363,14 +1111,13 @@ def list_local_profiles(linst, name=None):
     else:
         sdict, mwidth, cwidth = \
             get_mfest_or_profile_criteria(name, linst, AIdb.PROFILES_TABLE)
-        if sdict == {}:
-            estr = _('No profiles for ' \
-                     'local service named "%s".\n') % name
-            sys.stderr.write(estr)
-            sys.exit(1)
+        if not sdict:
+            output = _('There are no profiles configured for '
+                       'local service, "%s".\n') % name
+            sys.stdout.write(output)
+            return
 
-        # Pad swidth with 1 extra space.  Criteria is at the end.
-        mwidth = max(mwidth, len(_('Profile'))) + 1
+        mwidth = max(mwidth, len(_('Profile')))
         fields = [[_('Profile'), mwidth]]
         fields.extend([[_('Criteria'), len(_('Criteria'))]])
 
@@ -1385,26 +1132,31 @@ def do_list(cmd_options=None):
         -c option, lists information about clients
             of install services.
         -m option, lists the manifest information.
-
+        -p options, lists profiles
+    
     '''
     options = parse_options(cmd_options)
 
-    try:
-        inst = smf.AISCF(FMRI="system/install/server")
-    except KeyError:
-        raise SystemExit(_("Error: The system does not have the "
-                           "system/install/server SMF service"))
-    services = inst.services.keys()
+    services = config.get_all_service_props()
     if not services:
-        raise SystemExit(_('Error: no services on this server.\n'))
+        if options.service:
+            raise SystemExit(_('Error: Service does not exist: "%s".\n') %
+                               options.service)
+        else:
+            output = _('There are no services configured on this server.\n')
+            sys.stdout.write(output)
+            raise SystemExit(0)
 
-    if options.service and not options.service in services:
-        raise SystemExit(_('Error: no local service named "%s".\n') % \
+    if options.service and options.service not in services:
+        raise SystemExit(_('Error: Service does not exist: "%s".\n') %
                            options.service)
 
     # list
     if not options.client and not options.manifest and not options.profile:
-        list_local_services(inst, name=options.service)
+        try:
+            list_local_services(services, name=options.service)
+        except (config.ServiceCfgError, ValueError) as err:
+            raise SystemExit(err)
     else:
         # list -c
         if options.client:
@@ -1413,16 +1165,15 @@ def do_list(cmd_options=None):
         if options.manifest:
             if options.client:
                 print
-            list_local_manifests(inst, name=options.service)
+            list_local_manifests(services, name=options.service)
         # list -p
         if options.profile:
             if options.client or options.manifest:
                 print
-            list_local_profiles(inst, name=options.service)
+            list_local_profiles(services, name=options.service)
 
 
 if __name__ == '__main__':
-
     # initialize gettext
     gettext.install("ai", "/usr/lib/locale")
 

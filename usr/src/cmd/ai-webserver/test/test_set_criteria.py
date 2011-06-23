@@ -101,6 +101,13 @@ class MockgetManNames(object):
     def __call__(self, queue):
         return self.man_names
 
+
+class MockAIService(object):
+    '''Class for mock AIService '''
+    def __init__(self):
+        self.manifest_dir = "/var/ai/service/fakeservice/AI_data"
+
+
 class MockDataFiles(object):
     '''Class for mock DataFiles'''
     def __init__(self):
@@ -204,6 +211,7 @@ class SetCriteria(unittest.TestCase):
                        "'10.0.10.10',MAXipv4='10.0.10.300' WHERE name='myxml'"
         self.assertEquals(expect_query, self.mockquery.query)
 
+
 class CheckPublishedManifest(unittest.TestCase):
     '''Tests for check_published_manifest'''
 
@@ -218,6 +226,7 @@ class CheckPublishedManifest(unittest.TestCase):
         self.mockgetManNames = MockgetManNames()
         AIdb.getManNames = self.mockgetManNames
         self.files = MockDataFiles()
+        self.mockService = MockAIService()
 
     def tearDown(self):
         '''unit test tear down
@@ -229,14 +238,17 @@ class CheckPublishedManifest(unittest.TestCase):
 
     def test_no_such_name(self):
         '''Check no such manifest name caught '''
-        self.assertFalse(set_criteria.check_published_manifest("/tmp",
+        self.assertFalse(set_criteria.check_published_manifest(
+                         self.mockService,
                          self.files.database, "no_such_manifest"))
 
     def test_manifest_not_published(self):
         '''Check manifest not in published area caught'''
-        self.assertFalse(set_criteria.check_published_manifest("/tmp",
+        self.assertFalse(set_criteria.check_published_manifest(
+                         self.mockService,
                          self.files.database,
-                         self.mockgetManNames.man_names[0])) 
+                         self.mockgetManNames.man_names[0]))
+
 
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''

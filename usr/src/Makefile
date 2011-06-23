@@ -90,7 +90,7 @@ CTAGS=ctags
 ctags:
 	@-rm tags
 	find . \( -type d \( -name Codemgr_wsdata -o -name SCCS -o -name .del\* \) \) -prune -o \
-	       \( -name '*.[Ccshlxy]' -o -name \*.java -o -name \*.cc \) -print | xargs $(CTAGS) -a
+	       \( -name '*.[Ccshlxy]' -o -name \*.py -o -name \*.java -o -name \*.cc \) -print | xargs $(CTAGS) -a
 
 #
 # The cscope.out file is made in the current directory and spans the
@@ -107,7 +107,7 @@ CSCOPE=cscope
 cscope:
 	@-rm cscope.files cscope.out
 	find . \( -type d \( -name Codemgr_wsdata -o -name SCCS -o -name .del\* \) \) -prune -o \
-	       \( -name '*.[Ccshlxy]' -o -name \*.cc -o -name Makefile\* \) -print > cscope.files
+	       \( -name '*.[Ccshlxy]' -o -name '*.py' -o -name Makefile\* \) -print > cscope.files
 	$(CSCOPE) -b
 
 .NO_PARALLEL: cc-version cc64-version java-version

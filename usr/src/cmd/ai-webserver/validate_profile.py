@@ -20,30 +20,30 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
-
 """
 AI validate_profile
 """
-
 import gettext
-import lxml.etree
 import os.path
 import sys
 
-from optparse import OptionParser
+import lxml.etree
 
-import osol_install.auto_install.common_profile as sc
 import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.data_files as df
+
+from optparse import OptionParser
 
 from osol_install.auto_install.installadm_common import _, \
     validate_service_name
-from osol_install.auto_install.properties import get_service_info
+from osol_install.auto_install.service import AIService
 
 
 def get_usage():
     ''' get usage for validate'''
     return _("validate\t-n|--service <svcname>\n"
-             "\t\t-P <profile_path> ... | -p|--profile <profile_name> ...")
+             "\t\t-P|--profile-file <profile_path> ... |\n"
+             "\t\t-p|--profile <profile_name> ...")
 
 
 def parse_options(cmd_options=None):
@@ -55,10 +55,11 @@ def parse_options(cmd_options=None):
     """
     parser = OptionParser(usage='\n' + get_usage())
 
-    parser.add_option("-P", dest="profile_path", action="append", default=[],
+    parser.add_option("-P", "--profile-file", dest="profile_path",
+                      action="append", default=list(),
                       help=_("Path to profile file"))
     parser.add_option("-p", "--profile", dest="profile_name", action="append",
-                      default=[], help=_("Name of profile"))
+                      default=list(), help=_("Name of profile"))
     parser.add_option("-n", "--service", dest="service_name", default="",
                       help=_("Name of install service."))
 
@@ -115,68 +116,9 @@ def validate_internal(profile_list, database, table, image_dir):
             isvalid = False
             continue  # to the next profile
         for response in query.getResponse():
-            if not validate_file(response[0], response[1], image_dir):
+            if not df.validate_file(response[0], response[1], image_dir):
                 isvalid = False
     return isvalid
-
-
-def validate_file(profile_name, profile, image_dir=None):
-    '''validate a profile file, given the file path and profile name
-    Args:
-        profile_name - reference name of profile
-        profile - file path of profile
-        image_dir - path of service image, used to locate service_bundle
-    Return True if the profile is valid, False otherwise
-    '''
-    try:
-        with open(profile, 'r') as fip:
-            raw_profile = fip.read()
-    except IOError as err:
-        print >> sys.stderr, _("Error opening profile %s:  %s") % \
-                (profile_name, err.strerror)
-        return False
-    print >> sys.stderr, _("Validating static profile %s...") % profile_name,
-    errmsg = ''
-    validated_xml = ''
-    try:
-        # do any templating
-        tmpl_profile = sc.perform_templating(raw_profile, validate_only=False)
-        # validate
-        validated_xml = sc.validate_profile_string(tmpl_profile, image_dir,
-                                                   dtd_validation=True,
-                                                   warn_if_dtd_missing=True)
-    except lxml.etree.XMLSyntaxError, err:
-        errmsg = _('XML syntax error in profile %s:' % profile_name)
-    except KeyError, err:  # usr specified bad template variable (not criteria)
-        value = sys.exc_info()[1]  # take value from exception
-        found = False
-        # check if missing variable in error is supported
-        for tmplvar in sc.TEMPLATE_VARIABLES:
-            if "'" + tmplvar + "'" == str(value):  # values in single quotes
-                found = True  # valid template variable, but not in env
-                break
-        if found:
-            errmsg = \
-                _("Error: template variable %s in profile %s was not "
-                  "found in the user's environment.") % (value, profile_name)
-        else:
-            errmsg = \
-                _("Error: template variable %s in profile %s is not a "
-                  "valid template variable.  Valid template variables:  ") \
-                % (value, profile_name) + '\n\t' + \
-                ', '.join(sc.TEMPLATE_VARIABLES)
-        err = []  # no supplemental message text needed for this exception
-    # for all errors
-    if errmsg:
-        print raw_profile  # dump unparsed profile for perusal
-        print >> sys.stderr
-        print >> sys.stderr, errmsg  # print error message
-        for eline in err:  # print supplemental text from exception
-            print >> sys.stderr, '\t' + eline
-        return False
-    if validated_xml:
-        print >> sys.stderr, " Passed"
-    return True
 
 
 def do_validate_profile(cmd_options=None):
@@ -187,18 +129,22 @@ def do_validate_profile(cmd_options=None):
     options = parse_options(cmd_options)
     isvalid = True
     # get AI service directory, database name
-    dummy, dbname, image_dir = get_service_info(options.service_name)
+    service = AIService(options.service_name)
+    image_dir = service.image.path
+    dbname = service.database_path
+
     if options.profile_name:
         isvalid = validate_internal(options.profile_name, dbname,
                                     AIdb.PROFILES_TABLE, image_dir)
     if options.profile_path:
         # iterate through profile files on command line
         for fname in options.profile_path:
-            if not validate_file(os.path.basename(fname), fname, image_dir):
+            if not df.validate_file(os.path.basename(fname), fname, image_dir):
                 isvalid = False
     # return failure status if any profiles failed validation
     if not isvalid:
         sys.exit(1)
+
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")

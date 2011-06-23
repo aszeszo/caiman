@@ -21,16 +21,22 @@
 #
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
-''' Auto Installer mDNS and DNS Service Discovery class and application.
+'''
+Auto Installer mDNS and DNS Service Discovery class and application.
 '''
 import atexit
 import gettext
-from optparse import OptionParser
 import os
-import pybonjour as pyb
 import signal
 import sys
+
+import pybonjour as pyb
+
 import osol_install.auto_install.aimdns_mod as aimdns
+
+from optparse import OptionParser
+
+from osol_install.auto_install.installadm_common import _
 
 
 def parse_options():
@@ -139,8 +145,6 @@ def parse_options():
     return loptions
 
 
-# pylint: disable-msg=W0613
-# disabled for frame
 def on_exit(signum=0, frame=None):
     '''Callback invoked when SIGTERM is received,
        or when the program is exiting
@@ -159,7 +163,6 @@ def on_exit(signum=0, frame=None):
         None
     '''
     AIMDNS.clear_sdrefs()
-# pylint: enable-msg=W0613
 
 
 def main(mdns):

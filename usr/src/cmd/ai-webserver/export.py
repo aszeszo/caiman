@@ -21,23 +21,24 @@
 #
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
-
 '''
 export - write out a manifest or profile
 '''
-
 import errno
 import gettext
 import os
 import shutil
 import sys
 
+import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.service_config as config
+
 from optparse import OptionParser
 
-import osol_install.auto_install.AI_database as AIdb
-from osol_install.auto_install.installadm_common import validate_service_name
-from osol_install.auto_install.properties import get_default, get_service_info
-from solaris_install import AI_DATA, _
+from osol_install.auto_install.service import AIService
+from osol_install.auto_install.installadm_common import _, \
+    validate_service_name
+
 
 SCREEN = "/dev/stdout"
 HEADER_WIDTH = 80
@@ -58,15 +59,14 @@ def parse_options(cmd_options=None):
 
     parser = OptionParser(usage=get_usage(), prog="export")
     parser.add_option('-p', '--profile', dest='pnames', action="append",
-                      default=[], help=_("Name of profile to export."))
+                      default=list(), help=_("Name of profile to export."))
     parser.add_option('-m', '--manifest', dest='mnames', action="append",
-                      default=[], help=_("Name of manifest to export."))
+                      default=list(), help=_("Name of manifest to export."))
     parser.add_option('-n', '--service', dest='service_name',
                       default=None, help=_("Name of install service."))
     parser.add_option('-o', '--output', dest='output_name',
                       default=None, help=_("Name of output file."))
 
-    # pylint: disable-msg=W0612
     (options, args) = parser.parse_args(cmd_options)
 
     if args:
@@ -75,10 +75,11 @@ def parse_options(cmd_options=None):
     if not options.service_name:
         parser.error(_("Service name is required."))
 
-    try:
-        validate_service_name(options.service_name)
-    except ValueError as err:
-        parser.error(str(err))
+    if not config.is_service(options.service_name):
+        raise SystemExit(_("No such service: %s") % options.service_name)
+    
+    service = AIService(options.service_name)
+    options.service = service
 
     if not len(options.mnames) and not len(options.pnames):
         parser.error(_("A manifest or profile name is required."))
@@ -127,9 +128,7 @@ def do_export(cmd_options=None):
     ''' Export a manifest or a profile.  Called from installadm.
     '''
     options = parse_options(cmd_options)
-    # get AI service directory, database name
-    options.svcdir, options.dbname, dummy = \
-            get_service_info(options.service_name)
+
     merrno = perrno = 0
     if len(options.mnames):
         merrno = do_export_manifest(options)
@@ -148,7 +147,7 @@ def do_export_manifest(options):
         # Get the pathname of the manifest to export.
         if mname == "default":
             try:
-                mname = get_default(options.service_name)
+                mname = options.service.get_default_manifest()
             except StandardError as err:
                 print >> sys.stderr, _("Error translating \"default\" into a "
                                        "manifest.")
@@ -159,7 +158,7 @@ def do_export_manifest(options):
         else:
             output_name = options.output_name
 
-        input_mname = os.path.join(options.svcdir, AI_DATA, mname)
+        input_mname = os.path.join(options.service.manifest_dir, mname)
 
         if output_name == SCREEN:
             display_file_header(_("manifest: ") + mname)
@@ -184,7 +183,7 @@ def do_export_profile(options):
     save_errno = 0
 
     # Open the database
-    aisql = AIdb.DB(options.dbname, commit=True)
+    aisql = AIdb.DB(options.service.database_path, commit=True)
     aisql.verifyDBStructure()
 
     queue = aisql.getQueue()

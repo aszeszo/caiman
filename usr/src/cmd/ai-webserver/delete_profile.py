@@ -20,25 +20,23 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
-
 """
 AI delete-profile
 """
-# external modules
 import gettext
 import logging
-import os.path
+import os
 import sys
+
+import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.common_profile as sc
 
 from errno import ENOENT
 from optparse import OptionParser
 
-# Solaris modules
-import osol_install.auto_install.AI_database as AIdb
-import osol_install.auto_install.common_profile as sc
 from osol_install.auto_install.installadm_common import _, \
     validate_service_name
-from osol_install.auto_install.properties import get_service_info
+from osol_install.auto_install.service import AIService
 
 
 def get_usage():
@@ -55,7 +53,7 @@ def parse_options(cmd_options=None):
     parser = OptionParser(usage='\n' + get_usage())
 
     parser.add_option("-p", "--profile", dest="profile_name", action="append",
-                      default=[], help=_("Name of profile"))
+                      default=list(), help=_("Name of profile"))
     parser.add_option("-n", "--service", dest="service_name", default='',
                       help=_("Name of install service."))
     # Get the parsed options using parse_args().  We know we don't have
@@ -138,7 +136,8 @@ def do_delete_profile(cmd_options=None):
     options = parse_options(cmd_options)
 
     # get AI service directory, database name
-    dummy, dbname, dummy = get_service_info(options.service_name)
+    service = AIService(options.service_name)
+    dbname = service.database_path
 
     # Open the database
     aisql = AIdb.DB(dbname, commit=True)
@@ -146,6 +145,7 @@ def do_delete_profile(cmd_options=None):
 
     # delete profiles per command line
     delete_profiles(options.profile_name, aisql, AIdb.PROFILES_TABLE)
+
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")

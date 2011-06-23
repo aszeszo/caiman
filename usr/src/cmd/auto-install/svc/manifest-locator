@@ -29,12 +29,14 @@ TEE_LOGTOCONSOLE="/usr/bin/tee /dev/msglog"
 ARCH=$(/sbin/uname -p)
 # Installation configuration
 INSTALL_CONF=/tmp/install.conf
+SYSTEM_CONF=/etc/netboot/system.conf
 
 PRTCONF=/usr/sbin/prtconf
 SED=/usr/bin/sed
 AWK=/usr/bin/awk
 CHMOD=/usr/bin/chmod
 CUT=/usr/bin/cut
+DEVPROP=/usr/sbin/devprop
 FILE=/usr/bin/file
 GREP=/usr/bin/grep
 HEAD=/usr/bin/head
@@ -91,9 +93,11 @@ do_service_discovery()
 	#  - turning on debug mode
 	#
 	# For SPARC, parameters are stored in 
-	# <install_media_root_dir>/install.conf
-	# This file is downloaded using HTTP protocol and saved in
-        # /system/volatile.
+	# /etc/netboot/system.conf
+	# This file is downloaded as part of standard wanboot. If this
+	# client's install server is from an older release, then fall back
+	# to the original install.conf. Saved in /system/volatile.
+	# 
 	# For X86, parameters are in defined in GRUB menu.lst
 	#
 	# TODO: Unify the implementation - bug 7789
@@ -101,19 +105,19 @@ do_service_discovery()
 	#   and avoid using GRUB menu.lst
 	#
 	if [ "${ARCH}" = "sparc" ]; then
+		config_file="$SYSTEM_CONF"
+		if [[ ! -f "$config_file" ]]; then
+			config_file="$INSTALL_CONF"
+		fi
 		AI_SERVICE_NAME=$($GREP "^install_service" \
-		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2)
+		    $config_file |  /usr/bin/cut -d'=' -f2)
 
 		AI_SERVICE_ADDRESS=$($GREP "^install_svc_address" \
-		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2)
+		    $config_file |  /usr/bin/cut -d'=' -f2)
 	else
-		AI_SERVICE_NAME=$($PRTCONF -v /devices | \
-		    /usr/bin/sed -n '/install_service/{;n;p;}' | \
-		    /usr/bin/cut -f 2 -d \')
+		AI_SERVICE_NAME=$($DEVPROP -s install_service)
 
-		AI_SERVICE_ADDRESS=$($PRTCONF -v /devices | \
-		    /usr/bin/sed -n '/install_svc_address/{;n;p;}' | \
-		    /usr/bin/cut -f 2 -d \')
+		AI_SERVICE_ADDRESS=$($DEVPROP -s install_svc_address)
 	fi
 
 	#

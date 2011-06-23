@@ -21,34 +21,36 @@
 #
 # Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
-'''cgi_get_manifest retrieves the manifest based upon certain criteria
+'''
+cgi_get_manifest retrieves the manifest based upon certain criteria
 '''
 import cgi
 import gettext
 import logging
-import lxml.etree
 import mimetypes
 import os
 import socket
 import sys
+
+import lxml.etree
+import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.common_profile as sc
+import osol_install.auto_install.installadm_common as com
+import osol_install.auto_install.service_config as config
+import osol_install.libaimdns as libaimdns
+import osol_install.libaiscf as smf
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from lxml.html import builder as E
 from StringIO import StringIO
 
-import osol_install.auto_install.AI_database as AIdb
-import osol_install.auto_install.common_profile as sc
-import osol_install.libaimdns as libaimdns
-import osol_install.libaiscf as smf
+from osol_install.auto_install.service import AIService
+from osol_install.auto_install.installadm_common import _
 
-from osol_install.auto_install.ai_smf_service import PROP_TXT_RECORD
-from osol_install.auto_install.installadm_common import SRVINST, PORTPROP
-from osol_install.auto_install.properties import get_default, get_service_info
-from solaris_install import AI_DATA, _
 
 VERSION = '2.0'
-PROFILES_VERSION = '2.0'  # MIME-encoded profiles started
+PROFILES_VERSION = '2.0' # MIME-encoded profiles started
 COMPATIBILITY_VERSION = '0.5'
 
 # Solaris installer debugging levels
@@ -98,7 +100,6 @@ def get_parameters(form):
                         "Unrecognized logging level from POST REQUEST:  ")
                         + str(sol_dbg))
     if 'no_default' in form:
-        # no_default = form['no_default'].value
         no_default = (str(True).lower() == (form['no_default'].value).lower())
     if 'postData' in form:
         post_data = form['postData'].value
@@ -141,15 +142,16 @@ def send_needed_criteria(port):
 
     Raises
         None
+    
     '''
     # Establish the service SQL database based upon the
     # port number for the service
-    path = os.path.join(os.path.join('/var/ai', str(port)), 'AI.db')
+    path = os.path.join(com.AI_SERVICE_DIR_PATH, str(port), 'AI.db')
     if os.path.exists(path):
         try:
             aisql = AIdb.DB(path)
             aisql.verifyDBStructure()
-        except StandardError, err:
+        except StandardError as err:
             # internal error, record the error in the server error_log
             sys.stderr.write(_('error:AI database access error\n%s\n') % err)
             # report the error to the requesting client
@@ -188,7 +190,7 @@ def send_needed_criteria(port):
 def send_manifest(form_data, port=0, servicename=None,
         protocolversion=COMPATIBILITY_VERSION, no_default=False):
     '''Replies to the client with matching service for a service.
-
+    
     Args
         form_data   - the postData passed in from the client request
         port        - the port of the old client
@@ -200,9 +202,10 @@ def send_manifest(form_data, port=0, servicename=None,
 
     Returns
         None
-
+    
     Raises
         None
+    
     '''
     # figure out the appropriate path for the AI database,
     # and get service name if necessary.
@@ -212,32 +215,20 @@ def send_manifest(form_data, port=0, servicename=None,
     # port numbers as the separation mechanism.
     path = None
     found_servicename = None
+    service = None
+    port = str(port)
+    
     if servicename:
-        path = os.path.join(os.path.join('/var/ai', servicename), 'AI.db')
-    if not path or not os.path.exists(path):
-        inst = smf.AISCF(FMRI="system/install/server")
-        services = inst.services.keys()
-        if servicename:
-            for akey in services:
-                if akey == servicename:
-                    serv = smf.AIservice(inst, akey)
-                    if PROP_TXT_RECORD in serv.keys():
-                        port = serv[PROP_TXT_RECORD].partition(':')[-1]
-                        path = os.path.join(os.path.join('/var/ai', port),
-                                            'AI.db')
-        else:
-            # No service name, but we have port.  Get service name from port
-            for akey in services:
-                serv = smf.AIservice(inst, akey)
-                if PROP_TXT_RECORD in serv.keys():
-                    servs_port = serv[PROP_TXT_RECORD].partition(':')[-1]
-                    if int(port) == int(servs_port):
-                        found_servicename = akey
-                        break
-
-            path = os.path.join(os.path.join('/var/ai/', str(int(port))),
-                                'AI.db')
-
+        service = AIService(servicename)
+        path = service.database_path
+    else:
+        for name in config.get_all_service_names():
+            if config.get_service_port(name) == port:
+                found_servicename = name
+                service = AIService(name)
+                path = service.database_path
+                break
+    
     # Check to insure that a valid path was found
     if not path or not os.path.exists(path):
         print 'Content-Type: text/html'     # HTML is following
@@ -248,15 +239,11 @@ def send_manifest(form_data, port=0, servicename=None,
             print '<pre><b>Error</b>:unable to find<i>', port + '</i>.'
         print 'Available services are:<p><ol><i>'
         hostname = socket.gethostname()
-        for akey in inst.services.keys():
-            serv = smf.AIservice(inst, akey)
-            if PROP_TXT_RECORD in serv.keys():
-                port = int(serv[PROP_TXT_RECORD].split(':')[-1])
-            else:
-                port = libaimdns.getinteger_property(SRVINST, PORTPROP)
+        for name in config.get_all_service_names():
+            port = config.get_service_port(name)
             sys.stdout.write('<a href="http://%s:%d/cgi-bin/'
                    'cgi_get_manifest.py?version=%s&service=%s">%s</a><br>\n' %
-                   (hostname, port, VERSION, akey, akey))
+                   (hostname, port, VERSION, name, name))
         print '</i></ol>Please select a service from the above list.'
         return
 
@@ -268,7 +255,7 @@ def send_manifest(form_data, port=0, servicename=None,
     aisql.verifyDBStructure()
 
     # convert the form data into a criteria dictionary
-    criteria = {}
+    criteria = dict()
     orig_data = form_data
     while form_data:
         try:
@@ -280,12 +267,12 @@ def send_manifest(form_data, port=0, servicename=None,
             [key, value] = key_value.split('=')
             criteria[key] = value
         except (ValueError, NameError, TypeError, KeyError):
-            criteria = {}
+            criteria = dict()
 
     # find the appropriate manifest
     try:
         manifest = AIdb.findManifest(criteria, aisql)
-    except StandardError, err:
+    except StandardError as err:
         print 'Content-Type: text/html'     # HTML is following
         print                               # blank line, end of headers
         print '<pre><b>Error</b>:findManifest criteria<br>'
@@ -295,21 +282,21 @@ def send_manifest(form_data, port=0, servicename=None,
         print 'path        =', path
         print 'form_data   =', orig_data
         print 'criteria    =', criteria
-        print 'servicename found by port =', str(found_servicename), '</ol>'
+        print 'servicename found by port =', found_servicename, '</ol>'
         print '</pre>'
         return
 
     # check if findManifest() returned a number equal to 0
     # (means we got no manifests back -- thus we serve the default if desired)
     if manifest is None and not no_default:
-        manifest = get_default(servicename)
+        manifest = service.get_default_manifest()
 
     # if we have a manifest to return, prepare its return
     if manifest is not None:
         try:
             # construct the fully qualified filename
-            path = os.path.join(os.path.dirname(path), AI_DATA)
-            filename = os.path.abspath(os.path.join(path, manifest))
+            filename = os.path.abspath(os.path.join(service.manifest_dir,
+                                                    manifest))
             # open and read the manifest
             with open(filename, 'rb') as mfp:
                 manifest_str = mfp.read()
@@ -317,26 +304,28 @@ def send_manifest(form_data, port=0, servicename=None,
             if servicename is None or \
                     float(protocolversion) < float(PROFILES_VERSION):
                 content_type = mimetypes.types_map.get('.xml', 'text/plain')
-                print 'Content-Length:', len(manifest_str)  # Length of the file
-                print 'Content-Type:', content_type         # XML is following
-                print                               # blank line, end of headers
+                print 'Content-Length:', len(manifest_str) # Length of the file
+                print 'Content-Type:', content_type        # XML is following
+                print                              # blank line, end of headers
                 print manifest_str
                 logging.info('Manifest sent from %s.' % filename)
                 return
 
-        except OSError, err:
+        except OSError as err:
             print 'Content-Type: text/html'     # HTML is following
             print                               # blank line, end of headers
             print '<pre>'
             # report the internal error to error_log and requesting client
-            sys.stderr.write(_('error:manifest (%s) %s\n') % (str(manifest), err))
-            sys.stdout.write(_('error:manifest (%s) %s\n') % (str(manifest), err))
+            sys.stderr.write(_('error:manifest (%s) %s\n') % \
+                            (str(manifest), err))
+            sys.stdout.write(_('error:manifest (%s) %s\n') % \
+                            (str(manifest), err))
             print '</pre>'
             return
 
-
     # get AI service image path
-    service_info = get_service_info(servicename)
+    service = AIService(servicename)
+    image_dir = service.image.path
     # construct object to contain MIME multipart message
     outermime = MIMEMultipart()
     client_msg = list()  # accumulate message output for AI client
@@ -349,7 +338,6 @@ def send_manifest(form_data, port=0, servicename=None,
         msg.add_header('Content-Disposition', 'attachment',
                       filename=sc.AI_MANIFEST_ATTACHMENT_NAME)
         outermime.attach(msg)  # add manifest as an attachment
-
 
     # search for any profiles matching client criteria
     # formulate database query to profiles table
@@ -411,8 +399,8 @@ def send_manifest(form_data, port=0, servicename=None,
             # values.  We use a special user-defined function in the
             # determine if the given criteria is in that textual list.
             if no_default:
-                nvpairs += ["(is_in_list('" + crit + "', '" + envval + "', " + \
-                    crit + ", 'None') == 1)"]
+                nvpairs += ["(is_in_list('" + crit + "', '" + envval + \
+                    "', " + crit + ", 'None') == 1)"]
             else:
                 nvpairs += ["(" + crit + " IS NULL OR is_in_list('" + crit + \
                     "', '" + envval + "', " + crit + ", 'None') == 1)"]
@@ -437,7 +425,8 @@ def send_manifest(form_data, port=0, servicename=None,
                     profname = 'unnamed'
                 try:
                     if profpath is None:
-                        msgtxt = "Database record error - profile path is empty."
+                        msgtxt = "Database record error - profile path is " \
+                            "empty."
                         client_msg += [msgtxt]
                         logging.error(msgtxt)
                         continue
@@ -450,10 +439,10 @@ def send_manifest(form_data, port=0, servicename=None,
                     tmpl_profile = sc.perform_templating(raw_profile,
                                                          validate_only=False)
                     # precautionary validation or profile, logging only
-                    sc.validate_profile_string(tmpl_profile, service_info[2],
+                    sc.validate_profile_string(tmpl_profile, image_dir,
                                                dtd_validation=True,
                                                warn_if_dtd_missing=True)
-                except IOError, err:
+                except IOError as err:
                     msgtxt = _("Error:  I/O error: ") + str(err)
                     client_msg += [msgtxt]
                     logging.error(msgtxt)
@@ -464,14 +453,14 @@ def send_manifest(form_data, port=0, servicename=None,
                     logging.error(msgtxt)
                     continue
                 except KeyError:
-                    msgtxt = _('Error:  could not find criteria to substitute in '
-                            'template: ') + profpath
+                    msgtxt = _('Error:  could not find criteria to substitute '
+                        'in template: ') + profpath
                     client_msg += [msgtxt]
                     logging.error(msgtxt)
                     logging.error('Profile with template substitution error:' +
                             raw_profile)
                     continue
-                except lxml.etree.XMLSyntaxError, err:
+                except lxml.etree.XMLSyntaxError as err:
                     # log validation error and proceed
                     msgtxt = _(
                             'Warning:  syntax error found in profile: ') \
@@ -532,162 +521,129 @@ def list_manifests(service):
 
     port = 0
     try:
-        inst = smf.AISCF(FMRI="system/install/server")
+        smf.AISCF(FMRI="system/install/server")
     except KeyError:
         # report the internal error to error_log and requesting client
-        sys.stderr.write(_("error:The system does not have the " +
-                         "system/install/server SMF service."))
-        sys.stdout.write(_("error:The system does not have the " +
-                         "system/install/server SMF service."))
+        sys.stderr.write(_("error:The system does not have the "
+                           "system/install/server SMF service."))
+        sys.stdout.write(_("error:The system does not have the "
+                           "system/install/server SMF service."))
         return
-    services = inst.services.keys()
+    services = config.get_all_service_names()
     if not services:
         # report the error to the requesting client only
         sys.stdout.write(_('error:no services on this server.\n'))
         return
 
     found = False
-    for akey in inst.services.keys():
-        serv = smf.AIservice(inst, akey)
-        if 'service_name' not in serv.keys():
-            # report the internal error to error_log and requesting client
-            sys.stderr.write(_('error:SMF service key "service_name"'
-                               'property does not exist\n'))
-            sys.stdout.write(_('error:SMF service key "service_name"'
-                               'property does not exist\n'))
-            return
-        if serv['service_name'] == service:
-            found = True
-            if PROP_TXT_RECORD not in serv.keys():
-                # report the internal error to error_log and requesting client
-                sys.stderr.write(_('error:SMF service key \"' +
-                                   PROP_TXT_RECORD +
-                                   '\"property does not exist\n'))
-                sys.stdout.write(_('error:SMF service key \"' +
-                                   PROP_TXT_RECORD +
-                                   '\"property does not exist\n'))
+    if config.is_service(service):
+        service_ctrl = AIService(service)
+        found = True
+
+        # assume new service setup
+        path = service_ctrl.database_path
+        if os.path.exists(path):
+            try:
+                aisql = AIdb.DB(path)
+                aisql.verifyDBStructure()
+            except StandardError as err:
+                # report the internal error to error_log and
+                # requesting client
+                sys.stderr.write(_('error:AI database access '
+                                   'error\n%s\n') % err)
+                sys.stdout.write(_('error:AI database access '
+                                   'error\n%s\n') % err)
                 return
 
-            # assume new service setup
-            path = os.path.join('/var/ai', service, 'AI.db')
-            if not os.path.exists(path):
-                # Establish the service SQL database based upon the
-                # port number for the service
-                port = serv[PROP_TXT_RECORD].split(':')[-1]
-                path = os.path.join('/var/ai', str(port), 'AI.db')
+            # generate the list of criteria for the criteria table header
+            criteria_header = E.TR()
+            for crit in AIdb.getCriteria(aisql.getQueue(), strip=False):
+                criteria_header.append(E.TH(crit))
 
-            if os.path.exists(path):
-                try:
-                    aisql = AIdb.DB(path)
-                    aisql.verifyDBStructure()
-                except StandardError, err:
-                    # report the internal error to error_log and
-                    # requesting client
-                    sys.stderr.write(_('error:AI database access '
-                                       'error\n%s\n') % err)
-                    sys.stdout.write(_('error:AI database access '
-                                       'error\n%s\n') % err)
-                    return
+            # generate the manifest rows for the criteria table body
+            names = AIdb.getManNames(aisql.getQueue())
+            table_body = E.TR()
+            allcrit = AIdb.getCriteria(aisql.getQueue(), strip=False)
+            colspan = str(max(len(list(allcrit)), 1))
+            for manifest in names:
 
-                # generate the list of criteria for the criteria table header
-                criteria_header = E.TR()
-                for crit in AIdb.getCriteria(aisql.getQueue(), strip=False):
-                    criteria_header.append(E.TH(crit))
+                # iterate through each manifest (and instance)
+                for instance in range(0,
+                        AIdb.numInstances(manifest, aisql.getQueue())):
 
-                # generate the manifest rows for the criteria table body
-                names = AIdb.getManNames(aisql.getQueue())
-                table_body = E.TR()
-                allcrit = AIdb.getCriteria(aisql.getQueue(), strip=False)
-                colspan = str(max(len(list(allcrit)), 1))
-                for manifest in names:
+                    table_body.append(E.TR())
+                    # print the manifest name only once (from instance 0)
+                    if instance == 0:
+                        href = '../' + service + '/' + manifest
+                        row = str(AIdb.numInstances(manifest,
+                                                    aisql.getQueue()))
+                        table_body.append(E.TD(
+                                   E.A(manifest, href=href, rowspan=row)))
+                    else:
+                        table_body.append(E.TD())
 
-                    # iterate through each manifest (and instance)
-                    for instance in range(0,
-                            AIdb.numInstances(manifest, aisql.getQueue())):
+                    crit_pairs = AIdb.getManifestCriteria(manifest,
+                                                          instance,
+                                                          aisql.getQueue(),
+                                                          onlyUsed=True,
+                                                          humanOutput=True)
 
-                        table_body.append(E.TR())
-                        # print the manifest name only once (from instance 0)
-                        if instance == 0:
-                            href = '../' + service + '/' + manifest
-                            row = str(AIdb.numInstances(manifest,
-                                                       aisql.getQueue()))
-                            table_body.append(E.TD(
-                                    E.A(manifest, href=href, rowspan=row)))
+                    # crit_pairs is an SQLite3 row object which doesn't
+                    # support iteritems(), etc.
+                    for crit in crit_pairs.keys():
+                        formatted_val = AIdb.formatValue(crit,
+                                                         crit_pairs[crit])
+                        # if we do not get back a valid value ensure a
+                        # hyphen is printed (prevents "" from printing)
+                        if formatted_val and crit_pairs[crit]:
+                            table_body.append(E.TD(formatted_val,
+                                                   align="center"))
                         else:
-                            table_body.append(E.TD())
+                            table_body.append(E.TD(lxml.etree.Entity("nbsp"),
+                                                   align="center"))
 
-                        crit_pairs = AIdb.getManifestCriteria(manifest,
-                                                  instance,
-                                                  aisql.getQueue(),
-                                                  onlyUsed=True,
-                                                  humanOutput=True)
-
-                        # crit_pairs is an SQLite3 row object which doesn't
-                        # support iteritems(), etc.
-                        for crit in crit_pairs.keys():
-                            formatted_val = AIdb.formatValue(crit,
-                                                             crit_pairs[crit])
-                            # if we do not get back a valid value ensure a
-                            # hyphen is printed (prevents "" from printing)
-                            if formatted_val and crit_pairs[crit]:
-                                table_body.append(E.TD(formatted_val,
-                                                      align="center"))
-                            else:
-                                table_body.append(E.TD(
-                                                    lxml.etree.Entity("nbsp"),
-                                                        align="center"))
-
-                # print the default manifest at the end of the table,
-                # which has the same colspan as the Criteria List label
-                else:
-                    href = '../' + service + '/default.xml'
-                    table_body.append(
-                                     E.TR(
-                                         E.TD(
-                                             E.A("Default", href=href)),
-                                         E.TD(lxml.etree.Entity("nbsp"),
-                                             colspan=colspan,
-                                             align="center")
-                                     )
-                        )
-                web_page = E.HTML(
-                             E.HEAD(
-                                E.TITLE(_("Solaris Automated "
-                                          "Installation Webserver"))
-                                ),
-                             E.BODY(
-                                E.H1(_("Welcome to the Solaris "
-                                       "Automated Installation webserver!")),
-                                E.P(_("Service '%s' has the following "
-                                    "manifests available, served to clients "
-                                    "matching required criteria.") % service),
-                                E.TABLE(
-                                   E.TR(
-                                        E.TH(_("Manifest"), rowspan="2"),
-                                        E.TH(_("Criteria List"),
-                                            colspan=colspan)),
-                                        criteria_header,
-                                        table_body,
-                                        border="1", align="center"),
-                              )
-                         )
-                print lxml.etree.tostring(web_page, pretty_print=True)
+            # print the default manifest at the end of the table,
+            # which has the same colspan as the Criteria List label
+            else:
+                href = '../' + service + '/default.xml'
+                table_body.append(E.TR(E.TD(E.A("Default", href=href)),
+                                       E.TD(lxml.etree.Entity("nbsp"),
+                                            colspan=colspan,
+                                            align="center")))
+            web_page = E.HTML(
+                         E.HEAD(
+                            E.TITLE(_("Solaris Automated "
+                                      "Installation Webserver"))
+                            ),
+                         E.BODY(
+                            E.H1(_("Welcome to the Solaris "
+                                   "Automated Installation webserver!")),
+                            E.P(_("Service '%s' has the following "
+                                "manifests available, served to clients "
+                                "matching required criteria.") % service),
+                            E.TABLE(
+                               E.TR(
+                                    E.TH(_("Manifest"), rowspan="2"),
+                                    E.TH(_("Criteria List"),
+                                        colspan=colspan)),
+                                    criteria_header,
+                                    table_body,
+                                    border="1", align="center"),
+                          )
+                     )
+            print lxml.etree.tostring(web_page, pretty_print=True)
 
     # service is not found, provide available services on host
     if not found:
         sys.stdout.write(_('Service <i>%s</i> not found.  ') % service)
         sys.stdout.write(_('Available services are:<p><ol><i>'))
         host = socket.gethostname()
-        for akey in inst.services.keys():
-            serv = smf.AIservice(inst, akey)
+        for service_name in config.get_all_service_names():
             # assume new service setup
-            port = libaimdns.getinteger_property(SRVINST, PORTPROP)
-            if not os.path.exists('/var/ai/' + service):
-                if PROP_TXT_RECORD in serv.keys():
-                    port = int(serv[PROP_TXT_RECORD].split(':')[-1])
+            port = config.get_service_port(service_name)
             sys.stdout.write('<a href="http://%s:%d/cgi-bin/'
                    'cgi_get_manifest.py?version=%s&service=%s">%s</a><br>\n' %
-                   (host, port, VERSION, akey, akey))
+                   (host, port, VERSION, service_name, service_name))
         sys.stdout.write('</i></ol>%s' % _('Please select a service '
                    'from the above list.'))
 
@@ -695,7 +651,7 @@ def list_manifests(service):
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")
-    DEFAULT_PORT = libaimdns.getinteger_property(SRVINST, PORTPROP)
+    DEFAULT_PORT = libaimdns.getinteger_property(com.SRVINST, com.PORTPROP)
     (PARAM_VERSION, SERVICE, NO_DEFAULT, FORM_DATA) = \
         get_parameters(cgi.FieldStorage())
     print >> sys.stderr, PARAM_VERSION, SERVICE, NO_DEFAULT, FORM_DATA
@@ -727,7 +683,7 @@ if __name__ == '__main__':
             send_manifest(FORM_DATA, servicename=SERVICE,
                           protocolversion=PARAM_VERSION,
                           no_default=NO_DEFAULT)
-        except StandardError:
+        except:
             # send error report to client (through stdout), log
             print "Content-Type: text/html"     # HTML is following
             print                               # blank line, end of headers
@@ -738,6 +694,6 @@ if __name__ == '__main__':
             logging.error(ERRMSG)
             # traceback to stdout and log
             import traceback
-            TB = traceback.format_exc()  # traceback to stdout and log
+            TB = traceback.format_exc() # traceback to stdout and log
             logging.error(TB)
             print TB

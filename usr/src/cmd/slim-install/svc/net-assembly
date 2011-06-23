@@ -65,6 +65,7 @@ INSTALL_CONF_FILE="install.conf"
 INSTALL_CONF_SPEC="/tmp/$INSTALL_CONF_FILE"
 NETBOOT="/etc/netboot"
 WANBOOT_CONF="$NETBOOT/wanboot.conf"
+SYSTEM_CONF="$NETBOOT/system.conf"
 
 # DHCP Options
 BOOTSERVER="BootSrvA"
@@ -239,7 +240,7 @@ fi
 
 config_file=""
 # download the install.conf file to get the service name for SPARC
-if [[ "$ISA_INFO" == "sparc" ]]; then
+if [[ "$ISA_INFO" == "sparc" && ! -f "$SYSTEM_CONF" ]]; then
 	config_file="$INSTALL_CONF_FILE"
 fi
 
