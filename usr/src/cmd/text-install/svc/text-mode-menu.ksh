@@ -27,7 +27,7 @@ LANGUAGE_FILE=/etc/sysconfig/language
 
 export TEXTDOMAIN="SUNW_INSTALL_TEXT_MENU"
 # LOGNAME variable is needed to display the shell prompt appropriately
-export LOGNAME=`/usr/bin/logname`
+export LOGNAME=root
 
 # Block all signals which could terminate the menu or return to a parent process
 trap "" TSTP INT TERM ABRT QUIT
