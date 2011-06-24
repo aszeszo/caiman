@@ -392,24 +392,7 @@ class AutoInstall(object):
 
         return new_be
 
-    def __transfer_install_log(self):
-        """If BE exists, then transfer Log Files to New BE"""
-        new_be = self.be
-
-        if new_be is not None:
-            # Assumes BE is still mounted, should be, if it exists.
-            self.logger.debug("Transferring log to %s" %
-                (new_be.mountpoint + self.BE_LOG_DIR))
-            self.install_log_fh.transfer_log(
-                new_be.mountpoint + self.BE_LOG_DIR, isdir=True)
-        else:
-            self.logger.error(
-                "Unable to determine location to transfer logs to")
-            return False
-
-        return True
-
-    def __cleanup_before_exit(self, error_val):
+    def __cleanup_before_exit(self, error_val, success_printed=False):
         """Do some clean up and set exit code.
         """
 
@@ -418,7 +401,8 @@ class AutoInstall(object):
         self.exitval = error_val
         if not self.options.list_checkpoints:
             if error_val in [self.AI_EXIT_SUCCESS, self.AI_EXIT_AUTO_REBOOT]:
-                self.logger.info("Automated Installation succeeded.")
+                if not success_printed:
+                    self.logger.info("Automated Installation succeeded.")
                 if self.options.zone_pool_dataset is None:
                     if error_val == self.AI_EXIT_AUTO_REBOOT:
                         self.logger.info("System will be rebooted now")
@@ -601,14 +585,30 @@ class AutoInstall(object):
             dry_run=self.options.dry_run):
 
             if self.options.stop_checkpoint not in self.CHECKPOINTS_BEFORE_IPS:
-                if not self.__transfer_install_log():
+                new_be = self.be
+                if new_be is None:
+                    self.logger.error(
+                        "Unable to determine location to transfer logs to")
                     self.__cleanup_before_exit(self.AI_EXIT_FAILURE)
                 else:
+                    # Write success now, to ensure it's in the log before
+                    # transfer.
+                    self.logger.info("Automated Installation succeeded.")
+
+                    # Now do actual transfer of logs
+                    self.logger.debug("Transferring log to %s" %
+                        (new_be.mountpoint + self.BE_LOG_DIR))
+                    self.install_log_fh.transfer_log(
+                        new_be.mountpoint + self.BE_LOG_DIR, isdir=True)
+
+                    # And cleanup
                     if self.auto_reboot and \
                         self.options.zone_pool_dataset is None:
-                        self.__cleanup_before_exit(self.AI_EXIT_AUTO_REBOOT)
+                        self.__cleanup_before_exit(
+                            self.AI_EXIT_AUTO_REBOOT, True)
                     else:
-                        self.__cleanup_before_exit(self.AI_EXIT_SUCCESS)
+                        self.__cleanup_before_exit(
+                            self.AI_EXIT_SUCCESS, True)
 
             # Successful Execution
             elif self.options.stop_checkpoint:
