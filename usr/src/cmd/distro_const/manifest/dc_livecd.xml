@@ -162,12 +162,9 @@
       -->
       <software_data action="install">
         <name>pkg:/entire</name>
-        <name>pkg:/slim_install</name>
+        <name>pkg:/group/system/solaris-desktop</name>
         <name>pkg:/system/install/gui-install</name>
         <name>pkg:/system/install/media/internal</name>
-      </software_data>
-      <software_data action="uninstall">
-        <name>pkg:/slim_install</name>
       </software_data>
     </software>
     <!--

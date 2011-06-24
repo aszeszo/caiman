@@ -208,7 +208,7 @@ DTD sample manifest for Automatic Installer input manifest specification.
       -->
       <software_data>
         <name>pkg:/entire</name>
-        <name>pkg:/server_install</name>
+        <name>pkg:/group/system/solaris-large-server</name>
       </software_data>
     </software>
     <add_drivers>

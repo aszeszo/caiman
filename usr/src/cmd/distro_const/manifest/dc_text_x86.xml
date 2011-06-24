@@ -155,12 +155,9 @@
       -->
       <software_data action="install">
         <name>pkg:/entire</name>
-        <name>pkg:/server_install</name>
+        <name>pkg:/group/system/solaris-large-server</name>
         <name>pkg:/system/install/text-install</name>
         <name>pkg:/system/install/media/internal</name>
-      </software_data>
-      <software_data action="uninstall">
-        <name>pkg:/server_install</name>
       </software_data>
     </software>
     <!--
