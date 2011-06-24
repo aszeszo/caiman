@@ -945,7 +945,8 @@ class Disk(DataObject):
         for hole in holes:
             if hole.start_sector % self.geometry.cylsize != 0:
                 # celing the start_sector to the next cylinder boundary
-                new_start_sector = ((start_sector / self.geometry.cylsize) * \
+                new_start_sector = \
+                    ((hole.start_sector / self.geometry.cylsize) * \
                     self.geometry.cylsize) + self.geometry.cylsize
                 
                 # calculate the difference so the size can be adjusted
