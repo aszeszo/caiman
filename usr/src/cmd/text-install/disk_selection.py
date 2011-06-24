@@ -262,7 +262,6 @@ class DiskScreen(BaseScreen):
                                           max_x=(self.win_size_x - 1))
             return
 
-
         if self._image_size is None:
             try:
                 self._image_size = Size(str(get_image_size(LOGGER)) + \
