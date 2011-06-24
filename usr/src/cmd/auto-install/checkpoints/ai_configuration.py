@@ -28,21 +28,19 @@
 """
 
 import os
-import os.path
 import shutil
 import urllib
 
 from solaris_install import ApplicationData, Popen, CalledProcessError
 from solaris_install.auto_install import TRANSFER_FILES_CHECKPOINT
 from solaris_install.configuration.configuration import Configuration
-from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.ict import SVCCFG
 from solaris_install.target import Target
 from solaris_install.target.instantiation_zone import ALT_POOL_DATASET
-from solaris_install.target.logical import Filesystem, Zpool
+from solaris_install.target.logical import Filesystem
 
 # Define constants
 XMLLINT = '/usr/bin/xmllint'
@@ -60,6 +58,7 @@ class AIConfigurationError(Exception):
 
     def __str__(self):
         return self.msg
+
 
 class AIConfiguration(Checkpoint):
     """ AIConfiguration - Checkpoint to process configuration
@@ -82,9 +81,9 @@ class AIConfiguration(Checkpoint):
         """
 
         TMP_ZONES_DIR = os.path.join(self.app_data.work_dir, "zones")
-        TMP_ZONES_CONFIG_LIST = os.path.join(TMP_ZONES_DIR , "config_list")
+        TMP_ZONES_CONFIG_LIST = os.path.join(TMP_ZONES_DIR, "config_list")
         TMP_ZONES_CONFIG_OUTPUT = os.path.join(TMP_ZONES_DIR, "config_output")
-        TMP_ZONES_INSTALL_DIR = os.path.join(TMP_ZONES_DIR , "install")
+        TMP_ZONES_INSTALL_DIR = os.path.join(TMP_ZONES_DIR, "install")
 
         TARGET_ZONES_INSTALL_DIR = "/var/zones/install"
 
@@ -136,8 +135,8 @@ class AIConfiguration(Checkpoint):
                             raise AIConfigurationError("AI manifest query for "
                                 "zone (%s) failed: %s" % (conf.name, str(er)))
         except IOError, er:
-            raise AIConfigurationError("IO Error during zone validation: %s" % \
-                                       str(er))
+            raise AIConfigurationError("IO Error during zone validation: "
+                                       "%s" % str(er))
 
         # Pass the create a file with the list of zone config files in it
         # to "/usr/sbin/zonecfg auto-install-report", which will parse the
@@ -167,17 +166,15 @@ class AIConfiguration(Checkpoint):
                     elif name == "zfs_dataset":
                         datasets.append(value)
                     else:
-                        raise AIConfigruationError("Failure: unknown keyword "
+                        raise AIConfigurationError("Failure: unknown keyword "
                             "in %s: %s" % (TMP_ZONES_CONFIG_OUTPUT, name))
         except IOError, er:
             raise AIConfigurationError("Could not read zone config output "
                                        "file (%s): %s" % \
                                        (TMP_ZONES_CONFIG_OUTPUT, str(er)))
 
-
         # TODO: Check that all zonepath_parent values are directories that
         # will not exist under a filesystem dataset that is inside the BE.
-
 
         # Ensure all zfs_dataset values are specified to be created
         # on the installed system.  At this point, Target Selection
@@ -292,7 +289,7 @@ class AIConfiguration(Checkpoint):
                         conf.type + '".  Ignoring ...')
 
         if self.zone_confs:
-            if not self.alt_pool_dataset:   
+            if not self.alt_pool_dataset:
                 self.validate_zone_configuration(dry_run=dry_run)
             else:
                 # If alt_pool_dataset is not none, we're installing

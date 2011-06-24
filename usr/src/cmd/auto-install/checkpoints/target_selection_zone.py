@@ -52,7 +52,7 @@ class TargetSelectionZone(TargetSelection):
     """
 
     def __init__(self, name, be_mountpoint="/a"):
-        super(TargetSelection, self).__init__(name)
+        super(TargetSelectionZone, self).__init__(name, be_mountpoint)
 
         # instance attributes
         self.be_mountpoint = be_mountpoint
@@ -64,7 +64,7 @@ class TargetSelectionZone(TargetSelection):
         # set the platform
         self.arch = platform.processor()
 
-    def select_targets(self, from_manifest):
+    def select_zone_targets(self, from_manifest):
         '''Logic to select the targets for a zone.
 
            Given the alternate pool dataset, and the targets from the
@@ -95,7 +95,6 @@ class TargetSelectionZone(TargetSelection):
                               (str(from_manifest[0])))
         else:
             self.logger.debug("from_manifest is empty\n")
-
 
         # Instantiate desired target, logical, and zpool objects.
         target = Target(Target.DESIRED)
@@ -134,7 +133,6 @@ class TargetSelectionZone(TargetSelection):
         # Insert desired target object into the DOC.
         self.doc.persistent.insert_children(target)
 
-
     def parse_doc(self):
         """ Method for locating objects in the  data object cache (DOC) for
             use by the checkpoint.
@@ -168,4 +166,4 @@ class TargetSelectionZone(TargetSelection):
 
         from_manifest = self.parse_doc()
 
-        self.select_targets(from_manifest)
+        self.select_zone_targets(from_manifest)

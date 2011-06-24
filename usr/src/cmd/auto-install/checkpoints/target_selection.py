@@ -28,7 +28,6 @@
 '''
 import copy
 import os
-import os.path
 import platform
 import re
 import traceback
@@ -43,7 +42,6 @@ from solaris_install.target.controller import TargetController, \
 from solaris_install.target.logical import Logical, Zpool, Vdev, BE, Zvol, \
     Filesystem, DatasetOptions, PoolOptions
 from solaris_install.target.physical import Disk, Partition, Slice
-from solaris_install.target.shadow.physical import ShadowPhysical
 from solaris_install.target.size import Size
 
 DISK_RE = "c\d+(?:t\d+)?d\d+"
@@ -327,7 +325,7 @@ class TargetSelection(Checkpoint):
                     if new_fs.action == "preserve" and \
                         new_zpool.action not in self.PRESERVED:
                         raise SelectionError("Filesystem '%s' cannot be "
-                            "preserved in non-preserved zpool '%s'."
+                            "preserved in non-preserved zpool '%s'." % \
                             (new_fs.name, new_zpool.name))
 
                     fs_key = new_zpool.name + ":" + new_fs.name
@@ -351,7 +349,7 @@ class TargetSelection(Checkpoint):
                     if new_zvol.action in self.PRESERVED and \
                         new_zpool.action not in self.PRESERVED:
                         raise SelectionError("Zvol '%s' cannot be "
-                            "preserved in non-preserved zpool '%s'."
+                            "preserved in non-preserved zpool '%s'." % \
                             (new_zvol.name, zpool.name))
                     zvol_key = new_zpool.name + ":" + new_zvol.name
                     # Zvol name must be unique within each pool
@@ -533,14 +531,14 @@ class TargetSelection(Checkpoint):
                     # Check if this filesystem already exists as zvol
                     if fs_key in self._zvol_map:
                         raise SelectionError("Filesystem '%s' specified on "
-                            "preserved zpool '%s' exists as Zvol."
+                            "preserved zpool '%s' exists as Zvol." % \
                             (new_fs.name, zpool.name))
                     elif fs_key in self._fs_map:
                         # Only preserve and delete are allowed for existing
                         if new_fs.action not in ["preserve", "delete"]:
                             raise SelectionError("Filesystem '%s' specified on"
                                 " preserved zpool '%s' contains invalid action"
-                                " of '%s'."
+                                " of '%s'." % \
                                 (new_fs.name, zpool.name, new_fs.action))
                         # Remove discovered item in order to add user specified
                         discovered_zpool.delete_children(new_fs)
@@ -549,7 +547,7 @@ class TargetSelection(Checkpoint):
                         if new_fs.action != "create":
                             raise SelectionError("Filesystem '%s' specified on"
                                 " preserved zpool '%s' contains invalid action"
-                                " of '%s'."
+                                " of '%s'." % \
                                 (new_fs.name, zpool.name, new_fs.action))
                         self._fs_map[fs_key] = new_fs
 
@@ -567,7 +565,7 @@ class TargetSelection(Checkpoint):
                     # Check if This Zvol already exists as filesystem
                     if zvol_key in self._fs_map:
                         raise SelectionError("Zvol '%s' specified on "
-                            "preserved zpool '%s' exists as Filesystem."
+                            "preserved zpool '%s' exists as Filesystem." % \
                             (new_zvol.name, zpool.name))
                     elif zvol_key in self._zvol_map:
                         # Only preserve, delete, use_existing are allowed
@@ -575,7 +573,7 @@ class TargetSelection(Checkpoint):
                             ["preserve", "delete", "use_existing"]:
                             raise SelectionError("Zvol '%s' specified on "
                                 "preserved zpool '%s' contains invalid action "
-                                "of '%s'."
+                                "of '%s'." % \
                                 (new_zvol.name, zpool.name, new_zvol.action))
 
                         discovered_zvol = discovered_zpool.get_first_child(
@@ -594,7 +592,7 @@ class TargetSelection(Checkpoint):
                                 # Cannot delete a dump zvol
                                 self.__raise_dump_zvol_deletion_exception()
 
-                            elif new_zovl.use == "dump":
+                            elif new_zvol.use == "dump":
                                 # Can only specify one Dump Zvol
                                 if self._dump_zvol is not None:
                                     raise SelectionError(
@@ -643,7 +641,7 @@ class TargetSelection(Checkpoint):
                         if new_zvol.action != "create":
                             raise SelectionError("Zvol '%s' specified on "
                                 "preserved zpool '%s' contains invalid action "
-                                "of '%s'."
+                                "of '%s'." % \
                                 (new_zvol.name, zpool.name, new_zvol.action))
                         self._zvol_map[zvol_key] = new_zvol
 
@@ -928,7 +926,7 @@ class TargetSelection(Checkpoint):
                                         disk_found = True
                                         break
 
-                    elif isinstance(disk_kd, Slice):
+                    elif isinstance(disk_kid, Slice):
                         if disk_kid.in_zpool is not None and \
                             disk_kid.in_zpool == zpool.name:
                             disk_found = True
@@ -2303,7 +2301,7 @@ class TargetSelection(Checkpoint):
                         raise SelectionError(
                             "Cannot %s slice %s that doesn't exist on disk %s"
                             % (orig_slice.action, orig_slice.name,
-                            self.__pretty_print_disk(discovered_disk)))
+                            self.__pretty_print_disk(parent_object)))
                     else:
                         raise SelectionError(
                             "Cannot %s slice %s that doesn't exist on "
@@ -2755,7 +2753,7 @@ class TargetSelection(Checkpoint):
         errors = errsvc.get_all_errors()
 
         # Found errors and they cannot be ignored
-        if errors and not self.__can_ignore_errors(errors):
+        if errors:
             # Print desired contents to log
             existing_desired = \
                 self.doc.persistent.get_first_child(Target.DESIRED)
@@ -2767,35 +2765,6 @@ class TargetSelection(Checkpoint):
             raise SelectionError(errstr)
 
         return ret_disk
-
-    def __can_ignore_errors(self, errors):
-        '''
-            Process list of errors found in error service, and make a
-            judgement call on whether we can ignore them.
-
-            Add errors being ignored and reasoning here.
-
-            Errors to ignore for physical :
-            - SliceInUseError() we are overriding this existing slice
-              so we can ignore.
-        '''
-        return False
-        can_ignore = True
-
-        for error in errors:
-            for key in error.error_data:
-                if error.mod_id == "physical validation" and \
-                    isinstance(error.error_data[key], \
-                        ShadowPhysical.SliceInUseError):
-                    # We can ignore, just pass onto next error
-                    pass
-                else:
-                    # Error does not match one we can ignore, so set return
-                    # value and break.
-                    can_ignore = False
-                    break
-
-        return can_ignore
 
     def __create_temp_logical_tree(self, existing_logicals):
         '''Create a set of logicals that we will use should there be no other

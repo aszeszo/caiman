@@ -44,6 +44,7 @@ class TestAutoInstallManifest(unittest.TestCase):
         Create a auto_install client for testing with.
         '''
         self.AI = None
+        self.test_dir = os.path.dirname(os.path.abspath(__file__))
 
     def tearDown(self):
         '''
@@ -64,10 +65,8 @@ class TestAutoInstallManifest(unittest.TestCase):
         '''
         Test installation with manifest containing auto_reboot set to true
         '''
-        # To run tests bldenv script will have been run, thus we can assume
-        # that $SRC environment variable will be set.
-        testmanifest = os.environ['SRC'] + \
-            "/cmd/auto-install/test/manifest_auto_reboot_true.xml"
+        testmanifest = os.path.join(self.test_dir,
+                                    "manifest_auto_reboot_true.xml")
         args = ["-n", "-s", "target-discovery", "-m", testmanifest]
 
         try:
@@ -82,10 +81,8 @@ class TestAutoInstallManifest(unittest.TestCase):
         '''
         Test installation with manifest containing auto_reboot set to false
         '''
-        # To run tests bldenv script will have been run, thus we can assume
-        # that $SRC environment variable will be set.
-        testmanifest = os.environ['SRC'] + \
-            "/cmd/auto-install/test/manifest_auto_reboot_false.xml"
+        testmanifest = os.path.join(self.test_dir,
+                                    "manifest_auto_reboot_false.xml")
         args = ["-n", "-s", "target-discovery", "-m", testmanifest]
 
         try:
@@ -100,10 +97,8 @@ class TestAutoInstallManifest(unittest.TestCase):
         '''
         Test installation with manifest containing auto_reboot set to not set
         '''
-        # To run tests bldenv script will have been run, thus we can assume
-        # that $SRC environment variable will be set.
-        testmanifest = os.environ['SRC'] + \
-            "/cmd/auto-install/test/manifest_auto_reboot_not_set.xml"
+        testmanifest = os.path.join(self.test_dir,
+                                    "manifest_auto_reboot_not_set.xml")
         args = ["-n", "-s", "target-discovery", "-m", testmanifest]
 
         try:
@@ -120,10 +115,8 @@ class TestAutoInstallManifest(unittest.TestCase):
         Achieved by setting auto_reboot to an invalid value
         exitval should be set to AI_EXIT_FAILIRE
         '''
-        # To run tests bldenv script will have been run, thus we can assume
-        # that $SRC environment variable will be set.
-        testmanifest = os.environ['SRC'] + \
-            "/cmd/auto-install/test/manifest_auto_reboot_invalid.xml"
+        testmanifest = os.path.join(self.test_dir,
+                                    "manifest_auto_reboot_invalid.xml")
         args = ["-n", "-s", "target-discovery", "-m", testmanifest]
 
         try:
