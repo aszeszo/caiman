@@ -180,7 +180,7 @@ class FindAPI(unittest.TestCase):
             # iterate over the network list
             for network in networks:
                 # check if the interface's IPv4 address is in the network
-                if aimdns.compare_ipv4(inter_ipv4, network):
+                if common.compare_ipv4(inter_ipv4, network):
                     return True
             return False
 
@@ -284,7 +284,7 @@ class TestRegCallback(unittest.TestCase):
 
 
 class TestBrowseCallback(unittest.TestCase):
-    '''Class TestBrowseCallback - class to test _browse_callback functionatilty
+    '''Class TestBrowseCallback - class to test _browse_callback functionality
     '''
     name = 'nonsense-service'
     regtype = '_OSInstall._tcp'
@@ -305,7 +305,7 @@ class TestBrowseCallback(unittest.TestCase):
         assert rtn == None, 'servicename recognized'
 
         redirected = RedirectedOutput()
-        mdns.servicename = name
+        mdns.servicename = self.name
         mdns.timeout = 1
         sys.stderr = redirected
         # _ needs to get instantiated within the redirected output

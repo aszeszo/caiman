@@ -827,7 +827,7 @@ def _convert_cidr_mask(cidr_mask):
     return '.'.join(mask)
 
 
-def ipv4_equal(ipv4_one, ipv4_two):
+def compare_ipv4(ipv4_one, ipv4_two):
     '''Compares two IPv4 address for equality
        Args:
            ipv4_one - IPv4 address, can contain CIDR mask
@@ -886,7 +886,7 @@ def in_networks(inter_ipv4, networks):
     # iterate over the network list
     for network in networks:
         # check if the interface's IPv4 address is in the network
-        if ipv4_equal(inter_ipv4, network):
+        if compare_ipv4(inter_ipv4, network):
             return True
     return False
 
