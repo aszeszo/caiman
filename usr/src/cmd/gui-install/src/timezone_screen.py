@@ -378,7 +378,7 @@ class TimeZoneScreen(BaseScreen):
             self.currentmin = newtime.minute
             if self.currentmin == 0:
                 self.hourspinner.spin(gtk.SPIN_STEP_FORWARD)
-    
+
         return True
 
     def get_days_in_month(self, month, year):

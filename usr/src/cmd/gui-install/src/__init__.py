@@ -46,8 +46,8 @@ import osol_install.errsvc as errsvc
 from solaris_install.engine import InstallEngine
 from solaris_install.gui_install.gui_install_common import RELEASE, \
     GLADE_DIR, DEFAULT_LOG_LOCATION, DEFAULT_LOG_LEVEL, LOG_FORMAT, LOGNAME, \
-    other_instance_is_running, write_pid_file, exit_gui_install, modal_dialog, \
-    CLEANUP_CPIO_INSTALL, TRANSFER_PREP, TARGET_INIT
+    other_instance_is_running, write_pid_file, exit_gui_install, \
+    modal_dialog, CLEANUP_CPIO_INSTALL, TRANSFER_PREP, TARGET_INIT
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.gui_install.screen_manager import ScreenManager
 from solaris_install.logger import INSTALL_LOGGER_NAME, FileHandler

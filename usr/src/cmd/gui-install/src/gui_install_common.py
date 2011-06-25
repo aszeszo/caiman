@@ -78,10 +78,13 @@ RELEASE = _("Oracle Solaris")
 
 COLOR_WHITE = gtk.gdk.Color("white")
 
+FIREFOX = '/usr/bin/firefox'
+
 # Commonly used Checkpoint definitions
 CLEANUP_CPIO_INSTALL = "cleanup-cpio-install"
 TRANSFER_PREP = "PrepareTransfer"
 TARGET_INIT = "TargetInitialization"
+
 
 def empty_container(gtk_container, destroy=False):
     ''' Convenience function for emptying out the contents of a Gtk+

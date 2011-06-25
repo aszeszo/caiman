@@ -38,7 +38,6 @@ import thread
 from threading import Timer
 
 import g11nsvc
-from gnome.ui import url_show_on_screen
 import gtk
 
 import osol_install.errsvc as errsvc
@@ -48,7 +47,8 @@ from solaris_install.engine import InstallEngine
 from solaris_install.gui_install.base_screen import BaseScreen
 from solaris_install.gui_install.gui_install_common import modal_dialog, \
     GLADE_DIR, GLADE_ERROR_MSG, COLOR_WHITE, LOG_LOCATION_FINAL, \
-    DEFAULT_LOG_LOCATION, CLEANUP_CPIO_INSTALL, TRANSFER_PREP, TARGET_INIT
+    DEFAULT_LOG_LOCATION, CLEANUP_CPIO_INSTALL, TRANSFER_PREP, TARGET_INIT, \
+    FIREFOX
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.logger import INSTALL_LOGGER_NAME, \
     ProgressHandler
@@ -75,6 +75,7 @@ INIT_FILE = "/etc/default/init"
 class ProgressScreen(BaseScreen):
     '''Progress Screen Class'''
     URLMAPPING = 'imageurl.txt'
+    SHOWURL_TIMEOUT_SECONDS = 0.25
 
     def __init__(self, builder, finishapp):
         super(ProgressScreen, self).__init__(builder)
@@ -84,6 +85,7 @@ class ProgressScreen(BaseScreen):
         self.fraction = 0.0
         self.message = None
         self.update_screen = False
+        self.show_url = None
         self.logger = logging.getLogger(INSTALL_LOGGER_NAME)
 
         self.installationeventbox = self.builder.get_object(
@@ -347,7 +349,7 @@ class ProgressScreen(BaseScreen):
         else:
             # begin LOCALE hack
             # setup the LOCALE data - when system-configuration
-            # includes locale then this portion of code will not 
+            # includes locale then this portion of code will not
             # be necessary as the system profile already contains
             # the locale data.
             eng = InstallEngine.get_instance()
@@ -417,10 +419,20 @@ class ProgressScreen(BaseScreen):
         index = (self.image_index) % len(image_keys)
         url = self.urlimage_dictionary[image_keys[index]]
         if url:
-            url_show_on_screen(url, widget.get_screen())
+            self.show_url = url
+            timer = Timer(self.SHOWURL_TIMEOUT_SECONDS, self._show_url_cb)
+            timer.start()
 
     #--------------------------------------------------------------------------
     # Private methods
+
+    def _show_url_cb(self):
+        '''timer callback to show the URL outside the
+           main thread.
+        '''
+        if self.show_url:
+            Popen([FIREFOX, self.show_url])
+            self.show_url = None
 
     def _update_screen_message(self):
         ''' Updates the information on the screen.

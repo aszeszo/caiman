@@ -569,7 +569,7 @@ class DiskScreen(BaseScreen):
                     err = err_data.error_data[liberrsvc.ES_DATA_EXCEPTION]
                 else:
                     err = "Unknown error"
-                
+
                 LOGGER.error("Checkpoint [%s] logged error: [%s]" % \
                     (failed_cp, err))
 
@@ -652,7 +652,7 @@ class DiskScreen(BaseScreen):
         if not slices:
             LOGGER.info("Reinstating slice 0 on Solaris2 partition.")
 
-            # Use partition gaps to find 
+            # Use partition gaps to find
             gaps = partition.get_gaps()
 
             if len(gaps) == 1:
@@ -789,7 +789,7 @@ class DiskScreen(BaseScreen):
             self.set_back_next(back_sensitive=True, next_sensitive=True)
 
     def _td_completion_monitor(self):
-        ''' 
+        '''
             Monitors the completion status of target discovery and shows
             the disk & partitioning controls if this screen is mapped.
         '''

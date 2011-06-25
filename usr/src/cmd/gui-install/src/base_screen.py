@@ -53,7 +53,7 @@ class BaseScreen(object):
     # Dictionary for the install "stage" labels shown down
     # the left-hand-side of the screen.  The key is the Glade
     # widget id, the value is the text to be displayed.
-    # NOTE: These labels, can not be pre-translated here at 
+    # NOTE: These labels, can not be pre-translated here at
     # init time, and so are wrapped with the gettext macro,
     # '_()' when referenced at run time in BaseScreen.activate_stage_label()
     __STAGE_LABELS = {

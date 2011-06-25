@@ -26,16 +26,15 @@
 Welcome Screen for GUI Install app
 '''
 
-from gnome.ui import url_show_on_screen
 from threading import Timer
 
 from solaris_install import Popen
 from solaris_install.gui_install.base_screen import BaseScreen
 from solaris_install.gui_install.gui_install_common import \
-    modal_dialog, GLADE_ERROR_MSG, RELEASE
+    modal_dialog, GLADE_ERROR_MSG, RELEASE, FIREFOX
 
 # ReleaseNotes Timeout
-RELEASENOTES_TIMEOUT_SECONDS=0.25
+RELEASENOTES_TIMEOUT_SECONDS = 0.25
 
 
 class WelcomeScreen(BaseScreen):
@@ -75,9 +74,7 @@ class WelcomeScreen(BaseScreen):
         '''timer callback to show the release notes outside the
            main thread.
         '''
-        firefox_cmd = '/usr/bin/firefox %s' % self.RELEASENOTESURL
-        cmd = firefox_cmd.split()
-        Popen.check_call(cmd, check_result=Popen.ANY)
+        Popen([FIREFOX, self.RELEASENOTESURL])
 
     def on_releasenotesbutton_clicked(self, widget, data=None):
         '''callback for "clicked" event on release notes button'''

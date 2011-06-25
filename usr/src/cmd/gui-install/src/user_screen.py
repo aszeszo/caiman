@@ -181,7 +181,8 @@ class UserScreen(BaseScreen):
             try:
                 if validate_password(password):
                     # update the label message
-                    self.userpasswordinfolabel.set_markup(_('Re-enter to check for typing errors.'))
+                    self.userpasswordinfolabel.set_markup(_('Re-enter to '
+                        'check for typing errors.'))
                     self.userpasswordinfolabel.show_all()
                     self.userpasswordinfoimage.hide_all()
             except PasswordInvalid, err:
