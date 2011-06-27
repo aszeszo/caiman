@@ -461,7 +461,7 @@ class ISOBootMenuTestCase(BootMenuTestCaseBase):
                              "\nACTUAL:\t%s\nEXPECTED:\t%s" \
                              % (i, actual_title, exp_title))
             actual_cinfo = self.boot_menu.config.boot_instances[i].chaininfo
-            exp_cinfo = (0, 0)
+            exp_cinfo = tuple([0])
             self.assertEqual(actual_cinfo,
                              exp_cinfo,
                              "Unexpected chainloader chaininfo at index %d:" \

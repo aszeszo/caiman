@@ -890,7 +890,7 @@ class ISOImageBootMenu(BootMenu):
     def _add_chainloader_entry(self):
         """ Adds a chainloader entry to the boot configuration.
         """
-        instance = ChainDiskBootInstance(chaininfo=(0, 0))
+        instance = ChainDiskBootInstance(chaininfo=tuple([0]))
         instance.title = "Boot from Hard Disk"
         self.config.add_boot_instance(instance)
 
