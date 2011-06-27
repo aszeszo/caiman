@@ -80,8 +80,6 @@ file path=usr/lib/installadm/setup-sparc
 
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/AI_database.py group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/AI_database.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/ai_smf_service.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/ai_smf_service.pyc group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/client_control.py group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/client_control.pyc group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/common_profile.py group=sys
@@ -118,8 +116,6 @@ file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/rename_ser
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/rename_service.pyc group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service.py group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.pyc group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_criteria.py group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_criteria.pyc group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_service.py group=sys

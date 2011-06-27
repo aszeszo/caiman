@@ -76,10 +76,14 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/proce
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/_libaiscf.so mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/ai_smf_service.py group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/ai_smf_service.pyc group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/aimdns_mod.py group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/aimdns_mod.pyc group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/installadm_common.py group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/installadm_common.pyc group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.py group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.pyc group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/libaimdns.so mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/libaiscf.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/netif.so mode=0444
