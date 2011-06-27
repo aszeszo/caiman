@@ -258,6 +258,29 @@
 
     <!-- Copy partition -->
     <xsl:template match="partition">
+        <!-- Copy a partition, but only if it's not a deletion of a partition
+             that is being created, since you can only specify a partition
+             name once, and a creation will imply deleting the existing
+             partition with the same name.
+         -->
+        <xsl:choose>
+            <xsl:when test="@action='delete'">
+                <!-- Only copy if we're not creating one with
+                     same name
+                 -->
+                <xsl:if test="not(../partition[@action != 'delete']/@name = @name)">
+                    <xsl:call-template name="copy-partition"/>
+                </xsl:if>
+            </xsl:when>
+            <xsl:otherwise>
+                <!-- Always copy created or existing partitions -->
+                <xsl:call-template name="copy-partition"/>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+
+    <xsl:template name="copy-partition">
+        <!-- Do actual copying -->
         <xsl:copy>
             <xsl:if test="@name">
                 <xsl:attribute name="name">
@@ -299,6 +322,29 @@
 
     <!-- Copy a slice -->
     <xsl:template match="slice">
+        <!-- Copy a slice, but only if it's not a deletion of a slice
+             that is being created, since you can only specify a slice
+             name once, and a creation will imply deleting the existing
+             slice with the same name.
+         -->
+        <xsl:choose>
+            <xsl:when test="@action='delete'">
+                <!-- Only copy if we're not creating one with
+                     same name
+                 -->
+                <xsl:if test="not(../slice[@action != 'delete']/@name = @name)">
+                    <xsl:call-template name="copy-slice"/>
+                </xsl:if>
+            </xsl:when>
+            <xsl:otherwise>
+                <!-- Always copy created slices -->
+                <xsl:call-template name="copy-slice"/>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+
+    <xsl:template name="copy-slice">
+        <!-- Do actual copying -->
         <xsl:copy>
             <!-- Copy attributes -->
             <xsl:attribute name="name">
@@ -398,6 +444,11 @@
                 <source>
                     <xsl:for-each select="publisher">
                         <publisher>
+                            <xsl:if test="@name">
+                                <xsl:attribute name="name">
+                                    <xsl:value-of select="@name"/>
+                                </xsl:attribute>
+                            </xsl:if>
                             <xsl:for-each select="origin">
                                 <xsl:if test="@name != ''">
                                     <xsl:copy-of select="."/>
