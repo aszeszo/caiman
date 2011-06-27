@@ -1414,10 +1414,14 @@ class UIPartition(object):
         if self.partition is not None and self.partition.parent is not None:
             if self.is_logical:
                 gaps = self.partition.parent.get_logical_partition_gaps()
+                # An 'adjacent' logical gap is one that is within
+                # the "logical adjustment" + 1 sectors of this partition
                 adjacent_size = LOGICAL_ADJUSTMENT + 1
             else:
                 gaps = self.partition.parent.get_gaps()
-                adjacent_size = 1
+                # An 'adjacent' primary gap is one that is within
+                # one cylinder of this partition
+                adjacent_size = self.partition.parent.geometry.cylsize
 
             for gap in gaps:
                 if abs(gap.start_sector + gap.size.sectors \
@@ -1439,10 +1443,14 @@ class UIPartition(object):
         if self.partition is not None and self.partition.parent is not None:
             if self.is_logical:
                 gaps = self.partition.parent.get_logical_partition_gaps()
+                # An 'adjacent' logical gap is one that is within
+                # the "logical adjustment" + 1 sectors of this partition
                 adjacent_size = LOGICAL_ADJUSTMENT + 1
             else:
                 gaps = self.partition.parent.get_gaps()
-                adjacent_size = 1
+                # An 'adjacent' primary gap is one that is within
+                # one cylinder of this partition
+                adjacent_size = self.partition.parent.geometry.cylsize
 
             for gap in gaps:
                 if abs(self.partition.start_sector + \
