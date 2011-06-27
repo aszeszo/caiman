@@ -58,6 +58,7 @@ PROP_IMAGE_PATH = 'image_path'
 PROP_SERVICE_NAME = 'service_name'
 PROP_STATUS = 'status'
 PROP_TXT_RECORD = 'txt_record'
+PROP_VERSION = 'version'
 
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
@@ -1016,12 +1017,14 @@ def get_local_services(linst, sname=None):
     sdict = dict()
     for akey in linst.services:
         serv = smf.AIservice(linst, akey)
+        # Grab the keys since serv is not a dictionary
+        service_keys = serv.keys()
         # ensure that the current service has the keys we need.
         # if not then report the error and exit.
-        if not (PROP_SERVICE_NAME in serv.keys() and
-                PROP_STATUS in serv.keys() and
-                PROP_IMAGE_PATH in serv.keys() and
-                PROP_TXT_RECORD in serv.keys()):
+        if not (PROP_SERVICE_NAME in service_keys and
+                PROP_STATUS in service_keys and
+                PROP_IMAGE_PATH in service_keys and
+                PROP_TXT_RECORD in service_keys):
             sys.stderr.write(_('Error: SMF service: %s key '
                                'property does not exist\n') % linst)
             sys.exit(1)
@@ -1036,15 +1039,16 @@ def get_local_services(linst, sname=None):
             info['txt'] = serv[PROP_TXT_RECORD]
             info['port'] = serv[PROP_TXT_RECORD].split(':')[-1]
             info['arch'] = which_arch(info['path'])
-            try:
-                info['boot_file'] = serv[PROP_BOOT_FILE]
-            except KeyError:
-                pass
 
-            try:
+            # try to add the optional elements
+            if PROP_BOOT_FILE in service_keys:
+                info['boot_file'] = serv[PROP_BOOT_FILE]
+
+            if PROP_DEF_MANIFEST in service_keys:
                 info['default-manifest'] = serv[PROP_DEF_MANIFEST]
-            except KeyError:
-                pass
+
+            if PROP_VERSION in service_keys:
+                info['version'] = serv[PROP_VERSION]
 
             if servicename in sdict:
                 slist = sdict[servicename]
@@ -1217,7 +1221,12 @@ def move_service_directory(services, dryrun, ai_service):
         ipath = service['path']
         if not (os.path.exists(ipath) and os.path.isdir(ipath)):
             raise ServiceConversionError(
-                _("Error: Image path directory %s does not exist" % ipath))
+                _("Error: Image path directory does not exist: %s" % ipath))
+        # Make sure that the image appears valid (has a solaris.zlib file)
+        if not os.path.exists(os.path.join(ipath, "solaris.zlib")):
+            raise ServiceConversionError(
+                _('Error: Image path directory does not'
+                  ' contain a valid image: %s' % ipath))
 
     sdpath = os.path.join('/var/ai', ai_service)
     new_service_path = os.path.join(SERVICE_DIR, ai_service)
@@ -1258,7 +1267,7 @@ def move_service_directory(services, dryrun, ai_service):
                         raise ServiceConversionError(str(err))
 
     if service['arch'] == 'i386':
-        print _("Remove vfstab entry for %s if it exists" % ai_service)
+        print _("    Remove vfstab entry for %s if it exists" % ai_service)
         if not dryrun:
             try:
                 remove_boot_archive_from_vfstab(ai_service, service)
@@ -1763,9 +1772,19 @@ def main():
             # Upgrade the service from 1 to 2 (ISIM)
             upgrade_svc_vers_1_2(services, options.dryrun, service_name)
 
+            # Grab the attributes for the specified service. There
+            # is only one set of attributes associated so grab the first
+            # entry in the list.
+            service_attributes = services[service_name][0]
+
             # if is only necessary to upgrade when the default-manifest
-            # property isn't defined for the service
-            if not 'default-manifest' in services[service_name][0]:
+            # property isn't defined for the service and the service version
+            # is not 1 or greater
+            service_version = int(service_attributes.get('version', 0))
+            if service_version >= 1:
+                continue
+
+            if not 'default-manifest' in service_attributes:
                 # Upgrade the service version from 0 to 1
                 # It is necessary to call upgrade_svc_vers_0_1 after 
                 # upgrade_svc_vers_1_2 because it is necessary to upgrade the
@@ -1817,8 +1836,8 @@ def main():
         print "\nThe following services were not converted:"
         for errored_service in unconverted_services:
             # Print out the service and the reason that it wasn't converted
-            print "  ", errored_service, ": ", \
-                  unconverted_services[errored_service] 
+            print _("  %s: %s" % (errored_service,
+                str(unconverted_services[errored_service]).lstrip("Error: "))) 
 
     # Enable the AI service
     print _("Enable the AI SMF service")
