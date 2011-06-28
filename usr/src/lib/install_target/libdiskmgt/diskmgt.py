@@ -64,6 +64,7 @@ This is accessed at run time via cfunc.dm_get_associated_types()
 # #defines from /usr/include/sys/dkio.h
 DKIOCGGEOM = (0x04 << 8) | 1
 DKIOCINFO = (0x04 << 8) | 3
+DKIOCSETWCE = (0x04 << 8) | 37
 DKIOCGMEDIAINFO = (0x04 << 8) | 42
 DKC_CDROM = 1
 

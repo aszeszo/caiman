@@ -577,6 +577,9 @@ class Disk(DataObject):
         # disk label
         self.label = None
 
+        # write cache
+        self.write_cache = False
+
         # shadow lists
         self._children = ShadowPhysical(self)
 
@@ -948,7 +951,7 @@ class Disk(DataObject):
                 new_start_sector = \
                     ((hole.start_sector / self.geometry.cylsize) * \
                     self.geometry.cylsize) + self.geometry.cylsize
-                
+
                 # calculate the difference so the size can be adjusted
                 difference = new_start_sector - hole.start_sector
 
@@ -1068,6 +1071,7 @@ class Disk(DataObject):
         if self.in_vdev is not None:
             s += "; in_vdev=%s" % self.in_vdev
         s += "; whole_disk=%s" % self.whole_disk
+        s += "; write_cache=%s" % self.write_cache
 
         return s
 

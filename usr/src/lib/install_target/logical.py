@@ -41,7 +41,8 @@ from solaris_install.target.shadow.logical import ShadowLogical
 from solaris_install.target.shadow.zpool import ShadowZpool
 from solaris_install.target.libbe.be import be_list, be_init, be_destroy, \
     be_activate, be_mount, be_unmount
-from solaris_install.target.libbe.const import ZFS_FS_NAMES, ZFS_SHARED_FS_NAMES
+from solaris_install.target.libbe.const import ZFS_FS_NAMES, \
+    ZFS_SHARED_FS_NAMES
 
 DUMPADM = "/usr/sbin/dumpadm"
 LOFIADM = "/usr/sbin/lofiadm"
@@ -903,7 +904,8 @@ class BE(DataObject):
     def init(self, dry_run, pool_name="rpool", nested_be=False,
             fs_list=None, fs_zfs_properties=None,
             shared_fs_list=None, shared_fs_zfs_properties=None):
-        """ method to initialize a BE by creating the empty datasets for the BE.
+        """ method to initialize a BE by creating the empty datasets for the
+        BE.
         """
 
         if not dry_run:

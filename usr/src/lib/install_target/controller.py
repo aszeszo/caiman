@@ -79,11 +79,13 @@ class BadDiskError(Exception):
     '''
     pass
 
+
 class SubSizeDiskError(BadDiskError):
     ''' Specific exception sub-class for when a disk is below the
         minimum required size for installation.
     '''
     pass
+
 
 class SwapDumpGeneralError(Exception):
     ''' General exception for errors computing swap and dump values.
@@ -556,6 +558,11 @@ class TargetController(object):
             else:
                 new_slice = disk.add_slice("0", start, slice_size,
                     Size.sector_units, force=True)
+
+            # enable the disk's write-cache if wipe_disk is True.
+            if wipe_disk:
+                disk.write_cache = True
+
         else:
             # Compile a list of the usable slices, if any
             slice_list = list()
