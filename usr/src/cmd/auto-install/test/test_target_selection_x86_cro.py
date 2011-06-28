@@ -38,7 +38,7 @@ from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.test.engine_test_utils import \
     get_new_engine_instance, reset_engine
-from solaris_install.target import Target, CRO_LABEL
+from solaris_install.target import Target, CRO_LABEL, logical
 from solaris_install.target.physical import Disk
 
 
@@ -203,6 +203,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
             self.fail(errsvc._ERRORS[0])
 
     def setUp(self):
+        logical.DEFAULT_BE_NAME="ai_test_solaris"
         self.engine = get_new_engine_instance()
 
         self.target_selection = TargetSelection("Test Checkpoint")
@@ -259,7 +260,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ..<logical noswap="false" nodump="false">
         ....<zpool name="rpool1" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
-        ......<be name="solaris"/>
+        ......<be name="ai_test_solaris"/>
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="\d+m"/>
         ......</zvol>
@@ -284,7 +285,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
                  <zpool name="myrpool" is_root="true">
                    <filesystem name="/export"/>
                    <filesystem name="/export/home"/>
-                   <be name="solaris"/>
+                   <be name="ai_test_solaris"/>
                  </zpool>
                </logical>
              </target>
@@ -297,7 +298,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ....<zpool name="myrpool" action="create" is_root="true">
         ......<filesystem name="/export" action="create" in_be="false"/>
         ......<filesystem name="/export/home" action="create" in_be="false"/>
-        ......<be name="solaris"/>
+        ......<be name="ai_test_solaris"/>
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="\d+m"/>
@@ -357,7 +358,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool1" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
-        ......<be name="solaris"/>
+        ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
         </target>
@@ -395,7 +396,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ......<zvol name="dump" action="create" use="dump">
         ........<size val="\d+m"/>
         ......</zvol>
-        ......<be name="solaris"/>
+        ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
@@ -463,7 +464,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool1" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="mirror"/>
-        ......<be name="solaris"/>
+        ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
         </target>
@@ -506,7 +507,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool1" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="mirror"/>
-        ......<be name="solaris"/>
+        ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
@@ -567,7 +568,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool1" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="mirror"/>
-        ......<be name="solaris"/>
+        ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
@@ -630,7 +631,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ......<zvol name="dump" action="create" use="dump">
         ........<size val="\d+m"/>
         ......</zvol>
-        ......<be name="solaris"/>
+        ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
@@ -692,7 +693,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ......<zvol name="dump" action="create" use="dump">
         ........<size val="\d+m"/>
         ......</zvol>
-        ......<be name="solaris"/>
+        ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">

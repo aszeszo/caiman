@@ -53,6 +53,7 @@ SWAP = "/usr/sbin/swap"
 UMOUNT = "/usr/sbin/umount"
 ZFS = "/usr/sbin/zfs"
 ZPOOL = "/usr/sbin/zpool"
+DEFAULT_BE_NAME = "solaris"
 
 
 class Logical(DataObject):
@@ -852,7 +853,9 @@ class DatasetOptions(SimpleXmlHandlerBase):
 class BE(DataObject):
     """ be DOC node definition
     """
-    def __init__(self, initial_name="solaris"):
+    def __init__(self, initial_name=None):
+        if initial_name is None:
+            initial_name = DEFAULT_BE_NAME
         super(BE, self).__init__(initial_name)
 
         self.created_name = None
