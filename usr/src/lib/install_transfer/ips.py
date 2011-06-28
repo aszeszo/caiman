@@ -126,7 +126,7 @@ class AbstractIPS(Checkpoint):
     EXISTING = "use_existing"
     UPDATE = "update"
 
-    def __init__(self, name):
+    def __init__(self, name, zonename=None):
         super(AbstractIPS, self).__init__(name)
 
         # attributes per image
@@ -137,6 +137,7 @@ class AbstractIPS(Checkpoint):
         self.image_args = {}
         self.completeness = IMG_TYPE_ENTIRE
         self.is_zone = False
+        self.zonename = zonename
         self.facets = {}
         self.properties = {}
 
@@ -299,6 +300,12 @@ class AbstractIPS(Checkpoint):
 
         if self.is_zone:
             self.logger.debug("Image Type: zone")
+            # For images of type zone, we need the zonename so that
+            # we can construct the linked image name when attaching
+            # it to the parent image.
+            if not self.zonename:
+                raise ValueError("For images of type 'zone', a zonename "
+                                 "must be provided.")
 
         not_allowed = set(["prefix", "repo_uri", "origins", "mirrors"])
         img_args = set(self.image_args.keys())
@@ -642,6 +649,33 @@ class AbstractIPS(Checkpoint):
                 # dir back to "/".
                 os.chdir("/")
 
+                if self.is_zone:
+                    # If installing a zone image, attach its image as a
+                    # linked image to the global zone.  
+
+                    # Get an api object for the current global system image.
+                    gz_api_inst = api.ImageInterface(self.SYSTEM_IMAGE,
+                        self.CLIENT_API_VERSION, self.prog_tracker, False,
+                        self.SYSTEM_CLIENT_NAME)
+
+                    # For a zone's linked image name, we construct it as:
+                    #     "zone:<zonename>"
+                    lin = gz_api_inst.parse_linked_name(
+                        "zone:" + self.zonename, allow_unknown=True)
+                    self.logger.debug("Linked image name: %s" % lin)
+
+                    # Attach the zone image as a linked image.
+                    (ret, err) = gz_api_inst.attach_linked_child(lin, self.dst,
+                        force=True, li_md_only=True)
+                    if err != None:
+                        raise ValueError("Linked image error while attaching "
+                                         "zone image '%s':\n%s" %
+                                         (self.zonename, str(err)))
+
+                    # Refresh the zone's api object now that it has been
+                    # attached as a linked image.
+                    self.api_inst.reset()
+
             except api_errors.VersionException, ips_err:
                 self.logger.exception("Error creating the IPS image")
                 raise ValueError("The IPS API version specified, "
@@ -670,8 +704,8 @@ class TransferIPS(AbstractIPS):
     '''
     VALUE_SEPARATOR = ","
 
-    def __init__(self, name):
-        super(TransferIPS, self).__init__(name)
+    def __init__(self, name, zonename=None):
+        super(TransferIPS, self).__init__(name, zonename=zonename)
 
         # Holds the list of transfer dictionaries
         self._transfer_list = []

@@ -123,7 +123,7 @@ class AutoInstall(object):
         self.engine = InstallEngine(debug=True, stop_on_error=True)
         self.doc = self.engine.data_object_cache
 
-        if self.options.zone_pool_dataset is not None:
+        if self.options.zonename is not None:
             # If we're installing a zone root, generate a work_dir
             # location based on the current PID.
             work_dir = "/system/volatile/install." + str(os.getpid())
@@ -131,7 +131,7 @@ class AutoInstall(object):
             # Add ApplicationData to the DOC
             self._app_data = ApplicationData("auto-install", work_dir=work_dir)
             self._app_data.data_dict[ALT_POOL_DATASET] = \
-                self.options.zone_pool_dataset
+                self.options.alt_zpool_dataset
 
             # Set installed_root_dir to be based off work_dir
             self.installed_root_dir = work_dir + self.INSTALLED_ROOT_DIR
@@ -177,7 +177,7 @@ class AutoInstall(object):
             self.logger.info("Starting Automated Installation Service")
 
         if self.options.stop_checkpoint:
-            self.logger.debug("Pausing AI install before checkpoint: %s" % \
+            self.logger.debug("Pausing AI install before checkpoint: %s" %
                 (self.options.stop_checkpoint))
 
         if not self.options.list_checkpoints:
@@ -185,20 +185,24 @@ class AutoInstall(object):
                 self.logger.info("Using XML Manifest: %s" % (self.manifest))
 
             if self.derived_script:
-                self.logger.info("Using Derived Script: %s" % \
+                self.logger.info("Using Derived Script: %s" %
                     (self.derived_script))
 
             if self.options.profile:
-                self.logger.info("Using profile specification: %s" % \
+                self.logger.info("Using profile specification: %s" %
                     (self.options.profile))
 
             if self.options.service_list_file:
-                self.logger.info("Using service list file: %s" % \
+                self.logger.info("Using service list file: %s" %
                     (self.options.service_list_file))
 
-            if self.options.zone_pool_dataset:
-                self.logger.info("Installing zone under dataset: %s" % \
-                    (self.options.zone_pool_dataset))
+            if self.options.zonename:
+                self.logger.info("Installing zone image for: %s" %
+                    (self.options.zonename))
+
+            if self.options.alt_zpool_dataset:
+                self.logger.info("Installing zone under dataset: %s" %
+                    (self.options.alt_zpool_dataset))
 
             if self.options.dry_run:
                 self.logger.info("Dry Run mode enabled")
@@ -208,12 +212,13 @@ class AutoInstall(object):
         Method to parse command line arguments
         """
 
-        usage = "%prog -m <manifest> [-c <profile/dir>]\n"\
-            "\t[-i - Stop installation before Target Instantiation |\n" + \
-            "\t -I - Stop installation after Target Instantiation]\n" + \
-            "\t[-n - Enable dry run mode]\n" + \
-            "\t[-r <service_list_file>]" + \
-            "\t[-Z <zone_pool_dataset]"
+        usage = "%prog -m|--manifest <manifest>\n" + \
+            "\t[-c|--profile <profile/dir>]\n" + \
+            "\t[-i|--break-before-ti | -I|--break-after-ti]\n" + \
+            "\t[-n|--dry-run]\n" + \
+            "\t[-r|--service-list-file <service_list_file>]\n" + \
+            "\t[-Z|--alt-zpool-dataset <alternate_zpool_dataset>]\n" + \
+            "\t[-z|--zonename <zonename>]"
 
         parser = optparse.OptionParser(usage=usage)
 
@@ -245,11 +250,23 @@ class AutoInstall(object):
         parser.add_option("-r", "--service-list-file",
             dest="service_list_file", help="Specify service list file")
 
-        parser.add_option("-Z", "--zone-pool-dataset",
-            dest="zone_pool_dataset",
-            help="Specify zone pool dataset to install into")
+        parser.add_option("-Z", "--alt-zpool-dataset",
+            dest="alt_zpool_dataset",
+            help="Specify alternate zpool dataset to install into")
+
+        parser.add_option("-z", "--zonename", dest="zonename",
+            help="Specify the zonename of the image being installed")
 
         (options, args) = parser.parse_args(args)
+
+        # The zonename and alternate zpool dataset options must
+        # be specified together.
+        if options.zonename and not options.alt_zpool_dataset:
+            parser.error("Must specify an alternate zpool dataset when "
+                         "installing a zone")
+        elif options.alt_zpool_dataset and not options.zonename:
+            parser.error("Must specify a zonename when installing into an "
+                         "alternate zpool dataset")
 
         # If manifest argument provided, determine if script or XML manifest
         if options.manifest:
@@ -350,7 +367,7 @@ class AutoInstall(object):
         # Log progress and info messages to the console.
         self.progress_ph = AIProgressHandler(self.logger,
             skip_console_msg=(self.options.list_checkpoints or \
-                              self.options.zone_pool_dataset))
+                              self.options.alt_zpool_dataset))
         self.progress_ph.start_progress_server()
         self.logger.addHandler(self.progress_ph)
 
@@ -403,7 +420,7 @@ class AutoInstall(object):
             if error_val in [self.AI_EXIT_SUCCESS, self.AI_EXIT_AUTO_REBOOT]:
                 if not success_printed:
                     self.logger.info("Automated Installation succeeded.")
-                if self.options.zone_pool_dataset is None:
+                if self.options.alt_zpool_dataset is None:
                     if error_val == self.AI_EXIT_AUTO_REBOOT:
                         self.logger.info("System will be rebooted now")
                     else:
@@ -427,7 +444,7 @@ class AutoInstall(object):
                 if self.be is not None:
                     try:
                         self.be.unmount(self.options.dry_run,
-                            altpool=self.options.zone_pool_dataset)
+                            altpool=self.options.alt_zpool_dataset)
                     except RuntimeError as ex:
                         # Use print since logger is now closed.
                         print >> sys.stderr, str(ex)
@@ -603,7 +620,7 @@ class AutoInstall(object):
 
                     # And cleanup
                     if self.auto_reboot and \
-                        self.options.zone_pool_dataset is None:
+                        self.options.alt_zpool_dataset is None:
                         self.__cleanup_before_exit(
                             self.AI_EXIT_AUTO_REBOOT, True)
                     else:
@@ -826,7 +843,7 @@ class AutoInstall(object):
         # marked with a 'G' are applicable when installing a global zone.
         # Checkpoings marked with a 'N' are application when installing a
         # non-global zone.
-        #   G- -- Derived Manifest (If script passed as argument)
+        #   GN -- Derived Manifest (If script passed as argument)
         #   GN -- Manifest Parser (If manifest passed or derived)
         #   G- -- Target Discovery
         #   G- -- Target Selection
@@ -844,13 +861,13 @@ class AutoInstall(object):
                 self.logger.info("Configuring Checkpoints")
 
             # Register TargetDiscovery
-            if self.options.zone_pool_dataset is None:
+            if self.options.alt_zpool_dataset is None:
                 self.engine.register_checkpoint("target-discovery",
                                 "solaris_install.target.discovery",
                                 "TargetDiscovery", args=None, kwargs=None)
 
             # Register TargetSelection
-            if self.options.zone_pool_dataset is None:
+            if self.options.alt_zpool_dataset is None:
                 self.logger.debug("Adding Target Selection Checkpoint")
                 self.engine.register_checkpoint("target-selection",
                     "solaris_install.auto_install.checkpoints."
@@ -870,7 +887,7 @@ class AutoInstall(object):
                 "AIConfiguration", args=None, kwargs=None)
 
             # Register TargetInstantiation
-            if self.options.zone_pool_dataset is None:
+            if self.options.alt_zpool_dataset is None:
                 self.logger.debug("Adding Target Instantiation Checkpoint")
                 self.engine.register_checkpoint(
                                 self.TARGET_INSTANTIATION_CHECKPOINT,
@@ -961,7 +978,7 @@ class AutoInstall(object):
                     if sw.tran_type.upper() == "IPS":
                         image = Image(self.installed_root_dir, image_action)
 
-                        if self.options.zone_pool_dataset is None:
+                        if self.options.zonename is None:
                             img_type = ImType("full", zone=False)
                         else:
                             img_type = ImType("full", zone=True)
@@ -986,7 +1003,14 @@ class AutoInstall(object):
                 if ckpt_info is not None:
                     self.logger.debug("Adding Transfer Checkpoint: "
                         "%s, %s, %s" % ckpt_info)
-                    self.engine.register_checkpoint(*ckpt_info)
+                    if self.options.zonename:
+                        # If we're installing a zone, append a kwarg
+                        # specifying the zone's zonename to the transfer
+                        # checkpoint
+                        self.engine.register_checkpoint(*ckpt_info,
+                            kwargs={"zonename": self.options.zonename})
+                    else:
+                        self.engine.register_checkpoint(*ckpt_info)
                 else:
                     self.logger.error(
                         "Failed to register the softare install: %s"
@@ -996,7 +1020,7 @@ class AutoInstall(object):
             # Register ICT Checkpoints
             #=========================
             # 1. Initialize SMF Repository
-            if self.options.zone_pool_dataset is None:
+            if self.options.zonename is None:
                 self.engine.register_checkpoint("initialize-smf",
                     "solaris_install.ict.initialize_smf",
                     "InitializeSMF", args=None, kwargs=None)
@@ -1006,13 +1030,13 @@ class AutoInstall(object):
                     "InitializeSMFZone", args=None, kwargs=None)
 
             # 2. Boot Configuration
-            if self.options.zone_pool_dataset is None:
+            if self.options.zonename is None:
                 self.engine.register_checkpoint("boot-configuration",
                     "solaris_install.boot.boot",
                     "SystemBootMenu", args=None, kwargs=None)
 
             # 3. Update dumpadm / Dump Configuration
-            if self.options.zone_pool_dataset is None:
+            if self.options.zonename is None:
                 self.engine.register_checkpoint("update-dump-adm",
                     "solaris_install.ict.update_dumpadm",
                     "UpdateDumpAdm", args=None, kwargs=None)
@@ -1028,7 +1052,7 @@ class AutoInstall(object):
                 "SetFlushContentCache", args=None, kwargs=None)
 
             # 6. Device Configuration / Create Device Namespace
-            if self.options.zone_pool_dataset is None:
+            if self.options.zonename is None:
                 self.engine.register_checkpoint("device-config",
                     "solaris_install.ict.device_config",
                     "DeviceConfig", args=None, kwargs=None)
@@ -1040,14 +1064,15 @@ class AutoInstall(object):
                     "ApplySysConfig", args=None, kwargs=None)
 
             # 8. Transfer Zpool Cache and hostid (x86)
-            self.add_transfer_zpool_cache()
-            self.engine.register_checkpoint(
-                self.TRANSFER_ZPOOL_CACHE_CHECKPOINT,
-                "solaris_install.ict.transfer_files",
-                "TransferFiles", args=None, kwargs=None)
+            if self.options.zonename is None:
+                self.add_transfer_zpool_cache()
+                self.engine.register_checkpoint(
+                    self.TRANSFER_ZPOOL_CACHE_CHECKPOINT,
+                    "solaris_install.ict.transfer_files",
+                    "TransferFiles", args=None, kwargs=None)
 
             # 9. Boot Archive
-            if self.options.zone_pool_dataset is None:
+            if self.options.zonename is None:
                 self.engine.register_checkpoint("boot-archive",
                     "solaris_install.ict.boot_archive",
                     "BootArchive", args=None, kwargs=None)
@@ -1147,18 +1172,20 @@ class AutoInstall(object):
         else:
             tf_dict[self.manifest] = post_install_logs_path('ai.xml')
 
-        # Transfer smf logs
-        tf_dict['/var/svc/log/application-auto-installer:default.log'] = \
-            post_install_logs_path('application-auto-installer:default.log')
-        tf_dict['/var/svc/log/application-manifest-locator:default.log'] = \
-            post_install_logs_path('application-manifest-locator:default.log')
+        if not self.options.zonename:
+            # Transfer smf logs
+            tf_dict['/var/svc/log/application-auto-installer:default.log'] = \
+                post_install_logs_path('application-auto-installer:default.log')
+            tf_dict['/var/svc/log/application-manifest-locator:default.log'] = \
+                post_install_logs_path(
+                'application-manifest-locator:default.log')
 
-        # Transfer AI Service Discovery Log
-        tf_dict[system_temp_path('ai_sd_log')] = \
-            post_install_logs_path('ai_sd_log')
+            # Transfer AI Service Discovery Log
+            tf_dict[system_temp_path('ai_sd_log')] = \
+                post_install_logs_path('ai_sd_log')
 
-        # Transfer /var/adm/messages
-        tf_dict['/var/adm/messages'] = post_install_logs_path('messages')
+            # Transfer /var/adm/messages
+            tf_dict['/var/adm/messages'] = post_install_logs_path('messages')
 
         # Possibly copy contents of ApplicationData.work_dir, however
         # for standard AI install, this is /system/volatile, so not feasable

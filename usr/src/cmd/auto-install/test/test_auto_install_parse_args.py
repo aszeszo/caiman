@@ -89,13 +89,34 @@ class TestAutoInstallParseArgs(unittest.TestCase):
         '''
         Test passing of unknown/invalid argument
         '''
-        args = ["-n", "-z"]
+        args = ["-n", "-x"]
         try:
             self.AI = auto_install.AutoInstall(args)
         except:
             pass
 
         self.assertEqual(self.AI, None)
+
+    def test_z_and_Z(self):
+        '''
+        Test passing -z and -Z options independently should fail
+        '''
+        args = ["-m", "testmanifest", "-z", "zone1"]
+        try:
+            self.AI = auto_install.AutoInstall(args)
+        except:
+            pass
+
+        self.assertEqual(self.AI, None)
+
+        args = ["-m", "testmanifest", "-Z", "foo/bar/dataset"]
+        try:
+            self.AI = auto_install.AutoInstall(args)
+        except:
+            pass
+
+        self.assertEqual(self.AI, None)
+
 
 if __name__ == '__main__':
     unittest.main()
