@@ -438,7 +438,7 @@ class AbstractIPS(Checkpoint):
         if self.properties and not self.dry_run:
             # Update properties if needed.
             self.logger.debug("Updating image properties")
-            img = image.Image(root=self.dst, user_provided_dir=True)
+            img = self.api_inst.img
             for prop in self.properties.keys():
                 if prop == "preferred-publisher":
                     # Can't set preferred-publisher via set_property, you
@@ -542,7 +542,7 @@ class AbstractIPS(Checkpoint):
                 # purge history if requested.
                 self.logger.debug("Purging History")
                 if not self.dry_run:
-                    img = image.Image(root=self.dst, user_provided_dir=True)
+                    img = self.api_inst.img
                     img.history.purge()
 
     def check_cancel_event(self):
