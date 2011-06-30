@@ -182,7 +182,8 @@ class TargetDiscovery(Checkpoint):
 
         # set vendor information for the drive
         new_disk.disk_prop = DiskProp()
-        new_disk.disk_prop.dev_type = drive.controllers[0].attributes.type
+        if drive.controllers:
+            new_disk.disk_prop.dev_type = drive.controllers[0].attributes.type
         new_disk.disk_prop.dev_vendor = drive_attributes.vendor_id
 
         # set the alias and receptacle for disks, if possible
@@ -615,16 +616,32 @@ class TargetDiscovery(Checkpoint):
                     # query libdiskmgt for the drive's information
                     new_disk = self.discover_disk(drive)
 
-                    # skip drives that do not have media attributes
-                    if new_disk is None:
-                        continue
-
-                    # skip CDROM drives
-                    if new_disk.iscdrom:
+                    # skip invalid drives and CDROM drives
+                    if new_disk is None or new_disk.iscdrom:
                         continue
 
                     if add_physical:
                         self.root.insert_children(new_disk)
+
+        # extract all of the devpaths from all of the drives already inserted
+        devpath_list = [disk.devpath for disk in 
+                        self.root.get_descendants(class_type=Disk)]
+
+        # now walk all the drives in the system to make sure we pick up any
+        # disks which have no controller (OVM Xen disks)
+        for drive in diskmgt.descriptors_by_type(const.DRIVE):
+            new_disk = self.discover_disk(drive)
+
+            # skip invalid drives and CDROM drives
+            if new_disk is None or new_disk.iscdrom:
+                continue
+
+            # skip any disk we've already discovered
+            if new_disk.devpath in devpath_list:
+                continue
+
+            if add_physical:
+                self.root.insert_children(new_disk)
 
     def setup_iscsi(self):
         """ set up the iSCSI initiator appropriately (if specified)
