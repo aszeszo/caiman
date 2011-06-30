@@ -609,6 +609,18 @@ def set_exec_prop(val):
                            'tftp/udp6 service to "%s"\n' %
                            (os.path.basename(sys.argv[0]), val)))
 
+    cmd = ['/usr/sbin/svcadm', 'refresh', 'tftp/udp6:default']
+
+    try:
+        Popen.check_call(cmd, stdout=Popen.STORE,
+            stderr=Popen.STORE, logger='',
+            stderr_loglevel=logging.DEBUG)
+    except CalledProcessError:
+        sys.stderr.write(_('%s: warning: Unable to refresh the service: '
+                           'tftp/udp6:default\nThis needs to be done before '
+                           'attempting to do client installs\n' %
+                           os.path.basename(sys.argv[0])))
+
 
 def del_prop_group(ai_service, dry_run):
     """
@@ -1303,7 +1315,7 @@ def move_service_directory(services, dryrun, ai_service):
     else:
         netboot_path = os.path.join(NETBOOT, ai_service, 'wanboot.conf')
         if os.path.exists(netboot_path) and os.path.isfile(netboot_path):
-            new_netboot = os.path.join(new_service_path, 'wanboot.conf')
+            new_netboot = os.path.join(ipath, 'wanboot.conf')
             print _("    Move %s to %s") % (netboot_path, new_netboot)
             if not dryrun:
                 try:
@@ -1430,7 +1442,7 @@ def copy_netboot_files(dry_run):
             copy_error = True
 
     print _("Copy non-AI files from /tftpboot to /etc/netboot")
-    print _("Change inetconv/source_line property in "
+    print _("Change inetd_start/exec property in "
             "service tftp/udp6 to /etc/netboot")
     if not dry_run:
         for netfile in os.listdir(TFTPBOOT):
