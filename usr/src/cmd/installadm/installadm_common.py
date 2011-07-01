@@ -162,7 +162,7 @@ def ask_yes_or_no(prompt):
         elif choice in no_set:
             return False
         else:
-            sys.stdout.write(_("Please respond with 'yes' or 'no'"))
+            sys.stdout.write(_("Please respond with 'yes' or 'no'\n"))
 
 
 #
