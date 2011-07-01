@@ -77,7 +77,11 @@ def get_curr_bootdisk():
                 continue
 
             # calculate the ctd string from the full /dev path
-            ctd = re.split("[sp]", ctd_path.partition("/dev/dsk/")[2])[0]
+            (_none, sep, disk) = ctd_path.partition("/dev/dsk/")
+            if sep:
+                ctd = re.split("[sp]", disk)[0]
+            else:
+                continue
 
             # check to see if it's a CD-ROM drive
             dmd = diskmgt.descriptor_from_key(ldm_const.ALIAS, ctd)
@@ -88,3 +92,5 @@ def get_curr_bootdisk():
                 return ctd
     finally:
         cfunc.devfs_bootdev_free_list(bootdevs)
+
+    return None
