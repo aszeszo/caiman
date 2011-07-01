@@ -206,4 +206,43 @@
   <name>var/spool/cron/crontabs/root</name>
   <name>var/yp/aliases</name>
   <name>var/yp/nicknames</name>
+  <!-- Libraries, plugins and topo maps needed for /usr/sbin/dlmgmtd -->
+  <name>usr/lib/fm/libtopo.so.1</name>
+  <name>usr/lib/fm/amd64/libtopo.so.1</name>
+  <name>usr/lib/fm/libfmd_agent.so.1</name>
+  <name>usr/lib/libipmi.so.1</name>
+  <name>usr/lib/amd64/libipmi.so.1</name>
+  <name>usr/lib/libcurl.so.3</name>
+  <name>usr/lib/libcurl.so.3.0.0</name>
+  <name>usr/lib/libgss.so.1</name>
+  <name>usr/lib/liblldp.so.1</name>
+  <name>usr/lib/libpkcs11.so.1</name>
+  <name>usr/lib/amd64/libpkcs11.so.1</name>
+  <name>usr/lib/fm/topo/plugins/fac_prov_ipmi.so</name>
+  <name>usr/lib/fm/topo/plugins/disk.so</name>
+  <name>usr/lib/fm/topo/plugins/usb.so</name>
+  <name>usr/lib/fm/topo/plugins/xfp.so</name>
+  <name>usr/lib/fm/topo/plugins/bay.so</name>
+  <name>usr/lib/fm/topo/plugins/ses.so</name>
+  <name>usr/lib/fm/topo/plugins/ipmi.so</name>
+  <name>usr/lib/fm/topo/maps/xfp-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/plugins/x86pi.so</name>
+  <name>usr/platform/i86pc/lib/fm/topo/plugins/pcibus.so</name>
+  <name>usr/platform/i86pc/lib/fm/topo/plugins/chip.so</name>
+  <name>usr/platform/i86pc/lib/fm/topo/plugins/hostbridge.so</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/i86pc-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/i86pc-legacy-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/chassis-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/Sun-Fire-X4600-M2-disk-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/chip-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/Sun-Fire-X4500-disk-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/Netra-X4200-M2-disk-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/Sun-Fire-X4200-Server-disk-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/psu-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/fan-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/Sun-Fire-X4200-M2-disk-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/SUN-FIRE-X4270-M2-SERVER-disk-hc-topology.xml</name>
+  <name>usr/platform/i86pc/lib/fm/topo/maps/Sun-Fire-X4540-disk-hc-topology.xml</name>
+  <name>usr/share/lib/xml/dtd/topology.dtd.1</name>
+  <name>var/fm/fmd/topo</name>
 </software_data>
