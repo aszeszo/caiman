@@ -46,7 +46,7 @@ if [ ! -r $img ] && [ ! -c $img ]; then
 	exit 1
 fi
 # Image size (in MB)
-ibytes=$(stat -Lc %s $img)
+ibytes=$(ls -l $img | awk '{print $5}')
 isz=$((ibytes >> 20))
 
 #nawk script to output the details of plugged in USB drives

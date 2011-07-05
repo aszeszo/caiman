@@ -998,7 +998,7 @@ class TargetSelection(Checkpoint):
                 if zpool_available_size < self.controller.minimum_target_size:
                     raise SelectionError("Preserved root pool '%s' has "
                         "available space of '%s', which is insufficient "
-                        "space to install to. Minimim space "
+                        "space to install to. Minimum space "
                         "required is '%s'."
                         % (zpool.name, str(zpool_available_size),
                         str(self.controller.minimum_target_size)))
@@ -1231,7 +1231,7 @@ class TargetSelection(Checkpoint):
                             raise SelectionError("Root pool '%s' has "
                                 "available space of '%s', which is "
                                 "insufficient space to install to. "
-                                "Minimim space required is '%s'."
+                                "Minimum space required is '%s'."
                                 % (zpool.name, str(zpool_available_size),
                                 str(self.controller.minimum_target_size)))
 

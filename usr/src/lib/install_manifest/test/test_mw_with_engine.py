@@ -27,24 +27,18 @@
 '''ManifestWriter tests using InstallEngine'''
 
 
-import logging
 import os.path
 import unittest
 
 import common
+
 from solaris_install.configuration.configuration import *
+from solaris_install.distro_const.distro_spec import *
+from solaris_install.distro_const.execution_checkpoint import *
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.test.engine_test_utils import reset_engine, \
     get_new_engine_instance
 from solaris_install.manifest import ManifestError
-
-####################################################################
-# importing these classes causes them to be registered with the DOC
-####################################################################
-# pylint: disable-msg=W0614
-from solaris_install.distro_const.distro_spec import *
-from solaris_install.distro_const.execution_checkpoint import *
-from solaris_install.target import Target
 from solaris_install.transfer.info import *
 
 
@@ -59,10 +53,9 @@ class ManifestParserWithEngine(unittest.TestCase):
         '''Force all content of the DOC to be cleared.'''
         reset_engine()
 
-
     def test_mw_engine_simple(self):
-        '''
-            test_mw_engine_simple - read in and then write out a standard manifest
+        '''test_mw_engine_simple - read in and then write out a standard
+        manifest
         '''
         my_args = [common.MANIFEST_DC]
         my_kwargs = {}
@@ -99,59 +92,13 @@ class ManifestParserWithEngine(unittest.TestCase):
 
         # Confirm the output manifest looks as expected
         self.assertTrue(common.file_line_matches(common.MANIFEST_OUT_OK,
-            1, '<dc>') == True)
+            1, '<dc>'))
         self.assertTrue(common.file_line_matches(common.MANIFEST_OUT_OK,
-            -1, '</dc>') == True)
-
-
-    def test_mw_engine_invalid_file(self):
-        '''
-            test_mw_engine_invalid_file - try to write to file in non-existent dir
-        '''
-
-        # Repeat of test_mw_with_engine_simple, but change output file
-        # and ensure test fails
-        my_args = [common.MANIFEST_DC]
-        my_kwargs = {}
-        my_kwargs["validate_from_docinfo"] = True
-        my_kwargs["load_defaults"] = False
-
-        self.engine.register_checkpoint("manifest_parser",
-            "solaris_install/manifest/parser",
-            "ManifestParser",
-            args=my_args,
-            kwargs=my_kwargs)
-
-        status = self.engine.execute_checkpoints()[0]
-
-        self.assertEqual(status, InstallEngine.EXEC_SUCCESS,
-            "ManifestParser checkpoint failed")
-
-        my_args = [common.MANIFEST_OUT_NON_EXISTENT]
-        my_kwargs = {}
-        my_kwargs["xslt_file"] = common.XSLT_DOC_TO_DC
-        my_kwargs["validate_from_docinfo"] = False
-        my_kwargs["dtd_file"] = None
-
-        self.engine.register_checkpoint("manifest_writer",
-            "solaris_install/manifest/writer",
-            "ManifestWriter",
-            args=my_args,
-            kwargs=my_kwargs)
-
-        status = self.engine.execute_checkpoints()[0]
-
-        self.assertEqual(status, InstallEngine.EXEC_FAILED,
-            "ManifestWriter checkpoint should have failed")
-
-        # Confirm the output manifest wasn't created
-        self.assertTrue(os.path.exists(common.MANIFEST_OUT_NON_EXISTENT)
-            == False)
-
+            -1, '</dc>'))
 
     def test_mw_engine_nonexistent_xslt(self):
-        '''
-            test_mw_engine_nonexistent_xslt - try to transform using non-existing XSLT file
+        '''test_mw_engine_nonexistent_xslt - try to transform using
+        non-existing XSLT file
         '''
         # Repeat of test_mw_with_engine_simple, but change xslt file
         # and ensure test fails
@@ -191,8 +138,7 @@ class ManifestParserWithEngine(unittest.TestCase):
             self.assertEqual(status, InstallEngine.CP_INIT_FAILED)
 
     def test_mw_engine_invalid_xslt(self):
-        '''
-            test_mw_engine_invalid_xslt - use XSLT file with invalid syntax
+        '''test_mw_engine_invalid_xslt - use XSLT file with invalid syntax
         '''
         my_args = [common.MANIFEST_DC]
         my_kwargs = {}

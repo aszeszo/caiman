@@ -123,19 +123,6 @@ class TestDiskPartition(unittest.TestCase):
         except Exception as err:
             self.fail(str(err))
 
-    def test_noname_partition(self):
-        part = Partition(None)
-        part.action = "create"
-        part.start_sector = 0
-        part.size = Size("50" + Size.sector_units)
-        part.part_type = "primary"
-        part.bootid = Partition.ACTIVE
-
-        self.disk.insert_children(part)
-
-        t = instantiation.TargetInstantiation("test_ti")
-        self.assertRaises(RuntimeError, t.execute, dry_run=True)
-
 
 class TestDiskSlice(unittest.TestCase):
     def setUp(self):

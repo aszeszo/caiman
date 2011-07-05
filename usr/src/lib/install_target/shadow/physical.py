@@ -146,6 +146,11 @@ class ShadowPhysical(ShadowList):
         def __init__(self):
             self.value = "Partition has invalid partition type"
 
+    class InvalidPartitionNameError(ShadowExceptionBase):
+        def __init__(self, name, ctd):
+            self.value = "Invalid name:  '%s' for partition " % name + \
+                         "on disk:  %s" % ctd
+
     def in_use_check(self, ctds):
         """ in_use_check() - method to query libdiskmgt to check for in_use
         confilcts.
@@ -319,6 +324,11 @@ class ShadowPhysical(ShadowList):
         # verify part_type is not None
         if value.part_type is None:
             self.set_error(self.PartitionTypeMissingError())
+
+        # verify the name of the partition is valid
+        if not (1 <= int(value.name) <= (FD_NUMPART + MAX_EXT_PARTS)):
+            self.set_error(self.InvalidPartitionNameError(
+                str(value.name), self.container.ctd))
 
         # fix the start_sector and size to align to cylinder boundaries for
         # primary partitions
@@ -604,7 +614,7 @@ class ShadowPhysical(ShadowList):
                 end_cylinder = ((disk_size / cyl_boundary) - max_cyl) * \
                                cyl_boundary
                 value.size = Size(str(end_cylinder) + Size.sector_units)
-        
+
         return value
 
     def __init__(self, container, *args):

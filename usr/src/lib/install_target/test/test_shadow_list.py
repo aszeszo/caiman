@@ -425,11 +425,11 @@ class TestPartition(unittest.TestCase):
 
     def test_duplicate_partition(self):
         # add 2 1GB partition with the same index but different starting sector
-        self.disk.add_partition(0, 0, 1, Size.gb_units)
+        self.disk.add_partition(1, 0, 1, Size.gb_units)
 
         # account for the first silce moving from a start_sector of 0 to
         # CYLSIZE
-        self.disk.add_partition(0, CYLSIZE + GBSECTOR + 1, 1,
+        self.disk.add_partition(1, CYLSIZE + GBSECTOR + 1, 1,
                                 Size.gb_units)
 
         # verify there is only one error in the errsvc list and that it is the
@@ -468,14 +468,12 @@ class TestPartition(unittest.TestCase):
     def test_add_two_extended_partitions(self):
         # add 2 1GB partitions
         self.disk.add_partition(1, 0, 1, Size.gb_units,
-                                partition_type=\
-                                Partition.name_to_num("WIN95 Extended(LBA)"))
+            partition_type=Partition.name_to_num("WIN95 Extended(LBA)"))
 
         # account for the first silce moving from a start_sector of 0 to
         # CYLSIZE
         self.disk.add_partition(2, CYLSIZE + GBSECTOR + 1, 1, Size.gb_units,
-                                partition_type=\
-                                Partition.name_to_num("WIN95 Extended(LBA)"))
+            partition_type=Partition.name_to_num("WIN95 Extended(LBA)"))
 
         # verify there is only one error in the errsvc list and that it is the
         # proper error
@@ -586,8 +584,7 @@ class TestPartition(unittest.TestCase):
 
     def test_extended_partition_too_small(self):
         self.disk.add_partition(1, CYLSIZE, 10, Size.sector_units,
-                                partition_type= \
-                                Partition.name_to_num("WIN95 Extended(LBA)"))
+            partition_type=Partition.name_to_num("WIN95 Extended(LBA)"))
 
         # verify there is only one error in the errsvc list and that it is the
         # proper error
@@ -611,8 +608,7 @@ class TestPartition(unittest.TestCase):
     def test_whole_disk_is_true(self):
         self.disk.whole_disk = True
         self.disk.add_partition(1, 0, 10, Size.gb_units,
-                                partition_type= \
-                                Partition.name_to_num("Solaris2"))
+            partition_type=Partition.name_to_num("Solaris2"))
 
         # verify there is only one error in the errsvc list and that it is the
         # proper error
@@ -624,8 +620,7 @@ class TestPartition(unittest.TestCase):
     def test_whole_disk_is_false(self):
         self.disk.whole_disk = False
         self.disk.add_partition(1, 0, 10, Size.gb_units,
-                                partition_type= \
-                                Partition.name_to_num("Solaris2"))
+            partition_type=Partition.name_to_num("Solaris2"))
 
         # verify that there are no errors
         self.assertFalse(errsvc._ERRORS)
@@ -861,6 +856,16 @@ class TestPartition(unittest.TestCase):
         # primary partitions
         self.assertEqual(self.disk.get_next_partition_name(primary=True), None)
 
+    def test_cr_7055489(self):
+        self.disk.add_partition("0", CYLSIZE, 10, Size.gb_units)
+
+        # verify there is only one error in the errsvc list and that it is the
+        # proper error
+        self.assertEqual(len(errsvc._ERRORS), 1)
+        error = errsvc._ERRORS[0]
+        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
+                                   ShadowPhysical.InvalidPartitionNameError))
+
 
 class TestSliceInDisk(unittest.TestCase):
     def setUp(self):
@@ -1081,7 +1086,7 @@ class TestSliceInDisk(unittest.TestCase):
         self.assertEqual(len(holey_list), 2)
 
         self.assertEqual(holey_list[0].start_sector, CYLSIZE)
-        self.assertEqual(holey_list[0].size.sectors, 
+        self.assertEqual(holey_list[0].size.sectors,
             (((start - CYLSIZE - 1) / CYLSIZE) * CYLSIZE))
 
         # round the expected value up to the next cylinder boundary
@@ -1457,11 +1462,15 @@ class TestLogicalPartition(unittest.TestCase):
             start_sector = i * GBSECTOR
             self.disk.add_partition(i, start_sector, 1, Size.gb_units)
 
-        # verify there is only one error in the errsvc list and that it is the
-        # proper error
-        self.assertEqual(len(errsvc._ERRORS), 1)
-        error = errsvc._ERRORS[0]
-        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
+        # verify there are two errors in the errsvc list.  One for an invalid
+        # name and one for exceeding the number of logical partitions
+        self.assertEqual(len(errsvc._ERRORS), 2)
+        invalid_error = errsvc._ERRORS[0]
+        toomany_error = errsvc._ERRORS[1]
+
+        self.assertTrue(isinstance(invalid_error.error_data[ES_DATA_EXCEPTION],
+            ShadowPhysical.InvalidPartitionNameError))
+        self.assertTrue(isinstance(toomany_error.error_data[ES_DATA_EXCEPTION],
             ShadowPhysical.TooManyLogicalPartitionsError))
 
     def test_add_too_large_logical_partition(self):
