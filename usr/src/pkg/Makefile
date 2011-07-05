@@ -201,6 +201,15 @@ PM_TRANSFORMS= publish restart_fmri defaults extract_metadata \
 		disable_depend_checks
 PM_INC= transforms
 
+#
+# It's hard to manage the relationships between transform files and the
+# manifests they affect, so we choose a broader rule: .mog files should be
+# rebuilt if any transforms change.  So we collect up the names of all of the
+# transforms here and add them as dependencies in .mog rules below.
+#
+ALLTRANSFORMS :sh= (cd transforms; print *)
+TRANSFORM_PATHS=$(ALLTRANSFORMS:%=$(PM_INC)/%)
+
 PKGMOG_DEFINES= \
 	i386_ONLY=$(POUND_SIGN) \
 	sparc_ONLY=$(POUND_SIGN) \
@@ -331,8 +340,14 @@ PKGLISTS= \
 #		|
 #	manifest with dependencies resolved (mypkg.res)
 #		|
-#		| use pkgsend to publish the package
+#               | use pkglint to check manifest for errors before publishing
+#               | ("ERROR" messages returned by pkglint will prevent
+#               |  publishing and will cause the build to fail)
 #		|
+#       checked manifest (mypkg.res)
+#               |
+#               | use pkgsend to publish the package
+#               |
 #	placeholder to indicate successful publication (mypkg.pub)
 #	
 # * This may be suppressed via SUPPRESSPKGDEP.  The resulting
@@ -566,12 +581,14 @@ $(REPOS:%=$(PKGDEST)/repo.%):
 
 .SUFFIXES: .mf .mog .dep .res .pub
 
-$(PDIR)/%.mog: manifests/%.mf
+$(PDIR)/%.mog: manifests/%.mf $(TRANSFORM_PATHS)
 	@print "Processing manifest $(<F)"
+	@pkgfmt -c $<
 	$(PKGDEBUG)$(RM) $(@) $(@:%.mog=%) $(@:%.mog=%.nodepend) \
-		$(PDIR)/$(@F:%.mog=%).metadata.*
+		$(@:%.mog=%.lics) $(@:%.mog=%).metadata.* $(@).vars
 	$(PKGDEBUG)PKGMOG_OUT=`$(PKGMOGRIFY) $(PKGMOG_VERBOSE) $(PM_INC:%= -I %) \
-		$(PKGMOG_DEFINES:%=-D %) -O $(@) $(<) $(PM_TRANSFORMS)`; \
+		$(PKGMOG_DEFINES:%=-D %) -P $(@).vars -O $(@) \
+		$(<) $(PM_TRANSFORMS)`; \
 	if [ "$$?" != "0" ]; then \
 		exit 1; \
 	fi; \

@@ -35,11 +35,11 @@ dir path=etc/security group=sys
 dir path=etc/security/exec_attr.d group=sys
 dir path=etc/svc group=sys
 dir path=etc/svc/profile group=sys
-dir path=jack owner=jack group=staff
-dir path=jack/.config owner=jack group=staff
-dir path=jack/.config/autostart owner=jack group=staff
-dir path=jack/Desktop owner=jack group=staff
-dir path=jack/Documents owner=jack group=staff
+dir path=jack group=staff owner=jack
+dir path=jack/.config group=staff owner=jack
+dir path=jack/.config/autostart group=staff owner=jack
+dir path=jack/Desktop group=staff owner=jack
+dir path=jack/Documents group=staff owner=jack
 dir path=lib
 dir path=lib/svc
 dir path=lib/svc/manifest group=sys
@@ -55,23 +55,24 @@ dir path=usr/lib
 dir path=usr/lib/install
 dir path=usr/sbin
 dir path=usr/share group=sys
-file path=etc/security/exec_attr.d/system%2Finstall%2Fmedia%2Finternal group=sys
-file path=etc/svc/profile/network_nwam.xml mode=0444 group=sys
-link path=jack/.bashrc target=../etc/skel/.bashrc
-file path=jack/.config/autostart/iotrace.desktop owner=jack group=staff
-file path=jack/.config/autostart/ddu_silent.desktop owner=jack group=staff
-file path=jack/.dmrc mode=0644 owner=jack group=staff
-link path=jack/.profile target=../etc/skel/.profile
-file path=jack/.Xclients mode=0755 owner=jack group=staff
-file path=jack/.xscreensaver owner=jack group=staff
-file path=jack/Desktop/.os-icons-installed owner=jack group=staff
-file path=jack/Desktop/ddu.desktop owner=jack group=staff
-file path=jack/Desktop/gparted.desktop owner=jack group=staff
-file path=jack/Desktop/install_opensolaris.desktop owner=jack group=staff
-file path=lib/svc/manifest/system/filesystem/live-root-fs-minimal.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/filesystem/root-assembly.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/live-a11y.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/live-io-tracing.xml mode=0444 group=sys
+file path=etc/security/exec_attr.d/system%2Finstall%2Fmedia%2Finternal \
+    group=sys
+file path=etc/svc/profile/network_nwam.xml group=sys mode=0444
+file path=jack/.Xclients group=staff mode=0755 owner=jack
+file path=jack/.config/autostart/ddu_silent.desktop group=staff owner=jack
+file path=jack/.config/autostart/iotrace.desktop group=staff owner=jack
+file path=jack/.dmrc group=staff mode=0644 owner=jack
+file path=jack/.xscreensaver group=staff owner=jack
+file path=jack/Desktop/.os-icons-installed group=staff owner=jack
+file path=jack/Desktop/ddu.desktop group=staff owner=jack
+file path=jack/Desktop/gparted.desktop group=staff owner=jack
+file path=jack/Desktop/install_opensolaris.desktop group=staff owner=jack
+file path=lib/svc/manifest/system/filesystem/live-root-fs-minimal.xml \
+    group=sys mode=0444
+file path=lib/svc/manifest/system/filesystem/root-assembly.xml group=sys \
+    mode=0444
+file path=lib/svc/manifest/system/live-a11y.xml group=sys mode=0444
+file path=lib/svc/manifest/system/live-io-tracing.xml group=sys mode=0444
 file path=lib/svc/method/live-a11y mode=0555
 file path=lib/svc/method/live-fs-root-minimal mode=0555
 file path=lib/svc/method/live-io-tracing mode=0555
@@ -84,5 +85,7 @@ $(i386_ONLY)file path=usr/sbin/mkmenu mode=0555 variant.arch=i386
 file path=usr/sbin/mount_media mode=0555
 file path=usr/sbin/set_lang mode=0555
 license cr_Sun license=cr_Sun
-user username=jack uid=65432 group=staff gcos-field="Default User" home-dir=/jack \
-    login-shell=/usr/bin/bash password=9Nd/cwBcNWFZg
+link path=jack/.bashrc target=../etc/skel/.bashrc
+link path=jack/.profile target=../etc/skel/.profile
+user username=jack gcos-field="Default User" group=staff home-dir=/jack \
+    login-shell=/usr/bin/bash password=9Nd/cwBcNWFZg uid=65432

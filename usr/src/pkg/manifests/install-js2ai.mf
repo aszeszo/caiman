@@ -1,4 +1,4 @@
-# 
+#
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -24,13 +24,12 @@
 #
 
 set name=pkg.fmri value=pkg:/install/js2ai@$(PKGVERS)
-set name=pkg.description value=\
-	"JumpStart to Automated Installer translation utility"
+set name=pkg.description \
+    value="JumpStart to Automated Installer translation utility"
 set name=pkg.summary value="JumpStart to AI utility"
-set name=info.classification value=\
-        "org.opensolaris.category.2008:System/Administration and Configuration"
+set name=info.classification \
+    value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
-
 dir path=usr group=sys
 dir path=usr/include
 dir path=usr/lib
@@ -42,37 +41,35 @@ dir path=usr/sbin
 dir path=usr/share group=sys
 dir path=usr/share/man
 dir path=usr/share/man/man1m
-
 file path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/__init__.py \
     mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/__init__.pyc \
     mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/common.py \
     mode=0444
-file path=\
-    usr/lib/python2.6/vendor-packages/solaris_install/js2ai/common.pyc \
-	mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/common.pyc \
+    mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/conv.py \
     mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/conv.pyc \
     mode=0444
-file path=\
-    usr/lib/python2.6/vendor-packages/solaris_install/js2ai/conv_sysidcfg.py \
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/conv_sysidcfg.py \
     mode=0444
-file path=\
-    usr/lib/python2.6/vendor-packages/solaris_install/js2ai/conv_sysidcfg.pyc \
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/conv_sysidcfg.pyc \
     mode=0444
-file path=\
-    usr/lib/python2.6/vendor-packages/solaris_install/js2ai/default_xml.py \
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/default_xml.py \
     mode=0444
-file path=\
-    usr/lib/python2.6/vendor-packages/solaris_install/js2ai/default_xml.pyc \
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/default_xml.pyc \
     mode=0444
-file path=\
-    usr/lib/python2.6/vendor-packages/solaris_install/js2ai/ip_address.py \
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/ip_address.py \
     mode=0444
-file path=\
-    usr/lib/python2.6/vendor-packages/solaris_install/js2ai/ip_address.pyc \
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/js2ai/ip_address.pyc \
     mode=0444
 file path=usr/sbin/js2ai mode=0555
 file path=usr/share/man/man1m/js2ai.1m mode=0444

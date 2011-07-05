@@ -25,16 +25,10 @@
 set name=pkg.fmri value=pkg:/install/installadm@$(PKGVERS)
 set name=pkg.description value="Automatic Installation Server Setup Tools"
 set name=pkg.summary value="installadm utility"
-set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
+set name=info.classification \
+    value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
-
-depend fmri=database/sqlite-3 type=require
-depend fmri=service/network/dhcp/isc-dhcp type=require
-depend fmri=service/network/dns/mdns type=require
-depend fmri=service/network/tftp type=require
-depend fmri=web/server/apache-22 type=require
-
 dir path=lib
 dir path=lib/svc
 dir path=lib/svc/manifest group=sys
@@ -60,7 +54,7 @@ dir path=var/ai/image-server group=sys
 dir path=var/ai/image-server/cgi-bin group=sys
 dir path=var/ai/image-server/images group=sys
 dir path=var/ai/image-server/logs group=sys
-dir path=var/ai/profile owner=webservd group=webservd mode=0700
+dir path=var/ai/profile group=webservd mode=0700 owner=webservd
 dir path=var/ai/service group=sys
 dir path=var/installadm group=sys
 dir path=var/installadm/ai-webserver group=sys
@@ -72,63 +66,151 @@ file path=lib/svc/method/svc-install-server mode=0555
 file path=usr/lib/installadm/aimdns.py
 file path=usr/lib/installadm/aimdnsd.py
 file path=usr/lib/installadm/check-server-setup
-
 file path=usr/lib/installadm/installadm-common
 file path=usr/lib/installadm/setup-image
 file path=usr/lib/installadm/setup-service
 file path=usr/lib/installadm/setup-sparc
-
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/AI_database.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/AI_database.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/client_control.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/client_control.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/common_profile.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/common_profile.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_client.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_client.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_profile.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_profile.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_service.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_service.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/data_files.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/data_files.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_client.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_client.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_profile.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_profile.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_manifest.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_manifest.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_service.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_service.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/dhcp.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/dhcp.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/export.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/export.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/grub.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/grub.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/image.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/image.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/list.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/list.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/publish_manifest.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/publish_manifest.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/rename_service.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/rename_service.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_criteria.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_criteria.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_service.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_service.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/validate_profile.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/validate_profile.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/verifyXML.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/verifyXML.pyc group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/AI_database.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/AI_database.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/client_control.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/client_control.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/common_profile.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/common_profile.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_client.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_client.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_profile.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_profile.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_service.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_service.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/data_files.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/data_files.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_client.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_client.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_manifest.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_manifest.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_profile.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_profile.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_service.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/delete_service.pyc \
+    group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/dhcp.py \
+    group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/dhcp.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/export.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/export.pyc \
+    group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/grub.py \
+    group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/grub.pyc \
+    group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/image.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/image.pyc \
+    group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/list.py \
+    group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/list.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/publish_manifest.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/publish_manifest.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/rename_service.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/rename_service.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_criteria.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_criteria.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_service.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_service.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/validate_profile.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/validate_profile.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/verifyXML.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/verifyXML.pyc \
+    group=sys
 file path=usr/sbin/installadm mode=0555
 file path=usr/sbin/installadm-convert mode=0555
 file path=usr/share/auto_install/criteria_schema.rng group=sys
 file path=usr/share/man/man1m/installadm.1m mode=0444
 file path=var/ai/image-server/cgi-bin/cgi_get_manifest.py mode=0555
-file path=var/installadm/ai-webserver/ai-httpd.conf
 file path=var/installadm/ai-webserver/AI.db
+file path=var/installadm/ai-webserver/ai-httpd.conf
 license cr_Sun license=cr_Sun
+depend fmri=database/sqlite-3 type=require
+depend fmri=service/network/dhcp/isc-dhcp type=require
+depend fmri=service/network/dns/mdns type=require
+depend fmri=service/network/tftp type=require
+depend fmri=web/server/apache-22 type=require

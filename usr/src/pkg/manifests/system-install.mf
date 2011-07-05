@@ -22,12 +22,13 @@
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 set name=pkg.fmri value=pkg:/system/install@$(PKGVERS)
-set name=pkg.description value="Core software libraries and commands used for system installation"
+set name=pkg.description \
+    value="Core software libraries and commands used for system installation"
 set name=pkg.summary value="System install libraries and commands"
-set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
+set name=info.classification \
+    value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
-depend fmri=library/python-2/python-extra-26 type=require
 dir path=lib
 dir path=lib/svc
 dir path=lib/svc/manifest group=sys
@@ -51,33 +52,35 @@ dir path=usr/share/lib/xml group=sys
 dir path=usr/share/lib/xml/rng group=sys
 dir path=usr/snadm
 dir path=usr/snadm/lib
-
-file path=lib/svc/manifest/system/system-config.xml mode=0444 group=sys
+file path=lib/svc/manifest/system/system-config.xml group=sys mode=0444
 file path=lib/svc/method/svc-system-config mode=0555
 file path=usr/bin/ManifestRead mode=0555
 file path=usr/bin/ManifestServ mode=0555
 file path=usr/include/admin/ti_api.h
 file path=usr/include/admin/transfermod.h
-file path=usr/lib/python2.6/vendor-packages/osol_install/__init__.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/__init__.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/DefValProc.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/DefValProc.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/ENParser.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/ENParser.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestRead.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestRead.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestServ.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestServ.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/SocketServProtocol.py
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/SocketServProtocol.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/TreeAcc.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/TreeAcc.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/__init__.pyc \
+    mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/ict.py mode=0755
 file path=usr/lib/python2.6/vendor-packages/osol_install/ict.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/install_utils.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/install_utils.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/liblogsvc.so
 file path=usr/lib/python2.6/vendor-packages/osol_install/libti.so
-link path=usr/lib/python2.6/vendor-packages/osol_install/libtransfer.so target=../../../../snadm/lib/libtransfer.so
 file path=usr/lib/python2.6/vendor-packages/osol_install/libzoneinfo.so
-file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestRead.py
-file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestRead.pyc
-file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestServ.py
-file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestServ.pyc
-file path=usr/lib/python2.6/vendor-packages/osol_install/SocketServProtocol.py
-file path=usr/lib/python2.6/vendor-packages/osol_install/SocketServProtocol.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/tgt.so
 file path=usr/lib/python2.6/vendor-packages/osol_install/tgt_utils.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/tgt_utils.pyc
@@ -87,38 +90,55 @@ file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_defs.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_defs.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_mod.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_mod.pyc
-file path=usr/lib/python2.6/vendor-packages/osol_install/TreeAcc.py
-file path=usr/lib/python2.6/vendor-packages/osol_install/TreeAcc.pyc
 file path=usr/lib/python2.6/vendor-packages/terminalui/__init__.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/terminalui/__init__.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/terminalui/action.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/terminalui/action.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/base_screen.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/base_screen.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/color_theme.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/color_theme.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/base_screen.py \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/base_screen.pyc \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/color_theme.py \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/color_theme.pyc \
+    mode=0444
 file path=usr/lib/python2.6/vendor-packages/terminalui/edit_field.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/edit_field.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/error_window.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/error_window.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/help_screen.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/help_screen.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/edit_field.pyc \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/error_window.py \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/error_window.pyc \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/help_screen.py \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/help_screen.pyc \
+    mode=0444
 file path=usr/lib/python2.6/vendor-packages/terminalui/i18n.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/terminalui/i18n.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/inner_window.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/inner_window.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/inner_window.py \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/inner_window.pyc \
+    mode=0444
 file path=usr/lib/python2.6/vendor-packages/terminalui/list_item.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/terminalui/list_item.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/main_window.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/main_window.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/screen_list.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/screen_list.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/scroll_window.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/scroll_window.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/window_area.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/terminalui/window_area.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/main_window.py \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/main_window.pyc \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/screen_list.py \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/screen_list.pyc \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/scroll_window.py \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/scroll_window.pyc \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/window_area.py \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/window_area.pyc \
+    mode=0444
 file path=usr/sbin/install-finish mode=0555
-file path=usr/share/install/sc_template.xml mode=0444 group=sys
+file path=usr/share/install/sc_template.xml group=sys mode=0444
 file path=usr/share/lib/xml/rng/defval-manifest.rng group=sys
 file path=usr/snadm/lib/libict.so.1
 file path=usr/snadm/lib/liblogsvc.so.1
@@ -127,5 +147,8 @@ file path=usr/snadm/lib/libtd.so.1
 file path=usr/snadm/lib/libti.so.1
 file path=usr/snadm/lib/libtransfer.so.1
 license cr_Sun license=cr_Sun
+link path=usr/lib/python2.6/vendor-packages/osol_install/libtransfer.so \
+    target=../../../../snadm/lib/libtransfer.so
 link path=usr/snadm/lib/libtransfer.so target=libtransfer.so.1
+depend fmri=library/python-2/python-extra-26 type=require
 

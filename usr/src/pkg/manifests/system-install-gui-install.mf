@@ -23,9 +23,10 @@
 #
 
 set name=pkg.fmri value=pkg:/system/install/gui-install@$(PKGVERS)
-set name=pkg.description value="Solaris Installation GUI"
+set name=pkg.description value="Solaris Installation Graphical User Installer"
 set name=pkg.summary value="Solaris Installation GUI"
-set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
+set name=info.classification \
+    value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global
 dir path=etc group=sys
@@ -37,7 +38,7 @@ dir path=etc/user_attr.d group=sys
 dir path=usr group=sys
 dir path=usr/bin
 dir path=usr/lib
-dir path=usr/lib/python2.6 
+dir path=usr/lib/python2.6
 dir path=usr/lib/python2.6/vendor-packages
 dir path=usr/lib/python2.6/vendor-packages/solaris_install
 dir path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install
@@ -50,45 +51,82 @@ dir path=usr/share/gui-install/installmessages group=sys
 file path=etc/gconf/schemas/solaris-gui-install.schemas group=sys
 file path=etc/security/exec_attr.d/SUNWgui-install group=sys
 file path=etc/user_attr.d/SUNWgui-install group=sys
-file path=usr/bin/gui-install mode=0555 group=sys
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/__init__.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/__init__.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/base_screen.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/base_screen.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/confirm_screen.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/confirm_screen.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_screen.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_screen.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/failure_screen.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/failure_screen.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/fdisk_panel.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/fdisk_panel.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/finish_screen.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/finish_screen.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/gui_install_common.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/gui_install_common.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/help_dialog.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/help_dialog.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/install_profile.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/install_profile.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/libzoneinfo_ctypes.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/libzoneinfo_ctypes.pyc
+file path=usr/bin/gui-install group=sys mode=0555
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/__init__.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/__init__.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/base_screen.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/base_screen.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/confirm_screen.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/confirm_screen.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_screen.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_screen.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/failure_screen.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/failure_screen.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/fdisk_panel.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/fdisk_panel.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/finish_screen.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/finish_screen.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/gui_install_common.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/gui_install_common.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/help_dialog.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/help_dialog.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/install_profile.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/install_profile.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/libzoneinfo_ctypes.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/libzoneinfo_ctypes.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/map.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/map.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/progress_screen.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/progress_screen.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/screen_manager.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/screen_manager.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/textview_dialog.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/textview_dialog.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/timezone.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/timezone.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/timezone_screen.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/timezone_screen.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/user_screen.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/user_screen.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/welcome_screen.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/welcome_screen.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/map.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/progress_screen.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/progress_screen.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/screen_manager.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/screen_manager.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/textview_dialog.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/textview_dialog.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/timezone.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/timezone.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/timezone_screen.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/timezone_screen.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/user_screen.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/user_screen.pyc
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/welcome_screen.py
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/welcome_screen.pyc
 file path=usr/share/gui-install/city_mouseover_l.png group=sys
 file path=usr/share/gui-install/city_mouseover_s.png group=sys
 file path=usr/share/gui-install/city_normal_l.png group=sys

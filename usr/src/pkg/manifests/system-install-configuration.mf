@@ -23,74 +23,133 @@
 #
 
 set name=pkg.fmri value=pkg:/system/install/configuration@$(PKGVERS)
-set name=pkg.description value="Libraries, Python modules and binaries used by install technologies for core configuration of Solaris instance."
+set name=pkg.description \
+    value="Libraries, Python modules and binaries used by install technologies for core configuration of Solaris instance."
 set name=pkg.summary value="Core System Configuration Components"
-set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
+set name=info.classification \
+    value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
-
 dir path=usr group=sys
-dir path=usr/sbin
 dir path=usr/lib
 dir path=usr/lib/python2.6
 dir path=usr/lib/python2.6/vendor-packages
 dir path=usr/lib/python2.6/vendor-packages/solaris_install
 dir path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig
+dir path=usr/sbin
 dir path=usr/share group=sys
 dir path=usr/share/sysconfig group=sys
 dir path=usr/share/sysconfig/help group=sys
 dir path=usr/share/sysconfig/help/C group=sys
 dir path=usr/share/sysconfig/xslt group=sys
-
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/__init__.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/__init__.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/date_time.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/date_time.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/nameservice.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/nameservice.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_configure.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_configure.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_select.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_select.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_type.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_type.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/__init__.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/__init__.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/ip_address.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/ip_address.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/nameservice_info.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/nameservice_info.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/network_info.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/network_info.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/system_info.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/system_info.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/user_info.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/user_info.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/summary.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/summary.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/timezone.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/timezone.pyc \
+    mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/users.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/users.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/welcome.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/welcome.pyc \
+    mode=0444
 file path=usr/sbin/sysconfig mode=0555
-
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/__init__.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/__init__.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/date_time.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/date_time.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_configure.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_configure.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_select.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_select.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/nameservice.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/nameservice.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_type.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_type.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/summary.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/summary.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/timezone.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/timezone.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/users.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/users.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/welcome.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/welcome.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/__init__.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/__init__.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/ip_address.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/ip_address.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/nameservice_info.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/nameservice_info.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/network_info.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/network_info.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/system_info.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/system_info.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/user_info.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/user_info.pyc mode=0444
-
 file path=usr/share/sysconfig/help/C/date_time.txt group=sys
-file path=usr/share/sysconfig/help/C/dns_server.txt group=sys
 file path=usr/share/sysconfig/help/C/dns_search.txt group=sys
+file path=usr/share/sysconfig/help/C/dns_server.txt group=sys
 file path=usr/share/sysconfig/help/C/domain.txt group=sys
 file path=usr/share/sysconfig/help/C/ldap_profile.txt group=sys
 file path=usr/share/sysconfig/help/C/ldap_proxy.txt group=sys
 file path=usr/share/sysconfig/help/C/name_service.txt group=sys
-file path=usr/share/sysconfig/help/C/network_manual.txt group=sys
 file path=usr/share/sysconfig/help/C/network.txt group=sys
+file path=usr/share/sysconfig/help/C/network_manual.txt group=sys
 file path=usr/share/sysconfig/help/C/nis.txt group=sys
 file path=usr/share/sysconfig/help/C/summary.txt group=sys
 file path=usr/share/sysconfig/help/C/timezone.txt group=sys
 file path=usr/share/sysconfig/help/C/users.txt group=sys
 file path=usr/share/sysconfig/help/C/welcome.txt group=sys
-
 file path=usr/share/sysconfig/xslt/doc2sc_profile.xslt group=sys
-
 license cr_Sun license=cr_Sun

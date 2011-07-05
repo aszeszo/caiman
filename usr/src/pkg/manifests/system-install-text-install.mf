@@ -23,14 +23,13 @@
 #
 
 set name=pkg.fmri value=pkg:/system/install/text-install@$(PKGVERS)
-set name=pkg.description value="Text Installer libraries, commands, and data files"
+set name=pkg.description \
+    value="Text Installer libraries, commands, and data files"
 set name=pkg.summary value="Solaris Text Installer"
-set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
+set name=info.classification \
+    value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global
-
-depend fmri=system/install/locale type=require
-
 dir path=lib
 dir path=lib/svc
 dir path=lib/svc/manifest group=sys
@@ -52,46 +51,104 @@ dir path=usr/share/text-install/help group=sys
 dir path=usr/share/text-install/help/C group=sys
 dir path=var group=sys
 dir path=var/svc group=sys
-file path=lib/svc/manifest/system/text-mode-menu.xml mode=0444 group=sys
+file path=lib/svc/manifest/system/text-mode-menu.xml group=sys mode=0444
 file path=opt/install-test/bin/ict_test mode=0555
-file path=usr/bin/text-install mode=0555 group=sys
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/__init__.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/__init__.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/disk_selection.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/disk_selection.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/disk_window.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/disk_window.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/fdisk_partitions.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/fdisk_partitions.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/install_progress.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/install_progress.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/install_status.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/install_status.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/log_viewer.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/log_viewer.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/partition_edit_screen.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/partition_edit_screen.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/progress.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/progress.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_install.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_install.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_install_utils.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_install_utils.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_target_utils.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_target_utils.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/summary.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/summary.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/welcome.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/welcome.pyc mode=0444
+file path=usr/bin/text-install group=sys mode=0555
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/__init__.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/__init__.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/disk_selection.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/disk_selection.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/disk_window.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/disk_window.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/fdisk_partitions.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/fdisk_partitions.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/install_progress.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/install_progress.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/install_status.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/install_status.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/log_viewer.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/log_viewer.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/partition_edit_screen.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/partition_edit_screen.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/progress.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/progress.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/summary.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/summary.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_install.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_install.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_install_utils.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_install_utils.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_target_utils.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/ti_target_utils.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/welcome.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/welcome.pyc \
+    mode=0444
 file path=usr/sbin/text-mode-menu mode=0555
-
 file path=usr/share/text-install/help/C/disks.txt group=sys
-file path=usr/share/text-install/help/C/sparc_solaris_slices_select.txt group=sys
 file path=usr/share/text-install/help/C/sparc_solaris_slices.txt group=sys
+file path=usr/share/text-install/help/C/sparc_solaris_slices_select.txt \
+    group=sys
 file path=usr/share/text-install/help/C/summary.txt group=sys
 file path=usr/share/text-install/help/C/welcome.txt group=sys
-file path=usr/share/text-install/help/C/x86_fdisk_partitions_select.txt group=sys
 file path=usr/share/text-install/help/C/x86_fdisk_partitions.txt group=sys
-file path=usr/share/text-install/help/C/x86_fdisk_slices_select.txt group=sys
+file path=usr/share/text-install/help/C/x86_fdisk_partitions_select.txt \
+    group=sys
 file path=usr/share/text-install/help/C/x86_fdisk_slices.txt group=sys
+file path=usr/share/text-install/help/C/x86_fdisk_slices_select.txt group=sys
 license cr_Sun license=cr_Sun
+depend fmri=system/install/locale type=require

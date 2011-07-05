@@ -25,11 +25,11 @@
 set name=pkg.fmri \
     value=pkg:/system/install/auto-install/auto-install-common@$(PKGVERS)
 set name=pkg.description value="Automated Installer common components"
-set name=pkg.summary value="Automated Installer common components"
-set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
+set name=pkg.summary value="AI common components"
+set name=info.classification \
+    value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
-user gcos-field="AI User" group=nobody uid=60003 ftpuser=false username="aiuser"
 dir path=usr group=sys
 dir path=usr/bin
 dir path=usr/lib
@@ -39,7 +39,8 @@ dir path=usr/lib/python2.6/vendor-packages/osol_install
 dir path=usr/lib/python2.6/vendor-packages/osol_install/auto_install
 dir path=usr/lib/python2.6/vendor-packages/solaris_install
 dir path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install
-dir path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints
+dir \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints
 dir path=usr/share group=sys
 dir path=usr/share/auto_install group=sys
 dir path=usr/share/auto_install/sc_profiles group=sys
@@ -47,53 +48,132 @@ file path=etc/user_attr.d/system%2Finstall%2Fauto-install group=sys
 file path=usr/bin/ai_get_manifest mode=0555
 file path=usr/bin/aimanifest mode=0555
 file path=usr/bin/auto-install mode=0555
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/__init__.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/__init__.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_parse_manifest.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_parse_manifest.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_instance.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_instance.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/auto_install.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/auto_install.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/utmpx.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/utmpx.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/__init__.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/__init__.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/ai_configuration.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/ai_configuration.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/dmm.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/dmm.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/target_selection.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/target_selection.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/target_selection_zone.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/target_selection_zone.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/__init__.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/__init__.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/mim.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/mim.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/process_dtd.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/process_dtd.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/_libaiscf.so mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/ai_smf_service.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/ai_smf_service.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/aimdns_mod.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/aimdns_mod.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/installadm_common.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/installadm_common.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.py group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.pyc group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/libaimdns.so mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/_libaiscf.so \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/ai_smf_service.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/ai_smf_service.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/aimdns_mod.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/aimdns_mod.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/installadm_common.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/installadm_common.pyc \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.pyc \
+    group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/libaimdns.so \
+    mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/libaiscf.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/netif.so mode=0444
-file path=usr/share/auto_install/manifest/ai_manifest.xml mode=0444 group=sys
-file path=usr/share/auto_install/manifest/default.xml mode=0444 group=sys
-file path=usr/share/auto_install/manifest/zone_default.xml mode=0444 group=sys
-file path=usr/share/auto_install/sc_profiles/enable_sci.xml mode=0444 group=sys
-file path=usr/share/auto_install/sc_profiles/static_network.xml mode=0444 group=sys
-file path=usr/share/auto_install/sc_profiles/sc_sample.xml mode=0444 group=sys
-file path=usr/share/auto_install/version mode=0444 group=sys
-link path=usr/share/auto_install/default.xml target=manifest/default.xml
-link path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_get_manifest.py target=../../../../../bin/ai_get_manifest
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/__init__.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/__init__.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_instance.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_instance.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_parse_manifest.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_parse_manifest.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/auto_install.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/auto_install.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/__init__.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/__init__.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/ai_configuration.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/ai_configuration.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/dmm.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/dmm.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/target_selection.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/target_selection.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/target_selection_zone.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/target_selection_zone.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/utmpx.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/utmpx.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/__init__.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/__init__.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/mim.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/mim.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/process_dtd.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/process_dtd.pyc \
+    mode=0444
+file path=usr/share/auto_install/manifest/ai_manifest.xml group=sys mode=0444
+file path=usr/share/auto_install/manifest/default.xml group=sys mode=0444
+file path=usr/share/auto_install/manifest/zone_default.xml group=sys mode=0444
+file path=usr/share/auto_install/sc_profiles/enable_sci.xml group=sys \
+    mode=0444
+file path=usr/share/auto_install/sc_profiles/sc_sample.xml group=sys mode=0444
+file path=usr/share/auto_install/sc_profiles/static_network.xml group=sys \
+    mode=0444
+file path=usr/share/auto_install/version group=sys mode=0444
 license cr_Sun license=cr_Sun
+link \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_get_manifest.py \
+    target=../../../../../bin/ai_get_manifest
+link path=usr/share/auto_install/default.xml target=manifest/default.xml
+user username=aiuser ftpuser=false gcos-field="AI User" group=nobody uid=60003
