@@ -276,4 +276,12 @@
         <name>usr/platform/SUNW,Netra-T5220/lib/fm/topo/maps/Netra-T5220-hc-topology.xml</name>
         <name>usr/share/lib/xml/dtd/topology.dtd.1</name>
         <name>var/fm/fmd/topo</name>
+	<!-- libraries needed by the /usr/bin/su command -->
+	<name>usr/bin/su</name>
+	<name>usr/lib/libproject.so.1</name>
+	<name>usr/lib/security/pam_authtok_get.so.1</name>
+	<name>usr/lib/security/pam_dhkeys.so.1</name>
+	<name>usr/lib/security/pam_unix_cred.so.1</name>
+	<name>usr/lib/security/pam_unix_auth.so.1</name>
+	<name>usr/lib/security/pam_dial_auth.so.1</name>
     </software_data>
