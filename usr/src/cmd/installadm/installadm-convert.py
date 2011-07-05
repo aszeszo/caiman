@@ -48,6 +48,7 @@ from osol_install.auto_install import create_client
 from osol_install.auto_install.installadm_common import _
 from osol_install.auto_install.service import AIService
 from solaris_install import Popen, CalledProcessError
+from textwrap import fill
 
 VERSION = _("%prog: version 1.0")
 
@@ -71,9 +72,13 @@ SERVICE_DIR = '/var/ai/service'
 AI_SVC_FMRI = 'system/install/server:default'
 ISC_DHCP_CONFIG = '/var/ai/isc_dhcp.conf'
 NETBOOT_ERR = """Conversion continuing.  To manually complete this step:
-    Move all required non Automated Install file from /tftpboot to /etc/netboot
+    Move all required non Automated Install files from /tftpboot to /etc/netboot
     Delete /tftpboot
     Create /tftpboot as a symlink to /etc/netboot\n"""
+DHCP_ERR = fill(_("DHCP Conversion error - conversion continuing.  Some " 
+                  "hand translation will be required.  The untranslated items "
+                  "are tagged with '%(<element>)s' where element is the "
+                  "description of the required value.\n"))
 
 
 class ServiceConversionError(Exception):
@@ -1194,10 +1199,10 @@ def create_config(services, dryrun, ai_service):
     # the service directory, rename it system.conf, and then create
     # a symlink back to install.conf
     install_conf = os.path.join(service['path'], 'install.conf')
-    system_conf = os.path.join(SERVICE_DIR, ai_service, 'system.conf')
-    print _("Move %s to %s") % (install_conf, system_conf)
-    if not dryrun:
-        if os.path.exists(install_conf):
+    if os.path.exists(install_conf):
+        system_conf = os.path.join(SERVICE_DIR, ai_service, 'system.conf')
+        print _("Move %s to %s") % (install_conf, system_conf)
+        if not dryrun:
             shutil.move(install_conf, system_conf)
             os.symlink(system_conf, install_conf)
 
@@ -1647,25 +1652,58 @@ def create_isc_dhcp_configuration(dhcp_config):
     print _("Build ISC DHCP Configuration File: %s\n" % dhcp_config)
 
     cfgfile_base_printed = False
+    cfg_error_found = False
     for mname in macros:
         if 'broadcast' in macros[mname]:
             # Build the Configuration file base
             # Grab one of the macros and use the domain name and name servers
             # to populate the global definitions
             if not cfgfile_base_printed:
-                config_file.write(dhcp.CFGFILE_BASE % macros[mname])
+                try:
+                    config_file.write(dhcp.CFGFILE_BASE % macros[mname])
+                except KeyError:
+                    if not cfg_error_found:
+                        print DHCP_ERR
+                        cfg_error_found = True
+                    # Add the macro without substitutions to the file
+                    config_file.write(dhcp.CFGFILE_BASE)
+
                 cfgfile_base_printed = True
 
             # Build the subnet stanza
-            config_file.write(dhcp.CFGFILE_SUBNET_HEADER_STRING %
-                              macros[mname] % "\n")
+            try:
+                config_file.write(dhcp.CFGFILE_SUBNET_HEADER_STRING %
+                              macros[mname] + "\n")
+            except KeyError:
+                    if not cfg_error_found:
+                        print DHCP_ERR
+                        cfg_error_found = True
+                    # Add the macro without substitutions to the file
+                    config_file.write(dhcp.CFGFILE_SUBNET_HEADER_STRING)
+
+
             # build a range string for each subnet range found
             for subnet_range in macros[mname]['ip_ranges']:
-                config_file.write(dhcp.CFGFILE_SUBNET_RANGE_STRING %
+                try:
+                    config_file.write(dhcp.CFGFILE_SUBNET_RANGE_STRING %
                                   subnet_range + "\n") 
+                except KeyError:
+                    if not cfg_error_found:
+                        print DHCP_ERR
+                        cfg_error_found = True
+                    # Add the macro without substitutions to the file
+                    config_file.write(dhcp.CFGFILE_SUBNET_RANGE_STRING)
 
-            config_file.write(dhcp.CFGFILE_SUBNET_FOOTER_STRING %
+            try:
+                config_file.write(dhcp.CFGFILE_SUBNET_FOOTER_STRING %
                               macros[mname] + "\n")
+            except KeyError:
+                if not cfg_error_found:
+                    print DHCP_ERR
+                    cfg_error_found = True
+                # Add the macro without substitutions to the file
+                config_file.write(dhcp.CFGFILE_SUBNET_FOOTER_STRING)
+
             # Save off the server IP value for use in the Sparc class stanza
             server_ip = macros[mname]['nextserver']
             
@@ -1680,7 +1718,7 @@ def create_isc_dhcp_configuration(dhcp_config):
 
     # Build each of the host stanzas
     for  mname in macros:
-        if macro.startswith('01') and 'bootfile' in macros[mname]:
+        if mname.startswith('01') and 'bootfile' in macros[mname]:
             # Generate the string equivalent of the IP address from
             # the macro name
             raw_mac = mname[2:]
