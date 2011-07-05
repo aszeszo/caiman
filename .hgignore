@@ -92,3 +92,6 @@ pkgdefs.*/pkginfo$
 ^usr/src/tools/mkmsgs/adm_mkmsgs$
 ^usr/src/tools/tests/target
 ^usr/src/tools/xgetsh/xgetsh$
+^usr/src/cmd/aimanifest/aimanifest
+^usr/src/cmd/installadm/installadm-convert
+

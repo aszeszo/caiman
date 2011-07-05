@@ -650,16 +650,8 @@ class AImDNS(object):
         self._found = False
         self._resolved = list()
 
-        # figure out how many enabled/registerd services, so that we have
-        # an idea of how many times to process the browse requests
-        self.count = 0
-        for svc_name in config.get_all_service_names():
-            if config.is_enabled(svc_name):
-                self.count += 1
-
-        interface_count = len(common.get_valid_networks())
-        if interface_count:
-            self.count *= interface_count
+        # only browse over the number of interfaces available
+        self.count = len(self.interfaces)
 
         if self.verbose:
             print _('Browsing for services...')
@@ -704,7 +696,8 @@ class AImDNS(object):
         self._lookup = True
         self.servicename = servicename if servicename else self.servicename
 
-        self.count = len(common.get_valid_networks())
+        # only find over the number of interfaces available
+        self.count = len(self.interfaces)
         list_sdrefs = list()
         for inf in self.interfaces:
             # register the service on the appropriate interface index
