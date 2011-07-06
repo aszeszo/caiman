@@ -20,7 +20,7 @@
    
     CDDL HEADER END
    
-    Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+    Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
     Service profile customization for Live CD Image.
 -->
@@ -43,8 +43,11 @@
     <instance name='default' enabled='false'/>
   </service>
   <service name='network/physical' version='1' type='service'>
-      <instance name='default' enabled='false'/>
-      <instance name='nwam' enabled='true'/>
+      <instance name='default' enabled='true'>
+          <property_group name='netcfg' type='application'>
+              <propval name='active_ncp' type='astring' value='Automatic'/>
+          </property_group>
+      </instance> 
   </service>
   <service name='network/rpc/gss' version='1' type='service'>
       <instance name='default' enabled='false'/>

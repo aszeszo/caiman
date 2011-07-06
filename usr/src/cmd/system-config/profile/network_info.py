@@ -285,14 +285,17 @@ class NetworkInfo(SMFConfig):
         net_physical = SMFConfig("network/physical")
         data_objects.append(net_physical)
 
-        nwam = SMFInstance("nwam", enabled=False)
         net_default = SMFInstance("default", enabled=True)
-        net_physical.insert_children([nwam, net_default])
+        net_physical.insert_children(net_default)
+
+        netcfg_prop = SMFPropertyGroup("netcfg")
+        net_default.insert_children(netcfg_prop)
 
         if self.type == NetworkInfo.AUTOMATIC:
-            nwam.enabled = True
-            net_default.enabled = False
+            netcfg_prop.setprop(name="active_ncp", ptype="astring", value="Automatic")
         elif self.type == NetworkInfo.MANUAL:
+            netcfg_prop.setprop(name="active_ncp", ptype="astring", value="DefaultFixed")
+
             net_install = SMFConfig('network/install')
             data_objects.append(net_install)
 

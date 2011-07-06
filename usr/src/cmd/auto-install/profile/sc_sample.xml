@@ -88,7 +88,10 @@ See installadm(1M) for usage of 'create-profile' subcommand.
     </service>
 
     <service name="network/physical" version="1">
-      <instance name="nwam" enabled="true"/>
-      <instance name="default" enabled="false"/>
+      <instance name="default" enabled="true">
+          <property_group name='netcfg' type='application'>
+              <propval name='active_ncp' type='astring' value='Automatic'/>
+          </property_group>
+      </instance>
     </service>
 </service_bundle>

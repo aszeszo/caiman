@@ -499,17 +499,20 @@ class XMLSysidcfgData(object):
         # network_interface=None {hostname=hostname}
         #
         # <service name='network/physical' version='1' type='service'>
-        #   <instance name='default' enabled='true'/>
-        #   <instance name='nwam' enabled='false'/>
+        #   <instance name='default' enabled='true'>
+        #       <property_group name='netcfg' type='application'>
+        #           <propval name='active_ncp' type='astring'
+        #               value='DefaultFixed'/>
+        #        </property_group>
+        #   </instance>
         # </service>
         #
-        # NOTICE that default should be enabled.  This only configures
-        # the loopback interface, which is equivalent to what the text
+        # This only configures the loopback interface, 
+        # which is equivalent to what the text
         # installer does today one selects 'None' on Network screen.
         #
 
-        self.__create_net_interface(nwam_setting=False,
-                                        default_setting=True)
+        self.__create_net_interface(auto_netcfg=False)
 
         # Are there any more keys left in the dictionary that we need to flag
         self.__check_payload(line_num, "network_interface=NONE", payload)
@@ -534,8 +537,7 @@ class XMLSysidcfgData(object):
         # The only support we can provide in Solaris for PRIMARY is
         # via nwam and DHCP.  Not a perfect match but it's the best fit
         #
-        self.__create_net_interface(nwam_setting=True,
-                                        default_setting=False)
+        self.__create_net_interface(auto_netcfg=True)
 
         # Do we have a payload to configure
         if payload is None or len(payload) == 0:
@@ -738,9 +740,14 @@ class XMLSysidcfgData(object):
         #      </property_group>
         #    </instance>
         # </service>
-        # <service name="network/physical" version="1" type="service">
-        #    <instance name="nwam" enabled="false"/>
-        #    <instance name="default" enabled="true"/>
+        #
+        # <service name='network/physical' version='1' type='service'>
+        #   <instance name='default' enabled='true'>
+        #       <property_group name='netcfg' type='application'>
+        #           <propval name='active_ncp' type='astring'
+        #               value='DefaultFixed'/>
+        #        </property_group>
+        #   </instance>
         # </service>
         #
         if self._default_network is None:
@@ -773,8 +780,7 @@ class XMLSysidcfgData(object):
             return
 
         # Create default network
-        self.__create_net_interface(nwam_setting=False,
-                                        default_setting=True)
+        self.__create_net_interface(auto_netcfg=False)
 
     def __config_net_physical_ipv6(self, interface, dhcp=False):
         """Configures the IPv6 interface for the interface specified by the
@@ -835,8 +841,7 @@ class XMLSysidcfgData(object):
                                  "./service[@name='network/physical']")
             if svc_network_physical is None:
                 # Create NWAM network
-                self.__create_net_interface(nwam_setting=True,
-                                                default_setting=False)
+                self.__create_net_interface(auto_netcfg=True)
             return
 
         # The user specified one or more network
@@ -867,8 +872,7 @@ class XMLSysidcfgData(object):
                                  "lineno": line_num})
             self._report.add_unsupported_item()
             # Create NWAM network
-            self.__create_net_interface(nwam_setting=True,
-                                            default_setting=False)
+            self.__create_net_interface(auto_netcfg=True)
             return
         else:
             dhcp = payload.pop("dhcp", None)
@@ -902,12 +906,10 @@ class XMLSysidcfgData(object):
         if self._default_network is None:
             # Nothing is configured, which means the users choices errored out
             # Since we always want a network configured, we configure for NWAM
-            self.__create_net_interface(nwam_setting=True,
-                                            default_setting=False)
+            self.__create_net_interface(auto_netcfg=True)
         else:
             # Configure for default network
-            self.__create_net_interface(nwam_setting=False,
-                                            default_setting=True)
+            self.__create_net_interface(auto_netcfg=False)
 
     def __convert_nfs4_domain(self, line_num, keyword, values):
         """Converts the nfs4_domain keyword/values from the sysidcfg into
@@ -1162,13 +1164,15 @@ class XMLSysidcfgData(object):
         node.set(common.ATTRIBUTE_ENABLED, enabled_state)
         return node
 
-    def __create_net_interface(self, nwam_setting, default_setting):
-        """Create the nwam and default network node settings
-
-        <service name='network/physical' version='1' type='service'>
-          <instance name='default' enabled='default_settings'/>
-          <instance name='nwam' enabled='nwam_settings'/>
-        </service>
+    def __create_net_interface(self, auto_netcfg):
+        """Create the network/physical:default node, and set
+           its value based on the value of auto_netcfg.
+ 
+           If auto_netcfg is True,
+           the netcfg/active_ncp property of the network/physical:default
+           service will be set to "Automatic".  If auto_netcfg is not
+           True, the netcfg/active_ncp property will be set to 
+           "DefaultFixed".
 
         """
         service = fetch_xpath_node(self._service_bundle,
@@ -1178,9 +1182,19 @@ class XMLSysidcfgData(object):
         else:
             service = self.__create_service_node(self._service_bundle,
                                                 "network/physical")
-        self.__create_instance_node(service, "nwam", str(nwam_setting).lower())
-        self.__create_instance_node(service, "default",
-                                    str(default_setting).lower())
+        network_node = self.__create_instance_node(service,
+                                                   "default",
+                                                   enabled_state="true")
+        network_prop_grp = self.__create_propgrp_node(network_node,
+                                                      "netcfg", "application")
+
+        if auto_netcfg:
+            propval_node_value = "Automatic"
+        else:
+            propval_node_value = "DefaultFixed"
+
+        self.__create_propval_node(network_prop_grp, "active_ncp", "astring",
+                                   propval_node_value)
 
     def __create_prop_node(self, parent, name, prop_type):
         """Create a <property> node with a parent of 'parent'

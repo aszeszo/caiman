@@ -25,16 +25,11 @@
 #	This script checks for basic network setup necessary for an AI server
 #	to function.  Specifically it does the following:
 #
-#	- Check that svc:/network/physical services are set up properly:
-#	  ----------------------------------------------------------------------
-#	  | NWAM  /  default    | not online         | online                  |
-#	  ----------------------------------------------------------------------
-#	  | online              | WARNING (allowed)  | ERROR: too many net svcs|
-#	  ----------------------------------------------------------------------
-#	  | !online & !disabled | ERROR: no net svcs | ERROR: too many net svcs|
-#	  ----------------------------------------------------------------------
-#	  | disabled            | ERROR: no net svcs | OK                      |
-#	  ----------------------------------------------------------------------
+#	- Check that svc:/network/physical:default service is set up properly:
+#         * if disabled: ERROR: no net svcs
+#         * if netcfg/active_ncp == "DefaultFixed": OK
+#         * if netcfg/active_ncp != "DefaultFixed": WARNING(allowed).  This
+#           is the case where Automatic or User NCP is configured.
 #
 #	- Warn if the svc:/network/dns/multicast:default is not online
 #
@@ -50,7 +45,6 @@ PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 GETENT="/usr/bin/getent"
 
 MDNS_SVC="svc:/network/dns/multicast:default"
-NWAM_SVC="svc:/network/physical:nwam"
 NDEF_SVC="svc:/network/physical:default"
 
 #
@@ -92,24 +86,25 @@ do_all_service_create_check()
 		print_err "Hostname is not set. " \
 		    "It is needed to get IP information."
 		valid="False"
+                return
 	else
 		# Check network/physical SMF service configuration.
-		NWAM_STATE=$($SVCS -H -o STATE $NWAM_SVC)
 		NDEF_STATE=$($SVCS -H -o STATE $NDEF_SVC)
+
+                # make sure network/physical:default is online.
 		if [ "$NDEF_STATE" != "online" ] ; then
-			if [ "$NWAM_STATE" == "online" ] ; then
-				print_err "Warning: NWAM is enabled. " \
-				    "Please be sure that the IP address for" \
-				    "$THISHOST is static."
-			else
-				print_err "No networking SMF service is online."
-				valid="False"
-			fi
-		elif [ "$NWAM_STATE" != "disabled" ] ; then
-			print_err "More than one SMF network/physical service" \
-			    "is enabled."
-			valid="False"
-		fi
+			print_err "network/physical:default SMF service" \
+			    "is not enabled."
+                fi
+
+                # make sure netcfg/active_ncp property have the right value
+                ACTIVE_NCP_PROP=$($SVCPROP -p netcfg/active_ncp $NDEF_SVC)
+
+                if [ "$ACTIVE_NCP_PROP" != "DefaultFixed" ] ; then
+			print_err "Warning: $ACTIVE_NCP_PROP network" \
+			    "configuration is enabled.  Please be sure that" \
+			    "the IP address for $THISHOST is static."
+                fi
 
 		# Check if svc:/network/dns/multicast:default is online
 		MDNS_STATE=$($SVCS -H -o STATE $MDNS_SVC)

@@ -29,8 +29,11 @@
       svc.startd(1M) services
   -->
   <service name='network/physical' version='1' type='service'>
-      <instance name='default' enabled='true'/>
-      <instance name='nwam' enabled='false'/>
+      <instance name='default' enabled='true'>
+          <property_group name='netcfg' type='application'>
+              <propval name='active_ncp' type='astring' value='DefaultFixed'/>
+          </property_group>
+      </instance>
   </service>
   <service name='network/routing/ndp' version='1' type='service'>
     <instance name='default' enabled='false'/>
