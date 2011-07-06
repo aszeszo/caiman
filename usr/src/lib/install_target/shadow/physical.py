@@ -252,7 +252,8 @@ class ShadowPhysical(ShadowList):
             self.set_error(self.TooManySlicesError())
 
         # check for duplicate slice.name values
-        if value.name in [slc.name for slc in self._shadow]:
+        if value.name in [slc.name for slc in self._shadow \
+                          if slc.action != "delete"]:
             self.set_error(self.DuplicateSliceNameError(value.name))
 
         # check for in_zpool overlap
@@ -472,7 +473,8 @@ class ShadowPhysical(ShadowList):
             p_size = value.start_sector + value.size.sectors
 
         # check that the name of the partition is not already in the list
-        if value.name in [p.name for p in self._shadow]:
+        if value.name in [p.name for p in self._shadow \
+                          if p.action != "delete"]:
             self.set_error(self.DuplicatePartitionNameError(value.name))
 
         # if this is an extended partition, verify there are no other

@@ -866,6 +866,16 @@ class TestPartition(unittest.TestCase):
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
                                    ShadowPhysical.InvalidPartitionNameError))
 
+    def test_insertion_of_partition_over_deleted_partition_of_same_name(self):
+        # add a 1GB partition at start_sector CYLSIZE and set the action to
+        # delete
+        p = self.disk.add_partition(1, CYLSIZE, 1, Size.gb_units)
+        p.action = "delete"
+
+        # insert another partition with the same name
+        self.disk.add_partition(1, CYLSIZE, 2, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+
 
 class TestSliceInDisk(unittest.TestCase):
     def setUp(self):
@@ -1131,6 +1141,15 @@ class TestSliceInDisk(unittest.TestCase):
         self.assertEqual(start_sector, s.start_sector)
         self.assertEqual(Size("5gb"), s.size)
 
+    def test_insertion_of_slice_over_deleted_slice_of_same_name(self):
+        # add a 1GB slice at start_sector CYLSIZE and set the action to delete
+        s = self.disk.add_slice(0, CYLSIZE, 1, Size.gb_units)
+        s.action = "delete"
+
+        # insert another slice with the same name
+        self.disk.add_slice(0, CYLSIZE, 2, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+
 
 class TestSliceInPartition(unittest.TestCase):
     def setUp(self):
@@ -1349,6 +1368,15 @@ class TestSliceInPartition(unittest.TestCase):
         self.assertFalse(errsvc._ERRORS)
         self.assertEqual(start_sector, s.start_sector)
         self.assertEqual(Size("5gb"), s.size)
+
+    def test_insertion_of_slice_over_deleted_slice_of_same_name(self):
+        # add a 1GB slice at start_sector CYLSIZE and set the action to delete
+        s = self.partition.add_slice(0, CYLSIZE, 1, Size.gb_units)
+        s.action = "delete"
+
+        # insert another slice with the same name
+        self.partition.add_slice(0, CYLSIZE, 2, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
 
 
 class TestLogicalPartition(unittest.TestCase):
