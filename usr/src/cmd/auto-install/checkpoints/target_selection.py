@@ -80,6 +80,7 @@ class TargetSelection(Checkpoint):
         # instance attributes
         self.be_mountpoint = be_mountpoint
         self.doc = InstallEngine.get_instance().data_object_cache
+        self.dry_run = False
 
         # Initialize TargetController
         self.controller = TargetController(self.doc)
@@ -964,9 +965,15 @@ class TargetSelection(Checkpoint):
             discovered_zpool = self.__get_discovered_zpool(zpool)
 
             if discovered_zpool is None:
-                raise SelectionError("zpool.exists() reports zpool '%s' "
-                    "exists, but zpool object not in Discovered tree." % \
-                    (zpool.name))
+                if self.dry_run:
+                    # Throw warning only if in dry run mode
+                    self.logger.warning("zpool.exists() reports zpool '%s' "
+                        "exists, but zpool object not in Discovered tree." % \
+                        (zpool.name))
+                else:
+                    raise SelectionError("zpool.exists() reports zpool '%s' "
+                        "exists, but zpool object not in Discovered tree." % \
+                        (zpool.name))
 
             if zpool.action == "create":
                 # Log warning stating zpool will be destroyed
@@ -1017,8 +1024,13 @@ class TargetSelection(Checkpoint):
                 # Attempting to create a new Zpool, ensure pool name
                 # is not an existing directory as zpool create will fail.
                 if os.path.isdir(os.path.join("/", zpool.name)):
-                    raise SelectionError("Pool name '%s' is not valid, "
-                        "directory exists with this name." % (zpool.name))
+                    if self.dry_run:
+                        # Dry run mode, just post warning to log
+                        self.logger.warning("Pool name '%s' is not valid, "
+                            "directory exists with this name." % (zpool.name))
+                    else:
+                        raise SelectionError("Pool name '%s' is not valid, "
+                            "directory exists with this name." % (zpool.name))
 
     def __get_existing_zpool_size(self, zpool):
         '''Retrieve the size available for this zpool via the "size"
@@ -2777,7 +2789,8 @@ class TargetSelection(Checkpoint):
             logical = None
 
         logical = self.controller.apply_default_logical(logical,
-            self.be_mountpoint, redundancy="mirror")
+            self.be_mountpoint, redundancy="mirror",
+            unique_zpool_name=not self.dry_run)
 
         # There may be more than one pool in this logical, so need to
         # iterate over all pools breaking when root pool found.
@@ -2863,7 +2876,7 @@ class TargetSelection(Checkpoint):
                 # Call initialize again to ensure logicals created, since
                 # previously called to not create logicals.
                 self.controller.initialize(no_initial_disk=True,
-                                           unique_zpool_name=True)
+                                           unique_zpool_name=not self.dry_run)
 
                 # Disk specified in target may not contain a name, find
                 # A matching disk in the discovered tree
@@ -3025,7 +3038,7 @@ class TargetSelection(Checkpoint):
 
         return new_desired_target
 
-    def select_targets(self, from_manifest, discovered):
+    def select_targets(self, from_manifest, discovered, dry_run=False):
         '''The starting point for selecting targets.
 
            Arguments:
@@ -3036,6 +3049,9 @@ class TargetSelection(Checkpoint):
            - discovered:    A reference to the root node of the discovered
                             targets.
 
+           - dry_run:       Target Selection dry_run indicator. Mainly used
+                            by unit tests.
+
            If there are no targets in the manifest, we will defer to Target
            Controller to do the selection of the disk to install to.
 
@@ -3045,6 +3061,8 @@ class TargetSelection(Checkpoint):
 
         if discovered is None:
             raise SelectionError("No installation targets found.")
+
+        self.dry_run = dry_run
 
         # Store list of discovered disks
         self._discovered_disks = discovered.get_children(class_type=Disk)
@@ -3077,7 +3095,8 @@ class TargetSelection(Checkpoint):
         new_target = None
         if from_manifest is None or not targets_have_children:
             # Default to TargetController's automatic mechanism
-            initial_disks = self.controller.initialize(unique_zpool_name=True)
+            initial_disks = self.controller.initialize(
+                unique_zpool_name=not self.dry_run)
 
             # Occasionally initialize fails to select a disk because
             # it cannot find a slice large enough to install to, however
@@ -3248,7 +3267,7 @@ class TargetSelection(Checkpoint):
             self.doc.persistent.get_first_child(Target.DESIRED)
         if new_desired_target is None:
             self.controller.initialize(no_initial_logical=True,
-                                       unique_zpool_name=True)
+                                       unique_zpool_name=not self.dry_run)
             new_desired_target = \
                 self.doc.persistent.get_first_child(Target.DESIRED)
 
@@ -3288,7 +3307,7 @@ class TargetSelection(Checkpoint):
         try:
             (from_manifest, discovered) = self.parse_doc()
 
-            self.select_targets(from_manifest, discovered)
+            self.select_targets(from_manifest, discovered, dry_run)
         except Exception:
             self.logger.debug("%s" % (traceback.format_exc()))
             raise

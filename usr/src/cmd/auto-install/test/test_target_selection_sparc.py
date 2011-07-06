@@ -113,7 +113,8 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         b_lines = b.splitlines()
         return "\n".join(list(difflib.ndiff(a_lines, b_lines)))
 
-    def __run_simple_test(self, input_xml, expected_xml, fail_ex_str=None):
+    def __run_simple_test(self, input_xml, expected_xml, fail_ex_str=None,
+        dry_run=True):
         '''Run a simple test where given specific xml in the manifest, we
         validate that the generated DESIRED tree is as expected.
 
@@ -145,7 +146,8 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
             self.target_selection.select_targets(
                 self.doc.volatile.get_descendants(class_type=Target,
                                                   max_depth=2),
-                self.doc.persistent.get_first_child(Target.DISCOVERED))
+                self.doc.persistent.get_first_child(Target.DISCOVERED),
+                dry_run=dry_run)
             if (fail_ex_str is not None):
                 self.fail("Expected failure but test succeeded.")
         except Exception, ex:
@@ -178,7 +180,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
             self.fail(e)
 
     def setUp(self):
-        logical.DEFAULT_BE_NAME="ai_test_solaris"
+        logical.DEFAULT_BE_NAME = "ai_test_solaris"
         self.engine = get_new_engine_instance()
         self.target_selection = TargetSelection("Test Checkpoint")
         self.doc = InstallEngine.get_instance().data_object_cache
@@ -216,12 +218,12 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool1" in_vdev="vdev">
+        in_zpool="rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="rpool1" action="create" is_root="true">
+        ....<zpool name="rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
         ......<be name="ai_test_solaris"/>
         ......<zvol name="swap" action="create" use="swap">
@@ -309,12 +311,12 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool1" in_vdev="vdev">
+        in_zpool="rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
         ..<logical noswap="true" nodump="true">
-        ....<zpool name="rpool1" action="create" is_root="true">
+        ....<zpool name="rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
         ......<be name="ai_test_solaris"/>
         ....</zpool>
@@ -398,7 +400,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool1" in_vdev="vdev">
+        in_zpool="rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -407,12 +409,12 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool1" in_vdev="vdev">
+        in_zpool="rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
         ..<logical noswap="true" nodump="true">
-        ....<zpool name="rpool1" action="create" is_root="true">
+        ....<zpool name="rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="mirror"/>
         ......<be name="ai_test_solaris"/>
         ....</zpool>
@@ -480,7 +482,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="true" nodump="true">
-        ....<zpool name="rpool1" action="create" is_root="true">
+        ....<zpool name="rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="mirror"/>
         ......<be name="ai_test_solaris"/>
         ....</zpool>
@@ -491,7 +493,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool1" in_vdev="vdev">
+        in_zpool="rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -506,7 +508,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="4202688secs" start_sector="41945472"/>
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
-        in_zpool="rpool1" in_vdev="vdev">
+        in_zpool="rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -967,7 +969,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="true" nodump="true">
-        ....<zpool name="rpool1" action="create" is_root="true">
+        ....<zpool name="rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
         ......<be name="ai_test_solaris"/>
         ....</zpool>
@@ -981,7 +983,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="143349312secs" start_sector="0"/>
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
-        in_zpool="rpool1" in_vdev="vdev">
+        in_zpool="rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -1013,7 +1015,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="true" nodump="true">
-        ....<zpool name="rpool1" action="create" is_root="true">
+        ....<zpool name="rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
         ......<be name="ai_test_solaris"/>
         ....</zpool>
@@ -1027,7 +1029,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="143349312secs" start_sector="0"/>
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
-        in_zpool="rpool1" in_vdev="vdev">
+        in_zpool="rpool" in_vdev="vdev">
         ......<size val="62914560secs" start_sector="512"/>
         ....</slice>
         ..</disk>
