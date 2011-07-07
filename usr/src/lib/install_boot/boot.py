@@ -55,6 +55,7 @@ from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target import Target
 from solaris_install.target.logical import be_list, BE, Zpool
 from solaris_install.target.physical import Disk, Slice
+from solaris_install.transfer.media_transfer import get_image_grub_title
 
 BOOT_ENV = "boot-env"
 # Character boot device paths eg. c0t0d0s0
@@ -78,6 +79,7 @@ class BootMenu(Checkpoint):
         self.boot_tokens = dict()
         self.config = None
         self.doc = InstallEngine.get_instance().data_object_cache
+        self.img_info_path = None
         self.rel_file_title = None
 
     def get_progress_estimate(self):
@@ -284,6 +286,7 @@ class SystemBootMenu(BootMenu):
         self.boot_target = dict()
         self.boot_target[BOOT_ENV] = None
         self.boot_target[DEVS] = list()
+        self.img_info_title = None
 
         # Filesystem name of the target boot environment eg.
         # rpool/ROOT/solaris-11-XYZ
@@ -753,9 +756,28 @@ class SystemBootMenu(BootMenu):
 
         title_line = linecache.getline(self._get_rel_file_path(), 1)
         self.rel_file_title = title_line.strip()
-        # Set an initial boot_title value. It can be overwritten later when
-        # parsing the BootMods tree of the DOC
+        # Set an initial boot_title value. It can be overwritten later by the
+        # .image_info file GRUB_TITLE value or the BootMods tree of the DOC.
         self.boot_title = self.rel_file_title
+
+        # On X86 systems, set boot title according to "GRUB_TITLE" keyword
+        # of the .image_info file, if defined.
+        if self.arch == 'sparc':
+            return
+        try:
+            self.img_info_title = get_image_grub_title(
+                self.logger,
+                image_info_file=self.img_info_path)
+        # get_image_grub_title() will raise CalledProcessError if not
+        # booted from installation media so suppress it if dry_run == True
+        except CalledProcessError as cpe:
+            if dry_run == False:
+                raise cpe
+
+        if self.img_info_title is not None:
+            self.logger.debug("Setting boot title to image info value: %s" \
+                % self.img_info_title)
+            self.boot_title = self.img_info_title
 
     def build_default_entries(self):
         """ Method for constructing the default entries list.
@@ -935,6 +957,7 @@ class ISOImageBootMenu(BootMenu):
         except KeyError, msg:
             raise RuntimeError("Error retrieving a value from the DOC: " + \
                 str(msg))
+        self.img_info_path = os.path.join(self.pkg_img_path, ".image_info")
 
         title_line = linecache.getline(self._get_rel_file_path(), 1)
         self.rel_file_title = title_line.strip()
@@ -947,6 +970,7 @@ class ISOImageBootMenu(BootMenu):
         """
         self.logger.info("=== Executing Boot Loader Setup Checkpoint ===")
         super(ISOImageBootMenu, self).execute(dry_run)
+        self.update_img_info_path()
 
     def install_boot_loader(self, dry_run=False):
         """ Install the boot loader and associated boot configuration files.
@@ -964,6 +988,18 @@ class ISOImageBootMenu(BootMenu):
         self._handle_boot_config_list(boot_config_list, dry_run)
         if dry_run:
             rmtree(temp_dir)
+
+    def update_img_info_path(self):
+        """ Method to write out the .img_info_path file.
+        """
+        self.logger.info("Updating %s" % self.img_info_path)
+
+        # Write out the GRUB_TITLE line
+        with open(self.img_info_path, "a+") as iip:
+            try:
+                iip.write("GRUB_TITLE=" + self.boot_title)
+            except IOError, msg:
+                raise RuntimeError(msg)
 
     def _handle_iso_boot_image_type(self, config, dry_run):
         """ Method that copies ISO El Torito and HSFS bootblockimage file types
@@ -1022,7 +1058,6 @@ class AIISOImageBootMenu(ISOImageBootMenu):
         """ Constructor for class
         """
         super(AIISOImageBootMenu, self).__init__(name)
-        self.img_info_path = None
         self.installadm_entry = None
         if arg:
             self.__setup(**arg)
@@ -1062,16 +1097,9 @@ class AIISOImageBootMenu(ISOImageBootMenu):
         # Create a chainloader boot from HD entry
         self._add_chainloader_entry()
 
-    def execute(self, dry_run=False):
-        """ Primary execution method used by the Checkpoint parent class
-        """
-        super(AIISOImageBootMenu, self).execute(dry_run)
-        self.update_img_info_path()
-
     def update_img_info_path(self):
         """ Method to write out the .img_info_path file.
         """
-        self.img_info_path = os.path.join(self.pkg_img_path, ".image_info")
         self.logger.info("Updating %s" % self.img_info_path)
 
         # write out the GRUB_TITLE line

@@ -60,11 +60,12 @@ SVCS_CMD = "/bin/svcs"
 SVC_STATUS_DISABLED = "disabled"
 SVC_STATUS_ENABLED = "online"
 
-PRTCONF = "/usr/sbin/prtconf" 
+PRTCONF = "/usr/sbin/prtconf"
 DHCPINFO = "/sbin/dhcpinfo"
 
 IMAGE_INFO_FILENAME = ".image_info"
 IMAGE_SIZE_KEYWORD = "IMAGE_SIZE"
+IMAGE_GRUB_TITLE_KEYWORD = "GRUB_TITLE"
 
 
 class InvalidInstallEnvError(Exception):
@@ -75,7 +76,7 @@ class InvalidInstallEnvError(Exception):
 
 def is_net_booted(logger):
     '''Determine whether the application is running from a media booted
-       environment or a net booted environment.  
+       environment or a net booted environment.
 
        The following SMF services are examined:
            svc:/system/filesystem/root-assembly:net
@@ -121,8 +122,52 @@ def is_net_booted(logger):
         (NET_SVC, net_status, MEDIA_SVC, media_status))
 
 
+def get_image_grub_title(logger, image_info_file=None):
+    '''Specific boot title of the software in the image is stored in the
+       .image_info indicated by the keywoard GRUB_TITLE.
+       This function retrieves that string value from the .image_info file
+
+       Inputs:
+           logger:
+               Instance of Logger to use for logging.
+           image_info_file:
+               An alternative .image_info file path to use. Useful for unit
+               testing. The default value of None uses a .image_info file
+               value to be determined based on the boot method used to
+               boot the media (network or local media boot).
+
+       Returns:
+           GRUB_TITLE string value retrieved from .image_info file or None
+    '''
+    # Depending on how we are booted, get the .image_info file accordingly.
+    if image_info_file is None:
+        if is_net_booted(logger):
+            image_info_file = os.path.join(
+                NetPrepareMediaTransfer.MEDIA_SOURCE,
+                IMAGE_INFO_FILENAME)
+        else:
+            image_info_file = os.path.join(
+                PrepareMediaTransfer.MEDIA_SOURCE,
+                IMAGE_INFO_FILENAME)
+
+    grub_title = None
+    with open(image_info_file, 'r') as ih:
+        for line in ih:
+            (opt, val) = line.split("=")
+            if opt == IMAGE_GRUB_TITLE_KEYWORD:
+                grub_title = val.strip()
+                break
+
+    if grub_title is not None and len(grub_title) > 0:
+        logger.debug("Read GRUB_TITLE from %s of value '%s'" \
+                     % (image_info_file, grub_title))
+        return grub_title
+    logger.debug("GRUB_TITLE not specifed in %s" % image_info_file)
+    return None
+
+
 def get_image_size(logger):
-    '''Total size of the software in the image is stored in the 
+    '''Total size of the software in the image is stored in the
        .image_info indicated by the keywoard IMAGE_SIZE.
        This function retrieves that value from the .image_file
        The size recorded in the .image_file is in KB, other functions
@@ -136,10 +181,10 @@ def get_image_size(logger):
 
     # Depending on how we are booted, get the .image_info file accordingly.
     if is_net_booted(logger):
-        image_info_file = os.path.join(NetPrepareMediaTransfer.MEDIA_SOURCE, 
+        image_info_file = os.path.join(NetPrepareMediaTransfer.MEDIA_SOURCE,
                                        IMAGE_INFO_FILENAME)
     else:
-        image_info_file = os.path.join(PrepareMediaTransfer.MEDIA_SOURCE, 
+        image_info_file = os.path.join(PrepareMediaTransfer.MEDIA_SOURCE,
                                        IMAGE_INFO_FILENAME)
 
     img_size = 0
@@ -248,7 +293,7 @@ def setup_doc_content(manifest_name, media_source):
             path = path.replace(MEDIA_DIR_VAR, media_source)
             dir_node.dir_path = path
 
-    # copy the Software classes into the common DOC 
+    # copy the Software classes into the common DOC
     doc = InstallEngine.get_instance().data_object_cache
     doc.volatile.insert_children(software_nodes)
 
@@ -268,7 +313,7 @@ class PrepareMediaTransfer(AbstractCheckpoint):
         self.logger.debug("PrepareMediaTransfer init")
 
     def get_progress_estimate(self):
-        return 5 
+        return 5
 
     def execute(self, dry_run=False):
 
@@ -284,14 +329,14 @@ class NetPrepareMediaTransfer(AbstractCheckpoint):
         booted from the net. This checkpoint will first download the
         transfer-manifest.xml from the server, then, load it into the DOC.
         Based on content of the DOC, the checkpoint will also download any
-        other files that needs to be copied into the install target, 
+        other files that needs to be copied into the install target,
         but not yet present in the booted environment. Similar to
         PrepareMediaTransfer, this checkpoint will also download and
         mount the root archives we are not booted with and fill in values
         of mountpoints.
     '''
 
-    # For SPARC, The URL for the AI server is stored in wanboot.conf.  
+    # For SPARC, The URL for the AI server is stored in wanboot.conf.
     # This file should have been mounted during boot
     # so, it has to exist
     WANBOOT_CONF = "/etc/netboot/wanboot.conf"
@@ -303,7 +348,7 @@ class NetPrepareMediaTransfer(AbstractCheckpoint):
         self.logger.debug("NetPrepareMediaTransfer init")
 
     def get_progress_estimate(self):
-        return 5 
+        return 5
 
     def get_server_url(self):
         '''Get server URL for downloading files '''
@@ -311,7 +356,7 @@ class NetPrepareMediaTransfer(AbstractCheckpoint):
             with open(NetPrepareMediaTransfer.WANBOOT_CONF) as wanboot_conf:
 
                 ai_server = None
-                ai_image = None 
+                ai_image = None
 
                 for line in wanboot_conf:
                     if line.startswith("root_server="):
@@ -320,11 +365,11 @@ class NetPrepareMediaTransfer(AbstractCheckpoint):
                         #                                 <path_to_wanboot-cgi>
                         # and extract out the http://<ai_server>:<port> portion
                         (not_used, val) = line.split("=")
-                        split_val = val.split("/", 3) 
+                        split_val = val.split("/", 3)
                         #remove the last part, since it is not useful
                         split_val.remove(split_val[3])
                         self.logger.debug("URL: " + "/".join(split_val))
-                        ai_server = "/".join(split_val) #re-create the the URL
+                        ai_server = "/".join(split_val)  # re-create the URL
                         self.logger.debug("ai_server: " + ai_server)
                     elif line.startswith("root_file="):
                         # AI image line have the following format
@@ -345,7 +390,7 @@ class NetPrepareMediaTransfer(AbstractCheckpoint):
                                        "from %s",
                                        NetPrepareMediaTransfer.WANBOOT_CONF)
                 return(ai_server + ai_image)
-        else: 
+        else:
             cmd = [PRTCONF, "-v", "/devices"]
             p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                                  logger=self.logger)
@@ -362,9 +407,9 @@ class NetPrepareMediaTransfer(AbstractCheckpoint):
 
             if val is None:
                 raise RuntimeError("Unable to find install_media line")
-            
+
             self.logger.debug("found line: " + val)
-            
+
             # want the value after the equal sign
             (not_used, url) = val.split("=")
 
@@ -417,7 +462,7 @@ class NetPrepareMediaTransfer(AbstractCheckpoint):
                                                   not_found_is_err=True)
                 file_list = (cpio_spec[0]).contents
                 for file in file_list:
-                    # download each file 
+                    # download each file
                     dst_name = \
                         os.path.join(NetPrepareMediaTransfer.MEDIA_SOURCE, \
                         file)
