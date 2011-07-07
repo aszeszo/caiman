@@ -38,9 +38,11 @@ import grp
 from shutil import rmtree, copyfile
 from lxml import etree
 
+from bootmgmt import BootmgmtUnsupportedPropertyError
 from bootmgmt.bootconfig import BootConfig
-from solaris_install.boot.boot import SystemBootMenu, AIISOImageBootMenu, \
-    TextISOImageBootMenu, LiveCDISOImageBootMenu, BOOT_ENV, DEVS
+from solaris_install.boot.boot import BootMenu, SystemBootMenu, \
+    AIISOImageBootMenu, TextISOImageBootMenu, LiveCDISOImageBootMenu, \
+    BOOT_ENV, DEVS
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.test.engine_test_utils import \
@@ -160,6 +162,47 @@ class BootMenuTestCaseBase(unittest.TestCase):
         self.boot_menu = None
         self.arch = None
 
+    def _test_boot_timeout(self):
+        """ Implements a default and custom boot timeout value
+            unit test for derived classes
+        """
+        # 1. Test the default timeout value first - without BootMods
+        self.boot_menu._parse_doc_target(dry_run=True)
+        self.boot_menu.init_boot_config()
+        try:
+            bc_timeout = self.boot_menu.config.boot_loader.getprop('timeout')
+            self.failUnlessEqual(
+                bc_timeout,
+                BootMenu.DEFAULT_TIMEOUT,
+                "Default boot loader timeout value doesn't match expected " \
+                "value:\n" \
+                "Expected value: %d, Actual Value: %d " \
+                % (BootMenu.DEFAULT_TIMEOUT, bc_timeout))
+        except BootmgmtUnsupportedPropertyError:
+            # Boot loader might not support timeout property.
+            pass
+
+        # 2. Test for BootMods supplied timeout value.
+        # Reset the BootConfig instance first.
+        self.boot_menu.config = None
+        bc_timeout = None
+        boot_mods_dom = etree.fromstring(BOOT_MODS_XML)
+        self.doc.import_from_manifest_xml(boot_mods_dom, volatile=True)
+        self.boot_menu.parse_doc(dry_run=True)
+        self.boot_menu.init_boot_config()
+        try:
+            bc_timeout = self.boot_menu.config.boot_loader.getprop('timeout')
+            self.failUnlessEqual(
+                self.boot_menu.boot_mods.timeout,
+                bc_timeout,
+                "Custom boot loader timeout value doesn't match expected " \
+                "value:\n" \
+                "Expected value: %d, Actual Value: %d " \
+                % (self.boot_menu.boot_mods.timeout, bc_timeout))
+        except BootmgmtUnsupportedPropertyError:
+            # Boot loader might not support timeout property.
+            pass
+
 
 class SystemBootMenuTestCase(BootMenuTestCaseBase):
     """ Class for unit testing of SystemBootMenu class
@@ -277,6 +320,9 @@ class SystemBootMenuTestCase(BootMenuTestCaseBase):
             "BootMenu:get_progress_estimate() returned unexpected " \
             "estimate:\n(Expected estimate: \'5\', Actual estimate '%d'\n" \
             % (estimate))
+
+    def test_boot_timeout(self):
+        super(SystemBootMenuTestCase, self)._test_boot_timeout()
 
     def test_build_custom_entries(self):
         """ Unit tests custom boot menu entry creation from manifest XML
@@ -402,7 +448,7 @@ class ISOBootMenuTestCase(BootMenuTestCaseBase):
         rmtree(self.temp_dir)
 
     def _test_build_custom_entries(self):
-        """ Implements a custom boot menu entry listtest for derived classes
+        """ Implements a custom boot menu entry list test for derived classes
         """
         boot_mods_dom = etree.fromstring(BOOT_MODS_XML)
         self.doc.import_from_manifest_xml(boot_mods_dom, volatile=True)
@@ -580,6 +626,10 @@ class ISOBootMenuTestCase(BootMenuTestCaseBase):
 class AIISOBootMenuTestCase(ISOBootMenuTestCase):
     """ Unit test class for AIIsoBootMenu class
     """
+
+    def test_boot_timeout(self):
+        self.boot_menu = AIISOImageBootMenu("Test AI Boot Checkpoint")
+        super(AIISOBootMenuTestCase, self)._test_boot_timeout()
 
     def test_build_custom_entries(self):
         self.boot_menu = AIISOImageBootMenu("Test AI Boot Checkpoint")

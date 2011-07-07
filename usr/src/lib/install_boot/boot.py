@@ -66,6 +66,7 @@ class BootMenu(Checkpoint):
     """ Abstract class for BootMenu checkpoint
     """
     __metaclass__ = abc.ABCMeta
+    DEFAULT_TIMEOUT = 30
 
     def __init__(self, name):
         """ Constructor for class
@@ -73,6 +74,7 @@ class BootMenu(Checkpoint):
         super(BootMenu, self).__init__(name)
         self.arch = platform.processor()
         self.boot_entry_list = list()
+        self.boot_timeout = BootMenu.DEFAULT_TIMEOUT
         self.boot_mods = None
         self.boot_title = None
         # Used for string token substitution of pybootgmmt return data
@@ -140,6 +142,11 @@ class BootMenu(Checkpoint):
             self.logger.info("Setting boot title prefix from manifest value: \
                              '%s'" % self.boot_mods.title)
             self.boot_title = self.boot_mods.title
+
+        if self.boot_mods.timeout is not None:
+            self.logger.info("Setting boot timeout from manifest value: %d" \
+                             % self.boot_mods.timeout)
+            self.boot_timeout = self.boot_mods.timeout
 
         try:
             self.boot_entry_list = self.boot_mods.get_children(
@@ -321,17 +328,14 @@ class SystemBootMenu(BootMenu):
                                      tldpath=self.pool_tld_mount,
                                      zfspath=target_be.mountpoint)
 
-        # Apply boot_mods manifest XML attributes to boot loader:
-        # - Override the default timeout if specifed in boot_mods
-        if self.boot_mods:
-            try:
-                if self.boot_mods.timeout:
-                    self.config.boot_loader.setprop('timeout',
-                                                    self.boot_mods.timeout)
-            except BootmgmtUnsupportedPropertyError:
-                self.logger.warning("Boot loader type %s does not support the \
-                                    'timeout' property. Ignoring." \
-                                    % self.config.boot_loader.name)
+        # Apply boot timeout property to boot loader.
+        try:
+            self.config.boot_loader.setprop('timeout',
+                                            self.boot_timeout)
+        except BootmgmtUnsupportedPropertyError:
+            self.logger.warning("Boot loader type %s does not support the \
+                                'timeout' property. Ignoring." \
+                                % self.config.boot_loader.name)
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class
@@ -902,6 +906,15 @@ class ISOImageBootMenu(BootMenu):
         # UEFI Note that we will have to specify additional firmware
         # targets (uefi64 & SPARC OBP) when pybootmgmt supports them.
         self.config.boot_loader.setprop('boot-targets', 'bios')
+
+        # Apply boot timeout property to boot loader.
+        try:
+            self.config.boot_loader.setprop('timeout',
+                                            self.boot_timeout)
+        except BootmgmtUnsupportedPropertyError:
+            self.logger.warning("Boot loader type %s does not support the \
+                                'timeout' property. Ignoring." \
+                                % self.config.boot_loader.name)
 
     def _get_rel_file_path(self):
         """
