@@ -29,7 +29,6 @@
 '''
 
 import os
-import os.path
 import tempfile
 import unittest
 
@@ -93,7 +92,7 @@ class TestTransferAILogFiles(unittest.TestCase):
 
     def test_transfer_no_source_exists(self):
         '''Test no source doesn't exist'''
-        self.trans_dict["/bogus"] =  "/bogus/"
+        self.trans_dict["/bogus"] = "/bogus/"
         self.dod = DataObjectDict("TFS", self.trans_dict, generate_xml=True)
         self.doc.volatile.insert_children(self.dod)
 

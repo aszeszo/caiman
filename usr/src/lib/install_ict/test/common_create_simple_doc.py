@@ -33,7 +33,7 @@ from solaris_install.engine.test.engine_test_utils import \
 from solaris_install.target import Target
 from solaris_install.target.logical import BE, Logical, Vdev, Zpool
 from solaris_install.target.controller import DEFAULT_LOGICAL_NAME, \
-    DEFAULT_VDEV_NAME, DEFAULT_ZPOOL_NAME, TargetController
+    DEFAULT_VDEV_NAME, DEFAULT_ZPOOL_NAME
 
 
 class CreateSimpleDataObjectCache():

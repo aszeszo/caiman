@@ -117,9 +117,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_cleanup_temp_files(self):
         '''Test the cleanup of the temporary files'''
@@ -144,9 +143,8 @@ class TestCPIOFunctions(unittest.TestCase):
         self.tr_cpio._parse_input()
         try:
             self.tr_cpio._cleanup_tmp_files()
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_cleanup_temp_files_nonexistent_file(self):
         '''Test cleanup temp files should check nonexistent'''
@@ -155,9 +153,8 @@ class TestCPIOFunctions(unittest.TestCase):
                                         'contents': '/noexist'}]
         try:
             self.tr_cpio._cleanup_tmp_files()
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_cpio_w_file_list_file(self):
         '''Test copy of a file list file succeeds'''
@@ -186,9 +183,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_cpio_w_file_list(self):
         '''Test copy from a list succeeds'''
@@ -217,9 +213,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_cpio_w_dir_list_file(self):
         '''Test directory cpio copy succeeds'''
@@ -248,9 +243,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_cpio_w_dir_list(self):
         '''Test copying a list of directories and files succeeds'''
@@ -281,9 +275,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_cpio_non_default_args_set(self):
         '''Test copying a list of directories and files succeeds'''
@@ -317,9 +310,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_cpio_w_empty_list(self):
         ''' Test that an error is raised when contents list is empty'''
@@ -399,9 +391,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_skip_file_list_list(self):
         '''Test the success of using skip_file_list'''
@@ -440,9 +431,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_dir_excl_list_file(self):
         '''Test the success of using directory exclusion'''
@@ -483,9 +473,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_src_not_exist(self):
         ''' Test that an error is raised when src doesn't exist.'''
@@ -695,12 +684,7 @@ class TestCPIOFunctions(unittest.TestCase):
         path = Dir(self.TEST_DST_DIR)
         dst.insert_children([path])
         self.soft_node.insert_children([dst])
-
-        try:
-            self.tr_cpio.get_size()
-            self.assertTrue(False)
-        except Exception:
-            self.assertTrue(True)
+        self.assertRaises(IndexError, self.tr_cpio.get_size)
 
     def test_image_info_file_progress_estimate(self):
         '''Test progress estimate value when .image_info file exists
@@ -754,18 +738,16 @@ class TestCPIOFunctions(unittest.TestCase):
         os.chmod(self.TEST_MEDIA_TRANSFORM, 0777)
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_checkpoint_soft_node_match(self):
         '''The checkpoint and software node match
         '''
         try:
             tr_cpio = TransferCPIO("CPIO_Transfer")
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_checkpoint_soft_node_mismatch(self):
         '''The checkpoint and software node
@@ -816,9 +798,8 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_file_list_file(self):
         '''Test transfer of files in list file succeeds'''
@@ -837,9 +818,8 @@ class TestCPIOAttrFunctions(unittest.TestCase):
             filehandle.write("bin/who" + "\n")
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_file_list_list(self):
         '''Test transfer of files from a list succeeds'''
@@ -854,9 +834,8 @@ class TestCPIOAttrFunctions(unittest.TestCase):
         self.tr_cpio.contents = ["bin/xclock", "bin/pv.sh"]
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_dir_list(self):
         '''Test transfer of directories from a list succeeds'''
@@ -876,9 +855,8 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_skip_file_list_file(self):
         '''Test uninstall of skip_file file list succeeds'''
@@ -907,9 +885,8 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_dir_excl_list(self):
         '''Test uninstall of excluded directories succeeds'''
@@ -937,9 +914,8 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_src_not_exist(self):
         ''' Test that an error is raised when src doesn't exist.'''
@@ -1042,9 +1018,8 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         try:
             self.tr_cpio.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
 if __name__ == '__main__':
     unittest.main()

@@ -29,7 +29,6 @@
 '''
 
 import os
-import os.path
 import shutil
 import tempfile
 import unittest
@@ -64,8 +63,7 @@ class TestApplySysConfig(unittest.TestCase):
     def test_apply_sysconfig_dry(self):
         '''Test update boot archive dry run'''
 
-        # Call the execute command for the checkpoint
-        # with dry_run set to true.
+        # Call the execute command for the checkpoint with dry_run set to true.
         try:
             self.app_sc.execute(dry_run=True)
         except Exception as e:

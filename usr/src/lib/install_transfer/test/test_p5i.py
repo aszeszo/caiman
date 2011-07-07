@@ -27,6 +27,7 @@ import logging
 import unittest
 
 from solaris_install.engine import InstallEngine
+from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.logger import InstallLogger
 from solaris_install.transfer.info import Destination
 from solaris_install.transfer.info import Image
@@ -101,8 +102,7 @@ class TestP5IFunctions(unittest.TestCase):
         self.assertRaises(Exception, tr_p5i.execute, DRY_RUN)
 
     def test_publisher_not_specified(self):
-        '''Test an error is raised when the publisher is
-           not specified.
+        '''Test an error is raised when the publisher is not specified.
         '''
         src = Source()
         self.soft_node.insert_children([src])
@@ -110,23 +110,17 @@ class TestP5IFunctions(unittest.TestCase):
         self.assertRaises(Exception, tr_p5i.execute, DRY_RUN)
 
     def test_origin_not_specified(self):
-        '''Test an errer is raised when the origin is
-           not specified.
+        '''Test an errer is raised when the origin is not specified.
         '''
         src = Source()
         pub = Publisher()
         src.insert_children([pub])
         self.soft_node.insert_children([src])
         tr_p5i = TransferP5I("P5I transfer")
-        try:
-            tr_p5i.execute(DRY_RUN)
-            self.assertTrue(False)
-        except Exception:
-            self.assertTrue(True)
+        self.assertRaises(ObjectNotFoundError, tr_p5i.execute, DRY_RUN)
 
     def test_bogus_p5i_file(self):
-        '''Test that including a nonexistent origin
-           fails.
+        '''Test that including a nonexistent origin fails.
         '''
         src = Source()
         pub = Publisher()

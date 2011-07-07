@@ -29,7 +29,6 @@
 '''
 
 import os
-import os.path
 import tempfile
 import unittest
 

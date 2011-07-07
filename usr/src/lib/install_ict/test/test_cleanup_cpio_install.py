@@ -29,56 +29,53 @@
 '''
 
 import os
-import os.path
-import shutil
 import tempfile
 import unittest
-import solaris_install.ict as ICT
 
-from pkg.client.api import IMG_TYPE_ENTIRE, IMG_TYPE_PARTIAL
 from common_create_simple_doc import CreateSimpleDataObjectCache
 from solaris_install.ict.cleanup_cpio_install import CleanupCPIOInstall
 from solaris_install.engine.test.engine_test_utils import reset_engine
-from solaris_install.target.controller import TargetController
-from solaris_install.transfer.info import Args
 from solaris_install.transfer.info import IPSSpec
 from solaris_install.transfer.info import CPIOSpec
 from solaris_install.transfer.info import Software
 
 
 def create_filesystem(*args):
-        """ create_filesystem - function to create a dummy filesystem in /var/tmp
+    """ create_filesystem - function to create a dummy filesystem in
+    /var/tmp
 
-        *args - a list of specific files to create inside the filesystem
+    *args - a list of specific files to create inside the filesystem
 
-        create_filesystem(*["/etc/foo", "/etc/bar/fleeb"]) will create a filesystem
-        with those two files in it.  if empty directories are wanted, append a
-        slash to the end of the specific path:  /etc/, /lib/amd64/, etc
-        """
-        # get a temporary directory
-        tdir =  tempfile.mkdtemp(dir="/tmp", prefix="ict_test_")
+    create_filesystem(*["/etc/foo", "/etc/bar/fleeb"]) will create a
+    filesystem with those two files in it.  if empty directories are
+    wanted, append a slash to the end of the specific path:  /etc/,
+    /lib/amd64/, etc
+    """
+    # get a temporary directory
+    tdir = tempfile.mkdtemp(dir="/tmp", prefix="ict_test_")
 
-        # walk each entry in args and create the files and directories as needed
-        for arg in args:
-            # strip the leading slash
-            arg = arg.lstrip("/")
+    # walk each entry in args and create the files and directories as
+    # needed
+    for arg in args:
+        # strip the leading slash
+        arg = arg.lstrip("/")
 
-            # check for a directory entry
-            if arg.endswith("/"):
-                if not os.path.exists(os.path.join(tdir, arg)):
-                    os.makedirs(os.path.join(tdir, arg))
-                continue
+        # check for a directory entry
+        if arg.endswith("/"):
+            if not os.path.exists(os.path.join(tdir, arg)):
+                os.makedirs(os.path.join(tdir, arg))
+            continue
 
-            # create the directory if needed
-            if not os.path.exists(os.path.join(tdir, os.path.dirname(arg))):
-                os.makedirs(os.path.join(tdir, os.path.dirname(arg)))
+        # create the directory if needed
+        if not os.path.exists(os.path.join(tdir, os.path.dirname(arg))):
+            os.makedirs(os.path.join(tdir, os.path.dirname(arg)))
 
-            # touch the file
-            with open(os.path.join(tdir, arg), "w+") as fh:
-                pass
+        # touch the file
+        with open(os.path.join(tdir, arg), "w+") as fh:
+            pass
 
-        os.chmod(tdir, 0777)
-        return tdir
+    os.chmod(tdir, 0777)
+    return tdir
 
 
 class TestCleanupCPIOInstall(unittest.TestCase):
@@ -102,9 +99,8 @@ class TestCleanupCPIOInstall(unittest.TestCase):
             '/save/etc/xdg/autostart/updatemanagernotifier.desktop',
             '/save/usr/share/dbus-1/services/gnome-power-manager.service',
             '/save/usr/share/gnome/autostart/gnome-keyring-daemon-wrapper.desktop',
-            '.livecd', '.volsetid', '.textinstall',
-            'etc/sysconfig/language', '.liveusb', 'a',
-            'bootcd_microroot', '/save/bogus']
+            '.livecd', '.volsetid', '.textinstall', 'etc/sysconfig/language',
+            '.liveusb', 'a', 'bootcd_microroot', '/save/bogus']
 
         self.test_target = create_filesystem(*self.filesys_files)
 
@@ -136,10 +132,6 @@ class TestCleanupCPIOInstall(unittest.TestCase):
         self.add_cleanup_node.contents = self.add_files
         self.soft_node.insert_children([self.add_cleanup_node])
 
-
-        pkg_remove_list = ['pkg:/system/install/media/internal',
-                            'pkg:/system/install/text-install']
-
         cleanup_list = ['.livecd', '.volsetid', '.textinstall',
                         'etc/sysconfig/language', '.liveusb', 'a',
                         'bootcd_microroot', 'file1', 'file2',
@@ -167,4 +159,3 @@ class TestCleanupCPIOInstall(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

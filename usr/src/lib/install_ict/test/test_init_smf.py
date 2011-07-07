@@ -29,7 +29,6 @@
 '''
 
 import os
-import os.path
 import shutil
 import tempfile
 import unittest
@@ -100,7 +99,7 @@ class TestInitializeSMF(unittest.TestCase):
         # Call the execute command for the checkpoint
         self.smf.execute()
 
-        for key, value in self.sys_profile_dict.items():
+        for value in self.sys_profile_dict.values():
             self.assert_(os.path.islink(value))
 
     def test_initialize_smf_dry(self):

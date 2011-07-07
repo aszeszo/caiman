@@ -60,10 +60,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
         '''Test that the IPS image area is created'''
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception, er:
-            print str(er)
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_dst_not_specified(self):
         '''Test that an error is raised when dst is not
@@ -78,9 +76,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
         self.tr_ips.contents = ["SUNWcs"]
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_uninstall(self):
         '''Test that an IPS package can be uninstalled'''
@@ -89,9 +86,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
         self.tr_ips.contents = ["system/library/svm-rcm"]
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_purge_history(self):
         '''Test that the history is purged'''
@@ -99,34 +95,31 @@ class TestIPSAttrFunctions(unittest.TestCase):
         self.tr_ips.contents = ["SUNWcs"]
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
+
         self.tr_ips.action = "use_existing"
         self.tr_ips.purge_history = True
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_image_args(self):
         '''Test that setting Args for the image works'''
         self.tr_ips.image_args = {"force": True}
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_prog_track_image_args(self):
         '''Test that setting progtrack in image args works'''
         self.tr_ips.image_args = {"progtrack": progress.QuietProgressTracker()}
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_install_args(self):
         '''Test that setting Args for the install works'''
@@ -135,9 +128,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
         self.tr_ips.args = {"refresh_catalogs": False}
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_uninstall_args(self):
         '''Test that setting Args for the uninstall works'''
@@ -147,9 +139,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
         self.tr_ips.img_action = "use_existing"
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_multiple_sources(self):
         '''Test that adding multiple sources succeeds'''
@@ -161,9 +152,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
              ("extra", ["http://ipkg.sfbay.sun.com/extra/"], None)]
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_source_addition(self):
         '''Test that add another publisher to the repo succeeds'''
@@ -173,9 +163,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
             ("extra", ["http://pkg.opensolaris.org/extra/"], None)]
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_source_replacement(self):
         '''Test that replacing a source succeeds'''
@@ -185,9 +174,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
         self.ips_action = "update"
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_mirrors(self):
         '''Test that creating mirrors succeeds'''
@@ -197,9 +185,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
               ["http://ipkg.central.sun.com:8000/"])]
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_mirror_addition(self):
         '''Test that adding mirrors succeeds'''
@@ -212,10 +199,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
               ["http://ipkg.central.sun.com/extra/"])]
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception, er:
-            print str(er)
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_set_property(self):
         '''Test that setting properties succeeds'''
@@ -228,9 +213,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
                                   "preferred-publisher": "extra"}
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_set_create_facets(self):
         '''Test that creating facets succeeds'''
@@ -239,9 +223,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
         self.tr_ips.facets = {"facet.doc": 'True'}
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_set_invalid_facets(self):
         '''Test that an error is raised with an invalid facet'''
@@ -258,8 +241,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
                                 "babel_install"]
         try:
             estimate = self.tr_ips.get_progress_estimate()
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
         self.assertTrue(estimate == self.tr_ips.DEFAULT_PROG_EST * \
             (len(self.tr_ips.contents) / self.tr_ips.DEFAULT_PKG_NUM))
@@ -299,16 +282,15 @@ class TestIPSFunctions(unittest.TestCase):
             try_ips = TransferIPS("IPS transfer")
         except (TypeError, NameError):
             self.fail("Failed to create TransferIPS object")
-             
+
     def test_install(self):
         '''Test that an IPS package can be installed'''
         self.tr_node.action = "install"
         self.tr_node.contents = ["SUNWcs", "entire"]
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_uninstall(self):
         '''Test that an IPS package can be uninstalled'''
@@ -321,9 +303,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.soft_node.insert_children([self.tr_node2])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_purge_history(self):
         '''Test that the history is purged'''
@@ -332,12 +313,12 @@ class TestIPSFunctions(unittest.TestCase):
         self.tr_node.contents = ["SUNWcs"]
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_image_type(self):
         '''Test that image_type functionality succeeds'''
+        self.tr_ips = TransferIPS("IPS transfer", "zonename")
         self.ips_image.delete_children()
         ips_im_type = ImType("partial", zone=True)
         self.ips_image = Image(self.IPS_IMG_DIR, "create")
@@ -350,9 +331,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.doc.insert_children([self.soft_node])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_image_args(self):
         '''Test that setting Args for the image works'''
@@ -360,9 +340,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.ips_image.insert_children([image_args])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_ssl_key_in_image_args(self):
         '''Test that setting ssl_key in image_args produces an error'''
@@ -384,9 +363,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.tr_node.contents = ["SUNWcs"]
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_uninstall_args(self):
         '''Test that setting Args for the uninstall works'''
@@ -400,9 +378,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.soft_node.insert_children([self.tr_node2])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_default_publisher(self):
         '''Test that using the default publisher succeeds'''
@@ -414,9 +391,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.soft_node.insert_children([src])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_multiple_sources(self):
         '''Test that setting multiple sources succeeds'''
@@ -434,9 +410,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.soft_node.insert_children([src])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_source_addition(self):
         '''Test that adding additional sources succeeds'''
@@ -448,10 +423,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.soft_node.insert_children([src])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
-            return
+        except Exception as err:
+            self.fail(str(err))
 
         # Now add another publisher to the repo
         self.ips_image.action = "update"
@@ -461,9 +434,8 @@ class TestIPSFunctions(unittest.TestCase):
         src.insert_children([pub2])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_source_replacement(self):
         '''Test that replacing a source succeeds'''
@@ -479,10 +451,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.soft_node.insert_children([src])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
-            return
+        except Exception as err:
+            self.fail(str(err))
 
         # Create a new transaction with a differnt publisher/origin.
         # Specify to update the image created above.
@@ -499,9 +469,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.soft_node.insert_children([dst, src])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_mirrors(self):
         '''Test creating mirrors succeeds'''
@@ -514,9 +483,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.soft_node.insert_children([src])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_set_property(self):
         '''Test that setting properties succeeds'''
@@ -537,9 +505,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.ips_image.insert_children([prop, prop2])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_set_create_facets(self):
         '''Test that creating facets succeeds'''
@@ -553,9 +520,8 @@ class TestIPSFunctions(unittest.TestCase):
         self.ips_image.insert_children([facet])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_set_invalid_facets(self):
         '''Ensure an error is raised for an invalid facet'''
@@ -577,9 +543,8 @@ class TestIPSFunctions(unittest.TestCase):
                                          "SUNWmd", "babel_install"]
         try:
             estimate = self.tr_ips.get_progress_estimate()
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
         self.assertTrue(estimate == self.tr_ips.DEFAULT_PROG_EST * \
             (len(self.tr_node.contents) / self.tr_ips.DEFAULT_PKG_NUM))
@@ -612,9 +577,8 @@ class TestIPSFunctions(unittest.TestCase):
         '''The checkpoint and software node match'''
         try:
             tr_ips = TransferIPS("IPS transfer")
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
 
 if __name__ == '__main__':

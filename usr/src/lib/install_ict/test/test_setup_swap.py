@@ -29,7 +29,6 @@
 '''
 
 import os
-import os.path
 import shutil
 import tempfile
 import unittest
@@ -45,7 +44,7 @@ class TestSetupSwap(unittest.TestCase):
     '''test the functionality for SetupSwap Class'''
 
     def populate_doc(self):
-        DESIRED_XML='''
+        DESIRED_XML = '''
         <root>
           <target name="desired">
             <logical noswap="false" nodump="false">
@@ -66,7 +65,7 @@ class TestSetupSwap(unittest.TestCase):
               <disk_name name="c7d0" name_type="ctd"/>
               <partition action="create" name="1" part_type="191">
                 <size val="30Gb" start_sector="512"/>
-                <slice name="0" action="create" force="true" is_swap="false" 
+                <slice name="0" action="create" force="true" is_swap="false"
                  in_zpool="myrpool" in_vdev="vdev">
                   <size val="20Gb" start_sector="512"/>
                 </slice>
@@ -127,9 +126,9 @@ class TestSetupSwap(unittest.TestCase):
         # Read in the contents of the test file
         with open(self.test_file, "r") as fh:
             vfstab_data = fh.readlines()
-                
-        expected_lines  = [
-            '/dev/dsk/c7d0s1\t-\t\t-\t\tswap\t-\tno\t-\n', 
+
+        expected_lines = [
+            '/dev/dsk/c7d0s1\t-\t\t-\t\tswap\t-\tno\t-\n',
             '/dev/zvol/dsk/myrpool/myswap\t-\t\t-\t\tswap\t-\tno\t-\n']
         self.assertEqual(vfstab_data, expected_lines)
 

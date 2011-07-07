@@ -72,17 +72,15 @@ class TestTransferSVR4Functions(unittest.TestCase):
         '''Test the cancel method'''
         try:
             self.tr_svr4.cancel()
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_check_cancel_event(self):
         self.tr_svr4._cancel_event = True
         try:
             self.tr_svr4.check_cancel_event()
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_validate_dst(self):
         '''Test error is raised when no destination is registered'''
@@ -224,9 +222,8 @@ class TestTransferSVR4Functions(unittest.TestCase):
 
         try:
             self.tr_svr4.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_checkpoint_soft_node_mismatch(self):
         '''Test fail when checkpoint and software node don't match
@@ -298,9 +295,8 @@ class TestTransferSVR4Functions(unittest.TestCase):
 
         try:
             self.tr_svr4.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_uninstall_args(self):
         '''Test that setting args for uninstall works'''
@@ -327,9 +323,8 @@ class TestTransferSVR4Functions(unittest.TestCase):
 
         try:
             self.tr_svr4.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_dry_run_transfer(self):
         '''Test with accurate input dry run succeeds
@@ -357,9 +352,8 @@ class TestTransferSVR4Functions(unittest.TestCase):
 
         try:
             self.tr_svr4.execute(dry_run=True)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_valid_transfer_action(self):
         '''Test valid input with dry run.
@@ -499,10 +493,9 @@ class TestTransferSVR4Functions(unittest.TestCase):
 
         try:
             pkg_install_size = self.tr_svr4.get_size()
-            self.assertTrue(True)
             self.assertEquals(pkg_install_size, 512)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_get_size_no_pkgs_fails(self):
         '''The get_size fails when no packages are specified

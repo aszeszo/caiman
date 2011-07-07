@@ -29,7 +29,6 @@
 '''
 
 import os
-import os.path
 import shutil
 import tempfile
 import unittest
@@ -63,8 +62,7 @@ class TestBootArchive(unittest.TestCase):
 
     def test_boot_archive_dry(self):
         '''Test update boot archive dry run'''
-        # Call the execute command for the checkpoint
-        # with dry_run set to true.
+        # Call the execute command for the checkpoint with dry_run set to true.
         try:
             self.boot_arch.execute(dry_run=True)
         except Exception as e:
