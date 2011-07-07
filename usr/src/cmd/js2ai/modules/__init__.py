@@ -84,7 +84,7 @@ logfile_handler = None
 
 class ProcessedData(object):
     """Contents of user defined jumpstart rule file and associated profile
-    key value pairs
+       key value pairs
 
     """
 
@@ -100,7 +100,7 @@ class ProcessedData(object):
     @property
     def defined_profiles(self):
         """Returns a dictionary with all the defined profiles, where key
-        is the name of the profile and the value is ProfileData
+           is the name of the profile and the value is ProfileData
 
         """
         return self._profiles
@@ -164,7 +164,7 @@ class DefinedRule(object):
     @property
     def key_values_dict(self):
         """Returns the rule dictionary, where key is the rule line # and the
-        data object is dict of rules keywords and values
+           data object is dict of rules keywords and values
 
         """
         return self._data
@@ -172,7 +172,7 @@ class DefinedRule(object):
     @property
     def profile_name(self):
         """Returns the profile that should be applied if the rule keywords
-        match
+           match
 
         """
         return self._profile
@@ -200,7 +200,7 @@ class DefinedRule(object):
     @profile_name.setter
     def profile_name(self, profile_name):
         """Returns the profile that should be applied if the rule keywords
-        match
+           match
         """
         self._profile = profile_name
 
@@ -221,7 +221,7 @@ class RulesFileData(object):
     @property
     def data(self):
         """Returns Dictionary of contents of rules file, where key is the
-        rule number and the data object is of type DefinedRule
+           rule number and the data object is of type DefinedRule
 
         """
         return self._data
@@ -325,14 +325,14 @@ def clean_line(line):
 
 def read_rules(src_dir, verbose):
     """Reads the specified jumpstart rules file and returns a dictionary
-    of the parsed rules
+       of the parsed rules
 
-    Arguments:
-    src_dir -- The directory containing the rules file
-    verbose  -- verbose ouptut (true/false)
+       Arguments:
+       src_dir -- The directory containing the rules file
+       verbose  -- verbose ouptut (true/false)
 
-    Returns:
-    RuleFileData - the data read from the rules files
+       Returns:
+       RuleFileData - the data read from the rules files
 
     """
     if src_dir is None:
@@ -516,14 +516,14 @@ def read_rules(src_dir, verbose):
 
 def read_sysidcfg(src_dir, verbose):
     """Reads the sysidcfg file and returns a dictionary
-    of the parsed entries
+       of the parsed entries
 
-    Arguments:
-    src_dir - The directory containing the rules file
-    verbose - verbose ouptut (true/false)
+       Arguments:
+       src_dir - The directory containing the rules file
+       verbose - verbose ouptut (true/false)
 
-    Returns:
-    dictionary - the data read from the sysidcfg files
+       Returns:
+       dictionary - the data read from the sysidcfg files
 
     """
 
@@ -565,9 +565,11 @@ def read_sysidcfg(src_dir, verbose):
                     if match_pattern is not None:
                         key = match_pattern.group(1)
                         value = match_pattern.group(2)
+                        if not value:
+                            value = None
                     else:
                         key = data
-                        value = ""
+                        value = None
                     payload_dict[key] = value
                 line = key_value.strip()
             except ValueError:
@@ -651,15 +653,15 @@ def read_sysidcfg(src_dir, verbose):
 
 def read_profile(src_dir, profile_name, verbose):
     """Reads the specified jumpstart profile file and returns a dictionary
-    of the parsed rules
+       of the parsed rules
 
-    Arguments:
-    src_dir - the source directory for the jumpstart files
-    profile_name - the jumpstart profile file to read
-    verbose - verbose ouptut (true/false)
+       Arguments:
+       src_dir - the source directory for the jumpstart files
+       profile_name - the jumpstart profile file to read
+       verbose - verbose ouptut (true/false)
 
-    Returns:
-    ProfileData - the data read for the profile
+       Returns:
+       ProfileData - the data read for the profile
 
     """
 
@@ -715,16 +717,17 @@ def convert_rule(rule_data, rule_num, profile_name, conversion_report,
                  directory, verbose):
     """Take the rule_data dict and output it in the specified dir
 
-    Arguments:
-    rule_data - the dict of rule key value pairs
-    rule_num - the rule number rom the order found in the rules file
-    profile_name - the name of the profile
-    conversion_report - the convertion report for tracking errors
-    directory - the directory where to output the new profile to
-    verbose - verbose output (true/false)
+       Arguments:
+       rule_data - the dict of rule key value pairs
+       rule_num - the rule number rom the order found in the rules file
+       profile_name - the name of the profile
+       conversion_report - the convertion report for tracking errors
+       directory - the directory where to output the new profile to
+       verbose - verbose output (true/false)
 
-    Returns: None
-    Raises IOError if rule file not found
+       Returns: None
+       Raises IOError if rule file not found
+       Raises ValueError if rule_data is empty
 
     """
 
@@ -773,17 +776,17 @@ def output_profile(tree, prof_path, profile_name, arch, skip_validation,
 def convert_profile(profile_data, dest_dir, default_xml,
                     local, skip_validation, verbose):
     """Take the profile_data dictionary and output it in the jumpstart 11
-    style in the specified directory
+       style in the specified directory
 
-    Arguments:
-    profile_data - dictionary of profile key value pairs
-    dest_dir - the directory where to output the new profile to
-    default_xml - the object contains the xml tree to merge changes into
-    local - local only package name lookup (true/false)
-    skip_validation -- skip validation (true/false)
-    verbose - verbose output (true/false)
+       Arguments:
+       profile_data - dictionary of profile key value pairs
+       dest_dir - the directory where to output the new profile to
+       default_xml - the object contains the xml tree to merge changes into
+       local - local only package name lookup (true/false)
+       skip_validation -- skip validation (true/false)
+       verbose - verbose output (true/false)
 
-    Returns: None
+       Returns: None
 
     """
     if profile_data is None:
@@ -836,18 +839,18 @@ def convert_profile(profile_data, dest_dir, default_xml,
 def convert_rules_and_profiles(rules_profile, dest_dir, xml_default_data,
                                local, skip_validation, verbose):
     """Takes the rules and profile data and outputs the new solaris 11
-    jumpstart rules and profiles data
+       jumpstart rules and profiles data
 
-    Arguments:
-    ruleProfiles -- the rule/profile data to output
-    dest_dir -- the directory where to output to
-    xml_default_data - the XMLDefaultData object that contains the base
-        xml tree that will be copied and then merged into
-    local -- local only package name lookup (true/false)
-    skip_validation -- skip validation (true/false)
-    verbose  -- verbose output (true/false)
+       Arguments:
+       ruleProfiles -- the rule/profile data to output
+       dest_dir -- the directory where to output to
+       xml_default_data - the XMLDefaultData object that contains the base
+          xml tree that will be copied and then merged into
+       local -- local only package name lookup (true/false)
+       skip_validation -- skip validation (true/false)
+       verbose  -- verbose output (true/false)
 
-    Returns: None
+       Returns: None
 
     """
 
@@ -886,15 +889,15 @@ def convert_rules_and_profiles(rules_profile, dest_dir, xml_default_data,
 
 def convert_sysidcfg(sysidcfg, dest_dir, skip_validation, verbose):
     """Take the sysidcfg data object and output it in the jumpstart 11
-    style in the specified directory
+       style in the specified directory
 
-    Arguments:
-    sysidcfg - dictionary of profile key value pairs
-    dest_dir - the directory where to output the new profile to
-    skip_validation -- skip validation (true/false)
-    verbose - verbose output (true/false)
+       Arguments:
+       sysidcfg - dictionary of profile key value pairs
+       dest_dir - the directory where to output the new profile to
+       skip_validation -- skip validation (true/false)
+       verbose - verbose output (true/false)
 
-    Returns: None
+       Returns: None
 
     """
     if sysidcfg is None:
@@ -906,7 +909,6 @@ def convert_sysidcfg(sysidcfg, dest_dir, skip_validation, verbose):
 
     sysidcfg_data = XMLSysidcfgData(sysidcfg.data,
                                     sysidcfg.conversion_report,
-                                    None,
                                     LOGGER)
     if sysidcfg_data.tree is not None:
         # Write out the xml document
@@ -924,19 +926,19 @@ def convert_sysidcfg(sysidcfg, dest_dir, skip_validation, verbose):
 def process_profile(filename, source_dir, dest_dir, default_xml_tree, local,
                     skip_validation, verbose):
     """Take the read in profile data specified by the user and outputs
-    the converted solaris 11 profile data to the specified directory
+       the converted solaris 11 profile data to the specified directory
 
-    Arguments:
-    filename - the name of the profile file to convert
-    source_dir - the name of the source directory
-    dest_dir - the directory where to output the new profile to
-    default_xml_tree - the xml profile to merge changes into
-    local - local only package name lookup (true/false)
-    skip_validation -- skip validation (true/false)
-    verbose - verbose output (true/false)
+       Arguments:
+       filename - the name of the profile file to convert
+       source_dir - the name of the source directory
+       dest_dir - the directory where to output the new profile to
+       default_xml_tree - the xml profile to merge changes into
+       local - local only package name lookup (true/false)
+       skip_validation -- skip validation (true/false)
+       verbose - verbose output (true/false)
 
-    Returns: ProfileData
-    Raises IOError if file not found
+       Returns: ProfileData
+       Raises IOError if file not found
 
     """
     if filename == '-':
@@ -955,21 +957,21 @@ def process_profile(filename, source_dir, dest_dir, default_xml_tree, local,
 
 def process_rule(src_dir, dest_dir, xml_default_data, local, skip_validation,
                  verbose):
-    """Reads in the rule file and outputs the converted
-    solaris 11 rule file to the specified directory.  For every profile
-    referenced in the rule file it converts those profiles to the equivalent
-    solaris 11 profile file to the specified directory
+    """Reads in the rule file and outputs the converted solaris 11 rule file
+       to the specified directory.  For every profile referenced in the
+       rule file it converts those profiles to the equivalent solaris 11
+       profile file to the specified directory
 
-    Arguments:
-    src_dir -- the directory where to read the rules file from
-    dest_dir -- the directory where to output the new rule/profile files to
-    xml_default_data - the XMLDefaultData object that contains the xml tree
+       Arguments:
+       src_dir -- the directory where to read the rules file from
+       dest_dir -- the directory where to output the new rule/profile files to
+       xml_default_data - the XMLDefaultData object that contains the xml tree
             that will be merged into
-    local -- local only package name lookup (true/false)
-    skip_validation -- skip validation (true/false)
-    verbose  -- verbose output (true/false)
+       local -- local only package name lookup (true/false)
+       skip_validation -- skip validation (true/false)
+       verbose  -- verbose output (true/false)
 
-    Returns: ProcessedData
+       Returns: ProcessedData
 
     """
     if src_dir is None or dest_dir is None:
@@ -1019,14 +1021,14 @@ def process_rule(src_dir, dest_dir, xml_default_data, local, skip_validation,
 def process_sysidcfg(source_dir, dest_dir, skip_validation, verbose):
     """Read in and process the sysidcfg file specified by the user
 
-    Arguments:
-    source_dir - the name of the source directory
-    dest_dir - the name of the destination (output) directory
-    skip_validation -- skip validation (true/false)
-    verbose - verbose output (true/false)
+       Arguments:
+       source_dir - the name of the source directory
+       dest_dir - the name of the destination (output) directory
+       skip_validation -- skip validation (true/false)
+       verbose - verbose output (true/false)
 
-    Returns: ProfileData object containing the sysidcfg data
-    Raises IOError if file not found
+       Returns: ProfileData object containing the sysidcfg data
+       Raises IOError if file not found
 
     """
 
@@ -1102,13 +1104,13 @@ def output_report_data(name, report):
 
 def output_report(process_data, dest_dir, verbose):
     """Outputs a report on the conversion of the jumpstart files.  If verbose
-    is False only files that have failures are reported
+       is False only files that have failures are reported
 
-    Arguments
-    process_data - the data object containing the conversion reports
-        for all the rules and profiles
-    dest_dir -- the directory where the log file was outputed to
-    verbose  -- if True output info for all reports, False only failures
+       Arguments
+       process_data - the data object containing the conversion reports
+            for all the rules and profiles
+       dest_dir -- the directory where the log file was outputed to
+       verbose  -- if True output info for all reports, False only failures
 
     """
     if process_data is None:
@@ -1326,8 +1328,9 @@ def process(options):
 
 
 def main():
-    """ js2ai's main function
-    Exit Codes:
+    """js2ai's main function
+
+       Exit Codes:
         0 - Success
         1 - IO Error
         2 - Options Error

@@ -43,6 +43,7 @@ from StringIO import StringIO
 ATTRIBUTE_ACTION = "action"
 ATTRIBUTE_CREATE = "create"
 ATTRIBUTE_ENABLED = "enabled"
+ATTRIBUTE_FORCE = "force"
 ATTRIBUTE_IN_VDEV = "in_vdev"
 ATTRIBUTE_IN_ZPOOL = "in_zpool"
 ATTRIBUTE_IS_ROOT = "is_root"
@@ -73,6 +74,7 @@ ELEMENT_DUMP = "dump"
 ELEMENT_INSTANCE = "instance"
 ELEMENT_LOGICAL = "logical"
 ELEMENT_NAME = "name"
+ELEMENT_NET_ADDRESS_LIST = "net_address_list"
 ELEMENT_PARTITION = "partition"
 ELEMENT_PROPERTY = "property"
 ELEMENT_PROPERTY_GROUP = "property_group"
@@ -136,7 +138,7 @@ def pretty_print(tree):
     # correctly with etree.tostring(pretty_print).  This appears to be
     # related to the embedded comments doc contained within the document
     # The resulting document will only be partically pretty printed and will
-    # contain a large block of unseperated entries like:
+    # contain a large block of unseparated entries like:
     #
     #  <node1><node2><node3 name="xxx" is_root="true">
     #
@@ -304,7 +306,7 @@ class KeyValues(object):
     @property
     def line_num(self):
         """Return the line # that this rule key value combination was in the
-        rule file
+           rule file
         """
         return self._line_num
 
@@ -316,16 +318,17 @@ class KeyValues(object):
 
 class ConversionReport(object):
     """Contains the error counts that occurred during the various phases of
-    the conversion process.
-    process errors refers to errors that occur when the various entities are
-    read in
-    conversion errors refers to errors that occur when converting items from
-    the Solaris 10 nomiclature to Solaris 11
-    unsupported items refers to items that can not be converted.
+       the conversion process.
 
-    NOTE: conversion errors and unsupported items will
-    have a value of None if there is a processing error that prevents
-    the file from being read
+       Process errors refers to errors that occur when the various entities are
+       read in. Conversion errors refers to errors that occur when converting
+       items from the Solaris 10 nomiclature to Solaris 11 unsupported items
+       refers to items that can not be converted.
+
+       NOTE: Conversion errors and unsupported items will have a value of
+             None if there is a processing error that prevents the file from
+             being read
+
     """
 
     def __init__(self, process_errs=0, conversion_errs=0, unsupported_items=0,
@@ -418,7 +421,8 @@ class ConversionReport(object):
 
     def has_errors(self):
         """Returns boolean, True if there are any process errors, conversion
-        errors, or unsupported items
+           errors, or unsupported items
+
         """
         if self._process_errs or self._conversion_errs \
             or self._unsupported_items or self._validation_errs:

@@ -28,7 +28,6 @@ new Solaris installer
 import common
 import logging
 import re
-import sys
 
 from common import _
 from common import fetch_xpath_node as fetch_xpath_node
@@ -40,6 +39,7 @@ from StringIO import StringIO
 TYPE_APPLICATION = "application"
 TYPE_ASTRING = "astring"
 TYPE_COUNT = "count"
+TYPE_HOSTNAME = "hostname"
 TYPE_NET_ADDRESS = "net_address"
 TYPE_NET_ADDRESS_V4 = "net_address_v4"
 TYPE_SERVICE = "service"
@@ -51,9 +51,9 @@ MAXHOSTNAMELEN = 255
 COMMA_PATTERN = re.compile("\s*([^,]+)\s*,?")
 
 # Parse data in the form host1(129.00.00.000),host2(121.000.000.000)
-# We are only concerned with seperating the hostname and ip address
+# We are only concerned with separating the hostname and ip address
 # out of this structure.
-HOST_IP_PATTERN = re.compile("\s*([^,\(]+)(\(([^,\)]*)\))?\s*,?")
+HOST_IP_PATTERN = re.compile("\s*([^,\(]+)(\({1}([^,\)]*)\){1}){1}\s*,?")
 
 SVC_BUNDLE_XML_DEFAULT = \
 """<?xml version="1.0" encoding="utf-8"?>
@@ -87,7 +87,7 @@ class XMLSysidcfgData(object):
     #    instance of a keyword is valid. However, if you specify the keyword
     #    more than once, only the first instance of the keyword is used.
 
-    def __init__(self, sysidcfg_dict, report, sc_profile_filename, logger):
+    def __init__(self, sysidcfg_dict, report, logger):
 
         if logger is None:
             logger = logging.getLogger("js2ai")
@@ -110,12 +110,12 @@ class XMLSysidcfgData(object):
         self._svc_system_keymap = None
         self._svc_network_physical = None
 
-        self.__parse_sc_profile(sc_profile_filename)
+        self._tree = etree.parse(StringIO(SVC_BUNDLE_XML_DEFAULT))
         self.__process_sysidcfg()
 
     def __check_payload(self, line_num, keyword, payload):
         """Check the payload (dict) to see if any elements are contained in it.
-        Flag these extra elements as conversion errors
+           Flag these extra elements as conversion errors
 
         """
         if payload is None:
@@ -141,8 +141,8 @@ class XMLSysidcfgData(object):
 
     def __convert_keyboard(self, line_num, keyword, values):
         """Converts the keyboard keyword/values from the sysidcfg into
-        the proper xml output for the Solaris configuration file for the
-        auto installer.
+           the proper xml output for the Solaris configuration file for the
+           auto installer.
 
         """
         # Syntax:
@@ -176,8 +176,8 @@ class XMLSysidcfgData(object):
 
     def __convert_hostname(self, line_num, hostname):
         """Convert the hostname specified in the sysidcfg statement to the
-        proper xml output for the Solaris configuration file for the
-        auto installer.
+           proper xml output for the Solaris configuration file for the
+           auto installer.
 
         """
         if self._hostname is not None:
@@ -201,21 +201,25 @@ class XMLSysidcfgData(object):
 
         #
         # <service name="system/identity" version="1" type="service">
-        #   <instance name="default" enabled="true">
+        #   <instance name="default" enabled="node">
         #       <property_group name="config" type="application">
         #           <propval name="nodename" type="astring" value="solaris"/>
         #       </property_group>
         #    </instance>
         # </service>
         #
-        self._hostname = self.__create_service("system/identity",
-                                               "config", TYPE_APPLICATION,
-                                               "nodename", hostname)
+        self._hostname = self.__create_service_node(self._service_bundle,
+                                                    "system/identity")
+        instance = self.__create_instance_node(self._hostname, "node")
+        config = self.__create_propgrp_node(instance, "config",
+                                            TYPE_APPLICATION)
+        self.__create_propval_node(config, "nodename", TYPE_ASTRING,
+                                   hostname)
 
     def __convert_name_service_dns(self, line_num, keyword, payload):
         """Convert the DNS name service specified in the sysidcfg statement
-        to the proper xml output for Solaris configuration file for the
-        auto installer.
+           to the proper xml output for Solaris configuration file for the
+           auto installer.
 
         """
         #
@@ -244,35 +248,44 @@ class XMLSysidcfgData(object):
         #
         #
         # converting to:
-        #
-        # <service name='network/dns/install' version='1' type='service'>
-        #   <instance name='default' enabled='true'>
-        #       <property_group name='install_props' type='application'>
-        #           <property name='nameserver' type='net_address'>
-        #               <net_address_list>
-        #                   <value_node value='10.0.0.1'/>
-        #               </net_address_list>
-        #           </property>
-        #           <propval name='domain' type='astring' value='exam.com'/>
-        #           <property name='search' type='astring'>
+        #  <!-- name-service/switch below for DNS only -
+        #               (see nsswitch.conf(4)) -->
+        # <service version="1" type="service"
+        #       name="system/name-service/switch">
+        #    <property_group type="application" name="config">
+        #      <propval type="astring" name="default" value="files"/>
+        #      <propval type="astring" name="host" value="files dns mdns"/>
+        #      <propval type="astring" name="printer" value="user files"/>
+        #    </property_group>
+        #    <instance enabled="true" name="default"/>
+        # </service>
+        # <!-- name-service/cache must be present along with
+        #       name-service/switch -->
+        # <service version="1" type="service" name="system/name-service/cache">
+        #   <instance enabled="true" name="default"/>
+        # </service>
+        # <service name='network/dns/client' version='1' type='service'>
+        #    <property_group name='install_props' type='application'>
+        #       <property name='nameserver' type='net_address'>
+        #           <net_address_list>
+        #               <value_node value='10.0.0.1'/>
+        #           </net_address_list>
+        #       </property>
+        #       <propval name='domain' type='astring' value='exam.com'/>
+        #       <property name='search' type='astring'>
         #               <astring_list>
         #                   <value_node value='example.com'/>
         #               </astring_list>
         #           </property>
-        #       </property_group>
-        #   </instance>
+        #    </property_group>
+        #    <instance enabled="true" name="default"/>
         # </service>
 
-        self._name_service = self.__fetch_service("network/dns/install")
-        if self._name_service is not None:
-            self.__remove_children(self._name_service)
-        else:
-            self._name_service = \
-                self.__create_service_node(self._service_bundle,
-                                           "network/dns/install")
-        instance_node = \
-            self.__create_instance_node(self._name_service)
-        prop_grp = self.__create_propgrp_node(instance_node,
+        self.__adjust_nis(host="files dns mdns")
+        self._name_service = \
+            self.__create_service_node(self._service_bundle,
+                                           "network/dns/client")
+        prop_grp = self.__create_propgrp_node(self._name_service,
                                               "install_props",
                                               TYPE_APPLICATION)
         if payload is None:
@@ -282,11 +295,9 @@ class XMLSysidcfgData(object):
         if name_server is not None:
             prop = self.__create_prop_node(prop_grp, "nameserver",
                                            TYPE_NET_ADDRESS)
-            plist = etree.SubElement(prop, "net_address_list")
-            server_list = COMMA_PATTERN.findall(name_server)
-            for ip_address in server_list:
-                if self.__is_valid_ip(line_num, ip_address, _("ip address")):
-                    self.__create_value_node(plist, ip_address)
+            plist = etree.SubElement(prop, common.ELEMENT_NET_ADDRESS_LIST)
+            self.__create_address_list(line_num, plist, name_server,
+                                       _("name server"))
 
         domain_name = payload.pop("domain_name", None)
         if domain_name is not None:
@@ -298,17 +309,73 @@ class XMLSysidcfgData(object):
             prop = self.__create_prop_node(prop_grp, "search",
                                            TYPE_ASTRING)
             plist = etree.SubElement(prop, "astring_list")
-            search_list = COMMA_PATTERN.findall(search)
-            for search_element in search_list:
-                self.__create_value_node(plist, search_element)
+            entries = COMMA_PATTERN.findall(search)
+            for entry in entries:
+                self.__create_value_node(plist, entry)
+
+        self.__create_instance_node(self._name_service)
 
         # Are there any more keys left in the dictionary that we need to flag
         self.__check_payload(line_num, keyword, payload)
 
+    def __adjust_nis(self, default="files", printer="user files",
+                     host="files", netgroup="files"):
+        """Adjust the nswitch.conf settings for default, print, host
+           and netgroup
+
+        """
+
+        # <service version="1" type="service"
+        #       name="system/name-service/switch">
+        #    <property_group type="application" name="config">
+        #      <propval type="astring" name="default" value="files nis"/>
+        #      <propval type="astring" name="printer" value="user files nis"/>
+        #      <propval type="astring" name="netgroup" value="nis"/>
+        #    </property_group>
+        #    <instance enabled="true" name="default"/>
+        #  </service>
+        #  <!-- name-service/cache must be present along with
+        #       name-service/switch -->
+        #  <service version="1" type="service"
+        #       name="system/name-service/cache">
+        #    <instance enabled="true" name="default"/>
+        #  </service>
+
+        name_service = \
+            self.__create_service_node(self._service_bundle,
+                                           "system/name-service/switch")
+        prop_grp = self.__create_propgrp_node(name_service,
+                                              "config",
+                                              TYPE_APPLICATION)
+        self.__create_propval_node(prop_grp, "default", TYPE_ASTRING, default)
+        self.__create_propval_node(prop_grp, "host", TYPE_ASTRING, host)
+        self.__create_propval_node(prop_grp, "printer", TYPE_ASTRING, printer)
+        self.__create_propval_node(prop_grp, "netgrp", TYPE_ASTRING, netgroup)
+        self.__create_instance_node(name_service)
+
+        name_service_cache = \
+            self.__create_service_node(self._service_bundle,
+                                       "system/name-service/cache")
+        self.__create_instance_node(name_service_cache)
+
+    def __configure_dns_client(self, enabled):
+        """Add the xml structure for configuring the dns client with the
+           specified enabled state
+
+        """
+        #  <service version="1" type="service" name="network/dns/client">
+        #    <instance enabled="false" name="default"/>
+        #  </service>
+        name_service = self.__create_service_node(self._service_bundle,
+                                                  "network/dns/client")
+        self.__create_instance_node(name_service, "default", enabled)
+        return name_service
+
     def __convert_name_service_nis(self, line_num, keyword, payload):
         """Convert the NIS name service specified in the sysidcfg statement
-        to the proper xml output for the Solaris configuration file for the
-        auto installer. Currently NIS is not supported via the auto installer
+           to the proper xml output for the Solaris configuration file for the
+           auto installer. Currently NIS is not supported via the auto
+           installer
 
         """
         # sysidcfg form:
@@ -326,51 +393,82 @@ class XMLSysidcfgData(object):
         # file.  When NIS support becomes available this code should be
         # uncommented and expanded up
         #
-        #self._name_service = \
-        #    fetch_xpath_node(self._service_bundle,
-        #                     "./service[@name='network/nis/install']")
-        #if self._name_service is not None:
-        #    self.__remove_children(self._name_service)
-        #else:
-        #    self._name_service =\
-        #        self.__create_service_node(self._service_bundle,
-        #                                   "network/nis/install")
-        #instance_node =\
-        #    self.__create_instance_node(self._name_service)
-        #prop_grp = self.__create_propgrp_node(instance_node,
-        #                                     "intall_props", TYPE_APPLICATION)
+        # Convert to:
         #
-        #name_server = payload.pop("name_server", None)
-        #if name_server is not None:
-        #    prop = self.__create_prop_node(prop_grp, "nameserver",
-        #                                   TYPE_NET_ADDRESS)
-        #   list = etree.SubElement(prop, "net_address_list")
-        #    server_list = self.HOST_IP_PATTERN.findall(name_server)
-        #    for entry in server_list:
-        #        hostname = entry[0]
-        #        ip_address = entry[1]
-        #
-        #
-        #domain_name = payload.pop("domain_name", None)
-        #if domain_name is not None:
-        #    domain = self.__create_prop_node(prop_grp, "domain", TYPE_ASTRING)
-        #    domain.set(common.ATTRIBUTE_VALUE, domain_name)
-        #
-        # Are there any more keys left in the dictionary that we need to flag
-        #self.__check_payload(line_num, keyword, payload)
+        # <service version="1" type="service"
+        #       name="system/name-service/switch">
+        #    <property_group type="application" name="config">
+        #      <propval type="astring" name="default" value="files nis"/>
+        #      <propval type="astring" name="printer" value="user files nis"/>
+        #      <propval type="astring" name="netgroup" value="nis"/>
+        #    </property_group>
+        #    <instance enabled="true" name="default"/>
+        #  </service>
+        #  <!-- name-service/cache must be present along with
+        #       name-service/switch -->
+        #  <service version="1" type="service"
+        #       name="system/name-service/cache">
+        #    <instance enabled="true" name="default"/>
+        #  </service>
+        #  <!-- if no DNS, must be explicitly disabled to avoid error msgs -->
+        #  <service version="1" type="service" name="network/dns/client">
+        #    <instance enabled="false" name="default"/>
+        #  </service>
+        #  <service version="1" type="service" name="network/nis/domain">
+        #    <property_group type="application" name="config">
+        #      <propval type="hostname" name="domainname"
+        #               value="mydomain.com"/>
+        #      <!-- Note: use property with net_address_list and
+        #                 value_node as below -->
+        #      <property type="net_address" name="ypservers">
+        #        <net_address_list>
+        #          <value_node value="10.0.0.10"/>
+        #        </net_address_list>
+        #      </property>
+        #    </property_group>
+        #    <!-- configure default instance separate from property_group -->
+        #    <instance enabled="true" name="default"/>
+        #  </service>
+        #  <service version="1" type="service" name="network/nis/client">
+        #    <instance enabled="true" name="default"/>
+        #  </service>
+        # </service_bundle>
 
-        self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
-                            "name service specified. DNS or NONE is currently"
-                            " the only supported name servce selection.") % \
-                            {"file": SYSIDCFG_FILENAME, \
-                             "lineno": line_num})
-        self._report.add_unsupported_item()
+        self.__adjust_nis(default="files nis",
+                          printer="usr files nis",
+                          netgroup="nis")
+        self.__configure_dns_client(enabled="false")
+        self._name_service = self.__create_service_node(self._service_bundle,
+                                                        "network/nis/domain")
+        prop_grp = self.__create_propgrp_node(self._name_service,
+                                              "config",
+                                              TYPE_APPLICATION)
+        domain_name = payload.pop("domain_name", None)
+        if domain_name is not None:
+            self.__create_propval_node(prop_grp, "domainname",
+                                       TYPE_HOSTNAME, domain_name)
+
+        name_server = payload.pop("name_server", None)
+        if name_server is not None:
+            ypservers = self.__create_prop_node(prop_grp,
+                                                "ypservers", TYPE_NET_ADDRESS)
+            net_addr_list = etree.SubElement(ypservers,
+                                             common.ELEMENT_NET_ADDRESS_LIST)
+            self.__create_address_list(line_num, net_addr_list, name_server,
+                                       _("name server"))
+        self.__create_instance_node(self._name_service)
+
+        nis_client = self.__create_service_node(self._service_bundle,
+                                                "network/nis/client")
+        self.__create_instance_node(nis_client)
+
+        self.__check_payload(line_num, keyword, payload)
 
     def __convert_name_service_nisplus(self, line_num, keyword, payload):
         """Convert the NIS+ name service specified in the sysidcfg statement
-        to the proper xml output for the Solaris configuration file for the
-        auto installer.  NIS+ is no longer supported once NIS is supported the
-        NIS+ entry will be converted to NIS
+           to the proper xml output for the Solaris configuration file for the
+           auto installer.  NIS+ is no longer supported once NIS is supported
+           the NIS+ entry will be converted to NIS
 
         """
         # sysidcfg form:
@@ -380,24 +478,17 @@ class XMLSysidcfgData(object):
 
         # NIS plus is no longer supported in Solaris.
         # Convert this to standard NIS.  Output warning in log file
-        #self.logger.warning(_("%(file)s: line %(lineno)d: NIS+ is no longer"
-        #                    "supported.  Using NIS instead.") % \
-        #                    {"file": SYSIDCFG_FILENAME, \
-        #                     "lineno": line_num})
-        #self._convert_name_service_NIS(line_num, keyword, payload)
-
-        self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
-                             "name service specified.  DNS or None is "
-                            "currently the only supported name servce"
-                            "selection.") % \
-                            {"file": SYSIDCFG_FILENAME,
+        self.logger.warning(_("%(file)s: line %(lineno)d: NIS+ is no longer"
+                            "supported.  Using NIS instead.") % \
+                            {"file": SYSIDCFG_FILENAME, \
                              "lineno": line_num})
-        self._report.add_unsupported_item()
+        self._report.add_conversion_error()
+        self.__convert_name_service_nis(line_num, keyword, payload)
 
     def __convert_name_service_none(self, line_num, keyword, payload):
         """Convert the NONE name service specified in the sysidcfg statement
-        to the proper xml output for the Solaris configuration file for the
-        auto installer.
+           to the proper xml output for the Solaris configuration file for the
+           auto installer.
 
         """
         # sysidcfg form:
@@ -413,8 +504,9 @@ class XMLSysidcfgData(object):
 
     def __convert_name_service_ldap(self, line_num, keyword, payload):
         """Convert the LDAP name service specified in the sysidcfg statement
-        to the proper xml output for the Solaris configuration file for the
-        auto installer. Currently LDAP is not supported via the auto installer
+           to the proper xml output for the Solaris configuration file for the
+           auto installer. Currently LDAP is not supported via the auto
+           installer
 
         """
         # sysidcfg form:
@@ -434,11 +526,11 @@ class XMLSysidcfgData(object):
         # proxy_password (Optional) - Specifies the client proxy password
         #
 
-        #domain_name = payload.pop("domain_name", None)
-        #profile_name = payload.pop("profile", None)
-        #profile_server = payload.pop("ip_address", None)
-        #proxy_bind_dn = payload.pop("proxy_bind_dn", None)
-        #password = payload.pop("proxy_password", None)
+        domain_name = payload.pop("domain_name", None)
+        profile_name = payload.pop("profile", None)
+        profile_server = payload.pop("ip_address", None)
+        proxy_bind_dn = payload.pop("proxy_bind_dn", None)
+        password = payload.pop("proxy_password", None)
 
         self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
                             "name service specified. DNS or NONE is currently"
@@ -457,8 +549,8 @@ class XMLSysidcfgData(object):
 
     def __convert_name_service(self, line_num, keyword, values):
         """Converts the name_service keyword/values specified in the sysidcfg
-        statement to the proper xml output for the Solaris configuration
-        file for the auto installer.
+           statement to the proper xml output for the Solaris configuration
+           file for the auto installer.
 
         """
         if self._name_service is not None:
@@ -507,7 +599,7 @@ class XMLSysidcfgData(object):
         #   </instance>
         # </service>
         #
-        # This only configures the loopback interface, 
+        # This only configures the loopback interface,
         # which is equivalent to what the text
         # installer does today one selects 'None' on Network screen.
         #
@@ -529,7 +621,7 @@ class XMLSysidcfgData(object):
 
     def __config_net_interface_primary(self, line_num, payload):
         """Converts the network_interface keyword/values from the sysidcfg into
-        the appropriate equivalent Solaris xml configuration
+           the appropriate equivalent Solaris xml configuration
 
         """
         # Solaris installer:
@@ -581,9 +673,9 @@ class XMLSysidcfgData(object):
                 # args. We don't validate these. If the user switches to the
                 # interface from PRIMARY to an another interface then we'll
                 # validate them
-                ip_address = payload.pop("ip_address", None)
-                netmask = payload.pop("netmask", None)
-                default_route = payload.pop("default_route", None)
+                payload.pop("ip_address", None)
+                payload.pop("netmask", None)
+                payload.pop("default_route", None)
 
                 self.logger.error(
                     _("%(file)s: line %(lineno)d: when the "
@@ -613,8 +705,8 @@ class XMLSysidcfgData(object):
 
     def __config_net_physical_ipv4(self, line_num, interface, payload):
         """Configures the IPv4 interface for the interface specified by the
-        user by generating the proper xml structure used by the Solaris
-        auto installer
+           user by generating the proper xml structure used by the Solaris
+           auto installer
 
         """
         if payload is None or len(payload) == 0:
@@ -718,7 +810,7 @@ class XMLSysidcfgData(object):
 
     def __config_net_interface_dhcp(self, line_num, interface, payload):
         """Configures the specified interface as dhcp for ipv4 and ipv6 (if
-        specified)
+           specified)
 
         """
 
@@ -729,7 +821,7 @@ class XMLSysidcfgData(object):
         #      <property_group name="install_ipv4_interface"
         #               type="application">
         #        <propval name="name" type="astring" value="nge0/v4"/>
-        #        <propval name="address_type" type="astring" value="dhcp"/>
+        #        <propval name="address_type" type="astring" value="addrconf"/>
         #      </property_group>
         #      <property_group name="install_ipv6_interface"
         #               type="application">
@@ -768,7 +860,7 @@ class XMLSysidcfgData(object):
         # if ipv6 was specified add it
         ipv6 = payload.pop("protocol_ipv6", "no")
         if ipv6.lower() == "yes":
-            self.__config_net_physical_ipv6(interface, True)
+            self.__config_net_physical_ipv6(interface)
         if len(payload) != 0:
             self.logger.error(_("%(file)s: line %(lineno)d: unexpected "
                                 "option(s) specified. If you are using the "
@@ -782,10 +874,10 @@ class XMLSysidcfgData(object):
         # Create default network
         self.__create_net_interface(auto_netcfg=False)
 
-    def __config_net_physical_ipv6(self, interface, dhcp=False):
+    def __config_net_physical_ipv6(self, interface):
         """Configures the IPv6 interface for the interface specified by the
-        user by generating the proper xml structure used by the Solaris
-        auto installer
+           user by generating the proper xml structure used by the Solaris
+           auto installer
 
         """
         # output form:
@@ -794,7 +886,7 @@ class XMLSysidcfgData(object):
         #   <instance name="default" enabled="true">
         #   <property_group name="install_ipv6_interface" type="application">
         #       <propval name="name" type="astring" value="net0/v6"/>
-        #       <propval name="address_type" type="astring" value="xxxx"/>
+        #       <propval name="address_type" type="astring" value="addrconf"/>
         #       <propval name="stateless" type="astring" value="yes"/>
         #       <propval name="stateful" type="astring" value="yes"/>
         #   </property_group>
@@ -815,20 +907,16 @@ class XMLSysidcfgData(object):
                                        TYPE_APPLICATION)
         self.__create_propval_node(ipv6_interface, "name", TYPE_ASTRING,
                                     interface + "/v6")
-        if dhcp:
-            address_type = "dhcp"
-        else:
-            address_type = "addrconf"
         self.__create_propval_node(ipv6_interface, "address_type",
-                                    TYPE_ASTRING, address_type)
+                                   TYPE_ASTRING, "addrconf")
         self.__create_propval_node(ipv6_interface, "stateless",
-                                    TYPE_ASTRING, "yes")
+                                   TYPE_ASTRING, "yes")
         self.__create_propval_node(ipv6_interface, "stateful",
-                                    TYPE_ASTRING, "yes")
+                                   TYPE_ASTRING, "yes")
 
     def __config_net_interface(self):
         """Converts the network_interface keyword/values from the sysidcfg into
-        the new xml format
+           the new xml format
 
         """
         if len(self._defined_net_interfaces) == 0:
@@ -913,7 +1001,7 @@ class XMLSysidcfgData(object):
 
     def __convert_nfs4_domain(self, line_num, keyword, values):
         """Converts the nfs4_domain keyword/values from the sysidcfg into
-        the new xml format
+           the new xml format
 
         """
         # sysidcfg syntax:
@@ -929,7 +1017,7 @@ class XMLSysidcfgData(object):
 
     def __convert_root_password(self, line_num, keyword, values):
         """Converts the root_passord keyword/values from the sysidcfg into
-        the new xml format
+           the new xml format
 
         """
         # sysidcfg syntax:
@@ -963,7 +1051,7 @@ class XMLSysidcfgData(object):
 
     def __convert_security_policy(self, line_num, keyword, values):
         """Converts the security_policy keyword/values from the sysidcfg into
-        the new xml format
+           the new xml format
 
         """
         # sysidcfg syntax:
@@ -982,6 +1070,11 @@ class XMLSysidcfgData(object):
         #
         # If the security policy is anything other than None indicate to the
         # user that this setting is not supported or it's invalid
+
+        if len(values) != 1:
+            self.__invalid_syntax(line_num, keyword)
+            return
+
         policy = values[0].lower()
         if policy == "none":
             # Nothing to do
@@ -998,7 +1091,7 @@ class XMLSysidcfgData(object):
 
     def __convert_service_profile(self, line_num, keyword, values):
         """Converts the service_profile keyword/values from the sysidcfg into
-        the new xml format
+           the new xml format
 
         """
         #
@@ -1049,7 +1142,7 @@ class XMLSysidcfgData(object):
 
     def __convert_system_locale(self, line_num, keyword, values):
         """Converts the system_locale keyword/values from the sysidcfg into
-        the new xml format
+           the new xml format
 
         """
         # sysidcfg syntax:
@@ -1062,7 +1155,7 @@ class XMLSysidcfgData(object):
 
     def __convert_terminal(self, line_num, keyword, values):
         """Converts the terminal keyword/values from the sysidcfg into
-        the new xml format
+           the new xml format
 
         """
         # sysidcfg syntax:
@@ -1088,13 +1181,19 @@ class XMLSysidcfgData(object):
             self.__invalid_syntax(line_num, keyword)
             return
 
-        self._timezone = self.__create_service("system/timezone",
-                                               "ttymon", TYPE_APPLICATION,
-                                               "terminal_type", values[0])
+        self._terminal = \
+            self.__create_service_node(self._service_bundle,
+                                           "system/console-login")
+        prop_group = self.__create_propgrp_node(self._terminal,
+                                                "ttymon",
+                                                TYPE_APPLICATION)
+
+        self.__create_propval_node(prop_group, "terminal_type",
+                                   TYPE_ASTRING, values[0])
 
     def __convert_timeserver(self, line_num, keyword, values):
         """Converts the timeserver keyword/values from the sysidcfg into
-        the new xml format
+           the new xml format
 
         """
         # sysidcfg format:
@@ -1123,7 +1222,7 @@ class XMLSysidcfgData(object):
 
     def __convert_timezone(self, line_num, keyword, values):
         """Converts the timezone keyword/values from the sysidcfg into
-        the new xml format
+           the new xml format
 
         """
         # sysidcfg format:
@@ -1152,11 +1251,35 @@ class XMLSysidcfgData(object):
                                                "timezone", TYPE_APPLICATION,
                                                "localtime", values[0])
 
+    def __create_address_list(self, line_num, parent, addresses, type_label):
+        """Take the passed in comma separated address list and add
+           individual value node entries for each address.   Address list
+           should be in the form ip,ip  or hostname(ip),hostname(ip)
+
+                  <value_node value="10.0.0.10"/>
+
+           Arguments
+            line_num - the line # being processed
+            parent - the parent node to attach all value nodes to
+            addresses - comma separated list of ip addresses
+            type - localize name to identify the addresses as when
+                   generating error messages.
+        """
+        server_list = COMMA_PATTERN.findall(addresses)
+        for entry in server_list:
+            match_pattern = HOST_IP_PATTERN.match(entry)
+            if match_pattern:
+                ip_address = match_pattern.group(3)
+            else:
+                ip_address = entry
+            if self.__is_valid_ip(line_num, ip_address, type_label):
+                self.__create_value_node(parent, ip_address)
+
     def __create_instance_node(self, parent, name="default",
                                enabled_state="true"):
         """Create a <instance> node with a parent of 'parent'
 
-        <instance name="name" enabled="enabled_state">
+           <instance name="name" enabled="enabled_state">
 
         """
         node = etree.SubElement(parent, common.ELEMENT_INSTANCE)
@@ -1167,11 +1290,11 @@ class XMLSysidcfgData(object):
     def __create_net_interface(self, auto_netcfg):
         """Create the network/physical:default node, and set
            its value based on the value of auto_netcfg.
- 
+
            If auto_netcfg is True,
            the netcfg/active_ncp property of the network/physical:default
            service will be set to "Automatic".  If auto_netcfg is not
-           True, the netcfg/active_ncp property will be set to 
+           True, the netcfg/active_ncp property will be set to
            "DefaultFixed".
 
         """
@@ -1199,7 +1322,7 @@ class XMLSysidcfgData(object):
     def __create_prop_node(self, parent, name, prop_type):
         """Create a <property> node with a parent of 'parent'
 
-        <property name="name" type="prop_type">
+           <property name="name" type="prop_type">
 
         """
         node = etree.SubElement(parent, common.ELEMENT_PROPERTY)
@@ -1211,7 +1334,7 @@ class XMLSysidcfgData(object):
     def __create_propgrp_node(self, parent, name, propgrp_type):
         """Create a <property_group> node with a parent of 'parent'
 
-        <property_group name="name" type="propgrp_type">
+           <property_group name="name" type="propgrp_type">
 
         """
         node = etree.SubElement(parent, common.ELEMENT_PROPERTY_GROUP)
@@ -1223,7 +1346,7 @@ class XMLSysidcfgData(object):
     def __create_propval_node(self, parent, name, propval_type, value):
         """Create a <propval> node with a parent of 'parent'
 
-        <propval name="name" type="propval_type" value="value"/>
+           <propval name="name" type="propval_type" value="value"/>
 
         """
         node = etree.SubElement(parent, common.ELEMENT_PROPVAL)
@@ -1234,19 +1357,18 @@ class XMLSysidcfgData(object):
 
     def __create_service(self, service_label, propgrp_name, propgrp_type,
                          prop_name, prop_value):
-        """
-        Create a service node entry that conforms to the following layout.
-        If the service exists add the property group to the default instance
-        deleting an existing property group by that name.
+        """Create a service node entry that conforms to the following layout.
+           If the service exists add the property group to the default instance
+           deleting an existing property group by that name.
 
-        <service name="${service_label}" version="1" type="service">
-          <instance name="default" enabled="true">
-            <property_group name="${propgrp_name}" type="${propgrp_type}">
-                <propval name="${prop_name}" type="astring"
-                 value="${prop_val}"/>
-            </property_group>
-          </instance>
-        </service>
+            <service name="${service_label}" version="1" type="service">
+              <instance name="default" enabled="true">
+                <property_group name="${propgrp_name}" type="${propgrp_type}">
+                    <propval name="${prop_name}" type="astring"
+                     value="${prop_val}"/>
+                </property_group>
+              </instance>
+            </service>
         """
         service = self.__fetch_service(service_label)
         if service is None:
@@ -1275,7 +1397,7 @@ class XMLSysidcfgData(object):
                               service_type=TYPE_SERVICE):
         """Create a <service> node with a parent of 'parent'
 
-        <service name="name" version="1" type="service">
+            <service name="name" version="1" type="service">
 
         """
         service = etree.SubElement(parent, common.ELEMENT_SERVICE)
@@ -1316,7 +1438,7 @@ class XMLSysidcfgData(object):
 
     def __is_valid_hostname(self, hostname):
         """Perform a basic validation of the hostname
-        Return True if valid, False otherwise
+           Return True if valid, False otherwise
 
         """
         if len(hostname) > MAXHOSTNAMELEN:
@@ -1452,6 +1574,7 @@ class XMLSysidcfgData(object):
         """Process the profile by taking all keyword/values pairs and
            generating the associated xml for the key value pairs
         """
+
         if self.sysidcfg_dict is None or len(self.sysidcfg_dict) == 0:
             # There's nothing to convert.  This is a valid condition if
             # the file couldn't of been read for example
@@ -1493,16 +1616,3 @@ class XMLSysidcfgData(object):
 
         # All the elements have been processed at this point in time.
         self.__config_net_interface()
-
-    def __parse_sc_profile(self, filename):
-        """Read in the SC xml profile for AI"""
-        parser = etree.XMLParser()
-        if filename is None:
-            self._tree = etree.parse(StringIO(SVC_BUNDLE_XML_DEFAULT))
-        else:
-            self._tree = etree.parse(filename)
-
-        if len(parser.error_log) != 0:
-            # We got parsing errors
-            for err in parser.error_log:
-                sys.stderr.write(err)

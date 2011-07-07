@@ -833,6 +833,7 @@ class XMLProfileData(object):
         slice_node = etree.SubElement(parent, common.ELEMENT_SLICE)
         slice_node.set(common.ATTRIBUTE_NAME, slice_num)
         slice_node.set(common.ATTRIBUTE_ACTION, action)
+        slice_node.set(common.ATTRIBUTE_FORCE, "true")
         if in_pool is not None:
             slice_node.set(common.ATTRIBUTE_IN_ZPOOL, in_pool)
         if in_vdev is not None:
