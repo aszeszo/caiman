@@ -192,7 +192,6 @@ def parse_options(cmd_options=None):
     if options.dhcp_ip_start or options.dhcp_ip_count:
         if com.is_multihomed():
             # don't allow DHCP setup if multihomed
-            # XXX remove this restriction
             msg = _('DHCP server setup is not available on machines '
                     'with multiple network interfaces (-i and -c options '
                     'are disallowed).')

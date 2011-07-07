@@ -42,6 +42,7 @@ from solaris_install import Popen
 
 
 VERSION = "0.1"
+INVALID_IP = "0.0.0.0"
 NETSTAT = "/usr/bin/netstat"
 DOMAINNAME = "/usr/bin/domainname"
 GETENT = "/usr/bin/getent"
@@ -77,8 +78,7 @@ SPARC_VCI_PATTERN = 'match if not \(sub.*"PXEClient"\);'
 # Optionally passed in the format list:
 #   domainname - The domain name for this system
 #   nameservers - A comma-seperated list of server(s) (IP or hostname)
-CFGFILE_BASE = """
-# dhcpd.conf
+CFGFILE_BASE = """# dhcpd.conf
 #
 # Configuration file for ISC dhcpd
 # (created by installadm(1M))
@@ -97,7 +97,6 @@ authoritative;
 
 # Set logging facility (accompanies setting in syslog.conf)
 log-facility local7;
-
 """
 # The following defines a block quote for subnet stanzas. These stanzas
 # describe the details of a subnet which will be supported by the DHCP
@@ -131,7 +130,8 @@ CFGFILE_SUBNET_FOOTER_STRING = """  option broadcast-address %(broadcast)s;
 """
 
 # This string can be used when adding a new range to an existing subnet.
-CFGFILE_SUBNET_RANGE_STRING = """  range %(loaddr)s %(hiaddr)s; """
+CFGFILE_SUBNET_RANGE_STRING = """  range %(loaddr)s %(hiaddr)s;
+"""
 
 # The following defines a block quote for an x86 class stanza. Class stanzas
 # set details for an entire architecture.
@@ -438,10 +438,6 @@ class DHCPArchClass(DHCPData):
         if action == 'set' and bootfile is None:
             raise ValueError(_("action 'set' requires bootfile"))
 
-        # Ensure the proper IP address is set on the SPARC bootfile
-        if self.arch == 'sparc':
-            bootfile = _fixup_sparc_bootfile(self.server, bootfile)
-
         # This is the workhorse for both 'set_bootfile', 'unset_bootfile' and
         # 'update_bootfile'. We need to walk through the config data and make a
         # copy, watching for this architecture's class stanza as we traverse.
@@ -455,6 +451,7 @@ class DHCPArchClass(DHCPData):
             vci_re = re.compile(X86_VCI_PATTERN)
         elif self.arch == 'sparc':
             vci_re = re.compile(SPARC_VCI_PATTERN)
+            bootfile = _fixup_sparc_bootfile(bootfile)
         else:
             raise DHCPServerError(_("unsupported architecture: %s") % \
                 self.arch)
@@ -975,13 +972,10 @@ class DHCPServer(object):
         if arch == 'i386':
             new_stanza = _DHCPConfigPXEClass(bootfile)
         elif arch == 'sparc':
+            bootfile = _fixup_sparc_bootfile(bootfile)
             new_stanza = _DHCPConfigSPARCClass(bootfile)
         else:
             raise ValueError(_("invalid architecture: %s") % arch)
-
-        # Ensure the proper IP address is set on the SPARC bootfile
-        if arch == 'sparc':
-            bootfile = _fixup_sparc_bootfile(self, bootfile)
 
         self._add_stanza_to_config_file(new_stanza)
 
@@ -1206,39 +1200,60 @@ def _get_name_servers():
 
 def _get_default_route_for_subnet(subnet_ip):
     '''
-    Derive the IP address of the default route for the subnet passed.
+    Find the default route for the subnet passed.
     '''
+    # Since we have a requirement to be connected to the subnets we're
+    # configuring (in check-server-setup), we can find a default route
+    # in netstat output.
     cmd = [NETSTAT, "-nr"]
     p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                          logger='', stderr_loglevel=logging.DEBUG)
 
-    regexp = re.compile('^%s\s+(\S+)\s+' % subnet_ip)
-    route = [m.group(1)
-        for m in filter(bool, map(regexp.match, p.stdout.splitlines()))]
+    regexp = re.compile('^default\s+(%s)\s+' % IP_PATTERN)
+    for route in [m.group(1)
+        for m in filter(bool, map(regexp.match, p.stdout.splitlines()))]:
+            if _ip_is_in_network(route, subnet_ip, _get_mask(route)):
+                return route
 
-    if route:
-        return route[0]
+    print >> sys.stderr, _("Unable to determine a route for network (%s). "
+                           "Setting the route\ntemporarily to %s; this should "
+                           "be changed to an appropriate value in the\nDHCP "
+                           "configuration file. Please see dhcpd(8) for "
+                           "further information.") % (subnet_ip, INVALID_IP)
+    return INVALID_IP
+
+
+def _fixup_sparc_bootfile(bootfile):
+    '''
+    For a SPARC bootfile, ensure that a useful IP address is set on the
+    webserver portion of the address string. From service.py, we have a
+    bootfile for SPARC clients that includes the $serverIP string, which is
+    used by AI clients to determine their bootserver IP address. But, we
+    cannot use this in a DHCP configuration, so we have to fix that here.
+    '''
+    # We don't support multiple subnet configurations yet, so we should
+    # be able to simply use the IP address returned from get_valid_networks().
+    valid_nets = list(com.get_valid_networks())
+    if valid_nets:
+        ipaddr = valid_nets[0] 
     else:
-        raise DHCPServerError(_("unable to determine route on %s") % subnet_ip)
+        print >> sys.stderr, _("No networks are currently set to work with "
+                               "install services. Verify that the\ninstall "
+                               "server's SMF properties are set properly. "
+                               "Please see installadm(1M)\nfor further "
+                               "information.\nThe SPARC bootfile setting in "
+                               "the local DHCP server requires manual\n"
+                               "configuration. Please see dhcpd(8) for "
+                               "further information.")
+        return bootfile
 
-
-def _fixup_sparc_bootfile(server, bootfile):
-    '''
-    For a SPARC bootfile, ensure the proper IP address is set on the webserver
-    portion of the address string.
-    '''
-    # We don't fully support multiple subnet configurations yet, use the first
-    # as it should be the only.
-    subnet_ip = server._subnets[0].subnet_ip
-    ipaddr = _get_nextserver_ip_for_subnet(subnet_ip, _get_mask(subnet_ip))
-
-    # If we do have multiple subnets configured, warn and use the first.
-    if (len(server._subnets) > 1):
+    # If we have more than one network configured, warn and use the first.
+    if (len(valid_nets) > 1):
         print >> sys.stderr, _("More than one subnet is configured for DHCP "
-                               "service; this is likely not\nsupported. Using "
-                               "first available address (%s). Please ensure\n"
-                               "this is a suitable address for this "
-                               "service. Please see installadm(1m)\nfor more "
-                               "information.") % ipaddr
+                               "service; this is likely not\nsupported; using "
+                               "first available address (%s). Please ensure "
+                               "this\nis a suitable address to use for "
+                               "install clients. Please see installadm(1M)\n"
+                               "for more information.") % ipaddr
     
     return re.sub('\$serverIP', ipaddr, bootfile)

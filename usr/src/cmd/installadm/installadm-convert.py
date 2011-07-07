@@ -1681,7 +1681,6 @@ def create_isc_dhcp_configuration(dhcp_config):
                     # Add the macro without substitutions to the file
                     config_file.write(dhcp.CFGFILE_SUBNET_HEADER_STRING)
 
-
             # build a range string for each subnet range found
             for subnet_range in macros[mname]['ip_ranges']:
                 try:

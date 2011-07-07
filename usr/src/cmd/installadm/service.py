@@ -312,15 +312,16 @@ class AIService(object):
         # Configure DHCP for this service
         service._configure_dhcp(ip_start, ip_count, bootserver)
         
-        # Set the AI server's IP address as the server IP for install.
-        # Even if the client boots up on a secondary or private network,
-        # this address should be reachable by all clients.
-        server_ip = socket.gethostbyname(server_hostname)
+        # Supported client images will interpolate the bootserver's IP
+        # address (as retrieved from the DHCP server) in place of the
+        # '$serverIP' string. We choose to always utilize this functionality
+        # so that any client can utilize this service, from any network.
+        server_ip = "$serverIP"
         logging.debug("server_ip=%s", server_ip)
         
         # Save location of service in format <server_ip_address>:<port>
         # It will be used later for setting service discovery fallback
-        # mechanism. For multihomed, server_ip is: "$serverIP"
+        # mechanism.
         srv_address = '%s:%u' % (server_ip, port)
         logging.debug("srv_address=%s", srv_address)
         
@@ -364,7 +365,7 @@ class AIService(object):
         if version is None:
             raise VersionError(name, version,
                                alt_msg=_("Unable to determine service "
-                                         "version for '%s'"% name))
+                                         "version for '%s'" % name))
         elif version < self.EARLIEST_VERSION:
             raise OlderVersionError(name, version)
         elif version > self.LATEST_VERSION:
