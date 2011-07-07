@@ -195,9 +195,10 @@ class DerivedManifestModule(AbstractCheckpoint):
 
         # Copy the script into the same dir where the derived manifest will be.
         derived_dir = os.path.dirname(self.mpd.manifest)
-        script_name = os.path.basename(self.dmd.script)
-        shutil.copyfile(self.dmd.script,
-                        os.path.join(derived_dir, script_name))
+        if derived_dir != os.path.dirname(self.dmd.script):
+            script_name = os.path.basename(self.dmd.script)
+            shutil.copyfile(self.dmd.script,
+                            os.path.join(derived_dir, script_name))
 
         # Set up name of logfile aimanifest command can use.
         # This log will be collected after the script completes.
