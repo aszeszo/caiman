@@ -48,7 +48,7 @@ from StringIO import StringIO
 
 # This is defined here since we can't collect this information from the
 # pkg api. This is needed to make the calls into the pkg api.
-CLIENT_API_VERSION = 60
+CLIENT_API_VERSION = 62
 
 # These validation patterns were taken directly from the jumpstart
 # check script

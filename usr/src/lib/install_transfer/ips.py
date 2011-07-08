@@ -106,7 +106,7 @@ class AbstractIPS(Checkpoint):
     __metaclass__ = abc.ABCMeta
 
     # Variables associated with the package image
-    CLIENT_API_VERSION = 60
+    CLIENT_API_VERSION = 62
     DEF_REPO_URI = "http://pkg.opensolaris.org/release"
     DEF_PROG_TRACKER = progress.CommandLineProgressTracker()
 
