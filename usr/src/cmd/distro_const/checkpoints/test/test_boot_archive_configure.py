@@ -41,10 +41,13 @@ import unittest
 import testlib
 
 import solaris_install.distro_const.checkpoints.boot_archive_configure as bac
+
 from solaris_install.distro_const.checkpoints.boot_archive_configure \
     import BootArchiveConfigure, AIBootArchiveConfigure, \
            LiveCDBootArchiveConfigure
-from solaris_install.engine import InstallEngine
+from solaris_install.engine.test import engine_test_utils
+from solaris_install.transfer.media_transfer import TRANSFER_ROOT
+from solaris_install.transfer.info import Software
 
 _NULL = open("/dev/null", "r+")
 
@@ -56,7 +59,10 @@ class TestConfigureSymlinks(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        self.engine = engine_test_utils.get_new_engine_instance()
+        self.doc = self.engine.data_object_cache
+        self.doc.persistent.insert_children(Software(TRANSFER_ROOT))
+
         self.pi_filelist = ["/etc/zones/index", "/etc/mime.types",
                             "/var/adm/wtmpx", "/var/adm/spellhist",
                             "/var/lib/gdm/", "/var/log/gdm/",
@@ -65,13 +71,14 @@ class TestConfigureSymlinks(unittest.TestCase):
                             "/var/adm/spellhist"]
         args = {"image_type": "test"}
         self.bac = BootArchiveConfigure(name="Test BAC", arg=args)
+        self.bac.doc = self.doc
         self.bac.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
         self.bac.ba_build = testlib.create_filesystem(*self.ba_filelist)
 
     def tearDown(self):
         for entry in [self.bac.pkg_img_path, self.bac.ba_build]:
             shutil.rmtree(entry, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_basic_symlinks(self):
         # create a simple symlink for testing
@@ -140,11 +147,15 @@ class TestConfigureSystem(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        self.engine = engine_test_utils.get_new_engine_instance()
+        self.doc = self.engine.data_object_cache
+        self.doc.persistent.insert_children(Software(TRANSFER_ROOT))
+
         self.ba_filelist = ["/etc/inet/hosts", "/etc/nodename", "/etc/svc/",
                             "/usr/bin/"]
         args = {"image_type": "test"}
         self.bac = BootArchiveConfigure(name="Test BAC", arg=args)
+        self.bac.doc = self.doc
         self.bac.ba_build = testlib.create_filesystem(*self.ba_filelist)
         self.bac.pkg_img_path = tempfile.mkdtemp(dir="/var/tmp",
                                                  prefix="bac_conf_system_")
@@ -166,7 +177,7 @@ class TestConfigureSystem(unittest.TestCase):
     def tearDown(self):
         for entry in [self.bac.pkg_img_path, self.bac.ba_build]:
             shutil.rmtree(entry, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_basic_configure(self):
         # execute the method
@@ -209,7 +220,8 @@ class TestConfigureGDM(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        self.engine = engine_test_utils.get_new_engine_instance()
+
         self.pi_filelist = ["/etc/gdm/", "/save/", "/jack/",
                             "/etc/gdm/custom.conf"]
         self.ba_filelist = ["/etc/gdm/custom.conf"]
@@ -228,7 +240,7 @@ class TestConfigureGDM(unittest.TestCase):
     def tearDown(self):
         for entry in [self.bac.pkg_img_path, self.bac.ba_build]:
             shutil.rmtree(entry, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_configure_gdm(self):
         # configure gdm
@@ -253,7 +265,8 @@ class TestConfigureSudoers(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        self.engine = engine_test_utils.get_new_engine_instance()
+
         args = {"image_type": "test"}
         self.bac = LiveCDBootArchiveConfigure(name="Test BAC", arg=args)
         self.ba_filelist = ["/etc/sudoers"]
@@ -264,7 +277,7 @@ class TestConfigureSudoers(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.bac.ba_build, ignore_errors=True)
         shutil.rmtree(self.bac.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_configure_user_attr(self):
         # configure /etc/user_attr

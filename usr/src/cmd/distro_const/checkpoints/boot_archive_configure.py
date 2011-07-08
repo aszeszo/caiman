@@ -162,10 +162,8 @@ class BootArchiveConfigure(Checkpoint):
         tr_uninstall.action = CPIOSpec.UNINSTALL
         tr_uninstall.contents = ["opt"]
 
-        root_tr_software_node = self.doc.persistent.get_descendants(\
-                            name=TRANSFER_ROOT, class_type=Software,
-                            not_found_is_err=True)[0]
-
+        root_tr_software_node = self.doc.persistent.get_descendants(
+            name=TRANSFER_ROOT, class_type=Software, not_found_is_err=True)[0]
         root_tr_software_node.insert_children(tr_uninstall)
 
         # copy the SMF repository from pkg_image_path to ba_build
@@ -276,7 +274,7 @@ class BootArchiveConfigure(Checkpoint):
 
         # Add that into the software transfer list.  The list of files to
         # uninstall MUST go before the contents to be installed from /mnt/misc
-        root_tr_software_node = self.doc.persistent.get_descendants( \
+        root_tr_software_node = self.doc.persistent.get_descendants(
             name=TRANSFER_ROOT, class_type=Software, not_found_is_err=True)[0]
 
         root_tr_software_node.insert_children(tr_uninstall)
@@ -319,7 +317,7 @@ class BootArchiveConfigure(Checkpoint):
 
     def add_root_transfer_to_doc(self):
         """ Adds the list of files of directories to be transferred
-            to the DOC 
+            to the DOC
         """
         if self.doc is None:
             self.doc = InstallEngine.get_instance().data_object_cache
