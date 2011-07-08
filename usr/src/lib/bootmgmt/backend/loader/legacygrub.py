@@ -875,7 +875,7 @@ r"""# default menu entry to boot
         self._debug('_write_loader: Invoking command: ' + ' '.join(args))
 
         try:
-            Popen(args, stdout=Popen.PIPE, stderr=Popen.PIPE)
+            Popen.check_call(args, stdout=Popen.STORE, stderr=Popen.STORE)
         except CalledProcessError as cpe:
             self._debug('_write_loader: Return code = %d' % cpe.returncode)
             if cpe.returncode != LegacyGRUBBootLoader.INSTALLGRUB_NOUPDT:
@@ -892,7 +892,10 @@ r"""# default menu entry to boot
 
         args = ['/usr/sbin/installgrub', '-ie', devname]
         try:
-            proc = Popen(args, stdout=Popen.STORE, stderr=Popen.STORE)
+            proc = Popen.check_call(
+                args,
+                stdout=Popen.STORE,
+                stderr=Popen.STORE)
             version_string = proc.stdout.split('\n')[0]
             return version_string
         except CalledProcessError as cpe:
