@@ -1356,7 +1356,11 @@ class TargetSelection(Checkpoint):
             vdev_devices)
 
         if not zpool.action in self.PRESERVED:
-            if ((not zpool.is_root and
+            if not vdev_devices:
+                raise SelectionError(
+                    "Vdev '%s' on zpool '%s' must contain at least one "
+                    "device." % (child.name, zpool.name))
+            elif ((not zpool.is_root and
                 child.redundancy == "mirror") or \
                 child.redundancy == "logmirror" or
                 child.redundancy == "raidz" or
@@ -2460,7 +2464,8 @@ class TargetSelection(Checkpoint):
                 new_parent_obj.insert_children(new_slice)
                 if new_slice.in_zpool is None and \
                    new_slice.in_vdev is None:
-                    if first_large_slice is None and \
+                    if not new_slice.is_swap and \
+                       first_large_slice is None and \
                        new_slice.action == "create" and \
                        new_slice.size >= self.controller.minimum_target_size:
                         # Remember the first sufficiently large slice thats
@@ -2470,8 +2475,9 @@ class TargetSelection(Checkpoint):
                     found_zpool_vdev_slice = True
 
         # Check to see if we didn't find any specific references to vdevs
-        # Sets in_zpool/in_vdev on at least one slice
-        if not found_zpool_vdev_slice:
+        # Sets in_zpool/in_vdev on at least one slice, do not set on a slice
+        # that has in_use set to swap
+        if self._is_generated_root_pool and not found_zpool_vdev_slice:
             if first_large_slice is not None:
                 # Set in_zpool/in_vdev on slice, and remove from
                 # disk parent object (just in case)
@@ -3028,10 +3034,9 @@ class TargetSelection(Checkpoint):
             if not new_desired_target.final_validation():
                 errors = errsvc.get_all_errors()
                 if errors:
-                    if not self.__can_ignore_errors(errors):
-                        errstr = "Following errors occurred during final " \
-                            "validation :\n%s" % (str(errors[0]))
-                        raise SelectionError(errstr)
+                    errstr = "Following errors occurred during final " \
+                        "validation :\n%s" % (str(errors[0]))
+                    raise SelectionError(errstr)
                 else:
                     raise SelectionError("Final Validation Failed. See "
                         "install_log for more details.")

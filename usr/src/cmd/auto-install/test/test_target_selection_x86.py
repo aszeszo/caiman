@@ -333,7 +333,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
             self.fail(errsvc._ERRORS[0])
 
     def setUp(self):
-        logical.DEFAULT_BE_NAME="ai_test_solaris"
+        logical.DEFAULT_BE_NAME = "ai_test_solaris"
         self.engine = get_new_engine_instance()
 
         self.target_selection = TargetSelection("Test Checkpoint")
@@ -2912,7 +2912,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 <partition action="create" name="5" part_type="191">
                   <size val="8000mb"/>
                   <slice name="0" action="create" force="false"
-                   is_swap="false"/>
+                   is_swap="false" in_zpool="ai_test_rpool" in_vdev="vdev"/>
                 </partition>
               </disk>
               <logical noswap="false" nodump="false">
@@ -2940,7 +2940,8 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 <disk_name name="c10t3d0" name_type="ctd"/>
                 <partition action="create" name="2" part_type="191">
                     <size val="10240mb"/>
-                    <slice name="0" action="create"/>
+                    <slice name="0" action="create" in_zpool="ai_test_rpool" \
+                     in_vdev="vdev"/>
                 </partition>
             </disk>
             <logical noswap="true" nodump="true">
