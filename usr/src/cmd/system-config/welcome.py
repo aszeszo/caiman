@@ -32,6 +32,9 @@ from solaris_install.sysconfig import _, SCI_HELP, get_sc_options_from_doc, \
                                       SC_GROUP_DATETIME, SC_GROUP_LOCATION, \
                                       SC_GROUP_USERS
 from terminalui.base_screen import BaseScreen
+from terminalui.i18n import convert_paragraph
+from terminalui.scroll_window import ScrollWindow
+from terminalui.window_area import WindowArea
 
 
 class WelcomeScreen(BaseScreen):
@@ -43,10 +46,9 @@ class WelcomeScreen(BaseScreen):
     HEADER_TEXT = _("System Configuration Tool")
     WELCOME_TEXT = _("System Configuration Tool enables you to specify "
                      "the following configuration parameters for your "
-                     "newly-installed Oracle Solaris 11 system:\n"
-                     "%(scgroups)s\n"
-                     "System Configuration Tool produces an SMF profile file "
-                     "in %(scprof)s.\n\n"
+                     "newly-installed Oracle Solaris 11 system:\n")
+    NAVIPRO_TEXT = _("\nSystem Configuration Tool produces an SMF profile "
+                     "file in %(scprof)s.\n\n"
                      "How to navigate through this tool:")
     BULLET_ITEMS = [_("Use the function keys listed at the bottom of each "
                       "screen to move from screen to screen and to perform "
@@ -58,8 +60,10 @@ class WelcomeScreen(BaseScreen):
                       "bottom of the screen will change to show the ESC keys"
                       " for navigation and other functions.")]
     BULLET = "- "
+    BULLET_INDENT = "  "
     HELP_DATA = (SCI_HELP + "/%s/welcome.txt",
                  _("Welcome and Navigation Instructions"))
+    INDENT = 2  # begin text right of scroll bar
     
     def set_actions(self):
         '''Remove the F3_Back Action from the first screen'''
@@ -69,27 +73,48 @@ class WelcomeScreen(BaseScreen):
         '''Display the static paragraph WELCOME_TEXT and all
            applicable bullet items'''
         sc_options = get_sc_options_from_doc()
-        sc_groups = ""
+        max_width = self.win_size_x - WelcomeScreen.INDENT - 1
+        text = convert_paragraph(WelcomeScreen.WELCOME_TEXT, max_width)
+        # list configuration groups in a comma-separated list with
+        # bullet on first line and indentation on subsequent lines
+        grouplist = list()
         if configure_group(SC_GROUP_NETWORK):
-            sc_groups += _("- network\n")
+            grouplist.append(_("network"))
         elif configure_group(SC_GROUP_IDENTITY):
-            sc_groups += _("- system hostname\n")
+            grouplist.append(_("system hostname"))
         if configure_group(SC_GROUP_LOCATION):
-            sc_groups += _("- time zone\n")
+            grouplist.append(_("time zone"))
         if configure_group(SC_GROUP_DATETIME):
-            sc_groups += _("- date and time\n")
+            grouplist.append(_("date and time"))
         if configure_group(SC_GROUP_USERS):
-            sc_groups += _("- user and root accounts\n")
+            grouplist.append(_("user and root accounts"))
         if configure_group(SC_GROUP_NS):
-            sc_groups += _("- name services\n")
-
-        fmt = {"scgroups": sc_groups, "scprof": sc_options.profile}
-        text = WelcomeScreen.WELCOME_TEXT % fmt
-
-        y_loc = 1
-        y_loc += self.center_win.add_paragraph(text, start_y=y_loc)
-        x_loc = len(WelcomeScreen.BULLET)
+            grouplist.append(_("name services"))
+        grouplist = ", ".join(grouplist)
+        grouplist = convert_paragraph(grouplist,
+                                      max_width - len(WelcomeScreen.BULLET))
+        for ln in range(len(grouplist)):
+            if ln == 0:
+                text.append(WelcomeScreen.BULLET + grouplist[ln])
+            else:
+                text.append(WelcomeScreen.BULLET_INDENT + grouplist[ln])
+        # display navigation instructions and profile path
+        fmt = {"scprof": sc_options.profile}
+        text.extend(convert_paragraph(WelcomeScreen.NAVIPRO_TEXT % fmt,
+                                      max_width))
+        # indent and align while bulletting
         for bullet in WelcomeScreen.BULLET_ITEMS:
-            self.center_win.add_text(WelcomeScreen.BULLET, start_y=y_loc)
-            y_loc += self.center_win.add_paragraph(bullet, start_y=y_loc,
-                                                   start_x=x_loc)
+            btext = convert_paragraph(bullet,
+                                      max_width - len(WelcomeScreen.BULLET))
+            for ln in range(len(btext)):
+                if ln == 0:
+                    text.append(WelcomeScreen.BULLET + btext[ln])
+                else:
+                    text.append(WelcomeScreen.BULLET_INDENT + btext[ln])
+        # prepare welcome text in entire window for scrolling
+        area = WindowArea(x_loc=0, y_loc=1, scrollable_lines=(len(text) + 1))
+        area.lines = self.win_size_y - 1
+        area.columns = self.win_size_x
+        scroll_region = ScrollWindow(area, window=self.center_win)
+        scroll_region.add_paragraph(text, start_x=WelcomeScreen.INDENT)
+        self.center_win.activate_object(scroll_region)
