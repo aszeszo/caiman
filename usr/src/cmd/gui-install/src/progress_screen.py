@@ -311,10 +311,13 @@ class ProgressScreen(BaseScreen):
                         is_role=True,
                         password=gui_profile.userpassword,
                         expire="0")
-        user = UserInfo(login_name=gui_profile.loginname,
+        user = UserInfo(gid=10, shell="/usr/bin/bash",
+                        login_name=gui_profile.loginname,
                         real_name=gui_profile.username,
                         password=gui_profile.userpassword,
-                        roles="root")
+                        roles="root",
+                        profiles="System Administrator",
+                        sudoers="ALL=(ALL) ALL")
         profile.users = UserInfoContainer(user, root)
         self.logger.debug('from_engine returned %s', profile)
 
