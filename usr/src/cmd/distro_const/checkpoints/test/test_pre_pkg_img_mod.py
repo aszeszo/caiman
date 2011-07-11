@@ -31,23 +31,20 @@
 """
 
 import os
-import os.path
 import tempfile
 import shutil
-import subprocess
 import time
 import unittest
 
 import testlib
 
 from osol_install.install_utils import dir_size
-from solaris_install import DC_LABEL, DC_PERS_LABEL
+from solaris_install import DC_LABEL, DC_PERS_LABEL, run, run_silent
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.distro_const.checkpoints.pre_pkg_img_mod \
     import PrePkgImgMod, AIPrePkgImgMod, LiveCDPrePkgImgMod
-from solaris_install.engine import InstallEngine
+from solaris_install.engine.test import engine_test_utils
 
-_NULL = open("/dev/null", "r+")
 
 NODENAME = """  <service name="system/identity" type="service" version="1">
     <exec_method name="start" type="method" exec=":true" timeout_seconds="60"/>
@@ -67,7 +64,7 @@ class TestSetPassword(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.pi_filelist = ["/etc/passwd", "/etc/shadow", "/usr/lib/"]
         self.ppim = PrePkgImgMod("Test PPIM")
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
@@ -87,7 +84,7 @@ class TestSetPassword(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_cleartext_password(self):
         self.ppim.root_password = "test"
@@ -117,14 +114,14 @@ class TestEtcSystemModification(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.ppim = PrePkgImgMod("Test PPIM")
         self.pi_filelist = ["/etc/system"]
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
 
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_modify_etc_system(self):
         # test with a missing /etc/system file
@@ -143,7 +140,7 @@ class TestEtcSystemModification(unittest.TestCase):
         for entry in entry_list:
             cmd = ["/usr/bin/grep", entry, os.path.join(self.ppim.pkg_img_path,
                                                         "etc/system")]
-            self.assert_(subprocess.call(cmd, stdout=_NULL, stderr=_NULL) == 0)
+            self.assertEqual(run_silent(cmd).wait(), 0)
 
 
 class TestCalculateSize(unittest.TestCase):
@@ -153,7 +150,7 @@ class TestCalculateSize(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.ppim = PrePkgImgMod("Test PPIM")
         self.pi_filelist = ["/etc/system"]
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
@@ -162,13 +159,13 @@ class TestCalculateSize(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_calculate_size(self):
         # use mkfile to make a 1 MB file
         f = os.path.join(self.ppim.pkg_img_path, "foo")
         cmd = ["/usr/sbin/mkfile", "1m", f]
-        subprocess.check_call(cmd, stdout=_NULL, stderr=_NULL)
+        run_silent(cmd)
 
         self.ppim.calculate_size()
         # subract 1 due to the size of .image_info
@@ -186,14 +183,14 @@ class TestSymlinkVi(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.ppim = AIPrePkgImgMod("Test PPIM")
         self.pi_filelist = ["/usr/bin/vim", "/usr/has/bin/vi"]
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
 
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
 
 class TestSaveFiles(unittest.TestCase):
@@ -203,7 +200,7 @@ class TestSaveFiles(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.ppim = LiveCDPrePkgImgMod("Test PPIM")
         self.pi_filelist = [
             "usr/share/dbus-1/services/", "etc/gconf/schemas/",
@@ -218,7 +215,7 @@ class TestSaveFiles(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_save_files(self):
         self.ppim.save_files()
@@ -240,7 +237,7 @@ class TestConfigureSMF(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.ppim = PrePkgImgMod("Test PPIM")
         self.pi_filelist = ["/etc/svc/", "/lib/svc/manifest/system/",
                             "/var/svc/manifest/system/", "/lib/", "/usr/lib/",
@@ -282,7 +279,7 @@ class TestConfigureSMF(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
         os.remove(self.ppim.svc_profiles[0])
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_configure_smf_default_hostname(self):
         # insert a system/identity:node serivce into the var/svc manifest
@@ -306,14 +303,11 @@ class TestConfigureSMF(unittest.TestCase):
         # verify the instance's general/enabled is set to true
         cmd = [os.path.join(self.ppim.pkg_img_path, "usr/sbin/svccfg"), "-s",
                "libstub:default", "listprop", "general/enabled"]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        outs, _none = p.communicate()
-
+        p = run(cmd)
         # the format of the output will look like:
         # 'general/enabled  boolean  true\n'
-        #                            ^^^^^
-        self.assert_(outs.split()[2] == "true", outs)
+        #                            ^^^^
+        self.assertEqual(p.stdout.split()[2], "true", p.stdout)
 
         # verify the first line of /etc/inet/hosts has "solaris" in it
         with open(os.path.join(
@@ -348,14 +342,12 @@ class TestConfigureSMF(unittest.TestCase):
         # verify the instance's general/enabled is set to true
         cmd = [os.path.join(self.ppim.pkg_img_path, "usr/sbin/svccfg"), "-s",
                "libstub:default", "listprop", "general/enabled"]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        outs, _none = p.communicate()
+        p = run(cmd)
 
         # the format of the output will look like:
         # 'general/enabled  boolean  true\n'
-        #                            ^^^^^
-        self.assert_(outs.split()[2] == "true", outs)
+        #                            ^^^^
+        self.assertEqual(p.stdout.split()[2], "true", p.stdout)
 
         # verify the first line of /etc/inet/hosts has "hostnametest" in it
         with open(os.path.join(
@@ -372,7 +364,7 @@ class TestGetPkgVersion(unittest.TestCase):
     """
 
     def setUp(self):
-        eng = InstallEngine()
+        eng = engine_test_utils.get_new_engine_instance()
         self.ppim = AIPrePkgImgMod("Test PPIM")
         self.ppim.pkg_img_path = "/"
         (fd, path) = tempfile.mkstemp(dir="/var/tmp", prefix="test_pkg_ver_")
@@ -384,7 +376,7 @@ class TestGetPkgVersion(unittest.TestCase):
         self.ppim.doc.volatile.insert_children(DataObjectDict(DC_LABEL, {}))
 
     def tearDown(self):
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
         if os.path.exists(self.outfile):
             os.remove(self.outfile)
 
@@ -397,12 +389,12 @@ class TestGetPkgVersion(unittest.TestCase):
         self.assert_("SUNWcs" in d)
 
 
-class TestZZGenerateGnomeCaches(unittest.TestCase):
+class TestGenerateGnomeCaches(unittest.TestCase):
     """ test case for testing the generate gnome caches method
     """
 
     def setUp(self):
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.ppim = LiveCDPrePkgImgMod("Test PPIM")
         self.pi_filelist = ["/etc/svc/", "/lib/svc/manifest/system/",
                             "/var/svc/manifest/system/", "/lib/", "/usr/lib/",
@@ -431,7 +423,7 @@ class TestZZGenerateGnomeCaches(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_generate_gnome_caches(self):
         # create a dummy script in /lib/dummy
@@ -463,7 +455,7 @@ class TestZZGenerateGnomeCaches(unittest.TestCase):
         cmd = [os.path.join(self.ppim.pkg_img_path, "usr/sbin/svccfg"),
                "import", os.path.join(self.ppim.pkg_img_path,
                                       "lib/svc/manifest/system/trans.xml")]
-        subprocess.check_call(cmd)
+        run(cmd)
 
         # generate the caches
         self.ppim.generate_gnome_caches()

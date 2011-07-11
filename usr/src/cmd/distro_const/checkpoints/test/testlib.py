@@ -29,7 +29,6 @@ DC
 """
 
 import os
-import os.path
 import tempfile
 
 from lxml import etree

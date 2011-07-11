@@ -31,24 +31,22 @@
 """
 
 import os
-import os.path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
 import testlib
 
-from osol_install.install_utils import dir_size
+from solaris_install import run, run_silent
 from solaris_install.distro_const.checkpoints.boot_archive_archive \
     import BootArchiveArchive
-from solaris_install.engine import InstallEngine
+from solaris_install.engine.test import engine_test_utils
+
 
 # load a table of common unix cli calls
 import solaris_install.distro_const.cli as cli
 cli = cli.CLI()
 
-_NULL = open("/dev/null", "r+")
 
 class TestCalculateBASize(unittest.TestCase):
     """ test case to test the calculate_ba_size() method of
@@ -56,7 +54,8 @@ class TestCalculateBASize(unittest.TestCase):
     """
 
     def setUp(self):
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
+
         # create a dummy filesystem with some files
         filelist = ["/fake/directory/"]
         self.tdir = testlib.create_filesystem(*filelist)
@@ -65,7 +64,7 @@ class TestCalculateBASize(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tdir, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_archive_size(self):
         """ test case for an x86 archive that has content taking up 100M
@@ -76,13 +75,13 @@ class TestCalculateBASize(unittest.TestCase):
         # create an archive that is 100MB
         f = os.path.join(self.tdir, "fake/directory", "archive_file")
         cmd = ["/usr/sbin/mkfile", "100M", f]
-        subprocess.check_call(cmd)
+        run(cmd)
 
         size = self.baa.calculate_ba_size(self.tdir)
 
         # verify the calculated size is at least
         # 20MB bigger than the test directory size
-        min_expected_size = 120 * 1024 # 120MB
+        min_expected_size = 120 * 1024  # 120MB
         self.assert_(size >= min_expected_size, "%d %d" %
                      (size, min_expected_size))
 
@@ -93,7 +92,8 @@ class TestCreateRamdisksAndArchives(unittest.TestCase):
     """
 
     def setUp(self):
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
+
         # create a dummy filesystem with some files
         self.pi_filelist = ["/platform/i86pc/", "/platform/sun4u/lib/fs/ufs/",
                             "/usr/platform/sun4u/lib/fs/ufs/",
@@ -110,8 +110,7 @@ class TestCreateRamdisksAndArchives(unittest.TestCase):
         shutil.rmtree(self.baa.tmp_dir, ignore_errors=True)
         if self.baa.lofi:
             self.baa.lofi.destroy(dry_run=False)
-
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_create_x86_ramdisks(self):
         """ test case for x86 ramdisk creation
@@ -120,9 +119,9 @@ class TestCreateRamdisksAndArchives(unittest.TestCase):
         # set the nbpi to 1024
         self.baa.nbpi = 1024
 
-        # create a 1MB file 
+        # create a 1MB file
         cmd = ["/usr/sbin/mkfile", "1m", os.path.join(self.baa.ba_build, "a")]
-        subprocess.check_call(cmd)
+        run(cmd)
 
         self.baa.create_ramdisks()
         self.assert_(self.baa.lofi is not None)
@@ -138,14 +137,14 @@ class TestCreateRamdisksAndArchives(unittest.TestCase):
 
         # create a 1MB file in both self.baa.ba_build directory
         cmd = ["/usr/sbin/mkfile", "1m", os.path.join(self.baa.ba_build, "a")]
-        subprocess.check_call(cmd)
+        run(cmd)
 
         self.baa.create_ramdisks()
 
         for entry in ["set root_is_ramdisk=1", "set ramdisk_size="]:
             cmd = ["/usr/bin/grep", entry, os.path.join(self.baa.ba_build,
                                                         "etc/system")]
-            self.assert_(subprocess.call(cmd, stdout=_NULL, stderr=_NULL) == 0)
+            self.assertEqual(run_silent(cmd).wait(), 0)
 
         self.assert_(self.baa.lofi is not None)
 

@@ -26,7 +26,7 @@
 
 """ custom_script.py - Runs a custom script as a checkpoint.
 """
-from solaris_install import DC_LABEL, Popen
+from solaris_install import DC_LABEL, run
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
@@ -84,5 +84,4 @@ class CustomScript(Checkpoint):
         self.logger.info("Custom Script to run is: '%s'" % self.command)
 
         if not dry_run:
-            p = Popen.check_call(self.command, shell=True, stdout=Popen.STORE,
-                                 stderr=Popen.STORE, logger=self.logger)
+            run(self.command, shell=True)

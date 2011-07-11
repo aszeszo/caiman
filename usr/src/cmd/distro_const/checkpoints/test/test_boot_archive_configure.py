@@ -31,25 +31,21 @@
 """
 
 import os
-import os.path
 import tempfile
 import shutil
 import stat
-import subprocess
 import unittest
 
 import testlib
 
 import solaris_install.distro_const.checkpoints.boot_archive_configure as bac
 
+from solaris_install import run_silent
 from solaris_install.distro_const.checkpoints.boot_archive_configure \
-    import BootArchiveConfigure, AIBootArchiveConfigure, \
-           LiveCDBootArchiveConfigure
+    import BootArchiveConfigure, LiveCDBootArchiveConfigure
 from solaris_install.engine.test import engine_test_utils
 from solaris_install.transfer.media_transfer import TRANSFER_ROOT
 from solaris_install.transfer.info import Software
-
-_NULL = open("/dev/null", "r+")
 
 
 class TestConfigureSymlinks(unittest.TestCase):
@@ -254,8 +250,7 @@ class TestConfigureGDM(unittest.TestCase):
         for entry in ["AutomaticLoginEnable\=true", "AutomaticLogin=jack",
                       "GdmXserverTimeout=30"]:
             cmd = ["/usr/bin/grep", entry, self.gdm_conf]
-            self.assert_(subprocess.call(cmd, stdout=_NULL, stderr=_NULL) == 0,
-                         " ".join(cmd))
+            self.assertEqual(run_silent(cmd).wait(), 0, " ".join(cmd))
 
 
 class TestConfigureSudoers(unittest.TestCase):

@@ -26,11 +26,11 @@
 
 """ ai_publish_pkg - Publish the package image area into an pkg(5) repository
 """
-import logging
 import platform
 import urlparse
 
-from solaris_install import DC_LABEL, DC_PERS_LABEL, CalledProcessError, Popen
+from solaris_install import DC_LABEL, DC_PERS_LABEL, CalledProcessError, \
+    Popen, run
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.distro_const.distro_spec import Distro
@@ -129,22 +129,20 @@ class AIPublishPackages(Checkpoint):
         if scheme in ("file", ""):
             # Try to create the repo (it may already exist)
             cmd = [cli.PKGREPO, "create", self.pkg_repo]
-            repo = Popen.check_call(cmd, check_result=Popen.ANY,
-                                    stderr=Popen.STORE, logger=self.logger,
-                                    stderr_loglevel=logging.DEBUG)
+            repo = run(cmd, check_result=Popen.ANY)
+
             if repo.returncode == 0:
                 # New repo was created. Add the publisher and make it default
                 cmd = [cli.PKGREPO, "-s", self.pkg_repo, "add-publisher",
                        self.prefix]
-                Popen.check_call(cmd, stderr=Popen.STORE, logger=self.logger)
+                run(cmd)
                 cmd = [cli.PKGREPO, "-s", self.pkg_repo, "set",
                        "publisher/prefix=%s" % self.prefix]
-                Popen.check_call(cmd, stderr=Popen.STORE, logger=self.logger)
+                run(cmd)
 
         # Generate a manifest file
         cmd = [cli.PKGSEND, "generate", self.pkg_img_path]
-        generate = Popen.check_call(cmd, stdout=Popen.STORE,
-                                    stderr=Popen.STORE, logger=self.logger)
+        generate = run(cmd)
         manifest = [generate.stdout]
 
         arch = platform.processor()

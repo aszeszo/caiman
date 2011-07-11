@@ -29,9 +29,8 @@ usable boot archive.
 """
 import os
 import shutil
-import subprocess
 
-from solaris_install import DC_LABEL
+from solaris_install import DC_LABEL, run
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.transfer.info import Software, Source, Destination, \
     CPIOSpec, Dir
@@ -79,8 +78,7 @@ class BootArchiveConfigure(Checkpoint):
 
         # configure devices
         cmd = [cli.DEVFSADM, "-r", self.ba_build]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        subprocess.check_call(cmd)
+        run(cmd)
 
         # etc/dev/.devfsadm_dev.lock gets created every time devfsadm is run.
         # remove it since there's no point in carrying it forward through to
@@ -92,14 +90,12 @@ class BootArchiveConfigure(Checkpoint):
 
         # Set a marker so that every boot is a reconfiguration boot
         cmd = [cli.TOUCH, os.path.join(self.ba_build, "reconfigure")]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        subprocess.check_call(cmd)
+        run(cmd)
 
         # Set up /etc/rtc_config
         cmd = [cli.CP, os.path.join(self.file_defaults, "rtc_config.default"),
                os.path.join(self.ba_build, "etc/rtc_config")]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        subprocess.check_call(cmd)
+        run(cmd)
 
         # go to the ba_build directory
         self.logger.debug("creating symlinks and mountpoints")
@@ -131,8 +127,7 @@ class BootArchiveConfigure(Checkpoint):
         # create volume set id file
         self.logger.debug("creating .volsetid file")
         cmd = [cli.MAKEUUID]
-        self.logger.debug("executing:  %s" % cli.MAKEUUID)
-        subprocess.check_call(cmd, stdout=open(".volsetid", "w"))
+        run(cmd, stdout=open(".volsetid", "w"))
 
         # chmod it to 444 and set the ownership to root:root (0:0)
         os.chmod(".volsetid", 0444)

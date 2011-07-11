@@ -29,13 +29,12 @@
  Test program for create_usb
 """
 
-import os.path
 import unittest
 
 from subprocess import CalledProcessError
 
 from solaris_install.distro_const.checkpoints.create_usb import CreateUSB
-from solaris_install.engine import InstallEngine
+from solaris_install.engine.test import engine_test_utils
 
 
 class TestCreateUSB(unittest.TestCase):
@@ -43,11 +42,11 @@ class TestCreateUSB(unittest.TestCase):
     """
 
     def setUp(self):
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.c_usb = CreateUSB("Test Create USB")
 
     def tearDown(self):
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_missing_iso(self):
         self.c_usb.dist_usb = "/var/tmp/temp.usb"

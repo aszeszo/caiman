@@ -29,13 +29,11 @@ area.  The resulting .usb file is created from an .iso file so the .iso file
 must exist first.
 """
 import os
-import os.path
 import shutil
-import subprocess
 import tempfile
 import time
 
-from solaris_install import DC_LABEL, DC_PERS_LABEL
+from solaris_install import DC_LABEL, DC_PERS_LABEL, run_silent
 from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.distro_const.distro_spec import Distro
@@ -44,8 +42,6 @@ from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 
 import solaris_install.distro_const.cli as cli
 cli = cli.CLI()
-
-_NULL = open("/dev/null", "r+")
 
 
 class CreateUSB(Checkpoint):
@@ -139,8 +135,7 @@ class CreateUSB(Checkpoint):
         """
         self.logger.info("Making final USB image: %s" % self.dist_usb)
         cmd = [cli.USBGEN, self.dist_iso, self.dist_usb, self.tmp_mnt]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        subprocess.check_call(cmd, stdout=_NULL, stderr=_NULL)
+        run_silent(cmd)
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.

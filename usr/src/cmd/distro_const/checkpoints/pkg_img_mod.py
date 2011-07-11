@@ -33,9 +33,8 @@
 import os
 import platform
 import shutil
-import subprocess
 
-from solaris_install import DC_LABEL
+from solaris_install import CalledProcessError, DC_LABEL, Popen, run
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
@@ -48,8 +47,6 @@ from solaris_install.manifest.writer import ManifestWriter
 # load a table of common unix cli calls
 import solaris_install.distro_const.cli as cli
 cli = cli.CLI()
-
-_NULL = open("/dev/null", "r+")
 
 
 class PkgImgMod(Checkpoint):
@@ -191,27 +188,18 @@ class PkgImgMod(Checkpoint):
             # insert the flags directly after the name of the output file
             cmd.insert(3, "-sort")
             cmd.insert(4, self.dist_iso_sort)
-
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=_NULL)
-
-        # log the output
-        outs, _none = p.communicate()
-        for line in outs.splitlines():
-            self.logger.debug(line)
+        run(cmd)
 
         self.logger.info("Compressing /usr file system archive using: " +
-                            self.compression_type)
+                         self.compression_type)
 
         cmd = [cli.LOFIADM, "-C", self.compression_type,
                os.path.join(self.pkg_img_path, "solaris.zlib")]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        _none, stderr = p.communicate()
-        if p.returncode != 0:
-            raise RuntimeError("Compression of /usr file system failed:" +
-                                os.strerror(p.returncode))
+        try:
+            p = run(cmd)
+        except CalledProcessError:
+            raise RuntimeError("Compression of /usr file system failed: " +
+                               os.strerror(p.returncode))
 
     def create_misc_archive(self):
         """ class method to create the /mnt/misc file system archive
@@ -229,35 +217,26 @@ class PkgImgMod(Checkpoint):
                "-U", "-allow-multidot", "-no-iso-translate", "-quiet",
                "-cache-inodes", "-d", "-D", "-V", "\"compress\"",
                "miscdirs"]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=_NULL)
-
-        # log the output
-        outs, _none = p.communicate()
-        for line in outs.splitlines():
-            self.logger.debug(line)
+        run(cmd)
 
         self.logger.info("Compressing /mnt/misc file system archive " +
-                            "using: " + self.compression_type)
+                         "using: " + self.compression_type)
 
         cmd = [cli.LOFIADM, "-C", self.compression_type,
                os.path.join(self.pkg_img_path, "solarismisc.zlib")]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        _none, stderr = p.communicate()
+        p = run(cmd, check_result=Popen.ANY)
         if p.returncode != 0:
-            if "invalid algorithm name" in stderr:
+            if "invalid algorithm name" in p.stderr:
                 raise RuntimeError("Invalid compression algorithm " +
                     "specified for /mnt/misc archive: " +
                     self.compression_type)
             else:
                 raise RuntimeError("Compression of /mnt/misc file system " +
-                                   "failed")
+                                   "failed:  " + os.strerror(p.returncode))
 
-        # the removal of /usr must be deferred to until
-        # solarismisc.zlib has been created because the
-        # contents of solarismisc.zlib actually come from /usr
+        # the removal of /usr must be deferred to until solarismisc.zlib has
+        # been created because the contents of solarismisc.zlib actually come
+        # from /usr
         shutil.rmtree(os.path.join(self.pkg_img_path, "miscdirs"),
                       ignore_errors=True)
         shutil.rmtree(os.path.join(self.pkg_img_path, "usr"),
@@ -279,7 +258,7 @@ class PkgImgMod(Checkpoint):
         media_soft_node = Software(TRANSFER_MEDIA, type="CPIO")
         media_soft_node.insert_children([src, dst, media_install])
 
-        # Add that into the software transfer list.  
+        # Add that into the software transfer list.
         self.doc.persistent.insert_children(media_soft_node)
 
         # call manifest writer to write out the content of
@@ -313,16 +292,15 @@ class PkgImgMod(Checkpoint):
         self.add_content_list_to_doc(content_list)
 
         os.chdir(cwd)
-    
+
     def populate_save_list(self):
         '''Store a list of files under the 'save' directory. Net-booted
         text installer uses this list to determine what files it needs from
         the boot server
-        
         '''
         save_files = []
         save_dir = os.path.join(self.pkg_img_path, "save")
-        for root, d, files in os.walk(save_dir):
+        for root, _none, files in os.walk(save_dir):
             for f in files:
                 relpath = os.path.relpath(os.path.join(root, f),
                                           start=self.pkg_img_path)
@@ -347,7 +325,7 @@ class PkgImgMod(Checkpoint):
 
         # create the /mnt/misc archive
         self.create_misc_archive()
-        
+
 
 class LiveCDPkgImgMod(PkgImgMod, Checkpoint):
     """ LiveCDPkgImgMod - class to modify the pkg_image directory after the
@@ -448,7 +426,7 @@ class TextPkgImgMod(PkgImgMod, Checkpoint):
                 self.strip_x86_platform()
             else:
                 self.strip_sparc_platform()
-    
+
             # populate live cd's content into DOC
             self.populate_livecd_content()
         finally:
@@ -494,7 +472,7 @@ class AIPkgImgMod(TextPkgImgMod):
                 self.strip_x86_platform()
             else:
                 self.strip_sparc_platform()
-    
+
             # populate the value from the save directory into the DOC
             self.populate_save_list()
 

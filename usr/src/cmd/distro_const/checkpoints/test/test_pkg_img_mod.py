@@ -38,7 +38,7 @@ import testlib
 
 from solaris_install.distro_const.checkpoints.pkg_img_mod import PkgImgMod, \
     LiveCDPkgImgMod, AIPkgImgMod
-from solaris_install.engine import InstallEngine
+from solaris_install.engine.test import engine_test_utils
 
 
 class TestStripRoot(unittest.TestCase):
@@ -48,7 +48,7 @@ class TestStripRoot(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.filelist = ["/etc/.pwd.lock",
                          "/sbin/bar/baz",
                          "/kernel/foo",
@@ -61,7 +61,7 @@ class TestStripRoot(unittest.TestCase):
     def tearDown(self):
         for entry in [self.pim.pkg_img_path, self.pim.ba_build]:
             shutil.rmtree(entry, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_run(self):
         self.pim.strip_root()
@@ -88,7 +88,7 @@ class TestCreateUsrArchive(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.filelist = ["/usr/lib",
                          "/usr/sbin/lofiadm",
                          "/usr/file1/file2",
@@ -100,7 +100,7 @@ class TestCreateUsrArchive(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.pim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_run(self):
         self.pim.create_usr_archive()
@@ -117,7 +117,7 @@ class TestCreateMiscArchive(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.filelist = ["/opt/",
                          "/opt/lib",
                          "/etc/",
@@ -132,7 +132,7 @@ class TestCreateMiscArchive(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.pim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_run(self):
         self.pim.create_misc_archive()
@@ -149,7 +149,7 @@ class TestCleanupIcons(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the
         # proper location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.filelist = ["/usr/",
                          "/usr/file1/file2/icon-theme.cache"]
         self.pim = LiveCDPkgImgMod("Test LiveCDPkgImgMod")
@@ -157,7 +157,7 @@ class TestCleanupIcons(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.pim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_run(self):
         self.pim.cleanup_icons()
@@ -174,7 +174,7 @@ class TestStripPlatform(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the
         # proper location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.filelist = ["/platform/",
                          "/platform/dir1/dir2/unix",
                          "/platform/dir1/dir2/file",
@@ -186,7 +186,7 @@ class TestStripPlatform(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.pim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_run(self):
         self.pim.strip_platform()
@@ -207,7 +207,7 @@ class TestStripX86Platform(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the
         # proper location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.filelist = ["/platform/",
                          "/platform/i86pc/amd64/boot_archive",
                          "/platform/i86pc/amd64/archive_cache",
@@ -221,7 +221,7 @@ class TestStripX86Platform(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.pim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_run(self):
         self.pim.strip_x86_platform()
@@ -243,7 +243,7 @@ class TestStripSPARCPlatform(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the
         # proper location
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.filelist = ["/platform/",
                          "/platform/sun4u/boot_archive",
                          "/platform/sun4v/archive_cache",
@@ -257,7 +257,7 @@ class TestStripSPARCPlatform(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.pim.pkg_img_path, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_run(self):
         self.pim.strip_sparc_platform()

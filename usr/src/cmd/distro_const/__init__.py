@@ -43,11 +43,9 @@ import osol_install.errsvc as errsvc
 import solaris_install.transfer.info as transfer
 import solaris_install.configuration
 
-from subprocess import Popen, PIPE, CalledProcessError
-
 from osol_install.install_utils import set_http_proxy
 from osol_install.liberrsvc import ES_DATA_EXCEPTION
-from solaris_install import DC_LABEL
+from solaris_install import CalledProcessError, run, DC_LABEL
 from solaris_install.boot.boot_spec import BootMods
 from solaris_install.data_object import DataObject, ObjectNotFoundError
 from solaris_install.data_object.cache import DataObjectCache
@@ -485,13 +483,12 @@ def is_root_pool(pool_name):
     """ function to determine if a zpool is the boot pool
     """
     cmd = ["/usr/sbin/zpool", "get", "bootfs", pool_name]
-    p = Popen(cmd, stdout=PIPE, stderr=PIPE)
-    outs, _none = p.communicate()
+    p = run(cmd)
     # if the pool is the boot pool, the output looks like
     # NAME   PROPERTY  VALUE                SOURCE
     # rpool  bootfs    rpool/ROOT/dataset   local
     # if the pool is NOT the boot pool, the VALUE will be a hypen (-)
-    for line in outs.splitlines():
+    for line in p.stdout.splitlines():
         if line.startswith(pool_name):
             if line.split()[2] != "-":
                 return True

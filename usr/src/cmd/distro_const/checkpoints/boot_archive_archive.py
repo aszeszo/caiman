@@ -29,25 +29,21 @@
 import copy
 import math
 import os
-import os.path
 import platform
 import stat
-import subprocess
 
-from solaris_install import DC_LABEL
+from solaris_install import DC_LABEL, run, run_silent
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
 from osol_install.install_utils import dir_size
 from solaris_install.target.logical import Lofi
 from solaris_install.transfer.cpio import TransferCPIOAttr
-from solaris_install.transfer.info import INSTALL, UNINSTALL
+from solaris_install.transfer.info import INSTALL
 
 # load a table of common unix cli calls
 import solaris_install.distro_const.cli as cli
 cli = cli.CLI()
-
-_NULL = open("/dev/null", "r+")
 
 
 class BootArchiveArchive(Checkpoint):
@@ -214,7 +210,7 @@ class BootArchiveArchive(Checkpoint):
                os.path.join(self.pkg_img_path,
                             "usr/platform/sun4u/lib/fs/ufs/bootblk"),
                lofi_device]
-        subprocess.check_call(cmd)
+        run(cmd)
 
     def sparc_fiocompress(self, mountpoint):
         """ class method to fiocompress majority of the files
@@ -275,8 +271,7 @@ class BootArchiveArchive(Checkpoint):
                    statinfo.st_nlink < 2:
                     # fiocompress the file
                     cmd = [cli.FIOCOMPRESS, "-mc", ba_path, mp_path]
-                    self.logger.debug("executing " + " ".join(cmd))
-                    subprocess.check_call(cmd)
+                    run(cmd)
 
         # return to the original directory
         os.chdir(cwd)
@@ -324,7 +319,7 @@ class BootArchiveArchive(Checkpoint):
             cmd = [cli.CMD7ZA, "a", "-tgzip",
                    "-mx=%d" % self.comp_level,
                    self.lofi.ramdisk + ".gz", self.lofi.ramdisk]
-            subprocess.check_call(cmd, stdout=_NULL, stderr=_NULL)
+            run_silent(cmd)
 
             # move the file into the proper place in the pkg image area
             os.rename(self.lofi.ramdisk + ".gz", self.lofi.ramdisk)

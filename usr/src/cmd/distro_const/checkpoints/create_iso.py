@@ -28,13 +28,10 @@
 area.
 """
 import os
-import os.path
 import platform
-import subprocess
-import shutil
 import time
 
-from solaris_install import DC_LABEL, DC_PERS_LABEL
+from solaris_install import DC_LABEL, DC_PERS_LABEL, run_silent
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.data_object import ObjectNotFoundError
@@ -43,8 +40,6 @@ from solaris_install.distro_const.distro_spec import Distro
 
 import solaris_install.distro_const.cli as cli
 cli = cli.CLI()
-
-_NULL = open("/dev/null", "r+")
 
 
 class CreateISO(Checkpoint):
@@ -63,6 +58,7 @@ class CreateISO(Checkpoint):
         self.ba_build = None
         self.media_dir = None
 
+        self.bios_eltorito = None
         self.add_timestamp = None
         self.distro_name = None
         self.dist_iso = None
@@ -167,18 +163,16 @@ class CreateISO(Checkpoint):
         # the first 16 sectors (or 8K) of the media contain the bootblock.
         # The hsfs bootblock starts at offset 512.
         self.logger.debug("creating hsfs.bootblock")
-        # pylint: disable-msg=E1103
         cmd = [cli.DD, "if=%s" % inblock, "of=%s" % outblock, "bs=1b",
                "oseek=1", "count=15", "conv=sync"]
-
         self.logger.debug("executing:  %s" % " ".join(cmd))
-        subprocess.check_call(cmd, stdout=_NULL, stderr=_NULL)
+        run_silent(cmd)
 
     def run_mkisofs(self):
         """ class method to execute mkisofs to create the iso file
         """
         self.logger.debug("executing:  %s" % " ".join(self.mkisofs_cmd))
-        subprocess.check_call(self.mkisofs_cmd, stdout=_NULL, stderr=_NULL)
+        run_silent(self.mkisofs_cmd)
 
     def create_additional_timestamp(self):
         """ class method to create a symlink to the timestamped

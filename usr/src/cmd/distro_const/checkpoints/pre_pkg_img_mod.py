@@ -28,21 +28,19 @@
 boot archive construction begins.
 """
 import os
-import os.path
 import re
 import shutil
-import subprocess
 import tempfile
 
 from distutils.text_file import TextFile
 
 from osol_install.install_utils import dir_size, encrypt_password
 from pkg.cfgfiles import PasswordFile
-from solaris_install import DC_LABEL, DC_PERS_LABEL
+from solaris_install import CalledProcessError, DC_LABEL, DC_PERS_LABEL, run, \
+    run_silent, Popen
 from solaris_install.configuration.configuration import Configuration
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
-from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.data_object.data_dict import DataObjectDict
 
 # load a table of common unix cli calls
@@ -173,38 +171,33 @@ class PrePkgImgMod(Checkpoint):
         os.environ.update(smf_env_vars)
 
         # add all of the manifests in /var and /lib
-        for mdir in ["lib", "var"]:
-            cmd = [cli.SVCCFG, "import",
-                os.path.join(self.pkg_img_path, "%s/svc/manifest" % mdir)]
-            self.logger.debug("executing:  %s" % " ".join(cmd))
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
-            outs, errs = p.communicate()
-            self.logger.debug("stdout:  %s" % outs)
-            self.logger.debug("stderr:  %s" % errs)
-            if p.returncode != 0:
-                raise RuntimeError("Error importing manifests")
+        for manifest_dir in ["lib", "var"]:
+            import_dir = os.path.join(self.pkg_img_path,
+                                      "%s/svc/manifest" % manifest_dir)
+            cmd = [cli.SVCCFG, "import", import_dir]
+            try:
+                p = run(cmd)
+            except CalledProcessError:
+                raise RuntimeError("Error importing manifests from %s" % \
+                                   import_dir)
 
         # Apply each profile from the manifest
         for svc_profile_path in self.svc_profiles:
             self.logger.info("Applying SMF profile: %s" % svc_profile_path)
             cmd = [cli.SVCCFG, "apply", svc_profile_path]
-            self.logger.debug("executing:  %s" % " ".join(cmd))
-            subprocess.check_call(cmd)
+            run(cmd)
 
         # set the hostname of the distribution
         if self.hostname is not None:
             cmd = [cli.SVCCFG, "-s", "system/identity:node", "setprop",
                    "config/nodename", "=", "astring:", '"%s"' % self.hostname]
-            self.logger.debug("executing:  %s" % " ".join(cmd))
-            subprocess.check_call(cmd)
+            run(cmd)
         else:
             # retrieve the default hostname
             cmd = [cli.SVCCFG, "-s", "system/identity:node", "listprop",
                    "config/nodename"]
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-            outs, _none = p.communicate()
-            self.hostname = outs.strip().split()[2]
+            p = run(cmd)
+            self.hostname = p.stdout.strip().split()[2]
 
         # move the repo from /tmp to the proper place
         self.logger.debug("moving repo from /tmp into pkg_image directory")
@@ -281,10 +274,8 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         version_re = re.compile(r"FMRI:.*?%s@.*?\,(.*?):" % pkg)
 
         cmd = [cli.PKG, "-R", self.pkg_img_path, "info", pkg]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-        pkg_output = p.communicate()[0]
-
-        version = version_re.search(pkg_output).group(1)
+        p = run(cmd)
+        version = version_re.search(p.stdout).group(1)
 
         # ai_pkg_version needs to live in the persistent
         # section of the DOC to ensure pause/resume works
@@ -452,7 +443,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # removed.
         self.logger.debug("creating temporary /dev/null in pkg_image")
         cmd = [cli.TOUCH, os.path.join(self.pkg_img_path, "dev/null")]
-        subprocess.check_call(cmd)
+        run(cmd)
 
         # use the repository in the proto area
         os.environ.update({"SVCCFG_REPOSITORY":
@@ -460,10 +451,8 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # generate a list of services to refresh
         cmd = [cli.SVCCFG, "list", "*desktop-cache*"]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        stdout, _none = p.communicate()
-        service_list = stdout.splitlines()
+        p = run(cmd, check_result=Popen.ANY)
+        service_list = p.stdout.splitlines()
 
         # if no services were found, log a message
         if not service_list:
@@ -477,13 +466,10 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
             # get the name of the refresh/exec script
             cmd = [cli.SVCCFG, "-s", service, "listprop", "refresh/exec"]
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
-            stdout, _none = p.communicate()
-
-            # verify there's no error
-            if p.returncode != 0:
-                self.logger.critical("service: " + service + "does " +
+            try:
+                p = run(cmd)
+            except CalledProcessError:
+                self.logger.critical("service: " + service + " does " +
                                      "not have a start method")
                 continue
 
@@ -491,7 +477,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
             # refresh/exec  astring  "/lib/svc/method/method-name %m"\n
 
             # the method is the 3rd argument
-            method = stdout.split()[2]
+            method = p.stdout.split()[2]
 
             # strip the double-quotes from the method
             method = method.strip('"')
@@ -502,8 +488,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
             if pid == 0:
                 os.chroot(self.pkg_img_path)
                 self.logger.debug("executing:  %s" % " ".join(cmd))
-                subprocess.check_call(cmd, stdout=open("/dev/null", "w"),
-                                      stderr=subprocess.STDOUT)
+                run_silent(cmd)
                 os._exit(0)
             else:
                 # wait for the child to exit
@@ -522,8 +507,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # starts.
         cmd = [cli.TOUCH, os.path.join(self.pkg_img_path,
                "etc/gconf/schemas/panel-default-setup.entries")]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        subprocess.check_call(cmd)
+        run(cmd)
 
         # remove the temporary dev/null
         self.logger.debug("removing temporary /dev/null from pkg_image")
@@ -534,8 +518,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         cmd = [cli.FC_CACHE, "--force"]
         if pid == 0:
             os.chroot(self.pkg_img_path)
-            self.logger.debug("executing:  %s" % " ".join(cmd))
-            subprocess.check_call(cmd)
+            run(cmd)
             os._exit(0)
         else:
             _none, status = os.wait()

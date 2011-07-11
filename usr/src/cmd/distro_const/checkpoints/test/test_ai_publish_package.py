@@ -31,7 +31,6 @@
 """
 
 import os
-import os.path
 import shutil
 import tempfile
 import unittest
@@ -40,7 +39,7 @@ import testlib
 
 from solaris_install.distro_const.checkpoints.ai_publish_pkg \
     import AIPublishPackages
-from solaris_install.engine import InstallEngine
+from solaris_install.engine.test import engine_test_utils
 
 
 class TestCreateRepository(unittest.TestCase):
@@ -48,7 +47,7 @@ class TestCreateRepository(unittest.TestCase):
     """
 
     def setUp(self):
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         # create a dummy filesystem with some files created in the proper
         # location
         self.filelist = ["/file1", "/file2", "/file3", "/file4"]
@@ -59,7 +58,7 @@ class TestCreateRepository(unittest.TestCase):
         shutil.rmtree(self.app.pkg_img_path, ignore_errors=True)
         shutil.rmtree(self.app.tmp_dir, ignore_errors=True)
         shutil.rmtree(self.app.media_dir, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_default_options(self):
         """ test case for testing the default options
@@ -112,4 +111,3 @@ class TestCreateRepository(unittest.TestCase):
         # verify a cfg_cache file was created
         self.assert_(os.path.isfile(os.path.join(d, "test_repo",
                                                  "pkg5.repository")))
-

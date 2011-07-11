@@ -30,10 +30,8 @@ Test program for solaris_install/distro_const/__init__.py
 
 import logging
 import os
-import os.path
 import sys
 import tempfile
-import time
 import unittest
 
 import solaris_install.distro_const as dc
@@ -42,7 +40,7 @@ import solaris_install.distro_const.execution_checkpoint as dc_exec
 
 from lxml import etree
 
-from solaris_install.engine import InstallEngine
+from solaris_install.engine.test import engine_test_utils
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target import Target
 from solaris_install.target.logical import Filesystem, Logical, Zpool
@@ -56,12 +54,13 @@ def clear_proxy():
     if "HTTP_PROXY" in os.environ:
         del os.environ["HTTP_PROXY"]
 
+
 class TestLockfile(unittest.TestCase):
     """ test case to test the Lockfile context manager
     """
 
     def setUp(self):
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
 
         # create a temporary file
         (self.fd, self.path) = tempfile.mkstemp()
@@ -70,7 +69,7 @@ class TestLockfile(unittest.TestCase):
         os.remove(self.path)
 
     def tearDown(self):
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
         # ensure the file has been removed
         if os.path.exists(self.path):
@@ -127,6 +126,7 @@ class TestDCScreenHandler(unittest.TestCase):
         self.logger.debug("test entry")
         with open(self.filename, "r") as fh:
             self.assertTrue("test entry" in fh.read())
+
 
 class TestParseArgs(unittest.TestCase):
     """ test case for testing the argument handler to distro_const.py
@@ -207,11 +207,11 @@ class TestStreamHandler(unittest.TestCase):
     """ test case for setting up the StreamHandler
     """
     def setUp(self):
-        self.eng = InstallEngine()
+        self.eng = engine_test_utils.get_new_engine_instance()
         self.logger = logging.getLogger(INSTALL_LOGGER_NAME)
 
     def tearDown(self):
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
         for handler in self.logger.handlers:
             if isinstance(handler, logging.StreamHandler):
                 self.logger.removeHandler(handler)
@@ -222,7 +222,7 @@ class TestStreamHandler(unittest.TestCase):
         verbose = False
         list_cps = True
         dc.set_stream_handler(self.logger, list_cps, verbose)
-        
+
         # the StreamHandler will be the last entry in the handlers list
         self.assertTrue(self.logger.handlers[-1].level == logging.INFO)
 
@@ -232,7 +232,7 @@ class TestStreamHandler(unittest.TestCase):
         verbose = True
         list_cps = True
         dc.set_stream_handler(self.logger, list_cps, verbose)
-        
+
         # the StreamHandler will be the last entry in the handlers list
         self.assertTrue(self.logger.handlers[-1].level == logging.DEBUG)
 
@@ -241,14 +241,14 @@ class TestRegisterCheckpoints(unittest.TestCase):
     """ test case for testing the register_checkpoints function
     """
     def setUp(self):
-        self.eng = InstallEngine()
+        self.eng = engine_test_utils.get_new_engine_instance()
         self.doc = self.eng.data_object_cache
 
         # create DOC objects with 2 checkpoints
         self.distro = dc_spec.Distro("distro")
         self.execution = dc_exec.Execution("execution")
         self.execution.stop_on_error = "True"
-        
+
         # set the 'checkpoints' to use the unittest module and TestCase class
         self.cp1 = dc_exec.Checkpoint("checkpoint 1")
         self.cp1.mod_path = "unittest"
@@ -261,7 +261,7 @@ class TestRegisterCheckpoints(unittest.TestCase):
         self.logger = logging.getLogger(INSTALL_LOGGER_NAME)
 
     def tearDown(self):
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_basic_registration(self):
         """ simple registration of two checkpoints
@@ -299,7 +299,7 @@ class TestParseManifest(unittest.TestCase):
         distro = etree.SubElement(self.root, "distro")
         distro.set("name", "test")
         distro.set("add_timestamp", "false")
-        
+
         # distro_spec section
         ds = etree.SubElement(distro, "distro_spec")
         ip = etree.SubElement(ds, "img_params")
@@ -324,12 +324,12 @@ class TestParseManifest(unittest.TestCase):
         cp.set("checkpoint_class", "TestCase")
 
         # instantiate the engine
-        self.eng = InstallEngine()
+        self.eng = engine_test_utils.get_new_engine_instance()
 
     def tearDown(self):
         os.close(self.fh)
         os.remove(self.path)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_parse_manifest(self):
         """ test parsing of a simple manifest
@@ -356,7 +356,7 @@ class TestValidateTarget(unittest.TestCase):
 
     def setUp(self):
         # instantiate the engine
-        self.eng = InstallEngine()
+        self.eng = engine_test_utils.get_new_engine_instance()
         self.doc = self.eng.data_object_cache
 
         # create a Target DataObjects for later insertion
@@ -365,7 +365,7 @@ class TestValidateTarget(unittest.TestCase):
         self.target.insert_children(self.logical)
 
     def tearDown(self):
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_two_filesystems(self):
         """ test to make sure two Filesystem objects correctly errors
@@ -493,7 +493,7 @@ class TestSetHTTPProxy(unittest.TestCase):
     """
 
     def setUp(self):
-        self.eng = InstallEngine()
+        self.eng = engine_test_utils.get_new_engine_instance()
         self.doc = self.eng.data_object_cache
 
         self.distro = dc_spec.Distro("distro")
@@ -503,9 +503,8 @@ class TestSetHTTPProxy(unittest.TestCase):
         clear_proxy()
 
     def tearDown(self):
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
         clear_proxy()
-
 
     def test_http_proxy(self):
         """ test setting the proxy
@@ -537,14 +536,14 @@ class TestListCheckpoints(unittest.TestCase):
     """ test case for testing the list_checkpoints function
     """
     def setUp(self):
-        self.eng = InstallEngine()
+        self.eng = engine_test_utils.get_new_engine_instance()
         self.doc = self.eng.data_object_cache
 
         # create DOC objects with 2 checkpoints
         self.distro = dc_spec.Distro("distro")
         self.execution = dc_exec.Execution("execution")
         self.execution.stop_on_error = "True"
-        
+
         # set the 'checkpoints' to use the unittest module and TestCase class
         self.cp1 = dc_exec.Checkpoint("checkpoint 1")
         self.cp1.mod_path = "unittest"
@@ -557,7 +556,7 @@ class TestListCheckpoints(unittest.TestCase):
         self.logger = logging.getLogger(INSTALL_LOGGER_NAME)
 
     def tearDown(self):
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_list_checkpoints(self):
         """ test listing out all registered checkpoints.  Since the output goes

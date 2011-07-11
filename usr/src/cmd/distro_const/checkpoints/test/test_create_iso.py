@@ -30,16 +30,14 @@
 """
 
 import os
-import os.path
 import shutil
 import unittest
 
 import testlib
 
-from subprocess import CalledProcessError
-
+from solaris_install import CalledProcessError
 from solaris_install.distro_const.checkpoints.create_iso import CreateISO
-from solaris_install.engine import InstallEngine
+from solaris_install.engine.test import engine_test_utils
 
 
 class TestISOSetup(unittest.TestCase):
@@ -47,7 +45,7 @@ class TestISOSetup(unittest.TestCase):
     """
 
     def setUp(self):
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.ba_filelist = [".volsetid"]
         self.pi_filelist = ["a", "b"]
         self.c_iso = CreateISO("Test Create ISO")
@@ -65,7 +63,7 @@ class TestISOSetup(unittest.TestCase):
             os.rmdir(self.c_iso.media_dir)
         for entry in [self.c_iso.pkg_img_path, self.c_iso.ba_build]:
             shutil.rmtree(entry, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_missing_media_dir(self):
         if os.path.isdir(self.c_iso.media_dir):
@@ -91,14 +89,14 @@ class TestPrepareBootblock(unittest.TestCase):
     """
 
     def setUp(self):
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.outblock = "/var/tmp/bootblock"
         self.c_iso = CreateISO("Test Create ISO")
 
     def tearDown(self):
         if os.path.isfile(self.outblock):
             os.remove(self.outblock)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_prepare_bootblock(self):
         self.c_iso.prepare_bootblock("/dev/null", self.outblock)
@@ -111,11 +109,11 @@ class TestExecuteMkisofs(unittest.TestCase):
     """
 
     def setUp(self):
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.c_iso = CreateISO("Test Create ISO")
 
     def tearDown(self):
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_execute(self):
         self.c_iso.mkisofs_cmd = ["/usr/bin/cat", "/etc/motd"]
@@ -132,7 +130,7 @@ class TestTimeStampMedia(unittest.TestCase):
     """
 
     def setUp(self):
-        InstallEngine()
+        engine_test_utils.get_new_engine_instance()
         self.media_filelist = ["a.iso"]
         self.c_iso = CreateISO("Test Create ISO")
         self.c_iso.media_dir = testlib.create_filesystem(*self.media_filelist)
@@ -145,14 +143,14 @@ class TestTimeStampMedia(unittest.TestCase):
     def tearDown(self):
         if os.path.isdir(self.c_iso.media_dir):
             shutil.rmtree(self.c_iso.media_dir, ignore_errors=True)
-        InstallEngine._instance = None
+        engine_test_utils.reset_engine()
 
     def test_existing_iso(self):
         with open(self.incr_iso, "w"):
             pass
         self.c_iso.create_additional_timestamp()
         self.assert_(os.path.islink(self.incr_iso))
-        dist_iso_statinfo = os.stat(os.path.join(self.c_iso.media_dir, 
+        dist_iso_statinfo = os.stat(os.path.join(self.c_iso.media_dir,
                                     self.c_iso.dist_iso))
         incr_iso_statinfo = os.stat(self.incr_iso)
         self.assert_(dist_iso_statinfo.st_ino == incr_iso_statinfo.st_ino)
@@ -160,7 +158,7 @@ class TestTimeStampMedia(unittest.TestCase):
     def test_nonexisting_iso(self):
         self.c_iso.create_additional_timestamp()
         self.assert_(os.path.islink(self.incr_iso))
-        dist_iso_statinfo = os.stat(os.path.join(self.c_iso.media_dir, 
+        dist_iso_statinfo = os.stat(os.path.join(self.c_iso.media_dir,
                                     self.c_iso.dist_iso))
         incr_iso_statinfo = os.stat(self.incr_iso)
         self.assert_(dist_iso_statinfo.st_ino == incr_iso_statinfo.st_ino)
