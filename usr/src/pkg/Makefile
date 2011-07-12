@@ -245,7 +245,7 @@ PKGDEP_TOKENS= $(PKGDEP_TOKENS_$(PKGMACH))
 # dependency types, so that they can be included by either an
 # incorporation or a group package.
 #
-$(PDIR)/install-redist.mog:= PKGDEP_TYPE= require
+$(PDIR)/install-all.mog:= PKGDEP_TYPE= group
 $(PDIR)/install-incorporation.mog:= PKGDEP_TYPE= incorporate
 
 PKGDEP_INCORP= \
@@ -273,7 +273,7 @@ PROC_PKGS= $(PKGS:%=$(PDIR)/%.mog)
 # build rules and dependencies.  The synthetic and real packages use
 # different sets of transforms and macros for pkgmogrify.
 #
-SYNTH_PKGS= install-incorporation install-redist
+SYNTH_PKGS= install-incorporation install-all
 DEP_SYNTH_PKGS= $(SYNTH_PKGS:%=$(PDIR)/%.dep)
 PROC_SYNTH_PKGS= $(SYNTH_PKGS:%=$(PDIR)/%.mog)
 
