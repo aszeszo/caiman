@@ -972,30 +972,44 @@ class AutoInstall(object):
 
                 self.logger.debug("Setting destination for transfer: %s to %s"
                     % (sw.name, self.installed_root_dir))
+
+                # First check if a Destination already exists, it may do so if
+                # Facets are specified for IPS
                 dst = sw.get_first_child(class_type=Destination)
                 if dst is None:
+                    # None already present, so create one.
                     dst = Destination()
-                    if sw.tran_type.upper() == "IPS":
-                        image = Image(self.installed_root_dir, image_action)
-
-                        if self.options.zonename is None:
-                            img_type = ImType("full", zone=False)
-                        else:
-                            img_type = ImType("full", zone=True)
-
-                        image.insert_children(img_type)
-                        dst.insert_children(image)
-                        image_action = AbstractIPS.EXISTING
-                    else:
-                        directory = Dir(self.installed_root_dir)
-                        dst.insert_children(directory)
                     sw.insert_children(dst)
-                    # Next images are use_existing, not create.
+
+                if sw.tran_type.upper() == "IPS":
+                    image = dst.get_first_child(class_type=Image)
+                    if image is None:
+                        image = Image(self.installed_root_dir, image_action)
+                    else:
+                        if image.img_root is not None:
+                            self.logger.error(
+                                "Unexpected image dir in software " \
+                                "node '%s': %s" % \
+                                (sw.name, image.img_root))
+                            return False
+
+                        image.img_root = self.installed_root_dir
+                        image.action = image_action
+                        dst.insert_children(image)
+
+                    # Delete any existing children of ImType
+                    image.delete_children(class_type=ImType)
+                    if self.options.zonename is None:
+                        img_type = ImType("full", zone=False)
+                    else:
+                        img_type = ImType("full", zone=True)
+
+                    image.insert_children(img_type)
+                    # Next IPS image actions are use_existing, not create.
+                    image_action = AbstractIPS.EXISTING
                 else:
-                    self.logger.error(
-                        "Unexpected destination in software node: %s" % \
-                        (sw.name))
-                    return False
+                    directory = Dir(self.installed_root_dir)
+                    dst.insert_children(directory)
 
                 # Register a Transfer checkpoint suitable for the selected
                 # Software node
@@ -1175,8 +1189,9 @@ class AutoInstall(object):
         if not self.options.zonename:
             # Transfer smf logs
             tf_dict['/var/svc/log/application-auto-installer:default.log'] = \
-                post_install_logs_path('application-auto-installer:default.log')
-            tf_dict['/var/svc/log/application-manifest-locator:default.log'] = \
+                post_install_logs_path(
+                'application-auto-installer:default.log')
+            tf_dict['/var/svc/log/application-manifest-locator:default.log'] =\
                 post_install_logs_path(
                 'application-manifest-locator:default.log')
 

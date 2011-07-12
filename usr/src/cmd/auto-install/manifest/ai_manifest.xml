@@ -193,6 +193,39 @@ DTD sample manifest for Automatic Installer input manifest specification.
       </logical>
     </target>
     <software name="ips" type="IPS">
+      <!--
+
+      If you wish to specify different language packs to install, this done by
+      specifying facets, which match against the IPS packages.
+
+      To specify this in an AI manifest you can do it by uncommenting the
+      following section:
+
+      <destination>
+        <image>
+          <facet set="false">facet.locale.*</facet>
+          <facet set="true">facet.locale.de</facet>
+          <facet set="true">facet.locale.de_DE</facet>
+          <facet set="true">facet.locale.en</facet>
+          <facet set="true">facet.locale.en_US</facet>
+          <facet set="true">facet.locale.es</facet>
+          <facet set="true">facet.locale.es_ES</facet>
+          <facet set="true">facet.locale.fr</facet>
+          <facet set="true">facet.locale.fr_FR</facet>
+          <facet set="true">facet.locale.it</facet>
+          <facet set="true">facet.locale.it_IT</facet>
+          <facet set="true">facet.locale.ja</facet>
+          <facet set="true">facet.locale.ja_*</facet>
+          <facet set="true">facet.locale.ko</facet>
+          <facet set="true">facet.locale.ko_*</facet>
+          <facet set="true">facet.locale.pt</facet>
+          <facet set="true">facet.locale.pt_BR</facet>
+          <facet set="true">facet.locale.zh</facet>
+          <facet set="true">facet.locale.zh_CN</facet>
+          <facet set="true">facet.locale.zh_TW</facet>
+        </image>
+      </destination>
+      -->
       <source>
         <publisher name="solaris">
           <origin name="http://pkg.oracle.com/solaris/release"/>

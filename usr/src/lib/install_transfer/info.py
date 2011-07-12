@@ -293,7 +293,8 @@ class Image(DataObject):
             if Image.IMAGE_SSL_CERT_LABEL in arg_info[0].arg_dict:
                 element.set(Image.IMAGE_SSL_CERT_LABEL,
                             arg_info[0].arg_dict[Image.IMAGE_SSL_CERT_LABEL])
-        element.set(Image.IMAGE_IMG_ROOT_LABEL, self.img_root)
+        if self.img_root is not None:
+            element.set(Image.IMAGE_IMG_ROOT_LABEL, self.img_root)
         element.set(Image.IMAGE_ACTION_LABEL, self.action)
         element.set(Image.IMAGE_INDEX_LABEL, str(self.index))
         return element
