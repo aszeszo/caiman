@@ -27,6 +27,7 @@ Class and functions supporting name services
 '''
 
 import logging
+import nss
 
 from solaris_install.data_object import DataObject
 from solaris_install.logger import INSTALL_LOGGER_NAME
@@ -162,8 +163,15 @@ class NameServiceInfo(SMFConfig):
                 ldap.insert_children([ldap_cred_props])
                 ldap_cred_props.setprop("propval", "bind_dn", "astring",
                                         self.ldap_pb_dn)
+                # encrypt password if encryption method was integrated
+                # otherwise, user must enter encrypted password
+                # the check for the method can be removed after integration
+                if hasattr(nss.nssscf, 'ns1_convert'):
+                    psw = nss.nssscf.ns1_convert(self.ldap_pb_psw)
+                else:
+                    psw = self.ldap_pb_psw
                 ldap_cred_props.setprop("propval", "bind_passwd", "astring",
-                                        self.ldap_pb_psw)
+                                        psw)
             # configure default service instance
             ldap.insert_children(ENABLED_DEFAULT_SERVICE_LIST)
         # For NIS, user is given automatic (broadcast) or manual

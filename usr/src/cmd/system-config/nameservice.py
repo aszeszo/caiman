@@ -27,6 +27,7 @@ Name service selection screens
 '''
 
 import logging
+import nss
 import re
 import string
 
@@ -477,7 +478,11 @@ class NSLDAPProxyBindInfo(NameService):
                   "LDAP proxy bind password.  The network administrator "
                   "can provide this information.")
         self.title = _("Proxy bind distinguished name:")
-        self.title2 = _("Proxy bind password:")
+        # temporary code until ns1_convert method is integrated
+        if hasattr(nss.nssscf, 'ns1_convert'):
+            self.title2 = _("Proxy bind password:")
+        else:
+            self.title2 = _("Encrypted proxy bind password:")
 
     def _show(self):
         super(NSLDAPProxyBindInfo, self)._show()
@@ -506,7 +511,7 @@ class NSLDAPProxyBindInfo(NameService):
         self.ldap_pb_psw = EditField(area, window=self.center_win,
                                      text=self.nameservice.ldap_pb_psw,
                                      error_win=self.main_win.error_line,
-                                     masked=True)
+                                     masked=hasattr(nss.nssscf, 'ns1_convert'))
         self.main_win.do_update()
         self.center_win.activate_object(self.ldap_pb_dn)
 
