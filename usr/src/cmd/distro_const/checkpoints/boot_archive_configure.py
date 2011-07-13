@@ -29,6 +29,7 @@ usable boot archive.
 """
 import os
 import shutil
+import datetime
 
 from solaris_install import DC_LABEL, run
 from solaris_install.data_object.data_dict import DataObjectDict
@@ -124,10 +125,11 @@ class BootArchiveConfigure(Checkpoint):
         os.mkdir("mnt/misc", 0755)
         os.mkdir("mnt/pkg", 0755)
 
-        # create volume set id file
-        self.logger.debug("creating .volsetid file")
-        cmd = [cli.MAKEUUID]
-        run(cmd, stdout=open(".volsetid", "w"))
+        # create volume set id file, use system name + date for uniqueness
+        with open(".volsetid", "w") as v:
+       	    volsetid = os.uname()[1] + '-' + datetime.datetime.now().isoformat()
+       	    self.logger.debug("setting .volsetid to %s" % volsetid)
+            v.write(volsetid)
 
         # chmod it to 444 and set the ownership to root:root (0:0)
         os.chmod(".volsetid", 0444)

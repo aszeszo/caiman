@@ -45,7 +45,6 @@ class CLI(object):
     FIOCOMPRESS = "/usr/sbin/fiocompress"
     INSTALLBOOT = "/usr/sbin/installboot"
     LOFIADM = "/usr/sbin/lofiadm"
-    MAKEUUID = "/usr/bin/makeuuid"
     MKISOFS = "/usr/bin/mkisofs"
     PKG = "/usr/bin/pkg"
     PKGREPO = "/usr/bin/pkgrepo"
