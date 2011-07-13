@@ -194,7 +194,7 @@ def space_parse(input_str):
                     if (len(word) != 0):
                         outlist.append(word.strip())
                         word = ""
-		
+
         # Escaped double quote
         elif (next_state == __QST_DQT):
             if (squoteon):
@@ -329,7 +329,7 @@ def exec_cmd_outputs_to_log(cmd, log,
                not specified, it will default to DEBUG
       stderr_log_level: Logging level for the stderr of each command.  If
                not specified, it will default to ERROR
-	  discard_stdout: If set to True, discard stdout
+          discard_stdout: If set to True, discard stdout
 
     Returns:
       The return value of the command executed.
@@ -341,7 +341,7 @@ def exec_cmd_outputs_to_log(cmd, log,
 
     if (stdout_log_level is None):
         stdout_log_level = DEBUG
-	
+
     if (stderr_log_level is None):
         stderr_log_level = ERROR
 
@@ -361,7 +361,7 @@ def exec_cmd_outputs_to_log(cmd, log,
     log_msg = "exec command: " + string.join(cmd)
 
     if len(log_msg) > 200:
-	log_msg += "\n"
+        log_msg += "\n"
 
     if log is not None:
         log.log(stdout_log_level, log_msg)
@@ -579,6 +579,7 @@ def find(rootpaths, path_type=None, raise_errors=False):
                 rlist.append(fullname)
     return rlist
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def file_size(filename):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -615,6 +616,7 @@ def file_size(filename):
         return stat.st_size
     else:
         return (((stat.st_size / 1024) + 1) * 1024)
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def dir_size(rootpath):
@@ -683,8 +685,8 @@ def encrypt_password(plaintext, salt=None, alt_root="/", username=""):
         plaintext: password string in plaintext
         salt: salt to be used for the encryption.  If none is provided,
               a salt will be generated.
-        alt_root: alternate root to find the libc.so that contains the libraries
-                  to be called for generating the seed.
+        alt_root: alternate root to find the libc.so that contains the
+                  libraries to be called for generating the seed.
         username: name of the user to generate the password for.
 
     Returns:
@@ -749,6 +751,7 @@ def get_argspec(func):
         return inspect.getargspec(func.__init__)
     else:
         return inspect.getargspec(func.__call__)
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def set_http_proxy(proxy):

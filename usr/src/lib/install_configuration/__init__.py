@@ -33,4 +33,3 @@ __all__ = ["configuration"]
 
 # Register the DOC classes
 DataObjectCache.register_class(Configuration)
-

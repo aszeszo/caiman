@@ -25,8 +25,9 @@ This directory contains configuration files for Nose, the PyUnit test runner
 for the slim_source gate. In order to run the tests you should:
 
 1) Install Nose and the coverage module:
-	* Installing the Python setup tools:
+	* Installing the Python setup tools and runtime/python-26/tests
 		pkg install library/python-2/setuptools-26
+		pkg install runtime/python-26/tests
 	* Running the command:
 		easy_install-2.6 nose coverage
 		(The warning messages during installation may be ignored)

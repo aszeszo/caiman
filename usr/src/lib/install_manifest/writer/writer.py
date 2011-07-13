@@ -145,7 +145,6 @@ class ManifestWriter(AbstractCheckpoint):
             raise ManifestError("DTD [%s] is not a file" % dtd_file)
         self._dtd_file = dtd_file
 
-
     def get_progress_estimate(self):
         '''
             The parent class requires that this method be implemented
@@ -156,7 +155,6 @@ class ManifestWriter(AbstractCheckpoint):
         '''
 
         return 1
-
 
     def write(self, doc):
         '''
@@ -258,7 +256,6 @@ class ManifestWriter(AbstractCheckpoint):
             if manifest_file is not None:
                 manifest_file.close()
 
-
     def execute(self, dry_run=False):
         '''
             Abstract method defined in AbstractCheckpoint class.
@@ -308,7 +305,7 @@ def _create_unique_variant(orig_filename):
     prefix, suffix = os.path.splitext(filename)
 
     file_desc, new_filename = \
-        tempfile.mkstemp(suffix=suffix, prefix=prefix+"_", dir=dirname)
+        tempfile.mkstemp(suffix=suffix, prefix=prefix + "_", dir=dirname)
 
     try:
         os.close(file_desc)

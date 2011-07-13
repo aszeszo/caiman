@@ -42,8 +42,10 @@ via pfexec or sudo, to install software on the build system.
 
  3. Install required IPS packages:
 
+	developer/build/dmake
 	developer/swig
 	system/boot/wanboot/internal
+	system/header
 	system/library/install/libinstzones
 	system/library/libdiskmgt/header-libdiskmgt
 	system/zones/internal
@@ -64,6 +66,8 @@ To setup the repository to be built:
 	 /opt/sunstudio12.1	(default)
 	 /opt/solstudioex
 	 /opt/SUNWspro
+
+     You might want to link SUNWspro to sunstudio12.1 if necessary
 
 To build this repository use the following steps:
 -------------------------------------------------

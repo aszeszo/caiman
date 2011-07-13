@@ -139,7 +139,6 @@ class Configuration(SimpleXmlHandlerBase):
                                    "Unable to open source (%s): %s" % \
                                    (source, e))
 
-
         for subelement in element.iterchildren():
             if subelement.tag == cls.VALIDATION_LABEL:
                 path = subelement.get(cls.PATH_LABEL)
