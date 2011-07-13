@@ -745,8 +745,11 @@ class TargetDiscovery(Checkpoint):
             self.cro_dict[ctd] = (i, alias or None, receptacle)
             i += 1
 
-        self.doc.persistent.insert_children(
-            DataObjectDict(CRO_LABEL, self.cro_dict, generate_xml=True))
+        if self.cro_dict:
+            # Only insert if there is something in it
+            self.doc.persistent.insert_children(
+                DataObjectDict(CRO_LABEL, self.cro_dict, 
+                               generate_xml=True))
 
     def execute(self, dry_run=False):
         """ primary execution checkpoint for Target Discovery

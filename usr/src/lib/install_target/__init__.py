@@ -202,8 +202,10 @@ class Target(SimpleXmlHandlerBase):
 
         # compare the first element of the croinfo tuple (the position)
         def compare(x, y):
-            if isinstance(x, physical.Disk) and isinstance(y, physical.Disk):
+            if isinstance(x, physical.Disk) and isinstance(y, physical.Disk) \
+               and x.ctd in cro_dict and y.ctd in cro_dict:
                 return cmp(cro_dict[x.ctd][0], cro_dict[y.ctd][0])
+            return 0  # Default is to maintain location as-is
 
         # sort the children by croinfo order
         return sorted(unsorted_children, cmp=compare)
