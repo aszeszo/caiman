@@ -36,9 +36,8 @@ import tempfile
 import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.installadm_common as com
 
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from solaris_install import CalledProcessError, Popen
-
-_ = com._
 
 
 # AI installation service property keys and values
@@ -272,9 +271,9 @@ def verify_key_properties(svcname, props):
     else:
         prop_name = props[PROP_SERVICE_NAME]
         if prop_name != svcname:
-            raise ServiceCfgError(_("Error: service name '%s' does not match "
-                                    "%s property '%s'\n") %
-                                  (svcname, PROP_SERVICE_NAME, prop_name))
+            raise ServiceCfgError(cw(_("\nError: service name '%s' does not "
+                                       "match %s property '%s'\n") % (svcname,
+                                       PROP_SERVICE_NAME, prop_name)))
 
     if PROP_STATUS not in props.keys():
         missing.add(PROP_STATUS)
@@ -283,15 +282,16 @@ def verify_key_properties(svcname, props):
     else:
         port = props[PROP_TXT_RECORD].partition(':')[1]
         if not port:
-            raise ServiceCfgError(_("Error: Unable to determine service dir "
-                                  "for service %s\n") % svcname)
+            raise ServiceCfgError(cw(_("\nError: Unable to determine service "
+                                       "directory for service %s\n") %
+                                       svcname))
     if PROP_IMAGE_PATH not in props.keys():
         if PROP_ALIAS_OF not in props.keys():
             missing.add(PROP_IMAGE_PATH + _(' or ') + PROP_ALIAS_OF)
     if missing:
-        raise ServiceCfgError(_('Error: installation service key properties '
-                                'missing for service %s: %s\n') %
-                                (svcname, ', '.join(missing)))
+        raise ServiceCfgError(cw(_('\nError: installation service key '
+                                   'properties missing for service %s: %s\n') %
+                                   (svcname, ', '.join(missing))))
 
 
 def get_aliased_services(service_name, recurse=False):
@@ -339,8 +339,8 @@ def add_client_info(service_name, clientid, clientdata):
                 service_name, clientid, clientdata)
     cfg = _read_config_file(service_name)
     if cfg is None:
-        raise ServiceCfgError(_("Missing configuration file for service: %s" %
-                              service_name))
+        raise ServiceCfgError(_("\nMissing configuration file for service: "
+                                "%s\n" % service_name))
 
     if CLIENTS not in cfg.sections():
         cfg.add_section(CLIENTS)
@@ -365,8 +365,8 @@ def get_clients(service_name):
                 service_name)
     cfg = _read_config_file(service_name)
     if cfg is None:
-        raise ServiceCfgError(_("Missing configuration file for service: %s" %
-                              service_name))
+        raise ServiceCfgError(_("\nMissing configuration file for service: "
+                                "%s\n" % service_name))
 
     clients = dict()
     if CLIENTS not in cfg.sections():
@@ -401,8 +401,8 @@ def find_client(client_id):
     for svc in get_all_service_names():
         cfg = _read_config_file(svc)
         if cfg is None:
-            raise ServiceCfgError(_("Missing configuration file for "
-                                    "service: %s" % svc))
+            raise ServiceCfgError(_("\nMissing configuration file for "
+                                    "service: %s\n" % svc))
         if CLIENTS not in cfg.sections():
             continue
         clients = dict(cfg.items(CLIENTS))
@@ -433,8 +433,8 @@ def is_client(client_id):
     for svc in all_svc_names:
         cfg = _read_config_file(svc)
         if cfg is None:
-            raise ServiceCfgError(_("Missing configuration file for "
-                                    "service: %s" % svc))
+            raise ServiceCfgError(_("\nMissing configuration file for "
+                                    "service: %s\n" % svc))
         if CLIENTS not in cfg.sections():
             continue
         clients = dict(cfg.items(CLIENTS))
@@ -459,8 +459,8 @@ def remove_client_from_config(service_name, client_id):
                 "%s ****", service_name, client_id)
     cfg = _read_config_file(service_name)
     if cfg is None:
-        raise ServiceCfgError(_("Missing configuration file for "
-                                "service: %s" % service_name))
+        raise ServiceCfgError(_("\nMissing configuration file for "
+                                "service: %s\n" % service_name))
     if CLIENTS not in cfg.sections():
         return
     clients = cfg.options(CLIENTS)
@@ -520,7 +520,7 @@ def enable_install_service(svcname):
     # should have already been created, even if the service is new.
     props = get_service_props(svcname)
     if not props:
-        raise ServiceCfgError(_('Error: installation service properties'
+        raise ServiceCfgError(_('\nError: installation service properties'
                                 ' do not exist for %s.\n') % (svcname))
 
     # Confirm required keys are available and exit if not

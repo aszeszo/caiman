@@ -36,7 +36,7 @@ import time
 
 import osol_install.auto_install.installadm_common as com
 
-from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.libaimdns import getifaddrs
 from solaris_install import Popen
 
@@ -398,9 +398,13 @@ class DHCPArchClass(DHCPData):
         Set the provided bootfile string as the default bootfile for this
         architecture.
         '''
+        logging.debug("dhcp.set_bootfile: arch %s, bootfile '%s'", self.arch,
+                      bootfile)
+
         if self.bootfile is not None:
-            raise DHCPServerError(_("%s architecture already has a bootfile " \
-                "set in the DHCP configuration") % self.arch)
+            raise DHCPServerError(_("%s architecture already has a bootfile "
+                                    "set in the DHCP configuration") %
+                                    self.arch)
         self._edit_class_bootfile('set', bootfile)
         self.bootfile = bootfile
 
@@ -409,9 +413,12 @@ class DHCPArchClass(DHCPData):
         Remove the bootfile setting for this architecture. This is used
         when the default service for an architecture is deleted.
         '''
+        logging.debug("dhcp.unset_bootfile: arch %s", self.arch)
+
         if self.bootfile is None:
-            raise DHCPServerError(_("attempting to unset bootfile for %s " \
-                "architecture; no bootfile currently set") % self.arch)
+            raise DHCPServerError(_("attempting to unset bootfile for %s "
+                                    "architecture; no bootfile currently set")
+                                    % self.arch)
         self._edit_class_bootfile('update')
         self.bootfile = None
 
@@ -419,6 +426,9 @@ class DHCPArchClass(DHCPData):
         '''
         Update an existing bootfile for this architecture.
         '''
+        logging.debug("dhcp.update_bootfile: arch %s, bootfile '%s'",
+                      self.arch, bootfile)
+
         self._edit_class_bootfile('update', bootfile)
         self.bootfile = bootfile
 
@@ -546,12 +556,13 @@ class DHCPArchClass(DHCPData):
         # ensure we've made our edit. If not, for whatever reason, we should
         # inform the enduser that manual DHCP configuration might be required.
         if edit_complete == False:
-            print _("Failed to update the DHCP configuration. An error "
-                    "occured while setting\nthe new bootfile (%s) for the %s "
-                    "architecture in the current DHCP\nconfiguration file "
-                    "(%s). Please ensure the bootfile is properly set before"
-                    "\nusing this service.  Please see dhcpd(8) for further "
-                    "information.") % (bootfile, self.arch, current_cfgfile)
+            print cw(_("\nFailed to update the DHCP configuration. An error "
+                       "occured while setting the new bootfile (%s) for the "
+                       "%s architecture in the current DHCP configuration "
+                       "file (%s). Please ensure the bootfile is properly set "
+                       "before using this service. Please see dhcpd(8) for "
+                       "further information.\n") %
+                       (bootfile, self.arch, current_cfgfile))
 
         # Finally, rename the new temporary file to the configfile and return.
         os.rename(tmp_cfgfile, current_cfgfile)
@@ -627,6 +638,8 @@ class DHCPServer(object):
         '''
         Create a new base configuration file for use with a new DHCP server.
         '''
+        logging.debug("dhcp.init_config: creating new DHCP server")
+
         if self.is_configured():
             raise DHCPServerError(_("init_config failed, file already exists"))
 
@@ -643,9 +656,11 @@ class DHCPServer(object):
         enabled, disabled or, if needed, restarted to enact any pending
         configuration changes.
         '''
+        logging.debug("dhcp.control: invoking 'svcadm %s'", action)
+
         if action not in SMF_SUPPORTED_ACTIONS:
-            raise ValueError(_("unsupported action on DHCPServer object" \
-                ": %s") % action)
+            raise ValueError(_("unsupported action on DHCPServer object: %s")
+                               % action)
 
         cmd = [SVCADM, action, DHCP_SERVER_IPV4_SVC]
         Popen.check_call(cmd, stderr=Popen.STORE)
@@ -664,8 +679,11 @@ class DHCPServer(object):
                     time.sleep(1)
                 if self._state == SMF_EXPECTED_STATE[action]:
                     return
-            raise DHCPServerError(_("server is in an unexpected state: " \
-                "action [%s] result state [%s]") % (action, self._state))
+            logging.debug("dhcp.control: unexpected service state: %s",
+                          self._state)
+            raise DHCPServerError(cw(_("DHCP server is in an unexpected "
+                                       "state: action [%s] state [%s]") % 
+                                       (action, self._state)))
 
     def _add_stanza_to_config_file(self, new_stanza):
         '''
@@ -745,6 +763,9 @@ class DHCPServer(object):
             if subnet.ranges:
                 _check_subnet_for_overlap(subnet, loaddr, hiaddr)
 
+            logging.debug("dhcp: adding new range to existing subnet [%s]: "
+                          "loaddr [%s] hiaddr [%s]", subnet, loaddr, hiaddr)
+
             # This range is not in use, so we can now add a new range to the
             # subnet stanza.
             self._add_range_to_subnet(subnet, loaddr, hiaddr)
@@ -760,8 +781,15 @@ class DHCPServer(object):
                 nextserver = _get_nextserver_ip_for_subnet(subnet_ip, netmask)
 
             if nextserver is None:
-                raise DHCPServerError(_("unable to set the next-server DHCP "
-                    "attribute, possible unsupported configuration."))
+                raise DHCPServerError(cw(_("Unable to determine local IP "
+                                           "address for network %s. Possible "
+                                           "unsupported configuration.") %
+                                           subnet_ip))
+
+            logging.debug("dhcp: adding new network to DHCP config: subnet "
+                          "[%s] mask [%s] loaddr [%s] hiaddr [%s] bcast [%s]"
+                          "router [%s] server [%s]", subnet, loaddr, hiaddr,
+                          broadcast, router, nextserver)
 
             # Now we can build up a new subnet stanza
             new_stanza = _DHCPConfigSubnet(subnet_ip, netmask, loaddr, hiaddr,
@@ -843,12 +871,15 @@ class DHCPServer(object):
             bootfile - Bootfile to set for this client
             hostname - Label for this stanza (optional)
         '''
+        logging.debug("dhcp.add_host: adding host [%s] bootfile '%s'",
+                      macaddr, bootfile)
+
         if hostname is None:
             hostname = macaddr.replace(':', '')
 
         if self.host_is_configured(macaddr):
-            raise DHCPServerError(_("host [%s] already present in the DHCP " \
-                "configuration") % macaddr)
+            raise DHCPServerError(_("host [%s] already present in the DHCP "
+                                    "configuration") % macaddr)
 
         new_stanza = _DHCPConfigHost(hostname, macaddr, bootfile)
         self._add_stanza_to_config_file(new_stanza)
@@ -857,6 +888,8 @@ class DHCPServer(object):
         '''
         Remove the host stanza related to the hardware address 'macaddr'.
         '''
+        logging.debug("dhcp.remove_host: removing host [%s]", macaddr)
+
         current_cfgfile = self._properties['config_file']
         tmp_cfgfile = "%s~" % current_cfgfile
 
@@ -965,9 +998,12 @@ class DHCPServer(object):
             arch - The architecture to set this bootfile for.
             bootfile - The bootfile
         '''
+        logging.debug("dhcp.add_arch_class: arch [%s] bootfile [%s]", arch,
+                      bootfile)
+
         if self.arch_class_is_set(arch):
-            raise DHCPServerError(_("the %s architecture already has a " \
-                "class set in the DHCP configuration") % arch)
+            raise DHCPServerError(_("the %s architecture already has a class "
+                                    "set in the DHCP configuration") % arch)
 
         if arch == 'i386':
             new_stanza = _DHCPConfigPXEClass(bootfile)
@@ -1036,6 +1072,8 @@ def _get_mask(ipaddr):
     installadm code, we know that at least one of these requirements will be
     met. Raise DHCPServerError if it cannot be determined for whatever reason.
     '''
+    logging.debug("dhcp._get_mask: ipaddr [%s]", ipaddr)
+
     # Check netmasks(4) for an entry.
     cmd = [GETENT, "netmasks", ipaddr]
     p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
@@ -1044,6 +1082,7 @@ def _get_mask(ipaddr):
     if p.returncode == 0:
         (sn, sep, netmask) = p.stdout.partition(' ')
         if sep:
+            logging.debug("dhcp._get_mask: found mask [%s]", netmask.strip())
             return netmask.strip()
 
     # If no netmasks entry is found, then we'll have to see if we can determine
@@ -1056,9 +1095,11 @@ def _get_mask(ipaddr):
             this_mask = com._convert_cidr_mask(int(mask))
             this_net = _get_subnet(ip, this_mask)
             if _ip_is_in_network(ipaddr, this_net, this_mask):
+                logging.debug("dhcp._get_mask: found mask [%s]", this_mask)
                 return this_mask
 
     # If no netmasks entry is found and there is no NIC up, then fail.
+    logging.debug("dhcp._get_mask: no mask found")
     raise DHCPServerError(_("unable to determine netmask for [%s]") % ipaddr)
 
 
@@ -1069,6 +1110,9 @@ def _get_nextserver_ip_for_subnet(subnet_ip, netmask):
     is a single IP address configured, just return that. Otherwise, determine
     the correct IP address based upon membership in the subnet.
     '''
+    logging.debug("dhcp._get_nextserver_ip_for_subnet: subnet_ip %s "
+                  "netmask %s", subnet_ip, netmask)
+
     ifaddrs = dict()
     ifaddrs = getifaddrs()
 
@@ -1077,6 +1121,7 @@ def _get_nextserver_ip_for_subnet(subnet_ip, netmask):
         addr = ifaddrs.values()[0]
         (ip, sep, mask) = addr.rpartition("/")
         if sep:
+            logging.debug("dhcp._get_nextserver_ip_for_subnet: found %s", ip)
             return ip
 
     # This is a multihomed server, so walk the list of configured addresses
@@ -1085,6 +1130,8 @@ def _get_nextserver_ip_for_subnet(subnet_ip, netmask):
         (ip, sep, mask) = addr.rpartition("/")
         if sep:
             if _ip_is_in_network(ip, subnet_ip, netmask):
+                logging.debug("dhcp._get_nextserver_ip_for_subnet: found "
+                              "%s", ip)
                 return ip
 
 
@@ -1162,8 +1209,9 @@ def _check_subnet_for_overlap(subnet, loaddr, hiaddr):
     for r in subnet.ranges:
         addrs = [int(m.group(1)) for m in filter(bool, map(regexp.match, r))]
         if new_set & set(range(addrs[0], (addrs[1] + 1))):
-            raise DHCPServerError(_("check_subnet_for_overlap: adding range "
-                "causes overlap on subnet %s") % subnet.subnet_ip)
+            raise DHCPServerError(cw(_("check_subnet_for_overlap: adding "
+                                       "range causes overlap on subnet %s")
+                                       % subnet.subnet_ip))
 
 
 def _get_domain():
@@ -1202,6 +1250,9 @@ def _get_default_route_for_subnet(subnet_ip):
     '''
     Find the default route for the subnet passed.
     '''
+    logging.debug("dhcp._get_default_route_for_subnet: subnet_ip %s",
+                  subnet_ip)
+
     # Since we have a requirement to be connected to the subnets we're
     # configuring (in check-server-setup), we can find a default route
     # in netstat output.
@@ -1213,13 +1264,18 @@ def _get_default_route_for_subnet(subnet_ip):
     for route in [m.group(1)
         for m in filter(bool, map(regexp.match, p.stdout.splitlines()))]:
             if _ip_is_in_network(route, subnet_ip, _get_mask(route)):
+                logging.debug("dhcp._get_default_route_for_subnet: found  %s",
+                              route)
                 return route
 
-    print >> sys.stderr, _("Unable to determine a route for network (%s). "
-                           "Setting the route\ntemporarily to %s; this should "
-                           "be changed to an appropriate value in the\nDHCP "
-                           "configuration file. Please see dhcpd(8) for "
-                           "further information.") % (subnet_ip, INVALID_IP)
+    print >> sys.stderr, cw(_("\nUnable to determine a route for network %s. "
+                              "Setting the route temporarily to %s; this "
+                              "should be changed to an appropriate value in "
+                              "the DHCP configuration file. Please see "
+                              "dhcpd(8) for further information.\n") %
+                              (subnet_ip, INVALID_IP))
+
+    logging.debug("dhcp._get_default_route_for_subnet: no route found")
     return INVALID_IP
 
 
@@ -1237,23 +1293,25 @@ def _fixup_sparc_bootfile(bootfile):
     if valid_nets:
         ipaddr = valid_nets[0] 
     else:
-        print >> sys.stderr, _("No networks are currently set to work with "
-                               "install services. Verify that the\ninstall "
-                               "server's SMF properties are set properly. "
-                               "Please see installadm(1M)\nfor further "
-                               "information.\nThe SPARC bootfile setting in "
-                               "the local DHCP server requires manual\n"
-                               "configuration. Please see dhcpd(8) for "
-                               "further information.")
+        print >> sys.stderr, cw(_("\nNo networks are currently set to work "
+                                  "with install services. Verify that the "
+                                  "install server's SMF properties are set "
+                                  " properly. Please see installadm(1M) for "
+                                  "further information. The SPARC bootfile "
+                                  "setting in the local DHCP server requires "
+                                  "manual configuration. Please see dhcpd(8) "
+                                  "for further information.\n"))
+        logging.debug("dhcp._fixup_sparc_bootfile: no IP found")
         return bootfile
 
     # If we have more than one network configured, warn and use the first.
     if (len(valid_nets) > 1):
-        print >> sys.stderr, _("More than one subnet is configured for DHCP "
-                               "service; this is likely not\nsupported; using "
-                               "first available address (%s). Please ensure "
-                               "this\nis a suitable address to use for "
-                               "install clients. Please see installadm(1M)\n"
-                               "for more information.") % ipaddr
-    
+        print >> sys.stderr, cw(_("\nMore than one subnet is configured for "
+                                  "DHCP service; this is likely unsupported. "
+                                  "Using first available address (%s). Please "
+                                  "ensure this is a suitable address to use "
+                                  "for install clients. See installadm(1M) "
+                                  "further information.\n") % ipaddr)
+
+    logging.debug("dhcp._fixup_sparc_bootfile: setting IP address %s", ipaddr)
     return re.sub('\$serverIP', ipaddr, bootfile)

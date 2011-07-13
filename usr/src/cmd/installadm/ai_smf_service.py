@@ -36,6 +36,7 @@ import time
 import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as libaiscf
 
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from solaris_install import Popen
 
 _ = com._
@@ -82,8 +83,7 @@ def get_smf_instance():
         smf_instance = libaiscf.AISCF(FMRI=AI_SVC_FMRI)
     except KeyError:
         raise ServicesError(_("The system does not have the "
-                                             "system/install/server SMF "
-                                             "service.\n"))
+                              "system/install/server SMF service.\n"))
     return smf_instance
 
 
@@ -129,11 +129,12 @@ def _set_instance(state, wait_for):
         if wait_cnt >= MAX_WAIT_TIME:
             logging.debug("Wait time exceeded on attempt to move "
                           "installadm SMF service to %s.", state.lower())
-            raise ServicesError(_('Error: Failed to place %(svc)s '
-                                  'in %(state)s.\nSee the output of'
-                                  '"svcs -xv %(svc)s" for more '
-                                  'information.') % {'svc': AI_SVC_FMRI,
-                                                     'state': state.lower()})
+
+            raise ServicesError(cw(_("Error: Failed to place %(svc)s in "
+                                     "%(state)s. See the output of 'svcs "
+                                     "-xv %(svc)s' for more information.") %
+                                    {'svc': AI_SVC_FMRI,
+                                    'state': state.lower()}))
         else:
             time.sleep(1)
             wait_cnt += 1
@@ -160,9 +161,9 @@ def maintain_instance():
     
     _set_instance('MAINTENANCE', ('MAINTENANCE',))
     
-    sys.stderr.write("The installadm SMF service is no longer online because "
-                     "the last install service has been disabled or "
-                     "deleted.\n")
+    sys.stderr.write(cw(_("The installadm SMF service is no longer online "
+                          "because the last install service has been disabled "
+                          "or deleted.\n")))
 
 
 def disable_instance():
@@ -201,16 +202,18 @@ def _start_tftpd():
     if inet_start[-1] != com.BOOT_DIR:
         if (os.path.exists(inet_start[-1]) and os.path.isdir(inet_start[-1])
             and os.listdir(inet_start[-1])):
-            raise ServicesError(_("The %(svc)s service has been configured to"
-                                  " use the %(dir)s directory; installadm is "
-                                  "incompatible with these settings. Please"
-                                  " use svccfg to change the %(prop)s property"
-                                  " of the %(svc)s service to"
-                                  " migrate to the %(desired)s directory.") %
-                                  {'svc': TFTP_FMRI,
-                                   'dir': inet_start[-1],
-                                   'desired': com.BOOT_DIR,
-                                   'prop': INET_START_PROP})
+            raise ServicesError(cw(_("The %(svc)s service has been configured "
+                                     "to use the %(dir)s directory; "
+                                     "installadm is incompatible with these "
+                                     "settings. Please use svccfg to change "
+                                     "the %(prop)s property of the %(svc)s "
+                                     "service to migrate to the %(desired)s "
+                                     "directory.")
+                                      % {'svc': TFTP_FMRI,
+                                         'dir': inet_start[-1],
+                                         'desired': com.BOOT_DIR,
+                                         'prop': INET_START_PROP}))
+
         setprop = [SVCCFG, '-s', TFTP_FMRI, 'setprop', 'inetd_start/exec', '=',
                    INET_START % com.BOOT_DIR]
         Popen.check_call(setprop)

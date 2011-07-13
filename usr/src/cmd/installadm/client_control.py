@@ -36,7 +36,7 @@ import osol_install.auto_install.installadm_common as com
 import osol_install.auto_install.grub as grub
 import osol_install.auto_install.service_config as config
 
-from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.auto_install.service import AIService
 from solaris_install import force_delete
 
@@ -130,32 +130,31 @@ def setup_x86_client(service, mac_address, bootargs=''):
         # rather than the non-delimited string that 'mac_address' is.
         full_mac = AIdb.formatValue('mac', mac_address)
         try:
+            print >> sys.stdout, cw(_("Adding host entry for %s to local DHCP "
+                                      "configuration.") % full_mac)
             server.add_host(full_mac, bootfile)
         except dhcp.DHCPServerError as err:
-            print >> sys.stderr, _("Unable to add host (%s) to DHCP " \
-                                   "configuration: %s" % (full_mac, err))
+            print >> sys.stderr, cw(_("Unable to add host (%s) to DHCP "
+                                      "configuration: %s") % full_mac, err)
             return
 
         if server.is_online():
             try:
                 server.control('restart')
             except dhcp.DHCPServerError as err:
-                print >> sys.stderr, _("Unable to restart the DHCP SMF " \
-                                       "service: %s" % err)
+                print >> sys.stderr, cw(_("\nUnable to restart the DHCP SMF "
+                                          "service: %s\n" % err))
                 return
         else:
-            print _("Host-specific configuration information has been added "
-                    "to the local DHCP\nconfiguration but the DHCP SMF "
-                    "service is offline. To enable the changes\nmade to the "
-                    "configuration, enable the %s service.\nPlease see "
-                    "svcadm(1M) for further information.") % \
-                    dhcp.DHCP_SERVER_IPV4_SVC
+            print cw(_("\nLocal DHCP configuration complete, but the DHCP "
+                       "server SMF service is offline. To enable the "
+                       "changes made, enable: %s.\nPlease see svcadm(1M) "
+                       "for further information.\n") % 
+                       dhcp.DHCP_SERVER_IPV4_SVC)
     else:
-        print _("Detected that DHCP is not set up on this server. To enable "
-                "the desired behavior\nfor this client, host-specific "
-                "configuration data should be added to the DHCP\nconfig"
-                "uration by setting the service's boot file in a host "
-                "stanza. Please see\ndhcpd(8) for further information.")
+        print cw(_("No local DHCP configuration found. The DHCP server "
+                   "should be configured with the bootfile '%s' for this "
+                   "client.\n") % bootfile)
 
 
 def setup_sparc_client(service, mac_address):
@@ -189,6 +188,7 @@ def remove_client(client_id):
 
      '''
     logging.debug("Removing client config for %s", client_id)
+
     (service, datadict) = config.find_client(client_id)
     more_files = list()
     if service:
@@ -216,19 +216,20 @@ def remove_client_dhcp_config(client_id):
         mac_address = client_id[2:]
         mac_address = AIdb.formatValue('mac', mac_address)
         if server.host_is_configured(mac_address):
+            print >> sys.stdout, cw(_("Removing host entry for %s from local "
+                                      "DHCP configuration.") % mac_address)
             server.remove_host(mac_address)
 
             if server.is_online():
                 try:
                     server.control('restart')
                 except dhcp.DHCPServerError as err:
-                    print >> sys.stderr, _("Unable to restart the DHCP SMF " \
-                                           "service: %s" % err)
+                    print >> sys.stderr, cw(_("Unable to restart the DHCP "
+                                              "SMF service: %s" % err))
                     return
     else:
         # No local DHCP configuration, inform user that it needs to be
         # unconfigured elsewhere.
-        print _("Detected that DHCP is not set up on this machine. Any "
-                "client-specific\nconfiguration for this client-service "
-                "binding should be removed from\nthe DHCP configuration. "
-                "Please see dhcpd(8) for further information.")
+        print cw(_("No local DHCP configuration found. Ensure the DHCP "
+                   "server no longer references the bootfile for this "
+                   "client.\n"))

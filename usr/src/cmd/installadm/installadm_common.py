@@ -33,6 +33,8 @@ import StringIO
 import sys
 import time
 
+from textwrap import fill, dedent
+
 from osol_install.libaimdns import getifaddrs, getboolean_property, \
     getstrings_property
 from solaris_install import Popen, CalledProcessError
@@ -163,6 +165,24 @@ def ask_yes_or_no(prompt):
             return False
         else:
             sys.stdout.write(_("Please respond with 'yes' or 'no'\n"))
+
+
+_text_wrap = lambda(t): fill(dedent(t), replace_whitespace=False, width=70)
+
+
+def cli_wrap(text):
+    """
+    Generic textwrapper for use with installadm. Source modules can use this
+    utility to ensure appropriate formatting for the CLI's output when
+    printing longer-than-70-character strings. Note that the wrap width is not
+    dynamic, it is hardcoded at 70 characters.
+    
+    The argument 'text' is processed into a list of strings and returned as a
+    rejoined string. The text is first dedented, which removes any leading
+    whitespace (as might be seen with a block-quoted string), and it is then
+    line-wrapped at 70 characters.
+    """
+    return ("\n".join(map(_text_wrap, text.splitlines())))
 
 
 #
@@ -761,9 +781,10 @@ def validate_service_name(svcname):
     Raises: ValueError if name is invalid
 
     '''
-    error = _('Error:  The service name must contain only '
-              'alphanumeric chars, "_" and "-" and be shorter '
-              'than 64 characters in length.')
+    error = cli_wrap(_('\nError:  The service name must contain only '
+                       'alphanumeric chars, "_" and "-" and be shorter than '
+                       '64 characters in length.\n'))
+
     if not svcname:
         raise ValueError(error)
 

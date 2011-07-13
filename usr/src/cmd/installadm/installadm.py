@@ -49,7 +49,8 @@ from osol_install.auto_install import set_criteria
 from osol_install.auto_install import set_service
 from osol_install.auto_install import validate_profile
 from osol_install.auto_install.installadm_common import _, \
-    CHECK_SETUP_SCRIPT, validate_service_name, XDEBUG, setup_logging
+    CHECK_SETUP_SCRIPT, validate_service_name, XDEBUG, setup_logging, \
+    cli_wrap as cw
 from osol_install.auto_install.service import AIService, MountError, \
     VersionError, InvalidServiceError
 from solaris_install import Popen, CalledProcessError
@@ -130,9 +131,9 @@ def do_enable_service(cmd_options=None):
     except (aismf.ServicesError, config.ServiceCfgError, MountError) as err:
         raise SystemExit(err)
     except InvalidServiceError as err:
-        raise SystemExit(_("This service may not be enabled until all "
-                           " invalid manifests and profiles have been"
-                           " corrected or removed."))
+        raise SystemExit(cw(_("\nThis service may not be enabled until all "
+                              "invalid manifests and profiles have been "
+                              "corrected or removed.\n")))
 
 
 def do_disable_service(cmd_options=None):

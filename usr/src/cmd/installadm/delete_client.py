@@ -52,7 +52,7 @@ def parse_options(cmd_options=None):
     if not args:
         parser.error(_("Missing required argument, <macaddr>"))
     elif len(args) > 1:
-        parser.error(_('Too many arguments: %s') % args)
+        parser.error(_("Too many arguments: %s") % args)
 
     # Create a macAddress object and exit if MAC is not valid
     try:
@@ -75,13 +75,13 @@ def do_delete_client(cmd_options=None):
     # check that we are root
     if os.geteuid() != 0:
         raise SystemExit(_("Error: Root privileges are required for "
-                           "this command."))
+                           "this command.\n"))
 
     options = parse_options(cmd_options)
     clientid = '01' + str(options.mac)
     if not config.is_client(clientid):
-        raise SystemExit(_("Error: Client does not exist: %s" %
-                          options.origmac))
+        raise SystemExit(_("\nError: Client does not exist: %s\n" %
+                           options.origmac))
     
     clientctrl.remove_client(clientid)
 

@@ -52,7 +52,7 @@ import os
 
 import osol_install.auto_install.installadm_common as com
 
-from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from solaris_install import Popen
 
 
@@ -81,14 +81,13 @@ class InstalladmImage(object):
         '''
         # check image_path exists
         if not os.path.isdir(self.path):
-            raise ImageError(_("Error:\tThe image_path (%s) is not "
-                               "a directory. Please provide a "
-                               "different image path.\n") %
-                               self.path)
+            raise ImageError(cw(_("\nError:\tThe image_path (%s) is not "
+                                  "a directory. Please provide a "
+                                  "different image path.\n") % self.path))
         # check that the image_path has a solaris.zlib file
         if not os.path.exists(os.path.join(self.path, "solaris.zlib")):
-            raise ImageError(_("Error:\tThe path (%s) is not "
-                               "a valid image.\n") % self.path)
+            raise ImageError(cw(_("\nError:\tThe path (%s) is not "
+                                  "a valid image.\n") % self.path))
     
     @property
     def version(self):
@@ -151,8 +150,8 @@ class InstalladmImage(object):
                 elif "sun4v" in dirs or "sun4u" in dirs:
                     self._arch = "sparc"
                 else:
-                    raise ImageError(_("Error:\tUnable to determine "
-                                 "architecture of image.\n"))
+                    raise ImageError(_("\nError:\tUnable to determine "
+                                       "architecture of image.\n"))
                 break
         return self._arch
     

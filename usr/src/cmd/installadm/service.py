@@ -55,7 +55,7 @@ import osol_install.libaimdns as libaimdns
 from osol_install.auto_install.data_files import DataFiles, insert_SQL, \
     place_manifest, validate_file
 from osol_install.auto_install.image import InstalladmImage, ImageError
-from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from solaris_install import Popen, CalledProcessError, force_delete
 
 MOUNT = '/usr/sbin/mount'
@@ -116,10 +116,9 @@ class VersionError(AIServiceError):
     
     def short_str(self):
         '''Returns a one-line string message for this error'''
-        return (_("Service '%(name)s' is incompatible: "
-                  "[version: %(version)s]") %
-                  {'version': self.version,
-                   'name': self.service_name})
+        return (cw(_("Service '%(name)s' is incompatible: "
+                     "[version: %(version)s]") %
+                     {'version': self.version, 'name': self.service_name}))
 
 
 class OlderVersionError(VersionError):
@@ -127,11 +126,10 @@ class OlderVersionError(VersionError):
         if self.alt_msg:
             return self.alt_msg
         
-        return (_("Service '%(name)s' cannot be modified:"
-                  "\nIt was created with an older version"
-                  " of installadm(1M).\n"
-                  "[service version: %(version)s]") %
-                  {'version': self.version, 'name': self.service_name})
+        return (cw(_("\nService '%(name)s' cannot be modified because it was "
+                     "created with an older version of installadm (service "
+                     "version: %(version)s).\n") %
+                     {'version': self.version, 'name': self.service_name}))
 
 
 class NewerVersionError(VersionError):
@@ -139,12 +137,10 @@ class NewerVersionError(VersionError):
         if self.alt_msg:
             return self.alt_msg
         
-        return (_("Service '%(name)s' cannot be modified:"
-                  "\nIt was created with a newer version"
-                  " of installadm(1M).\n"
-                  "[service version: %(version)s]") %
-                  {'version': self.version,
-                   'name': self.service_name})
+        return cw(_("\nService '%(name)s' cannot be modified because it was "
+                    "created with a newer version of installadm (service "
+                    "version: %(version)s).\n") %
+                    {'version': self.version, 'name': self.service_name})
 
 
 class MountError(AIServiceError):
@@ -155,8 +151,8 @@ class MountError(AIServiceError):
         self.reason = reason
     
     def __str__(self):
-        return _("Unable to mount '%s' at '%s': %s" %
-                 (self.source, self.target, self.reason))
+        return cw(_("\nUnable to mount '%s' at '%s': %s\n" %
+                    (self.source, self.target, self.reason)))
 
 
 class UnmountError(MountError):
@@ -166,7 +162,8 @@ class UnmountError(MountError):
         self.reason = reason
     
     def __str__(self):
-        return _("Unable to unmount '%s': %s") % (self.target, self.reason)
+        return cw(_("\nUnable to unmount '%s': %s\n") %
+                    (self.target, self.reason))
 
 
 class MultipleUnmountError(UnmountError):
@@ -201,7 +198,7 @@ def mount_enabled_services(remount=False):
         except VersionError as err:
             # If this installadm server doesn't understand this
             # service, do not mount it.
-            print >> sys.stderr, _("Not mounting %s") % svc_name
+            print >> sys.stderr, _("\nNot mounting %s") % svc_name
             print >> sys.stderr, err
             continue
         if remount and svc.mounted():
@@ -274,10 +271,10 @@ class AIService(object):
         service._bootargs = bootargs
         
         if alias is not None and service.image.version < 3:
-            raise UnsupportedAliasError(_("Cannot create alias: Aliased "
-                                          "service, %s, does not support "
-                                          "aliasing. Please use a service "
-                                          "with a newer image.") % alias)
+            raise UnsupportedAliasError(cw(_("\nCannot create alias: Aliased "
+                                             "service '%s' does not support "
+                                             "aliasing. Please use a service "
+                                             "with a newer image.\n") % alias))
         
         compatibility_port = (service.image.version < 1)
         logging.debug("compatibility port=%s", compatibility_port)
@@ -767,11 +764,11 @@ class AIService(object):
             raise UnsupportedOperationError("This service is not an alias")
         newbasesvc = AIService(newbasesvc_name)
         if newbasesvc.image.version < 3:
-            raise UnsupportedAliasError(_("Cannot update alias: Aliased "
-                                          "service, %s, does not support "
-                                          "aliasing. Please use a service "
-                                          "with a newer image.") %
-                                          newbasesvc_name)
+            raise UnsupportedAliasError(cw(_("\nCannot update alias: Aliased "
+                                             "service '%s' does not support "
+                                             "aliasing. Please use a service "
+                                             "with a newer image.\n") %
+                                             newbasesvc_name))
         # update props first
         logging.debug("updating alias service props for %s", self.name)
         props = {config.PROP_ALIAS_OF: newbasesvc_name}
@@ -809,10 +806,10 @@ class AIService(object):
         try:
             self.check_valid()
         except InvalidServiceError:
-            print >> sys.stderr, _("One or more of this alias' manifests or "
-                                   "profiles is no longer valid.\nThis service"
-                                   " will be disabled until they have been"
-                                   " removed or fixed.")
+            print >> sys.stderr, cw(_("\nOne or more of this alias' manifests "
+                                      "or profiles is no longer valid. This "
+                                      "service will be disabled until they "
+                                      "have been removed or fixed.\n"))
         
         # Unmount and remount the alias to pick up the new image
         if self.mounted():
@@ -843,9 +840,9 @@ class AIService(object):
             try:
                 DataFiles.from_service(self, manifest_file=manifest_path)
             except ValueError as val_err:
-                error = _("Manifest '%s' is not valid for this"
-                          " image.\nPlease fix and update this"
-                          " manifest") % manifest
+                error = cw(_("\nManifest '%s' is not valid for this image. "
+                             "Please fix and update this manifest.\n") %
+                             manifest)
                 print >> sys.stderr, val_err
                 print >> sys.stderr, error
                 failures += 1
@@ -896,9 +893,9 @@ class AIService(object):
             valid = validate_file(profile_name, profile_path,
                                   self.image.path, verbose=False)
             if not valid:
-                error = _("Profile '%s' is not valid for this"
-                          " image.\nPlease fix and update this"
-                          " profile.") % profile_name
+                error = cw(_("\nProfile '%s' is not valid for this image. "
+                             "Please fix and update this profile.\n") %
+                             profile_name)
                 print >> sys.stderr, error
                 failures += 1
         return failures
@@ -1159,7 +1156,7 @@ class AIService(object):
         if not skip_manifest_check:
             manifest_path = "/".join([self.manifest_dir, manifest_name])
             if not os.path.isfile(manifest_path):
-                raise ValueError(_("Manifest %s does not exist.") %
+                raise ValueError(_("\nManifest '%s' does not exist.\n") %
                                  manifest_path)
         
         config.set_service_props(self.name,
@@ -1218,6 +1215,11 @@ def get_client_menulst(clientid):
 
 def setup_dhcp_server(service, ip_start, ip_count, bootserver):
     '''Set-up DHCP server for given AI service and IP address range'''
+    
+    _incomplete_msg = cw(_("\nThe install service has been created but the "
+                           "DHCP configuration has not been completed. Please "
+                           "see dhcpd(8) for further information.\n"))
+
     bootfile = service.dhcp_bootfile
     arch = service.arch
 
@@ -1241,17 +1243,17 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
                 # Otherwise, the service is configured but the SMF service is
                 # offline. Do not online it after configuration, so leave
                 # svc_cmd as its default False.
+                print >> sys.stdout, cw(_("\nStarting DHCP server...\n"))
                 server.init_config()
                 svc_cmd = 'enable'
 
         try:
+            print >> sys.stdout, cw(_("Adding IP range to local DHCP "
+                                      "configuration\n"))
             server.add_address_range(ip_start, ip_count, bootserver) 
         except dhcp.DHCPServerError as err:
-            print >> sys.stderr, _("Unable to add IP range: %s" % err)
-            print >> sys.stderr, _("The service has been created but the DHCP "
-                                   "configuration has not been\ncompleted. "
-                                   "Please see dhcpd(8) for further "
-                                   "information.")
+            print >> sys.stderr, cw(_("\nUnable to add IP range: %s\n" % err))
+            print >> sys.stderr, _incomplete_msg
             return
     
     # Regardless of whether the IP arguments are passed or not, we'll now check
@@ -1284,6 +1286,10 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
                             # 'restart', since this invocation would have been
                             # called without IP arguments (setting up an
                             # alias).
+                            print >> sys.stdout, cw(_("Updating the %s "
+                                                      "bootfile in the local "
+                                                      "DHCP configuration\n") %
+                                                      arch)
                             server.update_bootfile_for_arch(arch, bootfile)
                             svc_cmd = 'restart'
                     else:
@@ -1291,27 +1297,28 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
                         # architecture's existing bootfile. Inform the user
                         # that they'll need to configure this service in DHCP
                         # if they wish to use it.
-                        print _("A default bootfile is already configured for "
-                                "this install service's system\narchitecture."
-                                " The IP range, if requested, has been added, "
-                                "but to make use of\nthis install service, "
-                                "its bootfile will have to be added to the "
-                                "configuration.\nNote that specific clients "
-                                "may be added via create-client, as desired.")
+                        print cw(_("\nA default bootfile is configured for "
+                                   "this architecture. This service may be "
+                                   "set as the default, or it may be used "
+                                   "for specific clients via create-client. "
+                                   "See installadm(1M) for further "
+                                   "information.\n"))
                 else:
                     # There is no bootfile set, so we can add this one.
+                    print >> sys.stdout, cw(_("Setting the %s bootfile in the "
+                                              "local DHCP configuration\n") %
+                                              arch)
                     server.add_bootfile_to_arch(arch, bootfile)
             else:
                 # This configuration doesn't have a class stanza for this
                 # architecture. We can now set one up and set the bootfile.
+                print >> sys.stdout, cw(_("Setting the %s bootfile in the "
+                                          "local DHCP configuration\n") % arch)
                 server.add_arch_class(arch, bootfile)
         except dhcp.DHCPServerError as err:
-            print >> sys.stderr, _("Unable to update the current DHCP "
-                                   "configuration: %s" % err)
-            print >> sys.stderr, _("The service has been created but the DHCP "
-                                   "configuration has not been\ncompleted. "
-                                   "Please see dhcpd(8) for further "
-                                   "information.")
+            print >> sys.stderr, cw(_("\nUnable to update the current DHCP "
+                                      "configuration: %s\n" % err))
+            print >> sys.stderr, _incomplete_msg
             return
 
         # The configuration is in our desired state, finally update the SMF
@@ -1320,21 +1327,23 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
             try:
                 server.control(svc_cmd)
             except dhcp.DHCPServerError as err:
-                print >> sys.stderr, _("Unable to update the DHCP SMF service "
-                                       "after reconfiguration: %s" % err)
-                print >> sys.stderr, _("The service has been created and "
-                                       "the DHCP configuration has been "
-                                       "updated,\nhowever the SMF service "
-                                       "requires attention. Please see "
-                                       "dhcpd(8) for\nfurther information.")
+                print >> sys.stderr, cw(_("\nUnable to update the DHCP SMF "
+                                          "service after reconfiguration: "
+                                          "%s\n" % err))
+                print >> sys.stderr, cw(_("\nThe install service has been "
+                                          "created and the DHCP configuration "
+                                          "has been updated, however the DHCP "
+                                          "SMF service requires attention. "
+                                          "Please see dhcpd(8) for further "
+                                          "information.\n"))
                 return
     else:
-        print _("Detected that DHCP is not set up on this server. If not "
-                "already configured,\nthis service may be enabled by "
-                "modifying the DHCP configuration by setting\nits boot file "
-                "in a subnet configuration or in an architecture-specific\n"
-                "context. Please see dhcpd(8) for further information.")
-
+        print cw(_("\nNo local DHCP configuration found. The DHCP server may "
+                   "enable this service as a default by referencing its "
+                   "bootfile, if not already enabled. Client-specific "
+                   "bindings may also be created via the 'create-client' "
+                   "subcommand. See installadm(1M) for further "
+                   "information.\n"))
 
 if __name__ == '__main__':
     if sys.argv[1] == "mount-all":

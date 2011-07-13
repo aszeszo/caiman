@@ -583,12 +583,12 @@ def get_manifest_or_profile_names(services, dbtable):
                     else:
                         sdict[sname] = [[name, has_criteria]]
             except StandardError as err:
-                sys.stderr.write(_('Error: AI database '
-                                   'access error\n%s\n') % err)
+                sys.stderr.write(_('Error: AI database access error\n%s\n')
+                                   % err)
                 continue
         else:
-            sys.stderr.write(_('Error: unable to locate '
-                               'AI database for "%s" on server\n') % sname)
+            sys.stderr.write(_('Error: unable to locate AI database for "%s" '
+                               'on server\n') % sname)
             continue
 
     return sdict, swidth, mwidth
@@ -759,12 +759,12 @@ def get_mfest_or_profile_criteria(sname, services, dbtable):
                     raise ValueError("Invalid value for dbtable: %s" % dbtable)
 
             except StandardError as err:
-                sys.stderr.write(_('Error: AI database access '
-                                   'error\n%s\n') % err)
+                sys.stderr.write(_('Error: AI database access error\n%s\n')
+                                   % err)
                 sys.exit(1)
         else:
-            sys.stderr.write(_('Error: unable to locate '
-                               'AI database on server for %s\n') % sname)
+            sys.stderr.write(_('Error: unable to locate AI database on server '
+                               'for %s\n') % sname)
             sys.exit(1)
 
     return sdict, width, cwidth
@@ -1059,8 +1059,8 @@ def list_local_manifests(services, name=None):
         sdict, mwidth, cwidth = \
             get_mfest_or_profile_criteria(name, services, AIdb.MANIFESTS_TABLE)
         if not sdict:
-            output = _('There are no manifests configured for '
-                       'local service, "%s".\n') % name
+            output = _('There are no manifests configured for local service, '
+                       '"%s".\n') % name
             sys.stdout.write(output)
             return
 
@@ -1112,8 +1112,8 @@ def list_local_profiles(linst, name=None):
         sdict, mwidth, cwidth = \
             get_mfest_or_profile_criteria(name, linst, AIdb.PROFILES_TABLE)
         if not sdict:
-            output = _('There are no profiles configured for '
-                       'local service, "%s".\n') % name
+            output = _('There are no profiles configured for local service, '
+                       '"%s".\n') % name
             sys.stdout.write(output)
             return
 

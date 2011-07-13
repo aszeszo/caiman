@@ -22,28 +22,27 @@
 #
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
-
 '''
-
 AI create-service
-
 '''
 
 import gettext
 import logging
-from optparse import OptionParser, OptionValueError
 import os
 
 import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.installadm_common as com
 import osol_install.auto_install.service_config as config
+
+from optparse import OptionParser, OptionValueError
+
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
+from osol_install.auto_install.image import is_iso, InstalladmIsoImage
 from osol_install.auto_install.service import AIService, AIServiceError, \
     DEFAULT_ARCH, MountError, UnsupportedAliasError
-from osol_install.auto_install.image import is_iso, InstalladmIsoImage
 from solaris_install import Popen, CalledProcessError
 
 
-_ = com._
 BASE_DEF_SVC_NAME = "install_service"
 
 
@@ -55,14 +54,15 @@ def check_ip_address(option, opt_str, value, parser):
     '''
     segments = value.split(".")
     if len(segments) != 4:
-        raise OptionValueError(_("Malformed IP address: '%s'") % value)
+        raise OptionValueError(_("\nMalformed IP address: '%s'\n") % value)
     for segment in segments:
         try:
             segment = int(segment)
             if segment < 0 or segment > 255:
-                raise OptionValueError(_("Malformed IP address: '%s'") % value)
+                raise OptionValueError(_("\nMalformed IP address: '%s'\n") %
+                                         value)
         except (ValueError, TypeError):
-            raise OptionValueError(_("Malformed IP address: '%s'") % value)
+            raise OptionValueError(_("\nMalformed IP address: '%s'\n") % value)
     setattr(parser.values, option.dest, value)
 
 
@@ -83,11 +83,11 @@ def check_imagepath(imagepath):
         
         if dirlist:
             if com.AI_NETIMAGE_REQUIRED_FILE in dirlist:
-                raise ValueError(_("There is a valid image at (%s). "
+                raise ValueError(_("\nThere is a valid image at (%s). "
                                    "\nPlease delete the image and try "
-                                   "again.") % imagepath)
+                                   "again.\n") % imagepath)
             else:
-                raise ValueError(_("Target directory is not empty."))
+                raise ValueError(_("\nTarget directory is not empty.\n"))
 
 
 def get_usage():
@@ -167,7 +167,7 @@ def parse_options(cmd_options=None):
         
         # Give error if service already exists
         if config.is_service(options.svcname):
-            parser.error(_('Service already exists: %s') % options.svcname)
+            parser.error(_('\nService already exists: %s\n') % options.svcname)
     
     # If creating an alias, only allow additional options -n, -b, 
     # and -y
@@ -182,38 +182,38 @@ def parse_options(cmd_options=None):
                             '-t|--aliasof option'))
     else:
         if not options.srcimage:
-            parser.error(_("-s|--source or -t|--aliasof is required"))
+            parser.error(_("\n-s|--source or -t|--aliasof is required\n"))
         name = options.svcname
         if name in DEFAULT_ARCH:
-            raise SystemExit(_('Default services must be created as aliases. '
-                               ' Use -t|--aliasof.'))
+            raise SystemExit(_('\nDefault services must be created as '
+                               'aliases. Use -t|--aliasof.\n'))
 
     # check dhcp related options
     if options.dhcp_ip_start or options.dhcp_ip_count:
         if com.is_multihomed():
             # don't allow DHCP setup if multihomed
-            msg = _('DHCP server setup is not available on machines '
-                    'with multiple network interfaces (-i and -c options '
-                    'are disallowed).')
-            parser.error(msg)
+            parser.error(cw(_('\nDHCP server configuration is unavailable on '
+                              'hosts with multiple network interfaces (-i and '
+                              '-c options are disallowed).\n')))
         
         # Confirm options -i and -c are both provided 
         if options.dhcp_ip_count is None:
-            parser.error(_('If -i option is provided, -c option must '
-                           'also be provided'))
+            parser.error(_('\nIf -i option is provided, -c option must '
+                           'also be provided\n'))
         if not options.dhcp_ip_start:
-            parser.error(_('If -c option is provided, -i option must '
-                           'also be provided'))
+            parser.error(_('\nIf -c option is provided, -i option must '
+                           'also be provided\n'))
         
         # Confirm count of ip addresses is positive
         if options.dhcp_ip_count < 1:
-            parser.error('"-c <count_of_ipaddr>" must be greater than zero.')
+            parser.error(_('\n"-c <count_of_ipaddr>" must be greater than '
+                           'zero.\n'))
 
     if options.dhcp_bootserver:
         # Confirm if the -B is provided, that -i/-c are also
         if options.dhcp_ip_count is None:
-            parser.error(_('If -B option is provided, -i option must '
-                           'also be provided'))
+            parser.error(_('\nIf -B option is provided, -i option must '
+                           'also be provided\n'))
     
     # Make sure imagepath meets requirements
     if options.imagepath:
@@ -270,19 +270,19 @@ def do_alias_service(options):
     '''
     # Ensure that the base service is a service
     if not config.is_service(options.aliasof):
-        raise SystemExit(_("Service does not exist: %s") % options.aliasof)
+        raise SystemExit(_("\nService does not exist: %s\n") % options.aliasof)
 
     basesvc = AIService(options.aliasof)
 
     # Ensure that the base service is not an alias
     if basesvc.is_alias():
-        raise SystemExit(_("Error: Cannot create alias of another alias."))
+        raise SystemExit(_("\nError: Cannot create alias of another alias.\n"))
 
     logging.debug("Creating alias of service %s", options.aliasof)
 
     image = basesvc.image
 
-    print _("Creating alias %s") % options.svcname
+    print _("\nCreating alias %s\n") % options.svcname
 
     logging.debug("Creating AIService aliasname %s base svc=%s, bootargs=%s",
                   options.svcname, options.aliasof, options.bootargs)
@@ -362,7 +362,7 @@ def do_create_baseservice(options):
                 if not options.noprompt:
                     if not com.ask_yes_or_no(prompt):
                         raise SystemExit(_('\nPlease re-enter command with '
-                                           'desired --imagepath'))
+                                           'desired --imagepath\n'))
             except KeyboardInterrupt:
                 raise SystemExit(1)
 
@@ -374,7 +374,7 @@ def do_create_baseservice(options):
                 raise SystemExit(error)
             logging.debug('Using default image path: %s', options.imagepath)
 
-        print _("Creating service: %s") % options.svcname
+        print _("\nCreating service: %s\n") % options.svcname
         logging.debug("Creating ISO based service '%s'", options.svcname)
         try:
             image = InstalladmIsoImage.unpack(options.srcimage,
@@ -382,7 +382,7 @@ def do_create_baseservice(options):
         except CalledProcessError as err:
             raise SystemExit(err.popen.stderr)
     else:
-        raise SystemExit(_("Source image is not a valid ISO file"))
+        raise SystemExit(_("\nSource image is not a valid ISO file\n"))
 
     if options.dhcp_ip_start:
         service = AIService.create(options.svcname, image,
@@ -405,7 +405,7 @@ def do_create_baseservice(options):
     # service of this architecture
     if should_be_default_for_arch(service):
         defaultarch = 'default-' + image.arch
-        print (_("Creating %s alias.") % defaultarch)
+        print (_("\nCreating %s alias.\n") % defaultarch)
         try:
             defaultarchsvc = AIService.create(defaultarch, image,
                                               bootargs=options.bootargs,
@@ -435,8 +435,8 @@ def do_create_service(cmd_options=None):
 
     # check that we are root
     if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required"
-                           " for this command."))
+        raise SystemExit(_("Error: Root privileges are required for this "
+                           "command.\n"))
 
     logging.log(com.XDEBUG, '**** START do_create_service ****')
 

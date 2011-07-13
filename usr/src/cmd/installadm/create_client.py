@@ -36,7 +36,7 @@ import osol_install.auto_install.service_config as config
 
 from optparse import OptionParser, OptionValueError
 
-from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from solaris_install import Popen
 
 
@@ -108,15 +108,15 @@ def parse_options(cmd_options=None):
     service_props = config.get_service_props(options.service_name)
     if not service_props:
         parser.error(_("The specified service does not exist: %s\n") %
-                     options.service_name)
+                       options.service_name)
 
     # get the image_path from the service
     try:
         # set image to be a InstalladmImage object
         image = svc.AIService(options.service_name).image
     except KeyError:
-        raise SystemExit(_("The specified service does not have an image_path "
-                           "property.\n"))
+        raise SystemExit(_("\nThe specified service does not have an "
+                           "image_path property.\n"))
 
     # ensure we are not passed bootargs for a SPARC as we do not
     # support that
@@ -154,9 +154,9 @@ def create_new_client(arch, service, mac_address, bootargs=None):
     # is not enabled, print warning to the user.
     if not config.is_enabled(service.name):
         logging.debug("service is disabled: %s", service.name)
-        print (_('Warning: the installation service, %s, is disabled.\n'
-                '   To enable it, use "installadm enable %s".') %
-                (service.name, service.name))
+        print cw(_("\nWarning: the installation service, %s, is disabled. "
+                   "To enable it, use 'installadm enable %s'.") %
+                   (service.name, service.name))
 
 
 def do_create_client(cmd_options=None):

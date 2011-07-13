@@ -36,7 +36,7 @@ import osol_install.libaiscf as libaiscf
 
 from optparse import OptionParser
 
-from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw 
 from osol_install.auto_install.service import AIService, DEFAULT_ARCH
     
 
@@ -77,8 +77,8 @@ def parse_options(cmd_options=None):
     
     # validate service name
     if not config.is_service(service_name):
-        raise SystemExit(_("Error: The specified service does "
-                           "not exist: %s") % service_name)
+        raise SystemExit(_("\nError: The specified service does "
+                           "not exist: %s\n") % service_name)
     
     # add service_name to the options
     options.service_name = service_name
@@ -102,35 +102,40 @@ def remove_dhcp_configuration(service):
         # the default for this architecture, unset it.
         try:
             arch_class = dhcp.DHCPArchClass.get_arch(server, service.arch)
+            bootfile = arch_class.bootfile
         except dhcp.DHCPServerError as err:
-            print >> sys.stderr, _("Unable to access DHCP configuration: "
-                                   "%s" % err)
+            print >> sys.stderr, cw(_("\nUnable to access DHCP configuration: "
+                                      "%s\n" % err))
             return
 
         if (service.arch != 'sparc' and arch_class is not None and 
             arch_class.bootfile == service.dhcp_bootfile):
             try:
+                print >> sys.stdout, cw(_("Removing this service's bootfile "
+                                          "from local DHCP configuration\n"))
                 arch_class.unset_bootfile()
             except dhcp.DHCPServerError as err:
-                print >> sys.stderr, _("Unable to unset this service's "
-                                       "bootfile in the DHCP "
-                                       "configuration: %s" % err)
+                print >> sys.stderr, cw(_("\nUnable to unset this service's "
+                                          "bootfile in the DHCP "
+                                          "configuration: %s\n" % err))
                 return
 
             if server.is_online():
                 try:
                     server.control('restart')
                 except dhcp.DHCPServerError as err:
-                    print >> sys.stderr, _("Unable to restart the DHCP "
-                                           "SMF service: %s" % err)
+                    print >> sys.stderr, cw(_("\nUnable to restart the DHCP "
+                                              "SMF service: %s\n" % err))
                     return
     else:
-        # The local DHCP server isn't configured, so inform the end-user that
-        # they need to remove this service from the DHCP configuration.
-        print _("Detected that DHCP is not set up on this machine. Please "
-                "ensure that the\nservice being deleted is not in use in the "
-                "DHCP configuration by removing\nany references to its "
-                "bootfile. Please see dhcpd(8) for further information.")
+        # The local DHCP server isn't configured. If this is an x86 service,
+        # inform the end-user that they need to remove this service from the
+        # DHCP configuration. Note this isn't necessary for SPARC as we only
+        # require one global bootfile for SPARC clients.
+        if service.arch == 'i386':
+            print cw(_("\nNo local DHCP configuration found. Ensure that the "
+                       "bootfile for this service is no longer referenced by "
+                       "the DHCP server in use.\n"))
 
 
 def delete_specified_service(service_name, auto_remove, noprompt):
@@ -158,13 +163,13 @@ def delete_specified_service(service_name, auto_remove, noprompt):
 
         # if any aliases or clients are dependent on this service, exit
         if all_aliases or all_clients:
-            raise SystemExit(_("Error: The following aliases and/or clients "
-                               "are dependent on this service:\n%s\nPlease "
-                               "update or delete them prior to deleting "
-                               "this service or rerun this command using "
-                               "the -r|--autoremove option to have them "
-                               "automatically removed.\n") %
-                               '\n'.join(all_aliases + all_clients))
+            raise SystemExit(cw(_("\nError: The following aliases and/or "
+                                  "clients are dependent on this service:\n\n"
+                                  "%s\n\nPlease update or delete them prior "
+                                  "to deleting this service or rerun this "
+                                  "command using the -r|--autoremove option "
+                                  "to have them automatically removed.\n") %
+                                  '\n'.join(all_aliases + all_clients)))
 
     # Prompt user if they are deleting the default-sparc or default-i386 alias
     if not noprompt:
@@ -177,14 +182,17 @@ def delete_specified_service(service_name, auto_remove, noprompt):
                 sname = ''.join(default_alias)
         if sname:
             arch = sname.split('default-')[1]
-            prompt = \
-                (_('\nWARNING: The service you are deleting, or a dependent '
-                   'alias, is the alias for the default %(arch)s service.\n'
-                   '\nWithout the %(name)s service, clients will fail to boot '
-                   'unless explicitly assigned to a service using the '
-                   'create-client command.\n'
-                   '\nAre you sure you want to delete alias, '
-                   '%(name)s? [y/N]: ') % {'arch': arch, 'name': sname})
+            _warning = """
+            WARNING: The service you are deleting, or a dependent alias, is
+            the alias for the default %(sarch)s service. Without the '%(name)s'
+            service, %(arch)s clients will fail to boot unless explicitly
+            assigned to a service using the create-client command.
+            """ % {'sarch': arch,
+                   'arch': ('x86', 'SPARC')[arch == 'sparc'],
+                   'name': sname}
+
+            print >> sys.stdout, cw(_(_warning))
+            prompt = _("Are you sure you want to delete this alias? [y/N]: ")
             if not com.ask_yes_or_no(prompt):
                 raise SystemExit(1)
 
@@ -211,7 +219,7 @@ def delete_specified_service(service_name, auto_remove, noprompt):
     except StandardError as err:
         # Bail out if the service could not be unmounted during the disable,
         # as it won't be possible to delete necessary files.
-        print >> sys.stderr, _("Service could not be deleted.")
+        print >> sys.stderr, _("\nService could not be deleted.")
         raise SystemExit(err)
 
     # if this was the last service, go to maintenance
@@ -225,8 +233,8 @@ def do_delete_service(cmd_options=None):
     '''
     # check that we are root
     if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for "
-                           "this command."))
+        raise SystemExit(_("Error: Root privileges are required for this "
+                           "command.\n"))
     
     # parse server options
     options = parse_options(cmd_options)

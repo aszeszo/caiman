@@ -34,7 +34,7 @@ import osol_install.auto_install.service_config as config
 from optparse import OptionParser
 
 from osol_install.auto_install.installadm_common import _, \
-    validate_service_name
+    validate_service_name, cli_wrap as cw
 
 
 SERVICE_PROPS = [config.PROP_DEFAULT_MANIFEST, 'aliasof']
@@ -133,40 +133,40 @@ def set_aliasof(options):
     aliasname = options.svcname
 
     if not config.is_service(basesvcname):
-        raise SystemExit(_('Error: Service does not exist: %s ') %
+        raise SystemExit(_('\nError: Service does not exist: %s\n') %
                          basesvcname)
 
     if not config.is_service(aliasname):
-        raise SystemExit(_('Error: Alias does not exist: %s ') % aliasname)
+        raise SystemExit(_('\nError: Alias does not exist: %s\n') % aliasname)
 
     if aliasname == basesvcname:
-        raise SystemExit(_('Error: Alias name same as service name: %s ') %
+        raise SystemExit(_('\nError: Alias name same as service name: %s\n') %
                          aliasname)
 
     aliassvc = svc.AIService(aliasname)
     if not aliassvc.is_alias():
-        raise SystemExit(_('Error: Service exists, but is not an '
-                           'alias: %s ') % aliasname)
+        raise SystemExit(_('\nError: Service exists, but is not an '
+                           'alias: %s\n') % aliasname)
 
     basesvc_arch = svc.AIService(basesvcname).arch
     aliassvc_arch = aliassvc.arch
     if basesvc_arch != aliassvc_arch:
-        raise SystemExit(_("Error: Architectures of service and alias "
-                           "are different."))
+        raise SystemExit(_("\nError: Architectures of service and alias "
+                           "are different.\n"))
 
     if aliassvc.is_aliasof(basesvcname): 
-        raise SystemExit(_("Error: %s is already an alias of %s") %
+        raise SystemExit(_("\nError: %s is already an alias of %s\n") %
                          (aliasname, basesvcname))
 
     if svc.AIService(basesvcname).is_alias():
-        raise SystemExit(_("Error: Cannot alias to another alias."))
+        raise SystemExit(_("\nError: Cannot alias to another alias.\n"))
 
     # Make sure we aren't creating inter dependencies
     all_aliases = config.get_aliased_services(aliasname, recurse=True)
     if basesvcname in all_aliases:
-        raise SystemExit(_("Error: %s can not be made an alias of %s because "
-                           "%s is dependent on %s") %
-                        (aliasname, basesvcname, basesvcname, aliasname))
+        raise SystemExit(cw(_("\nError: %s can not be made an alias of %s "
+                              "because %s is dependent on %s\n") % (aliasname,
+                              basesvcname, basesvcname, aliasname)))
     try:
         aliassvc.update_basesvc(basesvcname)
     except (OSError, config.ServiceCfgError) as err:
@@ -185,8 +185,8 @@ def do_set_service(cmd_options=None):
     '''
     # check that we are root
     if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for "
-                           "this command."))
+        raise SystemExit(_("Error: Root privileges are required for this "
+                           "command."))
 
     options = parse_options(cmd_options)
 

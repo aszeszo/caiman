@@ -37,8 +37,7 @@ import osol_install.libaimdns as libaimdns
 import osol_install.libaiscf as smf
 import osol_install.netif as netif
 
-
-_ = common._
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 
 
 class AIMDNSError(Exception):
@@ -211,9 +210,9 @@ class AImDNS(object):
                     # simply warn that the mDNS service record needed
                     # additional time to process and do not issue an
                     # exception.
-                    sys.stderr.write(_('warning: unable to resolve "%s", '
-                                       'try using a longer timeout\n') %
-                                       servicename)
+                    sys.stderr.write(cw(_('warning: unable to resolve "%s", '
+                                          'try using a longer timeout\n') %
+                                          servicename))
                     break
                 # process the service
                 pyb.DNSServiceProcessResult(resolve_sdref)
@@ -371,17 +370,18 @@ class AImDNS(object):
         if port == 0:
             serv = config.get_service_props(name)
             if not serv:
-                raise AIMDNSError(_('error: aiMDNSError: no such installation '
-                                    'service "%s"') % name)
+                raise AIMDNSError(cw(_('error: aiMDNSError: no such '
+                                       'installation service "%s"') % name))
 
             # ensure the service is enabled
             if config.PROP_STATUS not in serv:
-                raise AIMDNSError(_('error: aiMDNSError: installation service '
-                                    'key "status" property does not exist'))
+                raise AIMDNSError(cw(_('error: aiMDNSError: installation '
+                                       'service key "status" property does '
+                                       'not exist')))
 
             if serv[config.PROP_STATUS] != config.STATUS_ON:
-                print(_('warning: Installation service "%s" is not enabled') %
-                      name)
+                print(cw(_('warning: Installation service "%s" is not enabled '
+                           % name)))
                 return None
             
             smf_port = config.get_service_port(name)
@@ -391,8 +391,8 @@ class AImDNS(object):
                                                              common.PORTPROP)
                     smf_port = str(smf_port)
                 except libaimdns.aiMDNSError, err:
-                    raise AIMDNSError(_('error: aiMDNSError: port property '
-                                        'failure (%s)') % err)
+                    raise AIMDNSError(cw(_('error: aiMDNSError: port property '
+                                           'failure (%s)') % err))
 
         # iterate over the interfaces saving the service references
         list_sdrefs = list()
@@ -408,8 +408,8 @@ class AImDNS(object):
                 continue
 
             if self.verbose:
-                print _('Registering %s on %s (%s)') % \
-                        (name, inf, interfaces[inf])
+                print cw(_('Registering %s on %s (%s)') % \
+                           (name, inf, interfaces[inf]))
 
             if smf_port is not None:
                 # comments are part of the service record
@@ -499,8 +499,9 @@ class AImDNS(object):
             self.sdrefs[servicename] = sdrefs
             self._handle_events()
         else:
-            raise AIMDNSError(_('error: aiMDNSError: mDNS ad hoc registration '
-                                'failed for "%s" service') % self.servicename)
+            raise AIMDNSError(cw(_('error: aiMDNSError: mDNS ad hoc '
+                                   'registration failed for "%s" service')
+                                   % self.servicename))
 
     def _signal_hup(self, signum, frame):
         '''Method: _signal_hup, class private

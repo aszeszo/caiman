@@ -45,7 +45,7 @@ import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as smf
 
 from osol_install.auto_install import create_client
-from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.auto_install.service import AIService
 from solaris_install import Popen, CalledProcessError
 from textwrap import fill
@@ -71,14 +71,17 @@ NETBOOT = '/etc/netboot'
 SERVICE_DIR = '/var/ai/service'
 AI_SVC_FMRI = 'system/install/server:default'
 ISC_DHCP_CONFIG = '/var/ai/isc_dhcp.conf'
-NETBOOT_ERR = """Conversion continuing.  To manually complete this step:
-    Move all required non Automated Install files from /tftpboot to /etc/netboot
-    Delete /tftpboot
-    Create /tftpboot as a symlink to /etc/netboot\n"""
-DHCP_ERR = fill(_("DHCP Conversion error - conversion continuing.  Some " 
-                  "hand translation will be required.  The untranslated items "
-                  "are tagged with '%(<element>)s' where element is the "
-                  "description of the required value.\n"))
+NETBOOT_ERR = _("""
+Conversion continuing.  To manually complete this step:
+   Move all required non Automated Install files from /tftpboot to /etc/netboot
+   Delete /tftpboot
+   Create /tftpboot as a symlink to /etc/netboot
+""")
+DHCP_ERR = _("""
+DHCP Conversion error - conversion continuing. Some by-hand translation will be
+required. The untranslated items are tagged with '%(<element>)s' where element
+is the description of the required value.
+""")
 
 
 class ServiceConversionError(Exception):
@@ -99,8 +102,8 @@ class SUNDHCPData:
         No state stored and this is server wide data, so do not make an
         instance of this class
         """
-        raise NotImplementedError("class does not support "
-                                  "creating an instance.")
+        raise NotImplementedError("class does not support creating an "
+                                  "instance.")
 
     class DHCPError(Exception):
         """
@@ -574,10 +577,10 @@ def get_exec_prop():
     try:
         pipe = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.DEVNULL)
     except CalledProcessError:
-        sys.stderr.write(_('%s: warning: unable to locate SMF service '
-                           'key property inetd_start/exec for '
-                           'tftp/udp6 service. Using default value.\n') %
-                           os.path.basename(sys.argv[0]))
+        sys.stderr.write(cw(_('%s: warning: unable to locate SMF service '
+                              'key property inetd_start/exec for '
+                              'tftp/udp6 service. Using default value.\n') %
+                              os.path.basename(sys.argv[0])))
         exec_line = ''
     else:
         # remove the '\n' character
@@ -609,10 +612,10 @@ def set_exec_prop(val):
             stderr=Popen.STORE, logger='',
             stderr_loglevel=logging.DEBUG)
     except CalledProcessError:
-        sys.stderr.write(_('%s: warning: Unable to set the value of '
-                           'key property inetd/start_exec for '
-                           'tftp/udp6 service to "%s"\n' %
-                           (os.path.basename(sys.argv[0]), val)))
+        sys.stderr.write(cw(_('%s: warning: Unable to set the value of '
+                              'key property inetd/start_exec for '
+                              'tftp/udp6 service to "%s"\n' %
+                              (os.path.basename(sys.argv[0]), val))))
 
     cmd = ['/usr/sbin/svcadm', 'refresh', 'tftp/udp6:default']
 
@@ -621,10 +624,10 @@ def set_exec_prop(val):
             stderr=Popen.STORE, logger='',
             stderr_loglevel=logging.DEBUG)
     except CalledProcessError:
-        sys.stderr.write(_('%s: warning: Unable to refresh the service: '
-                           'tftp/udp6:default\nThis needs to be done before '
-                           'attempting to do client installs\n' %
-                           os.path.basename(sys.argv[0])))
+        sys.stderr.write(cw(_('%s: warning: Unable to refresh the service: '
+                              'tftp/udp6:default\nThis needs to be done '
+                              'before attempting to do client installs\n' %
+                              os.path.basename(sys.argv[0]))))
 
 
 def del_prop_group(ai_service, dry_run):
@@ -646,9 +649,10 @@ def del_prop_group(ai_service, dry_run):
                 stderr=Popen.STORE, logger='',
                 stderr_loglevel=logging.DEBUG)
         except CalledProcessError as err:
-            sys.stderr.write(_('%s failed with: %s') % (cmd, err.popen.stderr))
-            sys.stderr.write(_('%s: warning: Unable to delete the '
-                               'property group: %s' % (cmd, pg_name)))
+            sys.stderr.write(cw(_('%s failed with: %s') % (cmd,
+                             err.popen.stderr)))
+            sys.stderr.write(cw(_('%s: warning: Unable to delete the '
+                                  'property group: %s' % (cmd, pg_name))))
 
 
 def remove_boot_archive_from_vfstab(ai_service, service):
@@ -659,9 +663,9 @@ def remove_boot_archive_from_vfstab(ai_service, service):
     # check that we have a valid tftpboot directory and set base_dir to it
     base_dir = find_tftp_root()
     if not base_dir:
-        sys.stderr.write(_("Unable to remove the vfstab entries for " +
-                          "install boot archives\nwithout a valid " +
-                          "tftp root directory.\n"))
+        sys.stderr.write(cw(_("Unable to remove the vfstab entries for "
+                              "install boot archives without a valid "
+                              "tftp root directory.\n")))
         return
 
     # if we have a boot_file use it instead of serviceName for paths
@@ -676,8 +680,8 @@ def remove_boot_archive_from_vfstab(ai_service, service):
     grub_menu = grub_menu_prefix + service_name
     if not os.path.exists(os.path.join(
                           base_dir, grub_menu)):
-        sys.stderr.write(_("Unable to find GRUB menu at %s, and thus " +
-                          "unable to find boot archive.\n") % grub_menu)
+        sys.stderr.write(cw(_("Unable to find GRUB menu at %s, and thus "
+                              "unable to find boot archive.\n") % grub_menu))
     else:
         # check the menu.lst file for the boot archive(s) in use
         menu_lst = GrubMenu(file_name=os.path.join(base_dir, grub_menu))
@@ -709,15 +713,16 @@ def remove_boot_archive_from_vfstab(ai_service, service):
                 # if run_cmd errors out we should continue
                 except CalledProcessError as err:
                     sys.stderr.write(str(err) + "\n")
-                    sys.stderr.write(_("Unable to unmount boot archive %s" +
-                        " for service\n") % os.path.join(base_dir,
-                        boot_archive))
+                    sys.stderr.write(cw(_("Unable to unmount boot archive %s "
+                                          "for service\n") %
+                                          os.path.join(base_dir,
+                                          boot_archive)))
 
             # boot archive directory not a mountpoint
             else:
-                sys.stderr.write(_("Boot archive %s for service is " +
-                                  "not a mountpoint.\n") %
-                                  os.path.join(base_dir, boot_archive))
+                sys.stderr.write(cw(_("Boot archive %s for service is not a "
+                                      "mountpoint.\n") % os.path.join(base_dir,
+                                      boot_archive)))
 
             try:
                 vfstab_obj = VFSTab(mode="r+")
@@ -735,9 +740,9 @@ def remove_boot_archive_from_vfstab(ai_service, service):
                     sys.stderr.write(str(err) + "\n")
             # boot archive was not found in /etc/vfstab
             except (ValueError, IndexError):
-                sys.stderr.write(_("Boot archive (%s) for service %s " +
-                                  "not in vfstab.\n") %
-                              (boot_archive, service_name))
+                sys.stderr.write(cw(_("Boot archive (%s) for service %s not " 
+                                      "in vfstab.\n") % (boot_archive,
+                                      service_name)))
 
 
 def generate_new_service_name(services, ai_service):
@@ -817,8 +822,8 @@ def find_sparc_clients(lservices, sname=None):
             with open(confpath) as filepointer:
                 fstr = filepointer.read(sinfo.st_size)
         except (OSError, IOError):
-            sys.stderr.write("Error: while accessing wanboot.conf file "
-                             "(%s/wanboot.conf)\n" % lpath)
+            sys.stderr.write(cw(_("Error: while accessing wanboot.conf file "
+                                  "(%s/wanboot.conf)\n" % lpath)))
             return
 
         start = fstr.find('boot_file=') + len('boot_file=')
@@ -847,8 +852,7 @@ def find_sparc_clients(lservices, sname=None):
             with open(confpath) as filepointer:
                 fstr = filepointer.read(sinfo.st_size)
         except (OSError, IOError):
-            sys.stderr.write("Error: while accessing "
-                             "install.conf file\n")
+            sys.stderr.write(_("Error: while accessing install.conf file\n"))
             return
 
         start = fstr.find('install_service=') + len('install_service=')
@@ -956,7 +960,7 @@ def find_x86_clients(lservices, sname=None):
         try:
             entries = menu.entries[0]
         except IndexError:
-            sys.stderr.write(_("Error: No entries found in %s\n") % path)
+            sys.stderr.write(cw(_("Error: No entries found in %s\n") % path))
             return ''
         if entries:
             if 'kernel$' in menu[entries]:
@@ -1042,8 +1046,8 @@ def get_local_services(linst, sname=None):
                 PROP_STATUS in service_keys and
                 PROP_IMAGE_PATH in service_keys and
                 PROP_TXT_RECORD in service_keys):
-            sys.stderr.write(_('Error: SMF service: %s key '
-                               'property does not exist\n') % linst)
+            sys.stderr.write(cw(_('Error: SMF service: %s key property does '
+                                  'not exist\n') % linst))
             sys.exit(1)
 
         servicename = serv[PROP_SERVICE_NAME]
@@ -1242,8 +1246,8 @@ def move_service_directory(services, dryrun, ai_service):
         # Make sure that the image appears valid (has a solaris.zlib file)
         if not os.path.exists(os.path.join(ipath, "solaris.zlib")):
             raise ServiceConversionError(
-                _('Error: Image path directory does not'
-                  ' contain a valid image: %s' % ipath))
+                cw(_('Error: Image path directory does not'
+                     ' contain a valid image: %s' % ipath)))
 
     sdpath = os.path.join('/var/ai', ai_service)
     new_service_path = os.path.join(SERVICE_DIR, ai_service)
@@ -1251,7 +1255,7 @@ def move_service_directory(services, dryrun, ai_service):
         os.mkdir(SERVICE_DIR)
     elif not os.path.isdir(SERVICE_DIR):
         raise ServiceConversionError(
-            _("Error: %s exists and is not a directory" % SERVICE_DIR))
+            cw(_("Error: %s exists and is not a directory" % SERVICE_DIR)))
 
     if os.path.exists(sdpath) and os.path.isdir(sdpath):
         print _("    Move %s to %s") % (sdpath, new_service_path)
@@ -1340,9 +1344,9 @@ def move_service_directory(services, dryrun, ai_service):
                     except OSError as err:
                         sys.stderr.write(str(err) + "\n")
         else:
-            raise ServiceConversionError(_("Warning: wanboot.conf file for "
-                                         "service: %s was not found" %
-                                         ai_service))
+            raise ServiceConversionError(cw(_("Warning: wanboot.conf file for "
+                                              "service: %s was not found" %
+                                              ai_service)))
 
 
 def get_bootargs(menupath):
@@ -1491,8 +1495,8 @@ def upgrade_svc_vers_0_1(services, dry_run, ai_service):
     else:
         sdpath = os.path.join('/var/ai/service', ai_service)
 
-    print _("Upgrade existing default manifests for %s to version 1") % \
-            ai_service
+    print cw(_("Upgrade existing default manifests for %s to version 1") % 
+            ai_service)
 
     if os.path.exists(sdpath) and os.path.isdir(sdpath):
         manifest_dir = sdpath
@@ -1513,8 +1517,9 @@ def upgrade_svc_vers_0_1(services, dry_run, ai_service):
                 manifest_dir = portpath
                 break
             else:
-                raise ServiceConversionError(_('Unable to find the service'
-                                            ' directory for %s' % ai_service))
+                raise ServiceConversionError(cw(_('Unable to find the service '
+                                                  ' directory for %s' %
+                                                  ai_service)))
 
     default_file = os.path.join(manifest_dir, 'AI_data', 'default.xml')
     print _("Search for default manifest %s") % default_file
@@ -1536,9 +1541,9 @@ def upgrade_svc_vers_0_1(services, dry_run, ai_service):
             except CalledProcessError:
                 # Move the default manifest back into place
                 shutil.move(temp_nm, default_file)
-                sys.stderr.write(_('Warning: Unable to add the '
-                                   'default manifest: %s for service: %s\n' %
-                                   (default_file, ai_service)))
+                sys.stderr.write(cw(_('Warning: Unable to add the default '
+                                      'manifest: %s for service: %s\n' %
+                                      (default_file, ai_service))))
                 return
 
             # delete the temporary file 
@@ -1547,7 +1552,7 @@ def upgrade_svc_vers_0_1(services, dry_run, ai_service):
             except OSError:
                 pass
     else:
-        print ' No default manifest found for service %s' % ai_service
+        print cw(_(' No default manifest found for service %s' % ai_service))
 
 
 def upgrade_svc_vers_1_2(services, dry_run, ai_service):
@@ -1575,8 +1580,8 @@ def copy_image_path(service_name, service_info, dry_run):
             break
         iter += 1
 
-    print _("Create a unique instance of image path for %s at %s") % \
-        (service_name, new_image_path)
+    print cw(_("Create a unique instance of image path for %s at %s") % 
+            (service_name, new_image_path))
     if not dry_run:
         # copy the image directory
         shutil.copytree(service_info['path'], new_image_path, symlinks=True)
@@ -1649,7 +1654,7 @@ def create_isc_dhcp_configuration(dhcp_config):
         return
 
     # Build each of the ISC DHCP stanzas
-    print _("Build ISC DHCP Configuration File: %s\n" % dhcp_config)
+    print cw(_("Build ISC DHCP Configuration File: %s\n" % dhcp_config))
 
     cfgfile_base_printed = False
     cfg_error_found = False
@@ -1797,11 +1802,13 @@ def main():
     if options.dryrun:
         print _("Dry run mode - no changes will be made to the system")
     else:
-        prompt = \
-            (_('\nWARNING: The conversion process will make changes to '
-               'the file system.\nIt is advisable to make a copy of the '
-               'boot environment\nusing beadm(1M) before proceeding.\n'
-               '\nAre you sure you want to proceed [y/N]: '))
+        _warning = """
+        WARNING: The conversion process will make changes to the file system.
+        It is advisable to make a copy of the boot environment using beadm(1M)
+        before proceeding.
+        """
+        print cw(_(_warning))
+        prompt = _('Are you sure you want to proceed [y/N]: ')
         if not com.ask_yes_or_no(prompt):
             raise SystemExit(1)
 
@@ -1882,11 +1889,11 @@ def main():
                     svc.rename(new_service_name)
 
     if len(unconverted_services) > 0:
-        print "\nThe following services were not converted:"
+        print _("\nThe following services were not converted:\n")
         for errored_service in unconverted_services:
             # Print out the service and the reason that it wasn't converted
-            print _("  %s: %s" % (errored_service,
-                str(unconverted_services[errored_service]).lstrip("Error: "))) 
+            print cw(_("  %s: %s\n" % (errored_service,
+                str(unconverted_services[errored_service]).lstrip("Error: ")))) 
 
     # Enable the AI service
     print _("Enable the AI SMF service")

@@ -128,7 +128,7 @@ def store_pid():
                 for pgrep_pid in pgrep_proc.stdout.split('\n')[:-1]:
                     runpid = int(pgrep_pid)
                     if runpid == pid:
-                        sys.stderr.write(_('error:aimdns already running '
+                        sys.stderr.write(_('error: aimdns already running '
                                            '(pid %d)\n') % pid)
                         sys.exit(1)
         except ValueError:

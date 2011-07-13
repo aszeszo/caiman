@@ -36,7 +36,7 @@ from optparse import OptionParser
 
 from osol_install.auto_install.image import ImageError
 from osol_install.auto_install.installadm_common import _, \
-    validate_service_name
+    validate_service_name, cli_wrap as cw
 from osol_install.auto_install.service import AIService, MountError, \
     DEFAULT_ARCH
 
@@ -100,28 +100,31 @@ def do_rename_service(cmd_options=None):
     '''
     # check that we are root
     if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for "
-                           "this command."))
+        raise SystemExit(_("Error: Root privileges are required for this "
+                           "command.\n"))
 
     (svcname, newsvcname) = parse_options(cmd_options)
 
     # Ensure the service to rename is a valid service
     if not config.is_service(svcname):
-        raise SystemExit(_("Failed to find service %s") % svcname)
+        raise SystemExit(_("\nFailed to find service %s\n") % svcname)
 
     # Ensure the new name is not already a service
     if config.is_service(newsvcname):
-        raise SystemExit(_("Service or alias already exists: %s") % newsvcname)
+        raise SystemExit(_("\nService or alias already exists: %s\n") %
+                           newsvcname)
 
     # Don't allow renaming to/from the 'default-<arch>' aliases 
     if svcname in DEFAULT_ARCH:
-        raise SystemExit(_('You may not rename the "%s" service.') % svcname)
+        raise SystemExit(_('\nYou may not rename the "%s" service.\n') %
+                           svcname)
 
     if newsvcname in DEFAULT_ARCH:
-        raise SystemExit(_('You may not rename a service %s to be the default '
-                           'service for an architecture.\nTo create the '
-                           'default-sparc or default-i386 service aliases, use'
-                           ' "installadm create-service -t|--aliasof."'))
+        raise SystemExit(cw(_('\nYou may not rename a service to be the '
+                              'default service for an architecture. To create '
+                              'the default-sparc or default-i386 service '
+                              'aliases, use "installadm create-service '
+                              '-t|--aliasof."\n')))
 
     # Unmount old service
     was_mounted = False
@@ -156,13 +159,13 @@ def do_rename_service(cmd_options=None):
         try:
             alias_svc.update_basesvc(newsvcname)
         except (OSError, config.ServiceCfgError) as err:
-            print >> sys.stderr, (_("Failed to update dependent alias: %s") %
-                                  alias_svc.name)
+            print >> sys.stderr, (_("\nFailed to update dependent alias: "
+                                    "%s\n") % alias_svc.name)
             print >> sys.stderr, err
             failures.append(err)
         except MountError as err:
-            print >> sys.stderr, (_("Failed to enable dependent alias: %s") %
-                                  alias_svc.name)
+            print >> sys.stderr, (_("\nFailed to enable dependent alias: "
+                                    "%s\n") % alias_svc.name)
             print >> sys.stderr, err
             failures.append(err)
     
