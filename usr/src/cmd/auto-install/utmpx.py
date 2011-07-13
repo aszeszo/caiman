@@ -67,18 +67,18 @@ class StructUtmpx(C.Structure):
         };
     """
     _fields_ = [
-        ("ut_user", C.c_char * 32),
-        ("ut_id", C.c_char * 4),
-        ("ut_line", C.c_char * 32),
-        ("ut_pid", C.c_uint),
-        ("ut_type", C.c_short),
-        ("ut_exit", C.c_short * 2),  # Shouldn't need it, so no need for
-                                     # struct here just yet.
-        ("ut_tv", C.c_long * 2),   # or here either.
-        ("ut_session", C.c_int),
-        ("pad", C.c_int * 5),
-        ("ut_syslen", C.c_short),
-        ("ut_host", C.c_char * 257)
+        ("ut_user",     C.c_char * 32),
+        ("ut_id",       C.c_char * 4),
+        ("ut_line",     C.c_char * 32),
+        ("ut_pid",      C.c_uint),
+        ("ut_type",     C.c_short),
+        ("ut_exit",     C.c_short * 2),  # Shouldn't need it, so no need for
+                                         # struct here just yet.
+        ("ut_tv",       C.c_long * 2),   # or here either.
+        ("ut_session",  C.c_int),
+        ("pad",         C.c_int * 5),
+        ("ut_syslen",   C.c_short),
+        ("ut_host",     C.c_char * 257)
     ]
 
 _FUNCS = [
