@@ -668,14 +668,10 @@ class TestZpool(unittest.TestCase):
         fs2.action = "create"
         fs3 = Filesystem("test_zpool/fs3")
         fs3.action = "create"
-        pool_options = PoolOptions("pool options")
-        fs_options = DatasetOptions("fs options")
-        pool_options1 = Options("pool option1")
-        pool_options1.options_str = "-o autoexpand=off"
-        fs_options1 = Options("fs options1")
-        fs_options1.options_str = "-O atime=on"
-        pool_options.insert_children(pool_options1)
-        fs_options.insert_children(fs_options1)
+        pool_options = PoolOptions("pool options", dict())
+        fs_options = DatasetOptions("fs options", dict())
+        pool_options.data_dict["autoexpand"] = "off"
+        fs_options.data_dict["atime"] = "on"
         zpool.insert_children([fs1, fs2, fs3, pool_options, fs_options])
         self.logical.insert_children(zpool)
         self.target.insert_children(self.logical)
