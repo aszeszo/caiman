@@ -74,8 +74,8 @@ class TargetInstantiation(Checkpoint):
         self.logical_list = self.target.get_descendants(class_type=Zpool)
         self.physical_list = self.target.get_descendants(class_type=Disk)
 
-        self.swap_list = []
-        self.dump_list = []
+        self.swap_list = list()
+        self.dump_list = list()
 
         zvol_list = self.target.get_descendants(class_type=Zvol)
 
@@ -142,7 +142,7 @@ class TargetInstantiation(Checkpoint):
                         label_disk = False
 
             update_vtoc = False
-            swap_slice_list = []
+            swap_slice_list = list()
             if slice_list:
                 dup_slice_list = copy(slice_list)
                 for slc in dup_slice_list:
@@ -219,7 +219,7 @@ class TargetInstantiation(Checkpoint):
         """ method to extract all of the physical device names for a given
         zpool or vdev name from the DOC
         """
-        vdev_list = []
+        vdev_list = list()
         for class_type in [Disk, Partition, Slice]:
             dev_list = self.target.get_descendants(class_type=class_type)
             for dev in [d for d in dev_list if d.in_zpool == zpool_name]:
@@ -284,20 +284,23 @@ class TargetInstantiation(Checkpoint):
             dataset_options_list = zpool.get_children(
                 class_type=DatasetOptions)
 
-            options = []
+            # Define a list for zpool_options to be passed to zpool command
+            zpool_options = list()
+
             if pool_options_list:
+                pool_options = list()
                 for entry in pool_options_list:
-                    options_entry = entry.get_children(class_type=Options)
-                    for option in options_entry:
-                        options.extend(option.options_str.split())
+                    pool_options.extend(entry.get_arg_list())
+                zpool_options.extend(pool_options)
+
             if dataset_options_list:
+                dataset_options = list()
                 for entry in dataset_options_list:
-                    options_entry = entry.get_children(class_type=Options)
-                    for option in options_entry:
-                        options.extend(option.options_str.split())
+                    dataset_options.extend(entry.get_arg_list())
+                zpool_options.extend(dataset_options)
 
             vdevs = zpool.get_children(class_type=Vdev)
-            vdev_list = []
+            vdev_list = list()
             if vdevs:
                 # if the pool has vdevs listed underneath it, get
                 # those as well as the associated physical devices. i.e.
@@ -322,12 +325,12 @@ class TargetInstantiation(Checkpoint):
             # set up the pool
             zpool.vdev_list = vdev_list
             if zpool.action == "create":
-                zpool.create(self.dry_run, options)
+                zpool.create(self.dry_run, zpool_options)
             elif zpool.action == "preserve":
                 if not zpool.exists:
                     # a pool marked 'preserve' that does not exist
                     # needs to be created
-                    zpool.create(self.dry_run, options)
+                    zpool.create(self.dry_run, zpool_options)
 
             # set up the filesystems in that pool, but only if the in_be
             # attribute is False
@@ -357,13 +360,26 @@ class TargetInstantiation(Checkpoint):
 
             # Set up the Boot Environment
             be_list = zpool.get_children(class_type=BE)
-            be_fs_list = [fs.name for fs in fs_list if fs.in_be]
+
+            # Process filesystems.
+            be_fs_list = list()
+            be_fs_zfs_properties_list = list()
+            for fs in fs_list:
+                if fs.action == "create":
+                    if fs.in_be:
+                        # Append filesystem name to BE filesystem list
+                        be_fs_list.append(fs.name)
+                        zfs_options = fs.get_first_child(class_type=Options)
+                        # Could be None, but still need to pass a value
+                        be_fs_zfs_properties_list.append(zfs_options)
+
             for be in be_list:
                 # Initialize the new BE.  If filesystems were specified with
                 # "in_be" set to True, add those filesystems to the init call
                 if be_fs_list:
                     be.init(self.dry_run, pool_name=zpool.name,
-                            fs_list=be_fs_list)
+                            fs_list=be_fs_list,
+                            fs_zfs_properties=be_fs_zfs_properties_list)
                 else:
                     be.init(self.dry_run, pool_name=zpool.name)
 

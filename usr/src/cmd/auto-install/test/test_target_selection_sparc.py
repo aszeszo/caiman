@@ -34,6 +34,7 @@ import osol_install.errsvc as errsvc
 from lxml import etree
 from solaris_install.auto_install.checkpoints.target_selection \
     import TargetSelection
+from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.test.engine_test_utils import \
     get_new_engine_instance, reset_engine
@@ -66,7 +67,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
             <size val="16770048secs" start_sector="10176"/>
           </slice>
           <slice name="2" action="preserve" force="false" tag="5"
-            is_swap="false">
+           is_swap="false">
             <size val="143349312secs" start_sector="0"/>
           </slice>
         </disk>
@@ -81,7 +82,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
             <size val="4202688secs" start_sector="41945472"/>
           </slice>
           <slice name="2" action="preserve" force="false" tag="5"
-            is_swap="false">
+           is_swap="false">
             <size val="143349312secs" start_sector="0"/>
           </slice>
         </disk>
@@ -161,7 +162,8 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         try:
             desired = \
                 self.doc.get_descendants(
-                    name=Target.DESIRED, class_type=Target, max_depth=2)[0]
+                    name=Target.DESIRED, class_type=Target, max_depth=2,
+                    not_found_is_err=True)[0]
 
             xml_str = desired.get_xml_tree_str()
 
@@ -172,12 +174,15 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                           self.__gendiff_str(expected_xml, xml_str))
 
             desired.final_validation()
-            if len(errsvc._ERRORS) > 0:
-                self.fail(errsvc._ERRORS[0])
+        except ObjectNotFoundError:
+            self.fail("Unable to find DESIRED tree!")
         except Exception, e:
             import traceback
             traceback.print_exc()
             self.fail(e)
+
+        if len(errsvc._ERRORS) > 0:
+            self.fail(errsvc._ERRORS[0])
 
     def setUp(self):
         logical.DEFAULT_BE_NAME = "ai_test_solaris"
@@ -899,6 +904,88 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
 
         self.__run_simple_test(test_manifest_xml, expected_xml)
 
+    def test_target_selection_if_pool_and_datasets_options(self):
+        '''Test Success If Pool and Datasets Options Specified
+        '''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="true" in_zpool="ai_test_rpool">
+                <disk_name name="c2t0d0" name_type="ctd"/>
+              </disk>
+              <logical>
+                <zpool name="ai_test_rpool" is_root="true">
+                  <pool_options>
+                    <option name="listsnaps" value="on"/>
+                  </pool_options>
+                  <dataset_options>
+                    <option name="compression" value="on"/>
+                  </dataset_options>
+                  <filesystem name="to_share" mountpoint="/share">
+                    <options>
+                      <option name="compression" value="off"/>
+                    </options>
+                  </filesystem>
+                  <filesystem name="export2"/>
+                  <be name="ai_test_solaris_be">
+                    <options>
+                      <option name="test:ai_test_option" value="1"/>
+                    </options>
+                  </be>
+                </zpool>
+              </logical>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="false" nodump="false">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<pool_options>
+        ........<option name="listsnaps" value="on"/>
+        ......</pool_options>
+        ......<dataset_options>
+        ........<option name="compression" value="on"/>
+        ......</dataset_options>
+        ......<filesystem name="to_share" action="create" mountpoint="/share" \
+        in_be="false">
+        ........<options>
+        ..........<option name="compression" value="off"/>
+        ........</options>
+        ......</filesystem>
+        ......<filesystem name="export2" action="create" in_be="false"/>
+        ......<be name="ai_test_solaris_be">
+        ........<options>
+        ..........<option name="test:ai_test_option" value="1"/>
+        ........</options>
+        ......</be>
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<zvol name="swap" action="create" use="swap">
+        ........<size val="\d+m"/>
+        ......</zvol>
+        ......<zvol name="dump" action="create" use="dump">
+        ........<size val="\d+m"/>
+        ......</zvol>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
+        dev_size="143349312secs"/>
+        ....<disk_keyword key="boot_disk"/>
+        ....<slice name="0" action="create" force="true" is_swap="false" \
+        in_zpool="ai_test_rpool" in_vdev="vdev">
+        ......<size val="143348736secs" start_sector="512"/>
+        ....</slice>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
     def test_target_selection_if_root_pool_with_be_specified(self):
         '''Test Success If Root Pool With BE Specified
         '''
@@ -911,7 +998,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
-                  <be name="ai_test__solaris_be"/>
+                  <be name="ai_test_solaris_be"/>
                 </zpool>
               </logical>
             </target>
@@ -923,7 +1010,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <target name="desired">
         ..<logical noswap="false" nodump="false">
         ....<zpool name="ai_test_rpool" action="create" is_root="true">
-        ......<be name="ai_test__solaris_be"/>
+        ......<be name="ai_test_solaris_be"/>
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="\d+m"/>

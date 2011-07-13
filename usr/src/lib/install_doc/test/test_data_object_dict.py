@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 '''Tests to validate DataObjectDict functionality'''
 
@@ -61,6 +61,27 @@ class DataObjectDictBadSubTag(DataObjectDict):
     SUB_TAG_NAME = "bad sub tag"
 
 
+class DataObjectDictDiffValueAndTag(DataObjectDict):
+    '''Define class where we override TAG_NAME and VALUE_ATTR_NAME'''
+    TAG_NAME = "different_tag"
+    VALUE_ATTR_NAME = "different_value"
+
+
+class DataObjectDictDiffValueAndSubTag(DataObjectDict):
+    '''Define class where we override SUB_TAG_NAME and VALUE_ATTR_NAME'''
+    SUB_TAG_NAME = "different_sub_tag"
+    VALUE_ATTR_NAME = "different_value"
+
+
+class DataObjectDictDiffValueAndBothTag(DataObjectDict):
+    '''Define class where we override both TAG_NAME and SUB_TAG_NAME and
+       VALUE_ATTR_NAME
+    '''
+    TAG_NAME = "different_both_tag"
+    SUB_TAG_NAME = "different_both_sub_tag"
+    VALUE_ATTR_NAME = "different_value"
+
+
 class  TestDataObjectDict(unittest.TestCase):
     '''Tests to validate DataObjectDict functionality'''
 
@@ -76,6 +97,9 @@ class  TestDataObjectDict(unittest.TestCase):
         self.data_dict_xml = DataObjectDict("test_dictionary_xml", tmp_dict,
             generate_xml=True)
 
+        self.data_dict_xml_no_name = DataObjectDict(None, tmp_dict,
+            generate_xml=True)
+
         self.data_dict_no_xml = DataObjectDict("test_dictionary_no_xml",
             tmp_dict)
 
@@ -88,6 +112,26 @@ class  TestDataObjectDict(unittest.TestCase):
         self.data_dict_diff_both_tags = DataObjectDictDiffBothTag(
             "test_dictionary_diff_both_tags", tmp_dict,
             generate_xml=True)
+
+        self.data_dict_xml_value_attr = DataObjectDict("test_dictionary_xml",
+            tmp_dict, generate_xml=True, value_as_attr=True)
+
+        self.data_dict_xml_value_attr_no_name = DataObjectDict(None, tmp_dict,
+            generate_xml=True, value_as_attr=True)
+
+        self.data_dict_diff_value_and_tag = DataObjectDictDiffValueAndTag(
+            "test_dictionary_diff_value_and_tag", tmp_dict, generate_xml=True,
+            value_as_attr=True)
+
+        self.data_dict_diff_value_and_sub_tag = \
+            DataObjectDictDiffValueAndSubTag(
+                "test_dictionary_diff_value_and_sub_tag", tmp_dict,
+                generate_xml=True, value_as_attr=True)
+
+        self.data_dict_diff_value_and_both_tags = \
+            DataObjectDictDiffValueAndBothTag(
+            "test_dictionary_diff_value_and_both_tags", tmp_dict,
+            generate_xml=True, value_as_attr=True)
 
         # Slightly different dictionary, add a key of 'name'.
         tmp_dict = dict()
@@ -108,6 +152,13 @@ class  TestDataObjectDict(unittest.TestCase):
         self.data_dict_diff_sub_tag = None
         self.data_dict_diff_both_tags = None
 
+        self.data_dict_xml_value_attr = None
+        self.data_dict_value_attr_no_xml = None
+        self.data_dict_diff_value_and_tag = None
+        self.data_dict_diff_value_and_sub_tag = None
+        self.data_dict_diff_value_and_both_tags = None
+
+    # Tests for value as text
     def test_data_object_dict_no_xml(self):
         '''Validate that XML isn't generated if generate_xml=False'''
         self.assertTrue(self.data_dict_no_xml.get_xml_tree() == None,
@@ -129,6 +180,25 @@ class  TestDataObjectDict(unittest.TestCase):
         '''.replace(indentation, "")
 
         xml_str = self.data_dict_xml.get_xml_tree_str()
+        self.assertEqual(xml_str, expected_xml, "EXPECTED:\n%s\nGOT:\n%s" %\
+            (expected_xml, xml_str))
+
+    def test_data_object_dict_xml_default_no_name(self):
+        '''Validate that XML is generated with default settings but no name'''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        expected_xml = '''\
+        <data_dictionary>
+          <data name="name1">value1</data>
+          <data name="name2">value2</data>
+          <data name="name3">value3</data>
+          <data name="name4">value4</data>
+          <data name="name5">value5</data>
+        </data_dictionary>
+        '''.replace(indentation, "")
+
+        xml_str = self.data_dict_xml_no_name.get_xml_tree_str()
         self.assertEqual(xml_str, expected_xml, "EXPECTED:\n%s\nGOT:\n%s" %\
             (expected_xml, xml_str))
 
@@ -349,6 +419,45 @@ class  TestDataObjectDict(unittest.TestCase):
         self.assertFalse(self.data_dict_no_xml.generate_xml)
         self.assertTrue(self.data_dict_no_xml.to_xml() == None)
 
+    def test_data_object_dict_import_xml_default_no_name(self):
+        '''Validate that from_xml() correctly imports XML if no name for tag'''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        TEST_XML = '''\
+        <data_dictionary>
+          <data name="name1">value1</data>
+          <data name="name2">value2</data>
+          <data name="name3">value3</data>
+          <data name="name4">value4</data>
+          <data name="name5">value5</data>
+        </data_dictionary>
+        '''.replace(indentation, "")
+
+        # Parse the XML into an XML tree.
+        xml_tree = etree.fromstring(TEST_XML)
+
+        if DataObjectDict.can_handle(xml_tree):
+            new_obj = DataObjectDict.from_xml(xml_tree)
+            self.assertTrue(new_obj != None,
+                "Failed to create DataObjectDict from XML")
+            self.assertEquals(new_obj.name, None,
+                "new object's name is not None.")
+            self.assertEquals(type(new_obj.data_dict), dict,
+                "new object's data_dict is not a data_dict.")
+            self.assertEquals(new_obj.data_dict["name1"], "value1",
+                "new object's name1 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name2"], "value2",
+                "new object's name2 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name3"], "value3",
+                "new object's name3 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name4"], "value4",
+                "new object's name4 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name5"], "value5",
+                "new object's name5 doesn't have correct value")
+        else:
+            self.fail("can_handle returned False, expected True!")
+
     def test_data_object_dict_import_xml_default(self):
         '''Validate that from_xml() correctly imports XML'''
         # Set expected xml, and compensate for indent
@@ -504,6 +613,389 @@ class  TestDataObjectDict(unittest.TestCase):
         data_dict_obj = DataObjectDict("TestChild", data_dict)
         data_obj.insert_children(data_dict_obj)
 
+    # Tests for value as an attribute
+    def test_data_object_dict_val_attr_xml_default(self):
+        '''Validate that XML(value attr) is generated with default settings'''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        expected_xml = '''\
+        <data_dictionary name="test_dictionary_xml">
+          <data name="name1" value="value1"/>
+          <data name="name2" value="value2"/>
+          <data name="name3" value="value3"/>
+          <data name="name4" value="value4"/>
+          <data name="name5" value="value5"/>
+        </data_dictionary>
+        '''.replace(indentation, "")
+
+        xml_str = self.data_dict_xml_value_attr.get_xml_tree_str()
+        self.assertEqual(xml_str, expected_xml, "EXPECTED:\n%s\nGOT:\n%s" %\
+            (expected_xml, xml_str))
+
+    def test_data_object_dict_val_attr_xml_default_no_name(self):
+        '''Validate that XML(value attr) is generated with defaults w/no name
+        '''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        expected_xml = '''\
+        <data_dictionary>
+          <data name="name1" value="value1"/>
+          <data name="name2" value="value2"/>
+          <data name="name3" value="value3"/>
+          <data name="name4" value="value4"/>
+          <data name="name5" value="value5"/>
+        </data_dictionary>
+        '''.replace(indentation, "")
+
+        xml_str = self.data_dict_xml_value_attr_no_name.get_xml_tree_str()
+        self.assertEqual(xml_str, expected_xml, "EXPECTED:\n%s\nGOT:\n%s" %\
+            (expected_xml, xml_str))
+
+    def test_data_object_dict_val_attr_xml_diff_value_and_tag(self):
+        '''Validate that XML(value attr) is generated using a diff TAG_NAME'''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        expected_xml = '''\
+        <different_tag name="test_dictionary_diff_value_and_tag">
+          <data name="name1" different_value="value1"/>
+          <data name="name2" different_value="value2"/>
+          <data name="name3" different_value="value3"/>
+          <data name="name4" different_value="value4"/>
+          <data name="name5" different_value="value5"/>
+        </different_tag>
+        '''.replace(indentation, "")
+
+        xml_str = self.data_dict_diff_value_and_tag.get_xml_tree_str()
+        self.assertEqual(xml_str, expected_xml, "EXPECTED:\n%s\nGOT:\n%s" %\
+            (expected_xml, xml_str))
+
+    def test_data_object_dict_val_attr_xml_diff_value_and_sub_tag(self):
+        '''Validate that XML(value attr) is generated with a diff SUB_TAG_NAME
+        '''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        expected_xml = '''\
+        <data_dictionary name="test_dictionary_diff_value_and_sub_tag">
+          <different_sub_tag name="name1" different_value="value1"/>
+          <different_sub_tag name="name2" different_value="value2"/>
+          <different_sub_tag name="name3" different_value="value3"/>
+          <different_sub_tag name="name4" different_value="value4"/>
+          <different_sub_tag name="name5" different_value="value5"/>
+        </data_dictionary>
+        '''.replace(indentation, "")
+
+        xml_str = self.data_dict_diff_value_and_sub_tag.get_xml_tree_str()
+        self.assertEqual(xml_str, expected_xml, "EXPECTED:\n%s\nGOT:\n%s" %\
+            (expected_xml, xml_str))
+
+    def test_data_object_dict_val_attr_xml_diff_value_and_both_tag(self):
+        '''Validate that XML(value attr) uses diff TAG_NAME and SUB_TAG_NAME
+        '''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        expected_xml = '''\
+        <different_both_tag name="test_dictionary_diff_value_and_both_tags">
+          <different_both_sub_tag name="name1" different_value="value1"/>
+          <different_both_sub_tag name="name2" different_value="value2"/>
+          <different_both_sub_tag name="name3" different_value="value3"/>
+          <different_both_sub_tag name="name4" different_value="value4"/>
+          <different_both_sub_tag name="name5" different_value="value5"/>
+        </different_both_tag>
+        '''.replace(indentation, "")
+
+        xml_str = self.data_dict_diff_value_and_both_tags.get_xml_tree_str()
+        self.assertEqual(xml_str, expected_xml, "EXPECTED:\n%s\nGOT:\n%s" %\
+            (expected_xml, xml_str))
+
+    def test_data_object_dict_val_attr_fail_not_dict(self):
+        '''Validate failure if non-dict type passed for dictionary'''
+        try:
+            DataObjectDict("not_dict", data_dict=["elem1"])
+            self.fail("Unexpected success creating obj with a list")
+        except ValueError:
+            pass
+
+    def test_data_object_dict_val_attr_set_dict_prop(self):
+        '''Validate correct setting of data_dict property on creation'''
+        obj = DataObjectDict("not_dict", data_dict=dict())
+        obj.data_dict = {'key1': 'value1', 'key2': 'value2'}
+        self.assertEqual(obj.data_dict['key1'], 'value1')
+        self.assertEqual(obj.data_dict['key2'], 'value2')
+
+    def test_data_object_dict_val_attr_fail_not_dict_prop(self):
+        '''Validate failure if non-dict passed as data_dict on creation'''
+        try:
+            obj = DataObjectDict("not_dict", data_dict=dict())
+            obj.data_dict = list()
+            self.fail("Unexpected success setting data_dict to a list")
+        except ValueError:
+            pass
+
+    def test_data_object_dict_val_attr_fail_invalid_tag(self):
+        '''Validate that XML(value attr) generation fails with invalid TAG_NAME
+        '''
+        try:
+            data_dict = {'key1': 'value1', 'key2': 'value2'}
+            data_obj = DataObjectDictBadTag("invalid_tag", data_dict,
+                generate_xml=True)
+            data_obj.to_xml()
+            self.fail("Unexpected success creating obj with a bad tag name")
+        except ValueError:
+            pass
+
+    def test_data_object_dict_val_attr_fail_invalid_sub_tag(self):
+        '''Validate that XML(value attr) generation fails with bad SUB_TAG_NAME
+        '''
+        try:
+            data_dict = {'key1': 'value1', 'key2': 'value2'}
+            data_obj = DataObjectDictBadSubTag("invalid_tag", data_dict,
+                generate_xml=True)
+            data_obj.to_xml()
+            self.fail(
+                "Unexpected success creating obj with a bad sub-tag name")
+        except ValueError:
+            pass
+
+    def test_data_object_dict_val_attr_fail_can_handle_invalid_tag(self):
+        '''Validate that can_handle fails using an invalid value attr name'''
+        indentation = '''\
+        '''
+        TEST_XML = '''\
+        <data_dictionary name="test_dictionary_xml">
+          <data name="name1" bad_value="value1"/>
+          <data name="name2" bad_value="value2"/>
+          <data name="name3" bad_value="value3"/>
+          <data name="name4" bad_value="value4"/>
+          <data name="name5" bad_value="value5"/>
+        </data_dictionary>
+        '''.replace(indentation, "")
+
+        # Parse the XML(value attr) into an XML tree.
+        xml_tree = etree.fromstring(TEST_XML)
+
+        self.assertFalse(DataObjectDict.can_handle(xml_tree),
+            "can_handle returned True when given a bad value attr: %s" %
+            (TEST_XML))
+
+    def test_data_object_dict_val_attr_fail_from_xml_invalid_tag(self):
+        '''Validate that from_xml() fails using an invalid value attr name'''
+        indentation = '''\
+        '''
+        TEST_XML = '''\
+        <data_dictionary name="test_dictionary_xml">
+          <data name="name1" bad_value="value1"/>
+          <data name="name2" bad_value="value2"/>
+          <data name="name3" bad_value="value3"/>
+          <data name="name4" bad_value="value4"/>
+          <data name="name5" bad_value="value5"/>
+        </data_dictionary>
+        '''.replace(indentation, "")
+
+        # Parse the XML(value attr) into an XML tree.
+        xml_tree = etree.fromstring(TEST_XML)
+
+        # can_handle tested seperately, just ensure from_xml will fail too.
+        self.assertRaises(ParsingError, DataObjectDict.from_xml, xml_tree)
+
+    def test_data_object_dict_val_attr_xml_default_no_name(self):
+        '''Validate that from_xml() imports XML(value attr) if no name for tag
+        '''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        TEST_XML = '''\
+        <data_dictionary>
+          <data name="name1" value="value1"/>
+          <data name="name2" value="value2"/>
+          <data name="name3" value="value3"/>
+          <data name="name4" value="value4"/>
+          <data name="name5" value="value5"/>
+        </data_dictionary>
+        '''.replace(indentation, "")
+
+        # Parse the XML(value attr) into an XML tree.
+        xml_tree = etree.fromstring(TEST_XML)
+
+        if DataObjectDict.can_handle(xml_tree):
+            new_obj = DataObjectDict.from_xml(xml_tree)
+            self.assertTrue(new_obj != None,
+                "Failed to create DataObjectDict from XML")
+            self.assertEquals(new_obj.name, None,
+                "new object's name is not None.")
+            self.assertEquals(type(new_obj.data_dict), dict,
+                "new object's data_dict is not a data_dict.")
+            self.assertEquals(new_obj.data_dict["name1"], "value1",
+                "new object's name1 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name2"], "value2",
+                "new object's name2 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name3"], "value3",
+                "new object's name3 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name4"], "value4",
+                "new object's name4 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name5"], "value5",
+                "new object's name5 doesn't have correct value")
+        else:
+            self.fail("can_handle returned False, expected True!")
+
+    def test_data_object_dict_val_attr_xml_default(self):
+        '''Validate that from_xml() correctly imports XML'''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        TEST_XML = '''\
+        <data_dictionary name="test_dictionary_xml">
+          <data name="name1" value="value1"/>
+          <data name="name2" value="value2"/>
+          <data name="name3" value="value3"/>
+          <data name="name4" value="value4"/>
+          <data name="name5" value="value5"/>
+        </data_dictionary>
+        '''.replace(indentation, "")
+
+        # Parse the XML(value attr) into an XML tree.
+        xml_tree = etree.fromstring(TEST_XML)
+
+        if DataObjectDict.can_handle(xml_tree):
+            new_obj = DataObjectDict.from_xml(xml_tree)
+            self.assertTrue(new_obj != None,
+                "Failed to create DataObjectDict from XML")
+            self.assertEquals(type(new_obj.data_dict), dict,
+                "new object's data_dict is not a data_dict.")
+            self.assertEquals(new_obj.data_dict["name1"], "value1",
+                "new object's name1 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name2"], "value2",
+                "new object's name2 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name3"], "value3",
+                "new object's name3 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name4"], "value4",
+                "new object's name4 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name5"], "value5",
+                "new object's name5 doesn't have correct value")
+        else:
+            self.fail("can_handle returned False, expected True!")
+
+    def test_data_object_dict_val_attr_xml_diff_value_and_tag(self):
+        '''Validate from_xml() imports correctly with diff tag'''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        TEST_XML = '''\
+        <different_tag name="test_dictionary_xml">
+          <data name="name1" different_value="value1"/>
+          <data name="name2" different_value="value2"/>
+          <data name="name3" different_value="value3"/>
+          <data name="name4" different_value="value4"/>
+          <data name="name5" different_value="value5"/>
+        </different_tag>
+        '''.replace(indentation, "")
+
+        # Parse the XML(value attr) into an XML tree.
+        xml_tree = etree.fromstring(TEST_XML)
+
+        if DataObjectDictDiffValueAndTag.can_handle(xml_tree):
+            new_obj = DataObjectDictDiffValueAndTag.from_xml(xml_tree)
+            self.assertTrue(new_obj != None,
+                "Failed to create DataObjectDict from XML")
+            self.assertEquals(type(new_obj.data_dict), dict,
+                "new object's data_dict is not a data_dict.")
+            self.assertEquals(new_obj.data_dict["name1"], "value1",
+                "new object's name1 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name2"], "value2",
+                "new object's name2 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name3"], "value3",
+                "new object's name3 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name4"], "value4",
+                "new object's name4 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name5"], "value5",
+                "new object's name5 doesn't have correct value")
+        else:
+            self.fail("can_handle returned False, expected True!")
+
+    def test_data_object_dict_val_attr_xml_diff_value_and_sub_tag(self):
+        '''Validate from_xml() imports correctly with diff sub tag'''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        TEST_XML = '''\
+        <data_dictionary name="test_dictionary_xml">
+          <different_sub_tag name="name1" different_value="value1"/>
+          <different_sub_tag name="name2" different_value="value2"/>
+          <different_sub_tag name="name3" different_value="value3"/>
+          <different_sub_tag name="name4" different_value="value4"/>
+          <different_sub_tag name="name5" different_value="value5"/>
+        </data_dictionary>
+        '''.replace(indentation, "")
+
+        # Parse the XML(value attr) into an XML tree.
+        xml_tree = etree.fromstring(TEST_XML)
+
+        if DataObjectDictDiffValueAndSubTag.can_handle(xml_tree):
+            new_obj = DataObjectDictDiffValueAndSubTag.from_xml(xml_tree)
+            self.assertTrue(new_obj != None,
+                "Failed to create DataObjectDict from XML")
+            self.assertEquals(type(new_obj.data_dict), dict,
+                "new object's data_dict is not a data_dict.")
+            self.assertEquals(new_obj.data_dict["name1"], "value1",
+                "new object's name1 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name2"], "value2",
+                "new object's name2 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name3"], "value3",
+                "new object's name3 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name4"], "value4",
+                "new object's name4 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name5"], "value5",
+                "new object's name5 doesn't have correct value")
+        else:
+            self.fail("can_handle returned False, expected True!")
+
+    def test_data_object_dict_val_attr_xml_diff_value_and_both_tag(self):
+        '''Validate from_xml() imports correctly with diff tag and sub-tag'''
+        # Set expected xml, and compensate for indent
+        indentation = '''\
+        '''
+        TEST_XML = '''\
+        <different_both_tag name="test_dictionary_diff_value_and_both_tags">
+          <different_both_sub_tag name="name1" different_value="value1"/>
+          <different_both_sub_tag name="name2" different_value="value2"/>
+          <different_both_sub_tag name="name3" different_value="value3"/>
+          <different_both_sub_tag name="name4" different_value="value4"/>
+          <different_both_sub_tag name="name5" different_value="value5"/>
+        </different_both_tag>
+        '''.replace(indentation, "")
+
+        # Parse the XML(value attr) into an XML tree.
+        xml_tree = etree.fromstring(TEST_XML)
+
+        if DataObjectDictDiffValueAndBothTag.can_handle(xml_tree):
+            new_obj = DataObjectDictDiffValueAndBothTag.from_xml(xml_tree)
+            self.assertTrue(new_obj != None,
+                "Failed to create DataObjectDict from XML")
+            self.assertEquals(type(new_obj.data_dict), dict,
+                "new object's data_dict is not a data_dict.")
+            self.assertEquals(new_obj.data_dict["name1"], "value1",
+                "new object's name1 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name2"], "value2",
+                "new object's name2 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name3"], "value3",
+                "new object's name3 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name4"], "value4",
+                "new object's name4 doesn't have correct value")
+            self.assertEquals(new_obj.data_dict["name5"], "value5",
+                "new object's name5 doesn't have correct value")
+        else:
+            self.fail("can_handle returned False, expected True!")
+
+    def test_data_object_dict_val_attr_can_insert_to_doc(self):
+        '''Validate DataObjectDict can be inserted as child of DataObject'''
+        data_obj = SimpleDataObject("test_obj")
+        data_dict = {'key1': 'value1', 'key2': 'value2'}
+        data_dict_obj = DataObjectDict("TestChild", data_dict)
+        data_obj.insert_children(data_dict_obj)
 
 if __name__ == '__main__':
     unittest.main()

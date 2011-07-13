@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# 
+#
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -49,7 +49,7 @@ from solaris_install.target.cgc import CTypesStructureRef
 from solaris_install.target.libnvpair import const, cfunc, cstruct
 
 
-ENOTSUP = 48 # errno should have this.
+ENOTSUP = 48  # errno should have this.
 
 
 class NVPair(C.POINTER(cstruct.nvpair)):
@@ -115,7 +115,7 @@ class NVPair(C.POINTER(cstruct.nvpair)):
             err = cfunc.nvpair_value_boolean_value(nvpair, C.byref(val))
             if err != 0:
                 raise OSError(err, "NVPair.value(): %s" % (os.strerror(err)))
-            return val.value == 1 # turn it into a bool
+            return val.value == 1  # turn it into a bool
 
         @ScalarValue(cfunc.nvpair_value_byte)
         def value_byte(nvpair):
@@ -212,7 +212,7 @@ class NVPair(C.POINTER(cstruct.nvpair)):
                 raise OSError(err, "NVPair.value(): %s" % (os.strerror(err)))
             rlist = list()
             for idx in xrange(nelem.value):
-                rlist.append(pvalue[idx] == 1) # why we can't use decorator
+                rlist.append(pvalue[idx] == 1)  # why we can't use decorator
             return tuple(rlist)
 
         @ArrayValue(cfunc.nvpair_value_byte_array)
@@ -275,12 +275,12 @@ class NVPair(C.POINTER(cstruct.nvpair)):
             # GC ALERT: must add ref to original nvlist (which nvpair better
             #           have)
             for idx in xrange(nelem.value):
-                pvalue[idx]._ref = nvpair._ref # why we can't use decorator
+                pvalue[idx]._ref = nvpair._ref  # why we can't use decorator
                 rlist.append(pvalue[idx])
             return tuple(rlist)
 
         value_function = { \
-            const.DATA_TYPE_BOOLEAN:       return_true, # exist means True
+            const.DATA_TYPE_BOOLEAN:       return_true,  # exist means True
             const.DATA_TYPE_BOOLEAN_VALUE: value_boolean_value,
             const.DATA_TYPE_BYTE:          value_byte,
             const.DATA_TYPE_INT8:          value_int8,
@@ -332,7 +332,7 @@ class NVKey(collections.Iterable):
     """
     An NVKey is just a tuple of name and datatype.
     By making it a class we can enforce good datatype values.
-    
+
     NVKey(str, int or str) -> NVKey object
     """
     def __init__(self, name, datatype):
@@ -384,7 +384,7 @@ class _AddScalar(object):
         @functools.wraps(pyfunction)
         def add_scalar_wrapper(self, name, val):
             """wrapper function"""
-            pyfunction(self, name, val) # call original for type check
+            pyfunction(self, name, val)  # call original for type check
             err = dself.cfunction(self, name, val)
             if err != 0:
                 if err == errno.EINVAL:
@@ -394,7 +394,7 @@ class _AddScalar(object):
                 raise OSError(err, os.strerror(err))
         return add_scalar_wrapper
 
-        
+
 class _LookupScalar(object):
     """decorator for looking up a scalar value in an NVList."""
     def __init__(dself, cfunction):
@@ -495,8 +495,8 @@ class _NVPairIter(collections.Iterator):
         """x.next() -> the next value, or raise StopIteration"""
         self._nvpair = self._cfunc(self._nvlist, self._nvpair)
         if not self._nvpair:
-            raise StopIteration() # Python way of saying we are done.
-        self._nvpair._ref = self._nvlist # GC protection
+            raise StopIteration()  # Python way of saying we are done.
+        self._nvpair._ref = self._nvlist  # GC protection
         return self._nvpair
 
 
@@ -522,7 +522,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
 
     def __new__(cls, *args, **kwargs):
         """allocate space for new NVList"""
-        # Only defining this method as pylint won't look it up in 
+        # Only defining this method as pylint won't look it up in
         # C.POINTER(cstruct.nvlist)
         return NVList._type_.__new__(cls, *args, **kwargs)
 
@@ -609,8 +609,8 @@ class NVList(C.POINTER(cstruct.nvlist)):
             if err == ENOTSUP:
                 raise TypeError("NVList.nvflags does not have NV_UNIQUE_NAME.")
             raise OSError(err, "lookup_nvpair: %s" % (os.strerror(err)))
-        val._ref = self # GC ALERT: must add ref to original nvlist
-        return val # don't use val.value, this is the right thing.
+        val._ref = self  # GC ALERT: must add ref to original nvlist
+        return val  # don't use val.value, this is the right thing.
 
     def add_boolean(self, name, val=True):
         """add_boolean(str) -> name added if val is True, otherwise removed"""
@@ -639,7 +639,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         if err == 0:
             return True
         if err == errno.ENOENT:
-            return False # ENOENT means False
+            return False  # ENOENT means False
         if err == errno.EINVAL:
             raise ValueError("invalid argument")
         raise OSError(err, "lookup_boolean: %s" % (os.strerror(err)))
@@ -669,7 +669,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
             if err == errno.ENOENT:
                 raise KeyError(name)
             raise OSError(err, "lookup_boolean_value: %s" % (os.strerror(err)))
-        return val.value == 1 # turn it into a bool
+        return val.value == 1  # turn it into a bool
 
     @_AddScalar(cfunc.nvlist_add_byte)
     def add_byte(self, name, val):
@@ -745,7 +745,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
                             (val.__class__.__name__))
         if val < -2147483648 or val > 2147483647:
             raise ValueError("val: %d not in range(-2147483648, 2147483648)"
-                              % (val)) 
+                              % (val))
 
     @_LookupScalar(cfunc.nvlist_lookup_int32)
     def lookup_int32(self, name):
@@ -860,7 +860,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
             raise OSError(err, os.strerror(err))
         retl = list()
         for idx in xrange(nelem.value):
-            retl.append(val[idx] == 1) # Turn into a bool
+            retl.append(val[idx] == 1)  # Turn into a bool
         return tuple(retl)
 
     @_AddArray(cfunc.nvlist_add_byte_array)
@@ -868,7 +868,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """add_byte_array(str, iterable of byte) ->
         name/byte array added to NVList"""
         ituple = tuple(itr)
-        for val, idx in enumerate(ituple):
+        for idx, val in enumerate(ituple):
             if not isinstance(val, numbers.Integral):
                 raise TypeError("itr[%d]: '%s' object not integer in "
                                 "range(256)" % (idx, val.__class__.__name__))
@@ -885,7 +885,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """add_int8_array(str, iterable of int8) ->
         name/int8 array added to NVList"""
         ituple = tuple(itr)
-        for val, idx in enumerate(ituple):
+        for idx, val in enumerate(ituple):
             if not isinstance(val, numbers.Integral):
                 raise TypeError("itr[%d]: '%s' object not integer in "
                                 "range(-128, 128)" %
@@ -904,7 +904,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """add_uint8_array(str, iterable of uint8) ->
         name/uint8 array added to NVList"""
         ituple = tuple(itr)
-        for val, idx in enumerate(ituple):
+        for idx, val in enumerate(ituple):
             if not isinstance(val, numbers.Integral):
                 raise TypeError("itr[%d]: '%s' object not integer in "
                                 "range(256)" % (idx, val.__class__.__name__))
@@ -921,7 +921,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """add_int16_array(str, iterable of int16) ->
         name/int16 array added to NVList"""
         ituple = tuple(itr)
-        for val, idx in enumerate(ituple):
+        for idx, val in enumerate(ituple):
             if not isinstance(val, numbers.Integral):
                 raise TypeError("itr[%d]: '%s' object not integer in "
                                 "range(-32768, 32768)" % \
@@ -940,7 +940,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """add_uint16_array(str, iterable of uint16) ->
         name/uint16 array added to NVList"""
         ituple = tuple(itr)
-        for val, idx in enumerate(ituple):
+        for idx, val in enumerate(ituple):
             if not isinstance(val, numbers.Integral):
                 raise TypeError("itr[%d]: '%s' object not integer in "
                                 "range(65536)" % \
@@ -959,7 +959,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """add_int32_array(str, iterable of int32) ->
         name/int32 array added to NVList"""
         ituple = tuple(itr)
-        for val, idx in enumerate(ituple):
+        for idx, val in enumerate(ituple):
             if not isinstance(val, numbers.Integral):
                 raise TypeError("itr[%d]: '%s' object not integer in "
                                 "range(-2147483648, 2147483648)" %
@@ -978,7 +978,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """add_uint32_array(str, iterable of uint32) ->
         name/uint32 array added to NVList"""
         ituple = tuple(itr)
-        for val, idx in enumerate(ituple):
+        for idx, val in enumerate(ituple):
             if not isinstance(val, numbers.Integral):
                 raise TypeError("itr[%d]: '%s' object not integer in "
                                 "range(4294967296)" %
@@ -997,7 +997,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """add_int64_array(str, iterable of int64) ->
         name/int64 array added to NVList"""
         ituple = tuple(itr)
-        for val, idx in enumerate(ituple):
+        for idx, val in enumerate(ituple):
             if not isinstance(val, numbers.Integral):
                 raise TypeError("itr[%d]: '%s' object not integer in "
                                 "range(-9223372036854775808, "
@@ -1018,7 +1018,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """add_uint64_array(str, iterable of uint64) ->
         name/uint64 array added to NVList"""
         ituple = tuple(itr)
-        for val, idx in enumerate(ituple):
+        for idx, val in enumerate(ituple):
             if not isinstance(val, numbers.Integral):
                 raise TypeError("itr[%d]: '%s' object not integer in "
                                 "range(18446744073709551616)" %
@@ -1038,7 +1038,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         name/str array added to NVList"""
         # NOTE: strings are themselves iterable but that may be what user
         # wants.
-        ituple = tuple(itr) # we will need len
+        ituple = tuple(itr)  # we will need len
         for idx, val in enumerate(ituple):
             if not isinstance(val, str):
                 raise TypeError("itr[%d]: '%s' object not str" %
@@ -1053,8 +1053,8 @@ class NVList(C.POINTER(cstruct.nvlist)):
     def add_nvlist_array(self, name, itr):
         """add_nvlist_array(str, iterable of NVList) ->
         name/NVList array added to NVList"""
-        ituple = tuple(itr) # we will need len
-        for val, idx in enumerate(ituple):
+        ituple = tuple(itr)  # we will need len
+        for idx, val in enumerate(ituple):
             if not isinstance(val, NVList):
                 raise TypeError("itr[%d]: '%s' object not NVList" %
                                 (idx, val.__class__.__name__))
@@ -1082,7 +1082,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
             raise OSError(err, os.strerror(err))
         retl = list()
         for idx in xrange(nelem.value):
-            val[idx]._ref = self # GC ALERT
+            val[idx]._ref = self  # GC ALERT
             retl.append(val[idx])
         return tuple(retl)
 
@@ -1096,7 +1096,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
 
         if not isinstance(key, NVKey):
             try:
-                nkey = NVKey(*key) # can try turning key into NVKey
+                nkey = NVKey(*key)  # can try turning key into NVKey
                 key = nkey
             except (TypeError, ValueError):
                 # TypeError if key isn't sequence either
@@ -1150,11 +1150,11 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """x.__reversed__() <==> reversed(x)"""
         return _NVKeysIter(self, forward=False)
 
-    def __getitem__(self, key):    
+    def __getitem__(self, key):
         """x.__getitem__(y) <==> x[y]"""
         if not isinstance(key, NVKey):
             try:
-                nkey = NVKey(*key) # can try turning key into NVKey
+                nkey = NVKey(*key)  # can try turning key into NVKey
                 key = nkey
             except (TypeError, ValueError):
                 # TypeError if key isn't sequence either
@@ -1232,7 +1232,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """x.__delitem__(y) <==> del x[y]"""
         if not isinstance(key, NVKey):
             try:
-                nkey = NVKey(*key) # can try turning key into NVKey
+                nkey = NVKey(*key)  # can try turning key into NVKey
                 key = nkey
             except (TypeError, ValueError):
                 # TypeError if key isn't sequence either
@@ -1246,7 +1246,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
                 # In general this is a KeyError, but not for boolean, where
                 # lack of data means False.
                 if key.datatype == const.DATA_TYPE_BOOLEAN:
-                    return # no error
+                    return  # no error
                 raise KeyError("%s" % (key))
             raise OSError(err, "nvlist_delitem: %s" % (os.strerror(err)))
 
@@ -1291,7 +1291,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         """x.__len__() <==> len(x)"""
         return len(self.values())
 
-    __marker = object() # used for pop()
+    __marker = object()  # used for pop()
 
     def pop(self, key, default=__marker):
         """
@@ -1303,7 +1303,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
             value = self[key]
         except KeyError:
             if default is NVList.__marker:
-                raise # no default passed in
+                raise  # no default passed in
             return default
         else:
             del self[key]
@@ -1315,7 +1315,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         2-tuple; but raise KeyError if D is empty.
         """
         try:
-            key = next(iter(self)) # self.iteritems() ?
+            key = next(iter(self))  # self.iteritems() ?
         except StopIteration:
             raise KeyError
         value = self[key]
@@ -1382,7 +1382,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         try:
             return self[key]
         except KeyError:
-            self[key] = default # will raise TypeError for bad key.
+            self[key] = default  # will raise TypeError for bad key.
         return default
 
 
@@ -1396,7 +1396,7 @@ def lookup_nvlist(self, name):
         if err == errno.ENOENT:
             raise KeyError(name)
         raise OSError(err, os.strerror(err))
-    val.ref = self # GC alert
+    val.ref = self  # GC alert
     CTypesStructureRef(val, cfunc.nvlist_free)
     return val
 

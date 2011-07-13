@@ -245,6 +245,13 @@ class TargetSelection(Checkpoint):
             "mountpoint='%s'" % (fs.name, fs.action, fs.mountpoint))
 
         new_fs = copy.copy(fs)
+
+        # Handle options children
+        for options in fs.children:
+            new_options = self.__handle_options(options)
+            if new_options is not None:
+                new_fs.insert_children(new_options)
+
         return new_fs
 
     def __handle_zvol(self, zvol):
@@ -254,24 +261,54 @@ class TargetSelection(Checkpoint):
             (zvol.name, zvol.action, zvol.use))
 
         new_zvol = copy.copy(zvol)
+        # Handle options children
+
+        for options in zvol.children:
+            new_options = self.__handle_options(options)
+            if new_options is not None:
+                new_zvol.insert_children(new_options)
+
         return new_zvol
+
+    def __handle_options(self, options):
+        '''Create Zpool or Dataset Options object
+        '''
+        self.logger.debug("Processing Options '%s'" %
+            str(options))
+
+        new_options = copy.copy(options)
+        return new_options
 
     def __handle_pool_options(self, pool_options):
         '''Create PoolOptions object
         '''
         self.logger.debug("Processing Pool Options '%s'" %
-            (pool_options.options))
+            str(pool_options))
 
         new_pool_options = copy.copy(pool_options)
+
+        # Handle options children
+        for options in pool_options.children:
+            new_options = self.__handle_options(options)
+            if new_options is not None:
+                new_pool_options.insert_children(new_options)
+
         return new_pool_options
 
     def __handle_dataset_options(self, dataset_options):
         '''Create DatasetOption object
         '''
         self.logger.debug("Processing Dataset Options '%s'" %
-            (dataset_options.options))
+            str(dataset_options))
 
         new_dataset_options = copy.copy(dataset_options)
+
+        # Handle options children
+        for options in dataset_options.children:
+            new_options = self.__handle_options(options)
+            if new_options is not None:
+                new_dataset_options.insert_children(new_options)
+
         return new_dataset_options
 
     def __handle_be(self, be):
@@ -282,6 +319,12 @@ class TargetSelection(Checkpoint):
 
         new_be = copy.copy(be)
         new_be.mountpoint = self.be_mountpoint
+
+        # Handle options children
+        for options in be.children:
+            new_options = self.__handle_options(options)
+            if new_options is not None:
+                new_be.insert_children(new_options)
 
         return new_be
 
@@ -407,8 +450,8 @@ class TargetSelection(Checkpoint):
                     # Can only specify one pool_options per zpool
                     if new_zpool.name not in self._pool_options:
                         self._pool_options[new_zpool.name] = new_pool_options
-                        self.logger.debug("Adding Pool Options '%s' to zpool"
-                            % (new_pool_options.options))
+                        self.logger.debug("Adding Pool Options '%s' to"
+                            "zpool '%s'" % (new_pool_options, new_zpool.name))
                         new_zpool.insert_children(new_pool_options)
                     else:
                         raise SelectionError(
@@ -425,8 +468,7 @@ class TargetSelection(Checkpoint):
                     if new_zpool.name not in self._dataset_options:
                         self._dataset_options[new_zpool.name] = \
                             new_dataset_options
-                        self.logger.debug("Adding Dataset Options '%s' to "
-                            "zpool" % (new_dataset_options.options))
+                        self.logger.debug("Adding Dataset Options to zpool")
                         new_zpool.insert_children(new_dataset_options)
                     else:
                         raise SelectionError(

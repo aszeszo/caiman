@@ -174,10 +174,8 @@
 
 <!--
     Filesystem options are for zfs filesystems. The format of these
-    is this: -o property=value. Any editable ZFS filesystem property
-    can be set at creation time. Multiple -o options can be
-    specified. An error will occur if a property is specified in
-    multiple -o options.
+    is described in below. Any editable ZFS filesystem property
+    can be set at creation time. 
 
     If a filesystem has the in_be attribute set to "true" then that 
     dataset will be created within the BE rather than as a shared
@@ -200,30 +198,65 @@
 <!ATTLIST zvol use (none|swap|dump) "none">
 
 <!--
-     Option elements allow any string type, and this string is
-     parsable character data, should the application require it.
+    An option consists of a key/value combination. 
+    
+    - The key is a zfs or zpool property, depending on the context of its use.
+    - The value is the text value for the specified property.
+
+    e.g.
+
+        <option name="compression" value="on"/>
 -->
-<!ELEMENT options (#PCDATA)>
+
+<!ELEMENT option EMPTY>
+<!ATTLIST option name CDATA #REQUIRED>
+<!ATTLIST option value CDATA #REQUIRED>
 
 <!--
      The pool_options string, which is also a parsable string, can include both
-     pool options and filesystem options.
+     pool options and the dataset options for the automatically created pool
+     dataset.
 
-     For pool options the format is: -o property=value
+     pool_options and dataset_options will be combined when creating a pool.
 
-     For filesystem properties the format is: -O file-system-property=value
-
-     Both of these types of properties can be set in the option string.
      For example:
 
--o altroot=/a -o autoexpand=off -o delegation=off -O atime=on -O compression=lzbj
+        <pool_options>
+          <option name="altroot" value="/a"/>
+          <option name="autoexpand" value="off"/>
+          <option name="delegation" value="off"/>
+        </pool_options>
+        <dataset_options>
+          <option name="atime" value="on"/>
+          <option name="compression" value="lzbj"/>
+        </dataset_options>
+
+    would result in a call to zpool like:
+
+        zpool create -o altroot=/a -o autoexpand=off -o delegation=off \
+            -O atime=on -O compression=lzbj
+
 -->
-<!ELEMENT pool_options (options)>
-<!ELEMENT dataset_options (options)>
+<!ELEMENT pool_options (option+)>
+<!ELEMENT dataset_options (option+)>
+
+<!--
+     Option elements contain 1 or more <option> elements which specify the
+     names and values for the options to be passed.
+
+        <options>
+          <option name="atime" value="on"/>
+          <option name="compression" value="lzbj"/>
+        <options>
+-->
+<!ELEMENT options (option+)>
 
 <!--
      The be element is used to control the name of the BE created by
      consumers.  If not specified, it defaults to solaris
+
+     Optionally it is possible to provide zfs properties to set on the new BE
+     in the <options> sub-tag.
 -->
-<!ELEMENT be EMPTY>
+<!ELEMENT be (options?)>
 <!ATTLIST be name CDATA #REQUIRED>

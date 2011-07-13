@@ -34,7 +34,7 @@ from lxml import etree
 
 from solaris_install import CalledProcessError, Popen
 from solaris_install.data_object import DataObject, ParsingError
-from solaris_install.data_object.simple import SimpleXmlHandlerBase
+from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target.size import Size
 from solaris_install.target.shadow.logical import ShadowLogical
@@ -43,6 +43,7 @@ from solaris_install.target.libbe.be import be_list, be_init, be_destroy, \
     be_activate, be_mount, be_unmount
 from solaris_install.target.libbe.const import ZFS_FS_NAMES, \
     ZFS_SHARED_FS_NAMES
+from solaris_install.target.libnvpair import nvl
 
 DUMPADM = "/usr/sbin/dumpadm"
 LOFIADM = "/usr/sbin/lofiadm"
@@ -411,7 +412,6 @@ class Filesystem(DataObject):
 
         self.action = "create"
         self.mountpoint = None
-        self.zfs_options = None
 
         self.in_be = False
 
@@ -440,9 +440,6 @@ class Filesystem(DataObject):
         element.set("action", self.action)
         if self.mountpoint is not None:
             element.set("mountpoint", self.mountpoint)
-        if self.zfs_options is not None:
-            options = etree.SubElement(element, "options")
-            options.text = self.zfs_options
         element.set("in_be", str(self.in_be).lower())
 
         return element
@@ -502,10 +499,6 @@ class Filesystem(DataObject):
                 # set the mountpoint to None
                 filesystem.mountpoint = None
 
-        options = element.find("options")
-        if options is not None:
-            filesystem.zfs_options = options.text
-
         if in_be is not None:
             if in_be.lower() == "true":
                 filesystem.in_be = True
@@ -521,8 +514,6 @@ class Filesystem(DataObject):
         s = "Filesystem: name=%s; action=%s" % (self.name, self.action)
         if self.mountpoint is not None:
             s += "; mountpoint=%s" % self.mountpoint
-        if self.zfs_options is not None:
-            s += "; zfs_options=%s" % self.zfs_options
         return s
 
     def snapshot(self, snapshot_name, overwrite=False):
@@ -588,8 +579,9 @@ class Filesystem(DataObject):
         """
         if not self.exists:
             cmd = [ZFS, "create", "-p"]
-            if self.zfs_options is not None:
-                cmd.extend(self.zfs_options.split())
+            zfs_options = self.get_first_child(class_type=Options)
+            if zfs_options is not None:
+                cmd.extend(zfs_options.get_arg_list())
             if self.mountpoint is not None:
                 cmd.extend(["-o", "mountpoint=%s" % self.mountpoint])
 
@@ -635,7 +627,6 @@ class Zvol(DataObject):
         self.use = "none"
 
         self.size = ""
-        self.zfs_options = None
 
     @property
     def full_name(self):
@@ -657,10 +648,6 @@ class Zvol(DataObject):
 
         size = etree.SubElement(element, "size")
         size.set("val", str(self.size))
-
-        if self.zfs_options is not None:
-            options = etree.SubElement(element, "options")
-            options.text = self.zfs_options
 
         return element
 
@@ -696,10 +683,6 @@ class Zvol(DataObject):
         else:
             raise ParsingError("Zvol element must contain a size subelement")
 
-        options = element.find("options")
-        if options is not None:
-            zvol.zfs_options = options.text
-
         zvol.action = action
         if use is not None:
             zvol.use = use
@@ -727,8 +710,9 @@ class Zvol(DataObject):
 
             cmd = [ZFS, "create", "-p", "-V", zvol_size]
 
-            if self.zfs_options is not None:
-                cmd.extend(self.zfs_options.split())
+            zfs_options = self.get_first_child(class_type=Options)
+            if zfs_options is not None:
+                cmd.extend(zfs_options.get_arg_list())
 
             cmd.append(self.full_name)
 
@@ -811,43 +795,81 @@ class Zvol(DataObject):
         self.size = str(new_size) + str(size_units)
 
 
-class Options(DataObject):
-    """ options DOC node definition
-    """
-    def __init__(self, name):
-        super(Options, self).__init__(name)
+class Options(DataObjectDict):
+    """Base class for all ZFS options variations"""
 
-        self.options_str = ""
+    TAG_NAME = "options"
+    SUB_TAG_NAME = "option"
+    OPTIONS_PARAM_STR = "-o"
 
-    def to_xml(self):
-        element = etree.Element("options")
-        element.text = self.options_str
-        return element
+    def __init__(self, name, data_dict, generate_xml=False):
+        """Initialize ZfsOptionsDict.  """
 
-    @classmethod
-    def can_handle(cls, element):
-        if element.tag == "options":
-            return True
-        return False
+        # Ignoring some passed arguments:
+        # - Name is None since there is no name attribute allowed in its XML.
+        # - Set generate_xml to True always to ensure it reads/writes XML
+        super(Options, self).__init__(None, data_dict,
+                                             generate_xml=True)
 
-    @classmethod
-    def from_xml(cls, element):
-        options = Options("options")
-        options.options_str = element.text
+    def get_arg_list(self, quote=False):
+        """Returns a list of arguments suitable for passing to Popen"""
+        arg_list = list()
+        for key in self.data_dict:
+            arg_list.append(self.OPTIONS_PARAM_STR)
+            # Dont quote value in default case since Popen will pass it
+            # directly causing zpool/zfs command to fail.
+            if quote:
+                arg_list.append('%s="%s"' % (key, self.data_dict[key]))
+            else:
+                arg_list.append('%s=%s' % (key, self.data_dict[key]))
+        return arg_list
 
-        return options
+    def get_nvlist(self):
+        """Returns options as an NVList"""
+        nv_list = nvl.NVList()
+
+        if self.data_dict is None or len(self.data_dict) == 0:
+            return nv_list
+
+        for key in self.data_dict:
+            nv_list.add_string(key, self.data_dict[key])
+
+        return nv_list
+
+    def __str__(self):
+        return "%s: %s" % (self.__class__.__name__,
+                          " ".join(self.get_arg_list(quote=True)))
 
 
-class PoolOptions(SimpleXmlHandlerBase):
+class PoolOptions(Options):
     """ pool_options DOC node definition
+
+        Its a DataObjectDict using the tags like:
+
+        <pool_options>
+          <option name="opt1" value="val1"/>
+          <option name="opt2" value="val2"/>
+          ...
+          <option name="optN" value="valN"/>
+        </pool_options>
     """
     TAG_NAME = "pool_options"
 
 
-class DatasetOptions(SimpleXmlHandlerBase):
+class DatasetOptions(Options):
     """ dataset_options DOC node definition
+
+        Its a DataObjectDict using the tags like:
+
+        <dataset_options>
+          <option name="opt1" value="val1"/>
+          <option name="opt2" value="val2"/>
+          ...
+          <option name="optN" value="valN"/>
+        </dataset_options>
     """
     TAG_NAME = "dataset_options"
+    OPTIONS_PARAM_STR = "-O"  # -O used to pass ZFS options to a pool
 
 
 class BE(DataObject):
@@ -889,6 +911,7 @@ class BE(DataObject):
             be = BE(name)
         else:
             be = BE()
+
         return be
 
     @property
@@ -907,12 +930,14 @@ class BE(DataObject):
     def init(self, dry_run, pool_name="rpool", nested_be=False,
             fs_list=None, fs_zfs_properties=None,
             shared_fs_list=None, shared_fs_zfs_properties=None):
-        """ method to initialize a BE by creating the empty datasets for the
-        BE.
+        """ method to initialize a BE by creating the empty datasets for
+            the BE.
         """
 
         if not dry_run:
+            be_options = self.get_first_child(class_type=Options)
             new_name = be_init(self.name, pool_name, nested_be=nested_be,
+                zfs_properties=be_options,
                 fs_list=fs_list, fs_zfs_properties=fs_zfs_properties,
                 shared_fs_list=shared_fs_list,
                 shared_fs_zfs_properties=shared_fs_zfs_properties)

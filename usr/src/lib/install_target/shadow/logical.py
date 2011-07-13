@@ -69,8 +69,9 @@ class ShadowLogical(ShadowList):
 
         # check the existing datasets for name and mountpoint overlap
         for dataset in self._shadow:
-            # look for name duplication
-            if value.name == dataset.name:
+            # look for name duplication if not an Options object
+            if not hasattr(value, "OPTIONS_PARAM_STR") and \
+               value.name == dataset.name:
                 self.set_error(self.DuplicateDatasetNameError(dataset.name))
 
             # check the mountpoint if this is a Filesystem object

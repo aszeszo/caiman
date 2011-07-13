@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 '''Defines the DataObjectDict class to allow storage of a dictionary in cache.
 '''
@@ -40,20 +40,29 @@ class DataObjectDict(DataObjectBase):
     would generate XML, then you need to pass generate_xml=True to the
     constructor.
 
-    XML Generated is along the lines of:
+    By default the XML Generated is along the lines of:
 
         <data_dictionary>
             <data name="key">value</data>
             ...
         </data_dictionary>
 
-    It is possible to change the tag and sub-tag names by sub-classing this
-    object along the lines of:
+    By setting the value_as_attr property to True, you can generate XML that
+    uses an attribute to store the value:
+
+        <data_dictionary>
+            <data name="key" value="value"/>
+            ...
+        </data_dictionary>
+
+    It is possible to change the tag, sub-tag names and the name of the
+    attribute for the value  by sub-classing this object along the lines of:
 
         class DataObjectDictDifferentTags(DataObjectDict):
             # Override both TAG_NAME and SUB_TAG_NAME
             TAG_NAME = "different_tag"
             SUB_TAG_NAME = "different_sub_tag"
+            VALUE_ATTR_NAME = "different_value"
             pass
 
     it is necessary to do things this way to ensure that the class methods
@@ -66,23 +75,31 @@ class DataObjectDict(DataObjectBase):
 
     TAG_NAME = "data_dictionary"
     SUB_TAG_NAME = "data"
+    VALUE_ATTR_NAME = "value"
 
-    def __init__(self, name, data_dict, generate_xml=False):
+    def __init__(self, name, data_dict=dict(), generate_xml=False,
+                 value_as_attr=False):
         '''Initialize the object with the provided data_dict.
 
         This method takes the following parameters:
 
-        name         - the name of the object
+        name            - the name of the object
 
-        data_dict   - a python dictionary object containing the data.
+        data_dict       - a python dictionary object containing the data.
 
-        generate_xml - boolean to say whether this will generate XML or not.
-                       (default: False)
+        generate_xml    - boolean to say whether this will generate XML or not.
+                          (default: False)
+
+        value_as_attr   - boolean to say whether the XML generated will
+                          contain the value as an attribute named 'value' or
+                          whether the value is stored in the text part of the
+                          tag (i.e. between open and close tags)
+                          (default: False = value stored in text)
 
         Exceptions:
 
-        ValueError   - Will be raised if any invalid values are passed as
-                       parameters.
+        ValueError      - Will be raised if any invalid values are passed as
+                          parameters.
 
         '''
 
@@ -94,6 +111,7 @@ class DataObjectDict(DataObjectBase):
         self._data_dict = data_dict
 
         self._generate_xml = generate_xml
+        self._value_as_attr = value_as_attr
 
     # Override abstract functions fron DataObject class.
     def to_xml(self):
@@ -113,11 +131,17 @@ class DataObjectDict(DataObjectBase):
         if not self.generate_xml:
             return None
 
-        element = etree.Element(self.TAG_NAME, name=self.name)
+        if self.name is None:
+            element = etree.Element(self.TAG_NAME)
+        else:
+            element = etree.Element(self.TAG_NAME, name=self.name)
         for k in sorted(self.data_dict.keys()):
             sub_element = etree.SubElement(element, self.SUB_TAG_NAME)
             sub_element.set("name", str(k))
-            sub_element.text = str(self.data_dict[k])
+            if self.value_as_attr:
+                sub_element.set(self.VALUE_ATTR_NAME, str(self.data_dict[k]))
+            else:
+                sub_element.text = str(self.data_dict[k])
 
         return element
 
@@ -132,6 +156,11 @@ class DataObjectDict(DataObjectBase):
             for child in xml_node:
                 if child.tag != cls.SUB_TAG_NAME:
                     # Fail if we find anything that isn't the sub-tag.
+                    return False
+                if len(child.keys()) > 1 and \
+                   child.get(cls.VALUE_ATTR_NAME) is None:
+                    # Fail if the XML has more than one attribute (name) and
+                    # that attribute is not called VALUE_ATTR_NAME
                     return False
             return True
         else:
@@ -148,7 +177,7 @@ class DataObjectDict(DataObjectBase):
 
         if xml_node.tag == cls.TAG_NAME:
             new_dict = dict()
-            new_obj = DataObjectDict(xml_node.get("name"), new_dict,
+            new_obj = cls(xml_node.get("name"), new_dict,
                 generate_xml=True)
 
             # Populate child nodes into dictionary.
@@ -157,7 +186,27 @@ class DataObjectDict(DataObjectBase):
                     # Fail if we find anything that isn't the sub-tag.
                     raise ParsingError("Invalid tag in data_dict: %s" \
                         % (child.tag))
-                new_dict[child.get("name")] = child.text
+                if len(child.keys()) > 1:
+                    if child.get(cls.VALUE_ATTR_NAME) is not None:
+                        # Assume value is stored as an attribute
+                        new_obj._value_as_attr = True
+                        new_dict[child.get("name")] = \
+                            child.get(cls.VALUE_ATTR_NAME).strip()
+                    else:
+                        invalid_attrs = \
+                            [a for a in child.keys() if a != "name"]
+                        invalid_attrs_str = ", ".join(invalid_attrs)
+                        raise ParsingError(
+                            "Invalid attributes specified in data_dict "
+                            "'%s' : %s" % (xml_node.tag,
+                            invalid_attrs_str))
+                else:
+                    if child.text is not None:
+                        new_dict[child.get("name")] = child.text.strip()
+                    else:
+                        raise ParsingError(
+                            "No value specified in data_dict '%s' for '%s'" %
+                            (xml_node.tag, child.get("name")))
         else:
             raise ParsingError("Invalid tag in data_dict: %s" %
                 (xml_node.tag))
@@ -212,6 +261,23 @@ class DataObjectDict(DataObjectBase):
         return locals()
 
     generate_xml = property(**generate_xml())
+
+    def value_as_attr():
+        def fget(self):
+            '''Returns whether this object will generate XML with the value as
+               an attribute.
+            '''
+            return self._value_as_attr
+
+        def fset(self, value_as_attr):
+            '''Sets the value_as_attr flag'''
+
+            self._value_as_attr = value_as_attr
+        doc = '''True if this object will generate XML with the values as an
+                 attribute'''
+        return locals()
+
+    value_as_attr = property(**value_as_attr())
 
     def __getattr__(self, attr):
         """Provide access to dictionary values as attributes if desired.

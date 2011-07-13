@@ -624,7 +624,7 @@ class TargetDiscovery(Checkpoint):
                         self.root.insert_children(new_disk)
 
         # extract all of the devpaths from all of the drives already inserted
-        devpath_list = [disk.devpath for disk in 
+        devpath_list = [disk.devpath for disk in
                         self.root.get_descendants(class_type=Disk)]
 
         # now walk all the drives in the system to make sure we pick up any
@@ -727,7 +727,7 @@ class TargetDiscovery(Checkpoint):
         """
         cmd = [CROINFO, "-h", "-O", "cAR"]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN)
+                             logger=ILN, stderr_loglevel=logging.DEBUG)
 
         # for systems that do not support CRO, nothing will be returned in
         # stdout so simply return.

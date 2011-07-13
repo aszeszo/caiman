@@ -34,6 +34,7 @@ import osol_install.errsvc as errsvc
 from lxml import etree
 from solaris_install.auto_install.checkpoints.target_selection \
     import TargetSelection
+from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.test.engine_test_utils import \
     get_new_engine_instance, reset_engine
@@ -317,18 +318,27 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 traceback.print_exc()
                 raise ex
 
-        desired = \
-            self.doc.get_descendants(
-                name=Target.DESIRED, class_type=Target, max_depth=2)[0]
+        try:
+            desired = \
+                self.doc.get_descendants(
+                    name=Target.DESIRED, class_type=Target, max_depth=2,
+                    not_found_is_err=True)[0]
 
-        xml_str = desired.get_xml_tree_str()
+            xml_str = desired.get_xml_tree_str()
 
-        expected_re = re.compile(expected_xml)
-        if not expected_re.match(xml_str):
-            self.fail("Resulting XML doesn't match expected:\nDIFF:\n%s\n" %
-                      self.__gendiff_str(expected_xml, xml_str))
+            expected_re = re.compile(expected_xml)
+            if not expected_re.match(xml_str):
+                self.fail("Resulting XML doesn't match expected:\nDIFF:\n%s\n"
+                          % self.__gendiff_str(expected_xml, xml_str))
 
-        desired.final_validation()
+            desired.final_validation()
+        except ObjectNotFoundError:
+            self.fail("Unable to find DESIRED tree!")
+        except Exception, e:
+            import traceback
+            traceback.print_exc()
+            self.fail(e)
+
         if len(errsvc._ERRORS) > 0:
             self.fail(errsvc._ERRORS[0])
 
@@ -1353,6 +1363,90 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ..<logical noswap="false" nodump="false">
         ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<be name="ai_test__solaris_be"/>
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<zvol name="swap" action="create" use="swap">
+        ........<size val="\d+m"/>
+        ......</zvol>
+        ......<zvol name="dump" action="create" use="dump">
+        ........<size val="\d+m"/>
+        ......</zvol>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="625141760secs"/>
+        ....<partition action="create" name="1" part_type="191">
+        ......<size val="625141248secs" start_sector="512"/>
+        ......<slice name="0" action="create" force="true" is_swap="false" \
+        in_zpool="ai_test_rpool" in_vdev="vdev">
+        ........<size val="625139712secs" start_sector="512"/>
+        ......</slice>
+        ....</partition>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_if_pool_and_datasets_options(self):
+        '''Test Success If Pool and Datasets Options Specified
+        '''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="true" in_zpool="ai_test_rpool">
+                <disk_name name="c10t0d0" name_type="ctd"/>
+              </disk>
+              <logical>
+                <zpool name="ai_test_rpool" is_root="true">
+                  <pool_options>
+                    <option name="listsnaps" value="on"/>
+                  </pool_options>
+                  <dataset_options>
+                    <option name="compression" value="on"/>
+                  </dataset_options>
+                  <filesystem name="to_share" mountpoint="/share">
+                    <options>
+                      <option name="compression" value="off"/>
+                    </options>
+                  </filesystem>
+                  <filesystem name="export2"/>
+                  <be name="ai_testing_solaris">
+                    <options>
+                      <option name="compression" value="on"/>
+                    </options>
+                  </be>
+                </zpool>
+              </logical>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="false" nodump="false">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<pool_options>
+        ........<option name="listsnaps" value="on"/>
+        ......</pool_options>
+        ......<dataset_options>
+        ........<option name="compression" value="on"/>
+        ......</dataset_options>
+        ......<filesystem name="to_share" action="create" mountpoint="/share" \
+        in_be="false">
+        ........<options>
+        ..........<option name="compression" value="off"/>
+        ........</options>
+        ......</filesystem>
+        ......<filesystem name="export2" action="create" in_be="false"/>
+        ......<be name="ai_testing_solaris">
+        ........<options>
+        ..........<option name="compression" value="on"/>
+        ........</options>
+        ......</be>
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="\d+m"/>
@@ -2576,13 +2670,13 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 <partition name="2" action="create" part_type="191">
                   <size val="20gb" start_sector="100000"/>
                   <slice name="0" action="create" is_swap="false"
-                   in_zpool="rpool" in_vdev="vdev">
+                   in_zpool="ai_testing_rpool" in_vdev="vdev">
                     <size val="20000001mb"/>
                   </slice>
                 </partition>
               </disk>
               <logical>
-                <zpool name="rpool" is_root="true">
+                <zpool name="ai_testing_rpool" is_root="true">
                   <vdev name="vdev" redundancy="none"/>
                 </zpool>
               </logical>
@@ -2610,13 +2704,13 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 <partition name="2" action="create" part_type="191">
                   <size val="200000000mb" start_sector="100000"/>
                   <slice name="0" action="create" is_swap="false"
-                   in_zpool="rpool" in_vdev="vdev">
+                   in_zpool="ai_testing_rpool" in_vdev="vdev">
                     <size val="200000001mb"/>
                   </slice>
                 </partition>
               </disk>
               <logical>
-                <zpool name="rpool" is_root="true">
+                <zpool name="ai_testing_rpool" is_root="true">
                   <vdev name="vdev" redundancy="none"/>
                 </zpool>
               </logical>

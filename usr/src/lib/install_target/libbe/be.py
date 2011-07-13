@@ -80,12 +80,14 @@ def be_init(new_be_name, new_be_pool, zfs_properties=None, nested_be=False,
 
     new_be_name - name for the new BE
     new_be_pool - pool to use for the BE layout
-    zfs_properties - properties applicable to the BE's root dataset.
+    zfs_properties - Options object representing properties applicable to the
+                     BE's root dataset.
     nested_be - flag to specify if we're initializing a nested BE.
     fs_list - list of paths to convert to datasets within the BE.
-    fs_zfs_properties - properties TODO
+    fs_zfs_properties - list of Options objects containing property settings
     shared_fs_list - list of paths to convert to datasets in the shared area.
-    shared_fs_zfs_properties - properties TODO
+    shared_fs_zfs_properties - list of Options objects containing property
+                               settings
 
     Returns - for nested BEs, the created name of the BE if different from
               the BE's original name.  None otherwise.
@@ -100,7 +102,8 @@ def be_init(new_be_name, new_be_pool, zfs_properties=None, nested_be=False,
     # If zfs properties are provided for the BE, add them (these apply to
     # the root dataset of the BE.)
     if zfs_properties is not None:
-        nvlist.add_nvlist(const.BE_ATTR_ZFS_PROPERTIES, zfs_properties)
+        prop_nvlist = zfs_properties.get_nvlist()
+        nvlist.add_nvlist(const.BE_ATTR_ZFS_PROPERTIES, prop_nvlist)
 
     # Add whether or not we're initializing a nested BE.
     nvlist.add_boolean_value(const.BE_ATTR_NEW_BE_NESTED_BE, nested_be)
@@ -116,8 +119,15 @@ def be_init(new_be_name, new_be_pool, zfs_properties=None, nested_be=False,
         nvlist.add_string_array(const.BE_ATTR_FS_NAMES, fs_list)
 
         if fs_zfs_properties is not None and len(fs_zfs_properties) > 0:
+            fs_zfs_prop_array = list()
+            for props in fs_zfs_properties:
+                if props is not None:
+                    prop_nvlist = props.get_nvlist()
+                else:
+                    prop_nvlist = nvl.NVList()
+                fs_zfs_prop_array.append(prop_nvlist)
             nvlist.add_nvlist_array(const.BE_ATTR_FS_ZFS_PROPERTIES,
-                                    fs_zfs_properties)
+                                    fs_zfs_prop_array)
 
     # Add the shared datasets
     if shared_fs_list is not None and len(shared_fs_list) > 0:
@@ -126,8 +136,15 @@ def be_init(new_be_name, new_be_pool, zfs_properties=None, nested_be=False,
 
         if shared_fs_zfs_properties is not None and \
             len(shared_fs_zfs_properties) > 0:
+            shared_fs_zfs_prop_array = list()
+            for props in shared_fs_zfs_properties:
+                if props is not None:
+                    prop_nvlist = props.get_nvlist()
+                else:
+                    prop_nvlist = nvl.NVList()
+                shared_fs_zfs_prop_array.append(prop_nvlist)
             nvlist.add_nvlist_array(const.BE_ATTR_SHARED_FS_ZFS_PROPERTIES,
-                                    shared_fs_zfs_properties)
+                                    shared_fs_zfs_prop_array)
 
     # pylint: disable-msg=E1101
     err = cfunc.be_init(nvlist)

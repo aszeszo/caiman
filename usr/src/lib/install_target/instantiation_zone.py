@@ -31,9 +31,11 @@ from solaris_install import ApplicationData
 from solaris_install.engine import InstallEngine
 from solaris_install.target import Target
 from solaris_install.target.instantiation import TargetInstantiation
-from solaris_install.target.logical import BE, DatasetOptions, Filesystem, Zpool
+from solaris_install.target.logical import BE, DatasetOptions, \
+    Filesystem, Zpool, Options
 
 ALT_POOL_DATASET = "alt_pool_dataset"
+
 
 class TargetInstantiationZone(TargetInstantiation):
     """ class to instantiate targets
@@ -80,25 +82,28 @@ class TargetInstantiationZone(TargetInstantiation):
 
             # Process filesystems.
             be_fs_list = list()
+            be_fs_zfs_properties_list = list()
             shared_fs_list = list()
+            shared_fs_zfs_properties_list = list()
             for fs in fs_list:
                 if fs.action == "create":
-                    # TODO: Parse options string and mountpoint and add
-                    # to zfs properties list here...
-
+                    zfs_options = fs.get_first_child(class_type=Options)
                     if fs.in_be:
                         # Append filesystem name to BE filesystem list
                         be_fs_list.append(fs.name)
+                        be_fs_zfs_properties_list.append(zfs_options)
                     else:
                         # Append filesystem name to shared filesystem list
                         shared_fs_list.append(fs.name)
+                        shared_fs_zfs_properties_list.append(zfs_options)
 
             # Initialize BE with the specified in_be filesystems.
             for be in be_list:
                 be.init(self.dry_run, self.pool_dataset, nested_be=True,
-                        fs_list=be_fs_list, fs_zfs_properties=None,
+                        fs_list=be_fs_list,
+                        fs_zfs_properties=be_fs_zfs_properties_list,
                         shared_fs_list=shared_fs_list,
-                        shared_fs_zfs_properties=None)
+                        shared_fs_zfs_properties=shared_fs_zfs_properties_list)
 
     def execute(self, dry_run=False):
         """ Primary execution method use by the Checkpoint parent class
