@@ -985,6 +985,7 @@ class AutoInstall(object):
                     image = dst.get_first_child(class_type=Image)
                     if image is None:
                         image = Image(self.installed_root_dir, image_action)
+                        dst.insert_children(image)
                     else:
                         if image.img_root is not None:
                             self.logger.error(
@@ -995,7 +996,6 @@ class AutoInstall(object):
 
                         image.img_root = self.installed_root_dir
                         image.action = image_action
-                        dst.insert_children(image)
 
                     # Delete any existing children of ImType
                     image.delete_children(class_type=ImType)
