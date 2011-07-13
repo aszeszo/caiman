@@ -311,9 +311,28 @@ class AIService(object):
         
         # Supported client images will interpolate the bootserver's IP
         # address (as retrieved from the DHCP server) in place of the
-        # '$serverIP' string. We choose to always utilize this functionality
-        # so that any client can utilize this service, from any network.
-        server_ip = "$serverIP"
+        # '$serverIP' string. We choose to utilize this functionality when
+        # possible so that any client can utilize this service, from any
+        # network.
+        if service.image.version < 1:
+            # Solaris 11 Express does not support the $serverIP function.
+            # We must use the configured AI network's local IP address.
+            valid_nets = list(com.get_valid_networks())
+            if valid_nets:
+                server_ip = valid_nets[0]
+
+                # If more than one IP is configured, inform the user of our
+                # choice that we're picking the first one available.
+                if len(valid_nets) > 1:
+                    print >> sys.stderr, _("More than one IP address is "
+                                           "configured for use with "
+                                           "install services, using %s for "
+                                           "this service.") % server_ip
+            else:
+                raise AIServiceError(_("Cannot determine bootserver IP."))
+        else:
+            server_ip = "$serverIP"
+
         logging.debug("server_ip=%s", server_ip)
         
         # Save location of service in format <server_ip_address>:<port>
