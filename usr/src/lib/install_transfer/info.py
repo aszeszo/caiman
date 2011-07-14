@@ -127,7 +127,7 @@ class Software(DataObject):
 
                     pkg_list = list()
                     for name in sub.iterchildren(tag="name"):
-                        pkg_list.append(name.text.strip('"'))
+                        pkg_list.append(name.text.strip('"\n\t '))
 
                     transfer_obj.action = action
                     transfer_obj.contents = pkg_list
@@ -142,7 +142,7 @@ class Software(DataObject):
                     # A file_list transfer is specified in the manifest.
                     file_list = list()
                     for name in sub.iterchildren(tag="name"):
-                        file_list.append(name.text.strip('"'))
+                        file_list.append(name.text.strip('"\n\t '))
 
                     transfer_obj.contents = file_list
                     transfer_obj.action = action
@@ -156,7 +156,7 @@ class Software(DataObject):
 
                     pkg_list = list()
                     for name in sub.iterchildren(tag="name"):
-                        pkg_list.append(name.text.strip('"'))
+                        pkg_list.append(name.text.strip('"\n\t '))
 
                     transfer_obj.action = action
                     transfer_obj.contents = pkg_list
@@ -559,7 +559,7 @@ class CPIOSpec(DataObject):
             file_list = list()
 
             for name in names:
-                file_list.append(name.text.strip('"'))
+                file_list.append(name.text.strip('"\n\t '))
             transfer_obj.contents = file_list
         transfer_obj.action = action
 
@@ -665,7 +665,7 @@ class IPSSpec(DataObject):
         names = element.getchildren()
 
         for name in names:
-            pkg_list.append(name.text.strip('"'))
+            pkg_list.append(name.text.strip('"\n\t '))
 
         transfer_obj.action = action
         transfer_obj.contents = pkg_list
@@ -726,7 +726,7 @@ class SVR4Spec(DataObject):
         pkg_list = []
         names = element.getchildren()
         for name in names:
-            pkg_list.append(name.text.strip('"'))
+            pkg_list.append(name.text.strip('"\n\t '))
 
         transfer_obj.action = action
         transfer_obj.contents = pkg_list
