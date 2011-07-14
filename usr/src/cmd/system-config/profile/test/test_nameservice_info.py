@@ -136,10 +136,10 @@ SAMPLE_NIS_XML = '''<root>
   <service version="1" type="service" name="network/nis/domain">
     <property_group type="application" name="config">
       <propval type="hostname" name="domainname" value="my.domain.com"/>
-      <property type="net_address" name="ypservers">
-        <net_address_list>
+      <property type="host" name="ypservers">
+        <host_list>
           <value_node value="1.1.1.1"/>
-        </net_address_list>
+        </host_list>
       </property>
     </property_group>
     <instance enabled="true" name="default"/>
