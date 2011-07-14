@@ -46,9 +46,6 @@ from solaris_install.gui_install.timezone import Timezone
 from solaris_install.logger import INSTALL_LOGGER_NAME
 
 DATE_CMD = "/usr/bin/date"
-RTC_CMD = "/usr/sbin/rtc"
-RTC_SET_ZONE = "-z"
-RTC_CORRECT_DST = "-c"
 LOGGER = None
 
 
@@ -301,30 +298,9 @@ class TimeZoneScreen(BaseScreen):
 
     def set_system_clock(self):
         '''
-        Set the system timezone and date/time, based on the values
+        Set the system date/time, based on the values
         entered on the screen.
         '''
-
-        # Set system TZ as per the selected Timezone
-        (continent, country, timezone) = self.timezone.get_selected_tz()
-        if timezone is not None:
-            cmd = [RTC_CMD, RTC_SET_ZONE, timezone.tz_name]
-            LOGGER.info("Running command: %s" % cmd)
-            try:
-                p = Popen.check_call(cmd, stdout=Popen.STORE)
-            except CalledProcessError, err:
-                print "ERROR: [%s] [%s]" % (cmd, err)
-                LOGGER.error("ERROR: [%s] [%s]" % (cmd, err))
-                return False
-
-            cmd = [RTC_CMD, RTC_CORRECT_DST]
-            LOGGER.info("Running command: %s" % cmd)
-            try:
-                p = Popen.check_call(cmd, stdout=Popen.STORE)
-            except CalledProcessError, err:
-                print "ERROR: [%s] [%s]" % (cmd, err)
-                LOGGER.error("ERROR: [%s] [%s]" % (cmd, err))
-                return False
 
         # Set system time as per the entered date/time values
         year = self.yearspinner.get_value()
