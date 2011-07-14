@@ -37,7 +37,7 @@ from distutils.text_file import TextFile
 from osol_install.install_utils import dir_size, encrypt_password
 from pkg.cfgfiles import PasswordFile
 from solaris_install import CalledProcessError, DC_LABEL, DC_PERS_LABEL, run, \
-    run_silent, Popen
+     Popen
 from solaris_install.configuration.configuration import Configuration
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
@@ -488,7 +488,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
             if pid == 0:
                 os.chroot(self.pkg_img_path)
                 self.logger.debug("executing:  %s" % " ".join(cmd))
-                run_silent(cmd)
+                run(cmd)
                 os._exit(0)
             else:
                 # wait for the child to exit

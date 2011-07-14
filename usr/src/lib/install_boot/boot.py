@@ -1119,7 +1119,6 @@ class AIISOImageBootMenu(ISOImageBootMenu):
         with open(self.img_info_path, "a+") as iip:
             try:
                 iip.write("GRUB_TITLE=" + self.boot_title + "\n")
-                iip.write("GRUB_MIN_MEM64=%d\n" % 1000)
                 iip.write("GRUB_DO_SAFE_DEFAULT=true\n")
                 iip.write("NO_INSTALL_GRUB_TITLE=%s\n" % self.installadm_entry)
             except IOError, msg:
