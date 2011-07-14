@@ -453,6 +453,10 @@ def _prepare_engine(options):
     
     terminalui.init_logging(INSTALL_LOGGER_NAME)
     
+    # if no directory in output profile path
+    if not os.path.dirname(options.profile):
+        # explicitly provide default directory for manifest writer
+        options.profile = './' + options.profile
     register_checkpoint(sc_profile=options.profile)
 
 
