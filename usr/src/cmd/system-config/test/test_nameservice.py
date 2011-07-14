@@ -34,6 +34,7 @@ import unittest
 from solaris_install.sysconfig.nameservice import NSDomain, NSDNSServer, \
         NSDNSSearch, NSLDAPProfile, NSLDAPProxyBindInfo, NSNISIP
 import solaris_install.sysconfig.nameservice as nsv
+from solaris_install.sysconfig.profile.nameservice_info import NameServiceInfo
 from terminalui.base_screen import UIMessage
 
 
@@ -50,13 +51,14 @@ class TestNS(unittest.TestCase):
     '''Test Name Services screens'''
     
     def setUp(self):
+        self.NameServiceInfo__init__ = NameServiceInfo.__init__ 
         self.NSDomain__init__ = NSDomain.__init__ 
         self.NSDNSServer__init__ = NSDNSServer.__init__ 
         self.NSDNSSEARCH__init__ = NSDNSSearch.__init__ 
         self.NSLDAPProfile__init__ = NSLDAPProfile.__init__ 
         self.NSLDAPProxyBindInfo_init_ = NSLDAPProxyBindInfo.__init__ 
         self.NSNISIP__init__ = NSNISIP.__init__ 
-        NSNISIP.__init__ = self.NSNISIP__init__
+        NameServiceInfo.__init__ = lambda x, y: None
         NSDomain.__init__ = lambda x, y: None
         NSDNSServer.__init__ = lambda x, y: None
         NSDNSSearch.__init__ = lambda x, y: None
@@ -67,10 +69,15 @@ class TestNS(unittest.TestCase):
         self.ns_dnsserver = NSDNSServer(None)
         self.ns_dnssearch = NSDNSSearch(None)
         self.ns_ldapprofile = NSLDAPProfile(None)
+        self.ns_ldapprofile.nameservice = NameServiceInfo(None)
+        self.ns_ldapprofile.nameservice.dns = False
         self.ns_ldapproxy = NSLDAPProxyBindInfo(None)
         self.ns_nisip = NSNISIP(None)
+        self.ns_nisip.nameservice = NameServiceInfo(None)
+        self.ns_nisip.nameservice.dns = False
 
     def tearDown(self):
+        NameServiceInfo.__init__ = self.NameServiceInfo__init__ 
         NSDomain.__init__ = self.NSDomain__init__
         NSDNSServer.__init__ = self.NSDNSServer__init__
         NSDNSSearch.__init__ = self.NSDNSSEARCH__init__
@@ -105,6 +112,8 @@ class TestNS(unittest.TestCase):
         self.ns_ldapprofile.ldap_profile = MockField('prof ile')
         self.assertRaises(UIMessage, self.ns_ldapprofile.validate)
 
+        self.dns = False
+        self.ns_ldapproxy.ldap_pb_dn = MockField('distinguishedname')
         self.ns_ldapproxy.ldap_pb_dn = MockField('distinguishedname')
         self.ns_ldapproxy.ldap_pb_psw = MockField('password')
         self.assertEqual(self.ns_ldapproxy.validate(), None)

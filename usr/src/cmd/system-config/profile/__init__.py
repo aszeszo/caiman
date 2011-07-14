@@ -325,7 +325,10 @@ class SMFProperty(DataObject):
                     int(propval)
                     proptype = "count"
                 except:
-                    proptype = "astring"
+                    if iproptype == "host":
+                        proptype = iproptype
+                    else:
+                        proptype = "astring"
 
         if is_list:
             proptype += "_list"

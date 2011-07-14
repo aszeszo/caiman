@@ -156,13 +156,15 @@ class TestNameServiceInfoToXML(unittest.TestCase):
     def test_to_xml_no_name_service(self):
         '''Test SCI tool name service to_xml method - no name service'''
         self._gen_to_xml(NameServiceInfo(
+                         dns=False,
                          domain='my.domain.com',
                          dns_server=['1.1.1.1'], dns_search=['my.domain.com']),
                          SAMPLE_NONE_XML)
 
     def test_to_xml_dns(self):
         '''Test SCI tool name service to_xml method - DNS'''
-        self._gen_to_xml(NameServiceInfo(nameservice='DNS',
+        self._gen_to_xml(NameServiceInfo(
+                         dns=True,
                          domain='my.domain.com',
                          dns_server=['1.1.1.1'], dns_search=['my.domain.com']),
                          SAMPLE_DNS_XML)
@@ -170,15 +172,17 @@ class TestNameServiceInfoToXML(unittest.TestCase):
     def test_to_xml_ldap(self):
         '''Test SCI tool name service to_xml method - LDAP'''
         self._gen_to_xml(NameServiceInfo(
+                         dns=False,
                          domain='my.domain.com',
                          nameservice='LDAP', ldap_ip='1.1.1.1'),
                          SAMPLE_LDAP_XML)
 
     def test_to_xml_nis(self):
         '''Test SCI tool name service to_xml method - NIS'''
-        self._gen_to_xml(NameServiceInfo(nameservice='NIS', nis_ip='1.1.1.1',
+        self._gen_to_xml(NameServiceInfo(
+                         dns=False,
                          domain='my.domain.com',
-                         nis_auto=1),
+                         nameservice='NIS', nis_ip='1.1.1.1', nis_auto=1),
                          SAMPLE_NIS_XML)
 
     def _gen_to_xml(self, nsv, compare_with_this):

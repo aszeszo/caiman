@@ -109,7 +109,8 @@ from solaris_install.sysconfig.network_type import NetworkTypeScreen
 from solaris_install.sysconfig.profile import ConfigProfile, SMFConfig, \
                                               SMFInstance, SMFPropertyGroup, \
                                               SMFProperty
-from solaris_install.sysconfig.nameservice import NSChooser, NSDomain, \
+from solaris_install.sysconfig.nameservice import NSDNSChooser, NSAltChooser, \
+                                                  NSDomain, \
                                                   NSDNSServer, NSDNSSearch, \
                                                   NSLDAPProfile, \
                                                   NSLDAPProxyBindChooser, \
@@ -227,7 +228,8 @@ def get_screens_from_groups(main_win):
 
 def _append_nameservice_screens(result, main_win):
     ''' Initialize and append all name service screens '''
-    result.append(NSChooser(main_win))
+    result.append(NSDNSChooser(main_win))
+    result.append(NSAltChooser(main_win))
     result.append(NSDomain(main_win))
     result.append(NSDNSServer(main_win))
     result.append(NSDNSSearch(main_win))

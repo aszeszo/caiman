@@ -175,7 +175,7 @@ class UserInfo(SMFPropertyGroup):
 
             # Expire
             if self.expire is not None:
-                self.add_props(expire = str(self.expire))
+                self.add_props(expire=str(self.expire))
         else:
             self.pg_name = "user_account"
             #
@@ -192,7 +192,7 @@ class UserInfo(SMFPropertyGroup):
 
             # Expire
             if self.expire is not None:
-                self.add_props(expire = str(self.expire))
+                self.add_props(expire=str(self.expire))
 
             # Description
             if self.real_name:
@@ -232,6 +232,7 @@ class UserInfo(SMFPropertyGroup):
     def can_handle(cls, xml_node):
         return False
 
+
 def validate_username(user_str, blank_ok=True):
     '''Ensure username complies with following rules
        - username can contain characters from set of alphabetic characters,
@@ -250,7 +251,6 @@ def validate_username(user_str, blank_ok=True):
 
     if not user_str:
         raise UsernameInvalid(_("Username must not be blank"))
-
 
     # verify that username starts with alphabetic character
     if not user_str[0].isalpha():
@@ -275,6 +275,7 @@ def validate_login(login_str):
         # KeyError raised if the given user doesn't exist; in which
         # case, it's safe to apply
         return True
+
 
 def validate_password(password):
     '''validates the password entered'''

@@ -141,8 +141,9 @@ class SummaryScreen(BaseScreen):
                                     self.sysconfig.system.keyboard)
                 summary_text.append("")
 
-            summary_text.append(_("Terminal type: %s") %
-                                self.sysconfig.system.terminal_type)
+            if hasattr(self.sysconfig.system, 'terminal_type'):
+                summary_text.append(_("Terminal type: %s") %
+                                    self.sysconfig.system.terminal_type)
 
             # user/root accounts belong to SC_GROUP_USERS group
             if configure_group(SC_GROUP_USERS):
@@ -156,6 +157,8 @@ class SummaryScreen(BaseScreen):
                 summary_text.append("")
                 summary_text.append(_("Network:"))
                 summary_text.extend(self.get_networks())
+            elif configure_group(SC_GROUP_NS):
+                self._get_nameservice(summary_text)
         
             return "\n".join(summary_text)
 
@@ -177,19 +180,22 @@ class SummaryScreen(BaseScreen):
             return network_summary
 
         nic = self.sysconfig.nic       
-        if nic.type == NetworkInfo.AUTOMATIC:
-            network_summary.append(_("  Network Configuration: Automatic"))
-        elif nic.type == NetworkInfo.NONE:
-            network_summary.append(_("  Network Configuration: None"))
-        else:
-            network_summary.append(_("  Manual Configuration: %s")
-                                   % nic.nic_name)
-            network_summary.append(_("IP Address: %s") % nic.ip_address)
-            network_summary.append(_("Netmask: %s") % nic.netmask)
-            if nic.gateway:
-                network_summary.append(_("Router: %s") % nic.gateway)
-            if configure_group(SC_GROUP_NS):
-                self._get_nameservice(network_summary)
+        if nic:
+            if nic.type == NetworkInfo.AUTOMATIC:
+                network_summary.append(_("  Network Configuration: Automatic"))
+            elif nic.type == NetworkInfo.NONE:
+                network_summary.append(_("  Network Configuration: None"))
+            else:
+                network_summary.append(_("  Manual Configuration: %s")
+                                       % nic.nic_name)
+                network_summary.append(_("IP Address: %s") % nic.ip_address)
+                network_summary.append(_("Netmask: %s") % nic.netmask)
+                if nic.gateway:
+                    network_summary.append(_("Router: %s") % nic.gateway)
+                if configure_group(SC_GROUP_NS):
+                    self._get_nameservice(network_summary)
+        elif configure_group(SC_GROUP_NS):
+            self._get_nameservice(network_summary)
         return network_summary
 
     def _get_nameservice(self, summary):
@@ -197,29 +203,35 @@ class SummaryScreen(BaseScreen):
         if not self.sysconfig.nameservice:
             return
         nameservice = self.sysconfig.nameservice
-        if nameservice.nameservice and nameservice.domain:
+        if not nameservice.dns and not nameservice.nameservice:
+            return
+        if nameservice.domain:
             summary.append(_("Domain: %s") % nameservice.domain)
         # fetch localized name for name service
-        ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
-        summary.append(_("Name service: %s") %
-                NameService.USER_CHOICE_LIST[ns_idx])
-        if nameservice.nameservice == 'DNS':
+        if nameservice.dns:
+            summary.append(_("Name service: %s") % NameService.USER_CHOICE_DNS)
             # strip empty list entries
             dnslist = [ln for ln in nameservice.dns_server if ln]
             summary.append(_("DNS servers: ") + " ".join(dnslist))
             dnslist = [ln for ln in nameservice.dns_search if ln]
-            summary.append(_("Domain list: ") + " ".join(dnslist))
-        elif nameservice.nameservice == 'LDAP':
+            summary.append(_("DNS Domain search list: ") + " ".join(dnslist))
+        if nameservice.nameservice == 'LDAP':
+            ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
+            summary.append(_("Name service: %s") %
+                           NameService.USER_CHOICE_LIST[ns_idx])
             summary.append(_("LDAP profile: ") + nameservice.ldap_profile)
             summary.append(_("LDAP server's IP: ") + nameservice.ldap_ip)
             summary.append(_("LDAP search base: ") + 
-                    nameservice.ldap_search_base)
+                           nameservice.ldap_search_base)
             if nameservice.ldap_proxy_bind == \
                     NameServiceInfo.LDAP_CHOICE_PROXY_BIND:
                 summary.append(_("LDAP proxy bind distinguished name: ") +
                                nameservice.ldap_pb_dn)
                 summary.append(_("LDAP proxy bind password: [concealed]"))
         elif nameservice.nameservice == 'NIS':
+            ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
+            summary.append(_("Name service: %s") %
+                           NameService.USER_CHOICE_LIST[ns_idx])
             if nameservice.nis_auto == NameServiceInfo.NIS_CHOICE_AUTO:
                 summary.append(_("NIS server: broadcast"))
             elif nameservice.nis_ip:

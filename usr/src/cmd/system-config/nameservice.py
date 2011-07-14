@@ -65,17 +65,23 @@ class NameService(BaseScreen):
     # dimensions
     SCROLL_SIZE = 2
     BORDER_WIDTH = (0, 3)
+    HOSTNAME_SCREEN_LEN = 25
     # name service choices for display to user
-    USER_CHOICE_LIST = [_('DNS'), _('LDAP'), _('NIS'), _('None')]
+    USER_CHOICE_LIST = [_('None'), _('LDAP'), _('NIS')]
+    USER_CHOICE_DNS = _('DNS')
     # identify name service choices for internal use
-    CHOICE_LIST = ['DNS', 'LDAP', 'NIS', None]
+    CHOICE_LIST = [None, 'LDAP', 'NIS']
 
+    MSG_HOST_NAME = _("Enter either a host name or an IP address.")
+    MSG_IP_FMT = _("An IP address must be of the form xxx.xxx.xxx.xxx")
+ 
     def __init__(self, main_win, screen=None):
         global LOGGER
         if LOGGER is None:
             LOGGER = logging.getLogger(INSTALL_LOGGER_NAME + ".sysconfig")
         super(NameService, self).__init__(main_win)
-        self.cur_nschoice_idx = self.CHOICE_LIST.index("DNS")
+        self.cur_dnschoice_idx = 0
+        self.cur_nschoice_idx = self.CHOICE_LIST.index(None)
         self.cur_pbchoice_idx = NameServiceInfo.LDAP_CHOICE_NO_PROXY_BIND
         self.cur_nisnschoice_idx = NameServiceInfo.NIS_CHOICE_AUTO
         self.intro = "DEVELOPER: define intro in subclass"
@@ -94,21 +100,24 @@ class NameService(BaseScreen):
     def _show(self):
         ''' called upon display of a screen '''
         sc_profile = solaris_install.sysconfig.profile.from_engine()
-        if sc_profile.nic.type != NetworkInfo.MANUAL and \
+        LOGGER.debug(sc_profile)
+        if hasattr(sc_profile, 'nic') and sc_profile.nic and \
+                sc_profile.nic.type != NetworkInfo.MANUAL and \
                 configure_group(SC_GROUP_NETWORK):
             raise SkipException
         if sc_profile.nameservice is None:
             # first time, assign sysconfig values to defaults found above
             LOGGER.debug('assigning NSV to sysconfig.profile')
             sc_profile.nameservice = NameServiceInfo()
-            nic = sc_profile.nic
-            LOGGER.info("Found NIC:")
-            LOGGER.info(nic)
-            # if values were learned from the NIC, offer those as defaults
-            if nic.domain:
-                sc_profile.nameservice.domain = nic.domain
-            if nic.dns_address:
-                sc_profile.nameservice.dns_server = nic.dns_address
+            if hasattr(sc_profile, 'nic') and sc_profile.nic:
+                nic = sc_profile.nic
+                LOGGER.info("Found NIC:")
+                LOGGER.info(nic)
+                # if values were learned from the NIC, offer those as defaults
+                if nic.domain:
+                    sc_profile.nameservice.domain = nic.domain
+                if nic.dns_address:
+                    sc_profile.nameservice.dns_server = nic.dns_address
         self.nameservice = sc_profile.nameservice
 
     def _paint_opening(self):
@@ -118,25 +127,70 @@ class NameService(BaseScreen):
         return 2 + self.center_win.add_paragraph(self.intro, 1)
 
 
-class NSChooser(NameService):
+class NSDNSChooser(NameService):
 
-    HEADER_TEXT = _("Name Service")
+    HEADER_TEXT = _("DNS Name Service")
     HELP_DATA = (SCI_HELP + "/%s/name_service.txt", HEADER_TEXT)
     HELP_FORMAT = "%s"
 
     def __init__(self, main_win):
-        super(NSChooser, self).__init__(main_win)
-        LOGGER.debug('in NSChooser init')
+        super(NSDNSChooser, self).__init__(main_win)
+        LOGGER.debug('in NSDNSChooser init')
         self.intro = \
-                _("Select the name service that will be used by this "
-                  "system. Select None if the desired name service is not "
-                  "listed.")
+                _("Indicates whether or not the system should use the DNS "
+                  "name service.")
 
     def _show(self):
         ''' called upon display of a screen '''
-        super(NSChooser, self)._show()
+        super(NSDNSChooser, self)._show()
         y_loc = self._paint_opening()
         LOGGER.debug(self.nameservice)
+        # allow the user to choose DNS or not
+        ynlist = [_('Configure DNS'),
+                  _('Do not configure DNS')]
+        area = WindowArea(x_loc=0, y_loc=y_loc,
+                          scrollable_lines=len(ynlist) + 1)
+        area.lines = self.win_size_y - (y_loc + 1)
+        area.columns = self.win_size_x
+        self.scroll_region_dns = ScrollWindow(area, window=self.center_win)
+        # add the entries to the screen
+        for idx, yon in enumerate(ynlist):
+            win_area = WindowArea(1, textwidth(yon) + 1, idx, INDENT)
+            ListItem(win_area, window=self.scroll_region_dns, text=yon,
+                     data_obj=yon)
+        # finalize positioning
+        self.main_win.do_update()
+        self.center_win.activate_object(self.scroll_region_dns)
+        self.scroll_region_dns.activate_object_force(self.cur_dnschoice_idx,
+                                                 force_to_top=True)
+
+    def on_change_screen(self):
+        ''' called when changes submitted by user for all screens '''
+        # Save the chosen index and object when leaving the screen
+        self.cur_dnschoice_idx = self.scroll_region_dns.active_object
+        self.nameservice.dns = (self.cur_dnschoice_idx == 0)
+        LOGGER.info("on_change_screen DNS chosen? %s", self.nameservice.dns)
+
+
+class NSAltChooser(NameService):
+
+    HEADER_TEXT = _("Alternate Name Service")
+    HELP_DATA = (SCI_HELP + "/%s/name_service.txt", HEADER_TEXT)
+
+    def __init__(self, main_win):
+        super(NSAltChooser, self).__init__(main_win)
+        self.intro = \
+                _("From the list below, select one name service to be "
+                  "used by this system. If the desired name service is not "
+                  "listed, select None. The selected name service may be "
+                  "used in conjunction with DNS.")
+
+    def _show(self):
+        ''' called upon display of a screen '''
+        super(NSAltChooser, self)._show()
+        y_loc = self._paint_opening()
+        LOGGER.debug(self.nameservice)
+        # allow the user to select an alternate name service
         area = WindowArea(x_loc=0, y_loc=y_loc,
                         scrollable_lines=len(NameService.USER_CHOICE_LIST) + 1)
         area.lines = self.win_size_y - (y_loc + 1)
@@ -150,6 +204,7 @@ class NSChooser(NameService):
             win_area = WindowArea(1, hilite, idx, INDENT)
             ListItem(win_area, window=self.scroll_region, text=nsn,
                      data_obj=nsn)
+        # finalize positioning
         self.main_win.do_update()
         self.center_win.activate_object(self.scroll_region)
         self.scroll_region.activate_object_force(self.cur_nschoice_idx,
@@ -180,7 +235,9 @@ class NSDomain(NameService):
     def _show(self):
         ''' show domain '''
         super(NSDomain, self)._show()
-        if self.nameservice.nameservice is None:
+        if not _has_name_service():
+            raise SkipException
+        if not self.nameservice.dns and not self.nameservice.nameservice:
             raise SkipException
         y_loc = self._paint_opening()
         cols = min(MAXDOMAINLEN + 1,
@@ -199,26 +256,30 @@ class NSDomain(NameService):
         validate_domain(self.domain.get_text(), allow_empty=False)
 
     def on_change_screen(self):
-        self.nameservice.domain = self.domain.get_text()
-        # default in LDAP-formatted values for domain
-        if self.nameservice.nameservice == 'LDAP':
-            ns = self.nameservice
-            ldapdom = _convert_to_ldap_domain(ns.domain)
-            # default in search base from domain
-            if not ns.ldap_search_base or \
-                    not ns.ldap_search_base.startswith(ldapdom):
-                ns.ldap_search_base = ldapdom
-            # default in distinguished name from search base 
-            if not ns.ldap_pb_dn:
-                # provide probable DN default
-                ns.ldap_pb_dn = 'cn=proxyagent,ou=profile,' + \
-                        ns.ldap_search_base
-            elif not ns.ldap_pb_dn.endswith(ns.ldap_search_base):
-                # user changed search base, update DN
-                dnsplit = ns.ldap_pb_dn.split(',dc=')
-                # replace old search base with new
-                if len(dnsplit) > 0 and dnsplit[0]:
-                    ns.ldap_pb_dn = dnsplit[0] + ',' + ns.ldap_search_base
+        ns = self.nameservice
+        new_domain = self.domain.get_text()
+        if ns.domain != new_domain or \
+                (ns.nameservice == 'LDAP' and not ns.ldap_search_base):
+            ns.domain = new_domain
+            # default in LDAP-formatted values for domain
+            if self.nameservice.nameservice == 'LDAP':
+                ldapdom = _convert_to_ldap_domain(new_domain)
+                # default in search base from domain
+                if not ns.ldap_search_base or \
+                        not ns.ldap_search_base.startswith(ldapdom):
+                    ns.ldap_search_base = ldapdom
+                # base DN on search base
+                if ns.ldap_pb_dn:
+                    # update DN with any changes in search_base from user
+                    fixedbase = _ldap_domain_fixup(ns.ldap_pb_dn,
+                            ns.ldap_search_base)
+                    if fixedbase:
+                        # user changed search base, update DN
+                        ns.ldap_pb_dn = fixedbase
+                else:
+                    # provide probable DN default
+                    ns.ldap_pb_dn = 'cn=proxyagent,ou=profile,' + \
+                            ns.ldap_search_base
 
 
 class NSDNSServer(NameService):
@@ -236,7 +297,7 @@ class NSDNSServer(NameService):
     def _show(self):
         super(NSDNSServer, self)._show()
         # check dictionary of screens associated with name service selections
-        if self.nameservice.nameservice != 'DNS':
+        if not self.nameservice.dns:
             raise SkipException
         y_loc = self._paint_opening()
         self.dns_server_list = []
@@ -303,7 +364,7 @@ class NSDNSSearch(NameService):
         ''' show DNS search list '''
         super(NSDNSSearch, self)._show()
         # check dictionary of screens associated with name service selections
-        if self.nameservice.nameservice != 'DNS':
+        if not self.nameservice.dns:
             raise SkipException
         y_loc = self._paint_opening()
         cols = min(MAXDOMAINLEN + 1,
@@ -363,23 +424,31 @@ class NSLDAPProfile(NameService):
 
     def __init__(self, main_win):
         super(NSLDAPProfile, self).__init__(main_win)
-        self.intro = \
-                _("Specify the name of the LDAP profile to be used to "
-                  "configure this system and the IP address of the "
-                  "server that contains the profile.")
         self.title = _("Profile name:")
-        self.title2 = _("Profile server IP address:")
         self.title3 = _("Search base:")
 
     def _show(self):
         super(NSLDAPProfile, self)._show()
         if self.nameservice.nameservice != 'LDAP':
             raise SkipException
+        if self.nameservice.dns:
+            self.intro = \
+                _("Specify the name of the LDAP profile to be used to "
+                  "configure this system and the host name or IP address of "
+                  "the server that contains the profile.")
+            self.title2 = _("Profile server host name or IP address:")
+        else:
+            self.intro = \
+                _("Specify the name of the LDAP profile to be used to "
+                  "configure this system and the IP address of the "
+                  "server that contains the profile.")
+            self.title2 = _("Profile server IP address:")
+        self.intro += _("  Enter the LDAP search base.")
         y_loc = self._paint_opening()
-        maxtitlelen = max(max(textwidth(self.title), textwidth(self.title2)),
+        maxtitlelen = max(textwidth(self.title), textwidth(self.title2),
                           textwidth(self.title3))
         aligned_x_loc = maxtitlelen + INDENT + 1
-        cols = self.win_size_x - maxtitlelen - INDENT - 1
+        cols = self.win_size_x - aligned_x_loc
         self.center_win.add_text(self.title.rjust(maxtitlelen), y_loc, INDENT)
         area = WindowArea(1, cols, y_loc, aligned_x_loc)
         self.ldap_profile = EditField(area, window=self.center_win,
@@ -389,12 +458,17 @@ class NSLDAPProfile(NameService):
         # in case of error, tell user what is being validated
         self.ldap_profile.validate_kwargs['etext'] = _('profile name')
         y_loc += 1
-        area = WindowArea(1, MAXIP, y_loc, aligned_x_loc)
+        area = WindowArea(1, cols, y_loc, aligned_x_loc,
+                        scrollable_columns=NameService.HOSTNAME_SCREEN_LEN + 1)
         self.center_win.add_text(self.title2.rjust(maxtitlelen), y_loc, INDENT)
+        # create edit field, validating for host name or IP address depending
+        # on whether DNS was selected
         self.ldap_ip = EditField(area, window=self.center_win,
                                  text=self.nameservice.ldap_ip,
-                                 validate=incremental_validate_ip,
-                                 error_win=self.main_win.error_line)
+                                 error_win=self.main_win.error_line,
+                                 validate=(incremental_validate_host
+                                           if self.nameservice.dns
+                                           else incremental_validate_ip))
         # search base
         y_loc += 1
         self.center_win.add_text(self.title3.rjust(maxtitlelen), y_loc, INDENT)
@@ -408,23 +482,27 @@ class NSLDAPProfile(NameService):
 
     def validate(self):
         validate_ldap_profile(self.ldap_profile.get_text())
-        validate_ip(self.ldap_ip.get_text())
+        ldap_ip = self.ldap_ip.get_text()
+        if self.nameservice.dns:
+            validate_host_or_ip(ldap_ip)
+        else:
+            validate_ip(ldap_ip)
         if not self.ldap_profile.get_text():
             raise UIMessage(_("The LDAP profile name cannot be blank."))
-        if not self.ldap_ip.get_text():
+        if not ldap_ip:
             raise UIMessage(_("The LDAP server IP address cannot be blank."))
 
     def on_change_screen(self):
         self.nameservice.ldap_profile = self.ldap_profile.get_text()
         self.nameservice.ldap_ip = self.ldap_ip.get_text()
-        self.nameservice.ldap_search_base = self.ldap_search_base.get_text()
-        # update DN with any changes in search_base from user
-        ldap_search_base = self.nameservice.ldap_search_base
-        if not self.nameservice.ldap_pb_dn.endswith(ldap_search_base):
-            dnsplit = self.nameservice.ldap_pb_dn.split(',dc=')
-            if len(dnsplit) > 0 and dnsplit[0]:
-                self.nameservice.ldap_pb_dn = dnsplit[0] + ',' + \
-                        ldap_search_base
+        new_search_base = self.ldap_search_base.get_text()
+        if new_search_base != self.nameservice.ldap_search_base:
+            self.nameservice.ldap_search_base = new_search_base
+            # update DN with any changes in search_base from user
+            fixedbase = _ldap_domain_fixup(self.nameservice.ldap_pb_dn,
+                                           new_search_base)
+            if fixedbase:
+                self.nameservice.ldap_pb_dn = fixedbase
 
 
 class NSLDAPProxyBindChooser(NameService):
@@ -455,9 +533,9 @@ class NSLDAPProxyBindChooser(NameService):
             win_area = WindowArea(1, textwidth(yon) + 1, idx, INDENT)
             ListItem(win_area, window=self.scroll_region, text=yon,
                      data_obj=yon)
-            self.main_win.do_update()
-            self.center_win.activate_object(self.scroll_region)
-            self.scroll_region.activate_object_force(self.cur_pbchoice_idx,
+        self.main_win.do_update()
+        self.center_win.activate_object(self.scroll_region)
+        self.scroll_region.activate_object_force(self.cur_pbchoice_idx,
                                                      force_to_top=True)
 
     def on_change_screen(self):
@@ -585,35 +663,54 @@ class NSNISIP(NameService):
 
     def __init__(self, main_win):
         super(NSNISIP, self).__init__(main_win)
-        self.intro = \
-                _("Enter the IP address of the name server.  IP "
-                  "addresses must contain four sets of numbers separated "
-                  "by periods (for example, 129.200.9.1).")
-        self.title = _("Server's IP address:")
 
     def _show(self):
         super(NSNISIP, self)._show()
+        LOGGER.info("self.nameservice: %s" % self.nameservice)
         if self.nameservice.nameservice != 'NIS':
             raise SkipException
         if self.nameservice.nis_auto == NameServiceInfo.NIS_CHOICE_AUTO:
             raise SkipException
+        if self.nameservice.dns:
+            self.intro = \
+                _("Enter the host name or IP address of the name server.  "
+                  "A host name must have at least 2 characters and can be "
+                  "alphanumeric and can contain hyphens.  IP "
+                  "addresses must contain four sets of numbers separated "
+                  "by periods (for example, 129.200.9.1).")
+            self.title = _("Server's host name or IP address:")
+        else:
+            self.intro = \
+                _("Enter the IP address of the name server.  IP "
+                  "addresses must contain four sets of numbers separated "
+                  "by periods (for example, 129.200.9.1).")
+            self.title = _("Server's IP address:")
         y_loc = self._paint_opening()
         self.center_win.add_text(self.title, y_loc, INDENT)
-        maxtitlelen = textwidth(self.title)
-        cols = self.win_size_x - maxtitlelen - INDENT - 1
-        area = WindowArea(1, cols, y_loc, maxtitlelen + INDENT + 1)
+        aligned_x_loc = textwidth(self.title) + INDENT + 1
+        cols = self.win_size_x - aligned_x_loc
+        area = WindowArea(1, cols, y_loc, aligned_x_loc)
         self.center_win.add_text(self.title, y_loc, INDENT)
-        area = WindowArea(1, MAXIP, y_loc, maxtitlelen + INDENT + 1)
+        area = WindowArea(1, cols, y_loc, aligned_x_loc,
+                        scrollable_columns=NameService.HOSTNAME_SCREEN_LEN + 1)
+        # create edit field, validating for host name or IP address depending
+        # on whether DNS was selected
         self.nis_ip = EditField(area, window=self.center_win,
                                 text=self.nameservice.nis_ip,
-                                validate=incremental_validate_ip,
-                                error_win=self.main_win.error_line)
+                                error_win=self.main_win.error_line,
+                                validate=(incremental_validate_host
+                                          if self.nameservice.dns
+                                          else incremental_validate_ip))
         self.main_win.do_update()
         self.center_win.activate_object(self.nis_ip)
 
     def validate(self):
-        validate_ip(self.nis_ip.get_text())
-        if not self.nis_ip.get_text():
+        nis_ip = self.nis_ip.get_text()
+        if self.nameservice.dns:
+            validate_host_or_ip(nis_ip)
+        else:
+            validate_ip(nis_ip)
+        if not nis_ip:
             raise UIMessage(_("The NIS server IP address cannot be blank."))
 
     def on_change_screen(self):
@@ -667,16 +764,36 @@ def validate_ldap_proxy_bind_psw(proxy_psw):
                               "quotation marks."))
 
 
+def validate_host_or_ip(host_name):
+    '''Validate argument as either a valid hostname or IP address
+    Raises: UIMessage if not valid
+    '''
+    if not host_name:
+        return
+    # assume host name if input starts with alpha character
+    if host_name[0].isalpha():
+        for chr in host_name:
+            if not chr.isalnum() and not chr in u"-.":
+                raise UIMessage(_("A host name can only contain letters, "
+                                  "numbers,  periods, and minus signs (-)."))
+        return
+    # attempt validation as a numeric IP address
+    try:
+        IPAddress.convert_address(host_name)
+    except ValueError:
+        raise UIMessage(NameService.MSG_HOST_NAME)
+
+
 def validate_ip(ip_address):
     '''Wrap a call to IPAddress.check_address and raise a UIMessage with
     appropriate message text
     '''
     if not ip_address:
-        return True
+        return
     try:
         IPAddress.convert_address(ip_address)
     except ValueError:
-        raise UIMessage(_("An IP address must be of the form xxx.xxx.xxx.xxx"))
+        raise UIMessage(NameService.MSG_IP_FMT)
 
 
 def validate_domain(domain, allow_empty=True):
@@ -712,7 +829,30 @@ def incremental_validate_ip(edit_field):
     try:
         IPAddress.incremental_check(ip_address)
     except ValueError:
-        raise UIMessage(_("An IP address must be of the form xxx.xxx.xxx.xxx"))
+        raise UIMessage(NameService.MSG_IP_FMT)
+    return True
+
+
+def incremental_validate_host(edit_field):
+    '''Incrementally validate the host as the user enters it
+    Arg: edit_field - EditField object for validation
+    Raises: UIMessage on failure
+    '''
+    host_name = edit_field.get_text()
+    if not host_name:
+        return True
+    # assume host name if input starts with alpha character
+    if host_name[0].isalpha():
+        for chr in host_name:
+            if not chr.isalnum() and not chr in u"-.":
+                raise UIMessage(_("A host name can only contain letters, "
+                                  "numbers,  periods, and minus signs (-)."))
+        return True
+    # attempt validation as a numeric IP address
+    try:
+        IPAddress.incremental_check(host_name)
+    except ValueError:
+        raise UIMessage(NameService.MSG_HOST_NAME)
     return True
 
 
@@ -748,6 +888,15 @@ def incremental_validate_domain(edit_field):
             raise UIMessage(_('Invalid character for domain name.'))
 
 
+def _has_name_service():
+        nsv = solaris_install.sysconfig.profile.from_engine().nameservice
+        if nsv.dns:
+            return True
+        if nsv.nameservice:
+            return True
+        return False
+
+
 def _convert_to_ldap_domain(domain):
     ''' given a domain in dotted notation, produce an LDAP domain
     Arg: domain - domain to convert
@@ -757,3 +906,18 @@ def _convert_to_ldap_domain(domain):
     for label in domain.split('.'):
         labels.append('dc=' + label)
     return ','.join(labels)
+
+
+def _ldap_domain_fixup(old, new_search_base):
+    ''' if existing LDAP-formatted value, does not have the specified
+    search base, replace it with the specified search base
+    Args:
+        old - the existing LDAP-formatted value
+        new_search_base - the search base to replace it with
+    '''
+    if old.endswith(new_search_base):
+        return None
+    dnsplit = old.split(',dc=')
+    if len(dnsplit) > 0 and dnsplit[0]:
+        return dnsplit[0] + ',' + new_search_base
+    return None

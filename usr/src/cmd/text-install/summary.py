@@ -166,35 +166,41 @@ class SummaryScreen(BaseScreen):
         if not self.sysconfig.nameservice:
             return
         nameservice = self.sysconfig.nameservice
-        if nameservice.nameservice and nameservice.domain:
+        if not nameservice.dns and not nameservice.nameservice:
+            return
+        if nameservice.domain:
             ns_summary.append(_("Domain: %s") % nameservice.domain)
-        ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
-        ns_summary.append(_("Name service: %s") %
-                NameService.USER_CHOICE_LIST[ns_idx])
-        if nameservice.nameservice == 'DNS':
+        # fetch localized name for name service
+        if nameservice.dns:
+            ns_summary.append(_("Name service: %s") %
+                              NameService.USER_CHOICE_DNS)
             # strip empty list entries
             dnslist = [ln for ln in nameservice.dns_server if ln]
             ns_summary.append(_("DNS servers: ") + " ".join(dnslist))
             dnslist = [ln for ln in nameservice.dns_search if ln]
-            ns_summary.append(_("Domain list: ") + " ".join(dnslist))
-        elif nameservice.nameservice == 'LDAP':
-            ns_summary.append(_("LDAP profile: ") +
-                                   nameservice.ldap_profile)
-            ns_summary.append(_("LDAP server's IP: ") +
-                                   nameservice.ldap_ip)
+            ns_summary.append(_("DNS Domain search list: ") +
+                              " ".join(dnslist))
+        if nameservice.nameservice == 'LDAP':
+            ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
+            ns_summary.append(_("Name service: %s") %
+                              NameService.USER_CHOICE_LIST[ns_idx])
+            ns_summary.append(_("LDAP profile: ") + nameservice.ldap_profile)
+            ns_summary.append(_("LDAP server's IP: ") + nameservice.ldap_ip)
+            ns_summary.append(_("LDAP search base: ") + 
+                              nameservice.ldap_search_base)
             if nameservice.ldap_proxy_bind == \
                     NameServiceInfo.LDAP_CHOICE_PROXY_BIND:
-                ns_summary.append(_(
-                                    "LDAP proxy bind distinguished name: ")
-                                    + nameservice.ldap_pb_dn)
-                ns_summary.append(_("LDAP proxy bind password: ") +
-                                       nameservice.ldap_pb_psw)
+                ns_summary.append(_("LDAP proxy bind distinguished name: ") +
+                                  nameservice.ldap_pb_dn)
+                ns_summary.append(_("LDAP proxy bind password: [concealed]"))
         elif nameservice.nameservice == 'NIS':
+            ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
+            ns_summary.append(_("Name service: %s") %
+                              NameService.USER_CHOICE_LIST[ns_idx])
             if nameservice.nis_auto == NameServiceInfo.NIS_CHOICE_AUTO:
                 ns_summary.append(_("NIS server: broadcast"))
             elif nameservice.nis_ip:
-                ns_summary.append(_("NIS server's IP: ") +
-                                       nameservice.nis_ip)
+                ns_summary.append(_("NIS server's IP: ") + nameservice.nis_ip)
 
     def get_users(self):
         '''Build a summary of the user information, and return it as a list

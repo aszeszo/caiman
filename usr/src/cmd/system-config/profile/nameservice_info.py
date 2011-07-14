@@ -58,7 +58,7 @@ class NameServiceInfo(SMFConfig):
     LDAP_CHOICE_PROXY_BIND = 1
 
     def __init__(self, nameservice=None, domain='',
-                 dns_server=[], dns_search=[],
+                 dns=True, dns_server=[], dns_search=[],
                  ldap_profile='default', ldap_ip='', ldap_search_base='',
                  ldap_proxy_bind=LDAP_CHOICE_NO_PROXY_BIND, ldap_pb_dn='',
                  ldap_pb_psw='', nis_ip='', nis_auto=NIS_CHOICE_AUTO):
@@ -66,6 +66,7 @@ class NameServiceInfo(SMFConfig):
         self.nameservice = nameservice
         self.domain = domain
         # DNS-specific
+        self.dns = dns
         self.dns_server = dns_server
         self.dns_search = dns_search
         # LDAP-specific
@@ -82,6 +83,7 @@ class NameServiceInfo(SMFConfig):
     def __repr__(self):
         return '\n'.join(["NS %s:" % self.nameservice,
                           "Domain: %s" % self.domain,
+                          "DNS? %s" % self.dns,
                           "DNSserv: %s" % self.dns_server,
                           "DNSsearch: %s" % self.dns_search,
                           "LDAPprofname: %s" % self.ldap_profile,
@@ -95,18 +97,18 @@ class NameServiceInfo(SMFConfig):
 
     def to_xml(self):
         data_objects = []
-        if self.nameservice is None:
+        if not self.dns and self.nameservice is None:
             # if no name services, files only
             LOGGER().info('setting name service to files only')
         # configure svc:system/name-service/switch
         LOGGER().info('preparing profile with nsswitch')
         # set NS switch service objects according to user's selection
-        data_objects.append(_set_nsswitch(self.nameservice))
+        data_objects.append(_set_nsswitch(self.dns, self.nameservice))
         # enable name service cache
         data_objects.append(_enable_service('system/name-service/cache'))
         LOGGER().debug('to_xml:name service type=%s', self.nameservice)
         LOGGER().info(self)
-        if self.nameservice == 'DNS':
+        if self.dns:
             LOGGER().info('preparing profile for DNS')
             dns = SMFConfig('network/dns/client')
             data_objects.append(dns)
@@ -197,7 +199,7 @@ class NameServiceInfo(SMFConfig):
                 # manual configuration naming NIS server explicitly
                 if self.nis_auto == self.NIS_CHOICE_MANUAL and \
                         self.nameservice == 'NIS':
-                    proptype = 'net_address'
+                    proptype = 'host'
                     nis_ip = nis_props.setprop("property", "ypservers",
                                                proptype)
                     nis_ip.add_value_list(propvals=[self.nis_ip],
@@ -229,7 +231,7 @@ class NameServiceInfo(SMFConfig):
         return False
 
 
-def _set_nsswitch(nameservice):
+def _set_nsswitch(dns, nameservice):
     ''' configure name services switch table
     for svc: system/name-service/switch
     Arg:
@@ -242,23 +244,37 @@ def _set_nsswitch(nameservice):
     props = SMFPropertyGroup('config')
     svc.insert_children([props])
     # set name service sources per name service
-    source_dict = {
-            'DNS': {
-                'default': 'files',
-                'host': 'files dns',
-                'printer': 'user files'},
-            'LDAP': {
-                'default': 'files ldap',
-                'printer': 'user files ldap',
-                'netgroup': 'ldap'},
-            'NIS': {
-                'default': 'files nis',
-                'printer': 'user files nis',
-                'netgroup': 'nis'},
-            None: {
-                'default': 'files',
-                'printer': 'user files'}
-            }[nameservice]
+    if dns:
+        # set combination with DNS
+        source_dict = {
+                None: {
+                    'default': 'files',
+                    'host': 'files dns',
+                    'printer': 'user files'},
+                'LDAP': {
+                    'default': 'files ldap',
+                    'host': 'files dns',
+                    'printer': 'user files ldap'},
+                'NIS': {
+                    'default': 'files nis',
+                    'host': 'files dns',
+                    'printer': 'user files nis'}
+                }[nameservice]
+    else:
+        # set name service sources per name service
+        source_dict = {
+                None: {
+                    'default': 'files',
+                    'printer': 'user files'},
+                'LDAP': {
+                    'default': 'files ldap',
+                    'printer': 'user files ldap',
+                    'netgroup': 'ldap'},
+                'NIS': {
+                    'default': 'files nis',
+                    'printer': 'user files nis',
+                    'netgroup': 'nis'}
+                }[nameservice]
     for prop in source_dict:
         props.setprop('propval', prop, 'astring', source_dict[prop])
     # configure default service instance
