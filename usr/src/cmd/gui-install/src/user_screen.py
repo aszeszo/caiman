@@ -145,7 +145,6 @@ class UserScreen(BaseScreen):
             self.saved_msg = err
             self.saved_msg_type = 'account'
             self.loginnameinfoimage.show_all()
-            widget.grab_focus()
 
     def password_changed(self, widget=None, data=None):
         '''callback for the user password change events'''
@@ -219,9 +218,6 @@ class UserScreen(BaseScreen):
 
                 # show the error image
                 self.userpasswordinfoimage.show_all()
-
-                # give the password entry the focus to correct the error.
-                user_password.grab_focus()
             else:
                 # no error, so hide the label and error image
                 self.userpasswordinfolabel.hide_all()
@@ -256,9 +252,6 @@ class UserScreen(BaseScreen):
 
             self.saved_msg = msg
             self.saved_msg_type = 'host'
-
-            # give the hostname entry the focus to correct the error.
-            widget.grab_focus()
 
     def go_back(self):
         '''method from the super that deals with
