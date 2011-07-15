@@ -182,7 +182,7 @@ def cli_wrap(text):
     whitespace (as might be seen with a block-quoted string), and it is then
     line-wrapped at 70 characters.
     """
-    return ("\n".join(map(_text_wrap, text.splitlines())))
+    return ("\n".join(map(_text_wrap, text.splitlines())) + "\n")
 
 
 #

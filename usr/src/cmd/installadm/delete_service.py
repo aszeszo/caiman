@@ -102,7 +102,6 @@ def remove_dhcp_configuration(service):
         # the default for this architecture, unset it.
         try:
             arch_class = dhcp.DHCPArchClass.get_arch(server, service.arch)
-            bootfile = arch_class.bootfile
         except dhcp.DHCPServerError as err:
             print >> sys.stderr, cw(_("\nUnable to access DHCP configuration: "
                                       "%s\n" % err))
