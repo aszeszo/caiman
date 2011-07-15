@@ -35,6 +35,7 @@ import os
 import sys
 import warnings
 
+from copy import deepcopy
 from itertools import izip
 
 from osol_install.install_utils import get_argspec
@@ -57,7 +58,7 @@ def validate_function_args(func, args, kwargs):
     spec = get_argspec(func)
 
     num_spec_args = len(spec.args)
-    arg_value = {}
+    arg_value = dict()
 
     # fill with expected arguments
     arg_value.update(izip(spec.args, args))
@@ -116,14 +117,14 @@ class CheckpointRegistrationData(DataObject):
         self.loglevel = loglevel
 
         if args is None:
-            self.args = ()
+            self.reg_args = list()
         else:
-            self.args = args
+            self.reg_args = deepcopy(args)
 
         if kwargs is None:
-            self.kwargs = {}
+            self.reg_kwargs = dict()
         else:
-            self.kwargs = kwargs
+            self.reg_kwargs = deepcopy(kwargs)
 
         DataObject.__init__(self, name)
 
@@ -132,8 +133,8 @@ class CheckpointRegistrationData(DataObject):
                self.mod_name == other.mod_name and \
                self.module_path == other.module_path and \
                self.checkpoint_class_name == other.checkpoint_class_name and \
-               self.args == other.args and \
-               self.kwargs == other.kwargs)
+               self.reg_args == other.reg_args and \
+               self.reg_kwargs == other.reg_kwargs)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -174,6 +175,15 @@ class CheckpointData(object):
         self.prog_est = decimal.Decimal('0')
         self.prog_est_ratio = decimal.Decimal('0')
         self.prog_reported = decimal.Decimal('0')
+        if args:
+            self.args = args
+        else:
+            self.args = list()
+
+        if kwargs:
+            self.kwargs = kwargs
+        else:
+            self.kwargs = dict()
 
     def validate_checkpoint_info(self):
         ''' Validate the information provided for the checkpoint '''
@@ -201,10 +211,10 @@ class CheckpointData(object):
         # add them explicitly.
 
         args_chk = ["self", "checkpoint_name"]
-        args_chk.extend(self.cp_info.args)
+        args_chk.extend(self.args)
 
         validate_function_args(self.checkpoint_class, args_chk,
-                               self.cp_info.kwargs)
+                               self.kwargs)
 
     @property
     def name(self):
@@ -266,8 +276,8 @@ class CheckpointData(object):
     def load_checkpoint(self):
         ''' Instantiate the checkpoint '''
         checkpoint = self.checkpoint_class(self.cp_info.name,
-                                           *self.cp_info.args,
-                                           **self.cp_info.kwargs)
+                                           *self.args,
+                                           **self.kwargs)
         return checkpoint
 
     def __str__(self):

@@ -142,7 +142,7 @@ class ComplexEngineTests(ComplexEngineTestsBase):
         cp_data = self.engine.get_cp_data(self.name_list[0])
         snap = Filesystem(dataset.snapname(".step_" + cp_data.name))
         
-        self.engine.snapshot(cp_data)
+        self.engine.snapshot(cp_data=cp_data)
         self.assertTrue(os.path.exists(cp_data.data_cache_path),
                         "Path doesn't exist: " + cp_data.data_cache_path)
         self.assertTrue(snap.exists)
@@ -157,7 +157,7 @@ class ComplexEngineTests(ComplexEngineTestsBase):
         
         snap = Filesystem(dataset.snapname(snapname))
         
-        self.engine.snapshot(cp_data)
+        self.engine.snapshot(cp_data=cp_data)
         self.assertTrue(os.path.exists(cp_data.data_cache_path),
                         "Path doesn't exist: " + cp_data.data_cache_path)
         self.assertTrue(snap.exists)
@@ -261,7 +261,6 @@ class ComplexEngineTests(ComplexEngineTestsBase):
         self.engine.execute_checkpoints()
 
         # manually snapshots
-        dataset.destroy(dry_run=False, snapshot=self.engine.get_zfs_snapshot_name(self.engine._LAST.name))
         dataset.destroy(dry_run=False, snapshot=self.engine.get_zfs_snapshot_name(self.name_list[-1]))
         dataset.destroy(dry_run=False, snapshot=self.engine.get_zfs_snapshot_name(self.name_list[-2]))
         
@@ -278,8 +277,6 @@ class ComplexEngineTests(ComplexEngineTestsBase):
 
         # manually remove a snapshot in middle of checkpoint list
         snap_path = self.engine.get_zfs_snapshot_name("three")
-        dataset.destroy(dry_run=False, snapshot=snap_path)
-        snap_path = self.engine.get_zfs_snapshot_name(self.engine._LAST.name)
         dataset.destroy(dry_run=False, snapshot=snap_path)
         
         cp_list = self.engine.get_resumable_checkpoints()
@@ -349,20 +346,6 @@ class ComplexEngineTests(ComplexEngineTestsBase):
         cp_list = self.engine.get_resumable_checkpoints()
         self.verify_resumable_cp_result(expected_result, cp_list)
 
-    def test_get_resumable_cp_missing_last_DOC_snapshot(self):
-        '''Verify get_resumable_checkpoints() with last DOC snapshot missing'''
-        dataset = self.get_dataset()
-        self.engine.dataset = dataset
-        
-        self.engine.execute_checkpoints()
-        
-        # Remove DOC snapshot of last executed checkpoint
-        snapshot_name = self.engine.get_cache_filename(self.engine._LAST)
-        os.remove(snapshot_name)
-
-        cp_list = self.engine.get_resumable_checkpoints()
-        self.verify_resumable_cp_result(["one"], cp_list)
-        
     def test_get_resumable_cp_no_cp_registered(self):
         '''Verify get_resumable_checkpoints() with no checkpoint registered in subsequent run'''
 

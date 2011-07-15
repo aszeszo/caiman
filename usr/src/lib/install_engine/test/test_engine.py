@@ -283,7 +283,7 @@ class SimpleEngineTests(EngineTest):
         
         cp_data = MockCheckpointData()
         
-        self.engine.snapshot(cp_data)
+        self.engine.snapshot(cp_data=cp_data)
         
         self.assertEqual(cp_data.zfs_snap, None)
         self.assertEqual(self.engine.doc.snapshotted,
@@ -298,7 +298,7 @@ class SimpleEngineTests(EngineTest):
         
         cp_data = MockCheckpointData()
         
-        self.engine.snapshot(cp_data)
+        self.engine.snapshot(cp_data=cp_data)
         
         self.assertEqual(cp_data.zfs_snap, None)
         self.assertEqual(self.engine.doc.snapshotted,
@@ -313,7 +313,7 @@ class SimpleEngineTests(EngineTest):
         
         cp_data = MockCheckpointData()
         
-        self.engine.snapshot(cp_data)
+        self.engine.snapshot(cp_data=cp_data)
         
         self.assertEqual(cp_data.zfs_snap, ds.snapped[0])
         self.assertEqual(self.engine.doc.snapshotted,
@@ -376,13 +376,6 @@ class EngineCheckpointsTest(EngineCheckpointsBase):
         self.assertRaises(engine.ChkptRegistrationError,
                           self.engine.register_checkpoint,
                           self.name_list[1], *self.cp_data_args)
-    
-    def test_register_reserved_checkpoint(self):
-        '''Assert cannot register checkpoint with reserved name'''
-        self.assertRaises(engine.ChkptRegistrationError,
-                          self.engine.register_checkpoint,
-                          engine.InstallEngine._LAST.name,
-                          *self.cp_data_args)
     
     def test_get_full_checkpoint_list(self):
         '''InstallEngine.get_exec_list - Default args (full list)'''
@@ -1544,7 +1537,7 @@ class EngineCancelTests(EngineCheckpointsBase):
         # Change the parameter of the checkpoint that would wait for the
         # cancel, to not do the waiting
         cp_data = self.engine.get_cp_data(EngineCancelTests.CANCEL_CP_NAME)
-        cp_data.cp_info.kwargs["wait_for_cancel"] = False
+        cp_data.cp_info.reg_kwargs["wait_for_cancel"] = False
 
         # continue execution.  Make sure rest of checkpoints are executed.
         status, failed_cp = self.engine.execute_checkpoints(dry_run=True)
