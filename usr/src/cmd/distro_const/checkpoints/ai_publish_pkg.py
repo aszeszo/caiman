@@ -149,11 +149,12 @@ class AIPublishPackages(Checkpoint):
         manifest.append("set name=variant.arch value=%s\n" % arch)
         manifest.append("set name=%s value=%s variant.arch=%s\n" %
                         (self.SVC_NAME_ATTR, self.service_name, arch))
+        manifest.append("set name=pkg.fmri value=%s\n" % self.pkg_name)
         manifest = "".join(manifest)
 
         self.logger.info("Publishing %s", self.pkg_name)
         cmd = [cli.PKGSEND, "-s", self.pkg_repo, "publish", "-d",
-               self.pkg_img_path, self.pkg_name]
+               self.pkg_img_path]
         pkgsend = Popen(cmd, stdin=Popen.PIPE, stdout=Popen.PIPE,
                         stderr=Popen.PIPE)
         stdout, stderr = pkgsend.communicate(manifest)
