@@ -200,7 +200,7 @@ def validate(profile_name, manifest_path, manifest_filename, dtd_filename,
             logging.raiseExceptions = True
         else:
             raise IOError(
-                _("file does not exist: %s\n") % manifest)
+                _("file does not exist: %s\n") % manifest_filename)
 
     except ManifestError, err_msg:
         is_valid = False
@@ -337,6 +337,7 @@ class ConversionReport(object):
         self._conversion_errs = conversion_errs
         self._unsupported_items = unsupported_items
         self._validation_errs = validation_errs
+        self._warnings = 0
 
     def add_process_error(self):
         """Increments the # of processing errors by 1"""
@@ -366,6 +367,13 @@ class ConversionReport(object):
         else:
             self._validation_errs += 1
 
+    def add_warning(self):
+        """Increments the # of warnings by 1"""
+        if self._warnings is None:
+            self._warnings = 1
+        else:
+            self._warnings += 1
+
     @property
     def process_errors(self):
         """Returns the # of process errors"""
@@ -385,6 +393,11 @@ class ConversionReport(object):
     def validation_errors(self):
         """Returns the # of validation errors"""
         return self._validation_errs
+
+    @property
+    def warnings(self):
+        """Returns the # of warnings"""
+        return self._warnings
 
     @process_errors.setter
     def process_errors(self, error_count):
@@ -406,6 +419,11 @@ class ConversionReport(object):
         """Set the # of validation_errs to error_count"""
         self._validation_errs = error_count
 
+    @warnings.setter
+    def warnings(self, warning_count):
+        """Set the # of warnings to warning_count"""
+        self._warnings = warning_count
+
     def error_count(self):
         """Return the # of errors associate with this report"""
         errs = 0
@@ -417,25 +435,28 @@ class ConversionReport(object):
             errs += self._unsupported_items
         if self._validation_errs is not None:
             errs += self._validation_errs
+        if self._warnings is not None:
+            errs += self._warnings
         return errs
 
     def has_errors(self):
         """Returns boolean, True if there are any process errors, conversion
-           errors, or unsupported items
+           errors, unsupported items, or warnings
 
         """
-        if self._process_errs or self._conversion_errs \
-            or self._unsupported_items or self._validation_errs:
+        if self.error_count():
             return True
         else:
             return False
 
     def __str__(self):
         return ("process errors: %(process)s, "
+               "warnings: %(warnings)s, "
                "conversion errors: %(conversion)s, "
                "unsupported items: %(unsupported)s, "
-               "validation errors: %(validation)s " % \
+               "validation errors: %(validation)s" %
                 {"process": str(self.process_errors),
+                 "warnings": str(self.warnings),
                  "conversion": str(self.conversion_errors),
                  "unsupported": str(self.unsupported_items),
                  "validation": str(self.validation_errors)})

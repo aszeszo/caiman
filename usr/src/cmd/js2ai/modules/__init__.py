@@ -41,6 +41,7 @@ from common import DEFAULT_AI_DTD_FILENAME, DEFAULT_AI_FILENAME
 from common import DEFAULT_SC_PROFILE_DTD_FILENAME
 from common import ERR_VAL_MODID
 from common import RULES_FILENAME, SYSIDCFG_FILENAME, SC_PROFILE_FILENAME
+from common import ARCH_X86, ARCH_SPARC
 from common import fetch_xpath_node
 from common import write_xml_data
 from common import validate
@@ -708,7 +709,7 @@ def read_profile(src_dir, profile_name, verbose):
     return profile_data
 
 
-def fetch_AI_profile_dir(directory, profile_name):
+def fetch_ai_profile_dir(directory, profile_name):
     """Return the profile diectory path for the specified profile_name"""
     return os.path.join(directory, AI_PREFIX + profile_name)
 
@@ -743,34 +744,34 @@ def convert_rule(rule_data, rule_num, profile_name, conversion_report,
 
     if root is not None:
         # Write out the xml document
-        prof_path = fetch_AI_profile_dir(directory, profile_name)
+        prof_path = fetch_ai_profile_dir(directory, profile_name)
         filename = ("criteria-%s.xml") % rule_num
         write_xml_data(root, prof_path, filename)
 
 
 def output_profile(tree, prof_path, profile_name, arch, skip_validation,
                    conversion_report, verbose):
-        """Output the profile for the specified xml tree.  If skip_validation
-           is set to False,  validate the xml tree and recorded any errors in
-           the conversion report
+    """Output the profile for the specified xml tree.  If skip_validation
+       is set to False,  validate the xml tree and recorded any errors in
+       the conversion report
 
-        """
-        # Write out the xml document
-        prof_file = "%(name)s.%(arch)s.xml" % \
-                    {"name": profile_name,
-                     "arch": arch}
-        if verbose:
-            print _("Generating %(arch)s manifest for: %(profile)s" %
-                    {"arch": arch,
-                     "profile": profile_name})
-        write_xml_data(tree, prof_path, prof_file)
-        if skip_validation:
-            conversion_report.validation_errors = None
-        else:
-            # Perform a validation
-            validate(profile_name, prof_path, prof_file,
-                     DEFAULT_AI_DTD_FILENAME,
-                     conversion_report, verbose)
+    """
+    # Write out the xml document
+    prof_file = "%(name)s.%(arch)s.xml" % \
+                {"name": profile_name,
+                 "arch": arch}
+    if verbose:
+        print _("Generating %(arch)s manifest for: %(profile)s" %
+                {"arch": arch,
+                 "profile": profile_name})
+    write_xml_data(tree, prof_path, prof_file)
+    if skip_validation:
+        conversion_report.validation_errors = None
+    else:
+        # Perform a validation
+        validate(profile_name, prof_path, prof_file,
+                 DEFAULT_AI_DTD_FILENAME,
+                 conversion_report, verbose)
 
 
 def convert_profile(profile_data, dest_dir, default_xml,
@@ -808,20 +809,20 @@ def convert_profile(profile_data, dest_dir, default_xml,
 
     if xml_profile_data.tree is not None:
         # Write out the xml document
-        prof_path = fetch_AI_profile_dir(dest_dir, profile_name)
+        prof_path = fetch_ai_profile_dir(dest_dir, profile_name)
         if xml_profile_data.architecture is None:
             # If the architecture is NONE then this implies the
             # profile is not architecture specific.  As such we'll have
             # to generate a profile for both x86 and for sparc
-            output_profile(xml_profile_data.fetch_tree(common.ARCH_X86),
+            output_profile(xml_profile_data.fetch_tree(ARCH_X86),
                            prof_path, profile_name,
-                           common.ARCH_X86,
+                           ARCH_X86,
                            skip_validation,
                            profile_data.conversion_report,
                            verbose)
-            output_profile(xml_profile_data.fetch_tree(common.ARCH_SPARC),
+            output_profile(xml_profile_data.fetch_tree(ARCH_SPARC),
                            prof_path, profile_name,
-                           common.ARCH_SPARC,
+                           ARCH_SPARC,
                            skip_validation,
                            profile_data.conversion_report,
                            verbose)
@@ -1066,6 +1067,7 @@ def perform_validation(filename, verbose):
     processed_data.add_defined_profile(profile_data)
     validate(profile_name, manifest_path, manifest_filename, dtd_filename,
              profile_data.conversion_report, verbose)
+    return processed_data
 
 
 def output_report_data(name, report):
@@ -1075,6 +1077,10 @@ def output_report_data(name, report):
     # from being processed.  In this case we don't want to output
     # a zero.  Instead we use "-" to represent to the user there
     # is no value for this field
+    if report.warnings is None:
+        warnings = "-"
+    else:
+        warnings = str(report.warnings)
     if report.process_errors is None:
         process_err_cnt = "-"
     else:
@@ -1093,9 +1099,10 @@ def output_report_data(name, report):
         val_err_cnt = "-"
     else:
         val_err_cnt = str(report.validation_errors)
-    print _("%(name)-20s  %(process)12s  %(unsupported)12s  %(conv)12s"
-            "  %(validation)12s") % \
+    print _("%(name)-20s  %(warnings)8s  %(process)7s  %(unsupported)11s"
+            "  %(conv)10s  %(validation)10s") % \
           {"name": os.path.basename(name),
+          "warnings": warnings,
           "process": process_err_cnt,
           "unsupported": unsupported_cnt,
           "conv": conv_err_cnt,
@@ -1136,12 +1143,12 @@ def output_report(process_data, dest_dir, verbose):
                         break
 
     if verbose or error_found:
-        print _("                      Process       Unsupported   "
-                "Conversion    Validation\n"
-                "Name                  Errors        Items         "
-                "Errors        Errors\n"
-                "-------------------   ------------  ------------  "
-                "------------  ------------")
+        print _("                                Process  Unsupported  "
+                "Conversion  Validation\n"
+                "Name                  Warnings  Errors   Items        "
+                "Errors      Errors\n"
+                "-------------------   --------  -------  -----------  "
+                "----------  ----------")
 
         # Always output the rule report 1st
         if rule_report is not None:
@@ -1314,6 +1321,7 @@ def process(options):
         processed_data.add_defined_profile(profile_data)
     elif options.rule:
         xml_default_data = XMLDefaultData(options.default_xml)
+        print "Source :", options.source
         processed_data = process_rule(options.source,
                                       options.destination,
                                       xml_default_data,
@@ -1321,7 +1329,7 @@ def process(options):
                                       options.skip,
                                       options.verbose)
     elif options.validate:
-        perform_validation(options.validate, options.verbose)
+        processed_data = perform_validation(options.validate, options.verbose)
     if options.verbose:
         print "\n"
     return processed_data

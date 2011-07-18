@@ -195,10 +195,9 @@ class XMLSysidcfgData(object):
                                 "'%(hostname)s'") % \
                                 {"file": SYSIDCFG_FILENAME,
                                  "lineno": line_num,
-                                 "hostname": self._hostname})
+                                 "hostname": hostname})
             self._report.add_conversion_error()
             return
-
         #
         # <service name="system/identity" version="1" type="service">
         #   <instance name="default" enabled="node">
@@ -213,8 +212,7 @@ class XMLSysidcfgData(object):
         instance = self.__create_instance_node(self._hostname, "node")
         config = self.__create_propgrp_node(instance, "config",
                                             TYPE_APPLICATION)
-        self.__create_propval_node(config, "nodename", TYPE_ASTRING,
-                                   hostname)
+        self.__create_propval_node(config, "nodename", TYPE_ASTRING, hostname)
 
     def __convert_name_service_dns(self, line_num, keyword, payload):
         """Convert the DNS name service specified in the sysidcfg statement
@@ -281,6 +279,20 @@ class XMLSysidcfgData(object):
         #    <instance enabled="true" name="default"/>
         # </service>
 
+	if payload is None:
+	    self.__missing_required_op(line_num, "domain_name")
+	    return
+
+        domain_name = payload.pop("domain_name", None)
+        if domain_name is None:
+            self.__missing_required_op(line_num, "domain_name")
+            return
+
+        name_server = payload.pop("name_server", None)
+        if name_server is None:
+            self.__missing_required_op(line_num, "name_server")
+	    return
+
         self.__adjust_nis(host="files dns mdns")
         self._name_service = \
             self.__create_service_node(self._service_bundle,
@@ -288,21 +300,15 @@ class XMLSysidcfgData(object):
         prop_grp = self.__create_propgrp_node(self._name_service,
                                               "install_props",
                                               TYPE_APPLICATION)
-        if payload is None:
-            return
 
-        name_server = payload.pop("name_server", None)
-        if name_server is not None:
-            prop = self.__create_prop_node(prop_grp, "nameserver",
-                                           TYPE_NET_ADDRESS)
-            plist = etree.SubElement(prop, common.ELEMENT_NET_ADDRESS_LIST)
-            self.__create_address_list(line_num, plist, name_server,
-                                       _("name server"))
+        prop = self.__create_prop_node(prop_grp, "nameserver",
+                                       TYPE_NET_ADDRESS)
+        plist = etree.SubElement(prop, common.ELEMENT_NET_ADDRESS_LIST)
+        self.__create_address_list(line_num, plist, name_server,
+                                   _("name server"))
 
-        domain_name = payload.pop("domain_name", None)
-        if domain_name is not None:
-            self.__create_propval_node(prop_grp, "domain",
-                                       TYPE_ASTRING, domain_name)
+        self.__create_propval_node(prop_grp, "domain",
+                                   TYPE_ASTRING, domain_name)
 
         search = payload.pop("search", None)
         if search is not None:
@@ -434,6 +440,20 @@ class XMLSysidcfgData(object):
         #  </service>
         # </service_bundle>
 
+	if payload is None:
+	    self.__missing_required_op(line_num, "domain_name")
+	    return
+
+        domain_name = payload.pop("domain_name", None)
+        if domain_name is None:
+            self.__missing_required_op(line_num, "domain_name")
+            return
+
+        name_server = payload.pop("name_server", None)
+        if name_server is None:
+            self.__missing_required_op(line_num, "name_server")
+            return
+
         self.__adjust_nis(default="files nis",
                           printer="usr files nis",
                           netgroup="nis")
@@ -443,19 +463,15 @@ class XMLSysidcfgData(object):
         prop_grp = self.__create_propgrp_node(self._name_service,
                                               "config",
                                               TYPE_APPLICATION)
-        domain_name = payload.pop("domain_name", None)
-        if domain_name is not None:
-            self.__create_propval_node(prop_grp, "domainname",
-                                       TYPE_HOSTNAME, domain_name)
+        self.__create_propval_node(prop_grp, "domainname",
+                                   TYPE_HOSTNAME, domain_name)
 
-        name_server = payload.pop("name_server", None)
-        if name_server is not None:
-            ypservers = self.__create_prop_node(prop_grp,
-                                                "ypservers", TYPE_NET_ADDRESS)
-            net_addr_list = etree.SubElement(ypservers,
-                                             common.ELEMENT_NET_ADDRESS_LIST)
-            self.__create_address_list(line_num, net_addr_list, name_server,
-                                       _("name server"))
+        ypservers = self.__create_prop_node(prop_grp,
+                                            "ypservers", TYPE_NET_ADDRESS)
+        net_addr_list = etree.SubElement(ypservers,
+                                         common.ELEMENT_NET_ADDRESS_LIST)
+        self.__create_address_list(line_num, net_addr_list, name_server,
+                                   _("name server"))
         self.__create_instance_node(self._name_service)
 
         nis_client = self.__create_service_node(self._service_bundle,
@@ -600,8 +616,8 @@ class XMLSysidcfgData(object):
         # </service>
         #
         # This only configures the loopback interface,
-        # which is equivalent to what the text
-        # installer does today one selects 'None' on Network screen.
+        # which is equivalent to what the text installer does today when
+        # one selects 'None' on Network screen.
         #
 
         self.__create_net_interface(auto_netcfg=False)
@@ -833,13 +849,14 @@ class XMLSysidcfgData(object):
         #    </instance>
         # </service>
         #
-        # <service name='network/physical' version='1' type='service'>
+        # <service name="network/physical" version="1" type="service">
         #   <instance name='default' enabled='true'>
         #       <property_group name='netcfg' type='application'>
         #           <propval name='active_ncp' type='astring'
         #               value='DefaultFixed'/>
         #        </property_group>
         #   </instance>
+
         # </service>
         #
         if self._default_network is None:
@@ -908,11 +925,11 @@ class XMLSysidcfgData(object):
         self.__create_propval_node(ipv6_interface, "name", TYPE_ASTRING,
                                     interface + "/v6")
         self.__create_propval_node(ipv6_interface, "address_type",
-                                   TYPE_ASTRING, "addrconf")
+                                    TYPE_ASTRING, "addrconf")
         self.__create_propval_node(ipv6_interface, "stateless",
-                                   TYPE_ASTRING, "yes")
+                                    TYPE_ASTRING, "yes")
         self.__create_propval_node(ipv6_interface, "stateful",
-                                   TYPE_ASTRING, "yes")
+                                    TYPE_ASTRING, "yes")
 
     def __config_net_interface(self):
         """Converts the network_interface keyword/values from the sysidcfg into
@@ -928,7 +945,7 @@ class XMLSysidcfgData(object):
                 fetch_xpath_node(self._service_bundle,
                                  "./service[@name='network/physical']")
             if svc_network_physical is None:
-                # Create NWAM network
+                # Create Auto Configuration Network
                 self.__create_net_interface(auto_netcfg=True)
             return
 
@@ -953,13 +970,15 @@ class XMLSysidcfgData(object):
             self.__config_net_interface_primary(line_num, payload)
             return
         if payload is None or len(payload) == 0:
-            self.logger.error(_("%(file)s: line %(lineno)d: unsupported  "
-                                "configuration.  Configuring"
-                                " system for NWAM") %
+            self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
+                                "network configuration no parameters for "
+                                "interface %(interface)s specified. "
+                                "Configuring network for auto configuration") %
                                 {"file": SYSIDCFG_FILENAME,
-                                 "lineno": line_num})
+                                 "lineno": line_num,
+                                 "interface": interface})
             self._report.add_unsupported_item()
-            # Create NWAM network
+            # Create Auto configuration network
             self.__create_net_interface(auto_netcfg=True)
             return
         else:
@@ -993,7 +1012,8 @@ class XMLSysidcfgData(object):
         # Make sure we have at least 1 network interface configured
         if self._default_network is None:
             # Nothing is configured, which means the users choices errored out
-            # Since we always want a network configured, we configure for NWAM
+            # Since we always want a network configured, we configure for
+            # auto config
             self.__create_net_interface(auto_netcfg=True)
         else:
             # Configure for default network
@@ -1265,6 +1285,8 @@ class XMLSysidcfgData(object):
             type - localize name to identify the addresses as when
                    generating error messages.
         """
+        if addresses is None:
+            return
         server_list = COMMA_PATTERN.findall(addresses)
         for entry in server_list:
             match_pattern = HOST_IP_PATTERN.match(entry)
@@ -1419,6 +1441,15 @@ class XMLSysidcfgData(object):
                             {"file": SYSIDCFG_FILENAME,
                              "lineno": line_num, \
                              "key": keyword})
+        self._report.add_process_error()
+
+    def __missing_required_op(self, line_num, op):
+        """Generate a missing required op error"""
+        self.logger.error(_("%(file)s: line %(lineno)d: invalid entry, "
+                            "missing requirement value for: %(op)s") % \
+                            {"file": SYSIDCFG_FILENAME,
+                             "lineno": line_num, \
+                             "op": op})
         self._report.add_process_error()
 
     def __fetch_service(self, name):
@@ -1616,3 +1647,20 @@ class XMLSysidcfgData(object):
 
         # All the elements have been processed at this point in time.
         self.__config_net_interface()
+
+        # Perform some simple check to unsure we warn user about potentially
+        # unexpected conditions
+        if self._hostname is None:
+            self.logger.warning(_("%(file)s: line %(lineno)d: WARNING: no "
+                                "hostname specified, Auto Installer will "
+                                "configure with default hostname.") % \
+                                {"file": SYSIDCFG_FILENAME, \
+                                 "lineno": line_num + 1})
+            self._report.add_warning()
+        if self._root_passwd is None:
+            self.logger.warning(_("%(file)s: line %(lineno)d: WARNING: no "
+                                "root password specified,  Auto Installer will"
+                                " configure with default root password.") % \
+                                {"file": SYSIDCFG_FILENAME, \
+                                 "lineno": line_num + 1})
+            self._report.add_warning()

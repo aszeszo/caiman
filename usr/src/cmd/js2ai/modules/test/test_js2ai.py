@@ -32,8 +32,41 @@ import traceback
 import unittest
 
 import solaris_install.js2ai as js2ai
+
+from lxml import etree
+from StringIO import StringIO
 from solaris_install.js2ai.common import pretty_print
+from solaris_install.js2ai.common import write_xml_data
 from solaris_install.js2ai.default_xml import XMLDefaultData
+
+
+TEST_SIMPLE_PROFILE_CONFIG = \
+"""<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+  Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+
+-->
+<!DOCTYPE auto_install SYSTEM "file:///usr/share/auto_install/ai.dtd">
+<auto_install>
+  <ai_instance>
+    <target>
+        <logical nodump="true" noswap="false">
+        <zpool is_root="true" name="rpool">
+          <vdev name="rpool_vdev" redundancy="none"/>
+        </zpool>
+      </logical>
+    </target>
+    <software type="IPS">
+      <source>
+        <publisher name="solaris">
+          <origin name="http://pkg.oracle.com/solaris/release"/>
+        </publisher>
+      </source>
+    </software>
+  </ai_instance>
+</auto_install>
+"""
 
 
 def fetch_log(logfile):
@@ -1216,6 +1249,43 @@ class TestCommandArgs8(unittest.TestCase):
             self.assertEquals(err.code, js2ai.EXIT_ERROR,
                               exit_code_report(err.code,
                                                js2ai.EXIT_ERROR,
+                                               js2ai.logfile_name))
+        except Exception, err:
+            self.fail(exception_report(err, js2ai.logfile_name))
+
+
+class TestCommandArgsValidate(unittest.TestCase):
+    """Test -V command line argument"""
+    working_dir = None
+    filename = "profile.xml"
+
+    def setUp(self):
+        """Test setup"""
+        # Create a directory to work in
+        self.working_dir = tempfile.mkdtemp()
+        tree = etree.parse(StringIO(TEST_SIMPLE_PROFILE_CONFIG))
+        write_xml_data(tree, self.working_dir, self.filename)
+
+    def tearDown(self):
+        """Clean up after test run"""
+        shutil.rmtree(self.working_dir)
+
+    def test_validate(self):
+        """Tests calling js2ai with -V option against a profile that contains
+           no errors
+
+        """
+        test_file = os.path.join(self.working_dir, self.filename)
+        sys.argv = ["js2ai", "-V", test_file]
+        try:
+            js2ai.main()
+        except SystemExit, err:
+            self.assertEquals(type(err), type(SystemExit()))
+            # When there are errors in the rules/profiles the exit code
+            # will correspond to the # of failures
+            self.assertEquals(err.code, js2ai.EXIT_SUCCESS,
+                              exit_code_report(err.code,
+                                               js2ai.EXIT_SUCCESS,
                                                js2ai.logfile_name))
         except Exception, err:
             self.fail(exception_report(err, js2ai.logfile_name))
