@@ -183,7 +183,8 @@ class ConfirmScreen(BaseScreen):
         translated = _("The whole installation will take " \
                 "up %.1fGB hard disk space.")
         text_str = translated % \
-            profile.install_size.get(units=Size.gb_units)
+            profile.target_controller.minimum_target_size.get(
+                units=Size.gb_units)
         add_detail_line(self.diskvbox, text_str)
         self.logger.info('\t' + text_str)
 

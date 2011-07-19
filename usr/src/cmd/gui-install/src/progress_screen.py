@@ -57,6 +57,9 @@ from solaris_install.sysconfig.profile.network_info import NetworkInfo
 from solaris_install.sysconfig.profile.system_info import SystemInfo
 from solaris_install.sysconfig.profile.user_info import UserInfo, \
     UserInfoContainer
+from solaris_install.target import Target
+from solaris_install.target.controller import DEFAULT_ZPOOL_NAME
+from solaris_install.target.logical import BE
 from solaris_install.transfer.info import Software, IPSSpec
 
 # location of image files
@@ -350,25 +353,41 @@ class ProgressScreen(BaseScreen):
                     (failed_cp, err))
             success = False
         else:
-            # begin LOCALE hack
-            # setup the LOCALE data - when system-configuration
-            # includes locale then this portion of code will not
-            # be necessary as the system profile already contains
-            # the locale data.
             eng = InstallEngine.get_instance()
-            profile = eng.data_object_cache.persistent.get_first_child(
-                name="GUI Install",
+            doc = eng.data_object_cache
+            profile = doc.persistent.get_first_child(name="GUI Install",
                 class_type=InstallProfile)
             if profile is None:
                 raise RuntimeError("INTERNAL ERROR: Unable to retrieve "
                     "InstallProfile from DataObjectCache")
 
+            # begin LOCALE hack
+            # setup the LOCALE data - when system-configuration
+            # includes locale then this portion of code will not
+            # be necessary as the system profile already contains
+            # the locale data.
             locale_cmd = '/bin/echo "LANG=%s" >> %s%s' % \
                          (profile.default_locale, '/a', INIT_FILE)
             cmd = locale_cmd.split()
             Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger=self.logger)
             # end LOCALE hack
+
+            # If swap was created, add appropriate entry to <target>/etc/vfstab
+            desired_root = doc.persistent.get_descendants(name=Target.DESIRED,
+                class_type=Target, max_depth=2, not_found_is_err=True)[0]
+            new_bes = desired_root.get_descendants(class_type=BE)
+            if not new_bes:
+                self.logger.debug("No new BE created!")
+            else:
+                new_be = new_bes[0]
+                install_mountpoint = new_be.mountpoint
+                self.logger.debug("New BE: %s", new_be)
+                self.logger.debug("install mountpoint: %s", install_mountpoint)
+                self.logger.debug("Setting up /etc/vfstab for swap")
+                profile.target_controller.setup_vfstab_for_swap(
+                    DEFAULT_ZPOOL_NAME, install_mountpoint)
+
             self.logger.info("INSTALL FINISHED SUCCESSFULLY!")
             self.set_progress_fraction(1.0)
             self.install_complete = True

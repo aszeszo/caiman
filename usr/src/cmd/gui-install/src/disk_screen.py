@@ -51,7 +51,7 @@ from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target import Target
 from solaris_install.target.controller import TargetController, \
-    BadDiskError, SubSizeDiskError
+    BadDiskError, SubSizeDiskError, DEFAULT_ZPOOL_NAME
 from solaris_install.target.libadm.const import V_ROOT
 from solaris_install.target.logical import Zpool, Zvol, Filesystem
 from solaris_install.target.physical import Disk, Partition, \
@@ -59,7 +59,7 @@ from solaris_install.target.physical import Disk, Partition, \
 from solaris_install.target.shadow.physical import ShadowPhysical
 from solaris_install.target.size import Size
 
-ROOT_POOL = "rpool"
+ROOT_POOL = DEFAULT_ZPOOL_NAME
 EXPORT_FS_NAME = 'export'
 EXPORT_FS_MOUNTPOINT = '/export'
 EXPORT_HOME_FS_NAME = 'export/home'
@@ -409,12 +409,13 @@ class DiskScreen(BaseScreen):
             if not ok_to_proceed:
                 self._raise_error("Partition smaller than recommended")
 
-        # Save the install size in the DOC
+        # Save the TargetController in the DOC (used to retrieve the
+        # minimum_target_size and call setup_vfstab_for_swap())
         profile = doc.persistent.get_first_child(
             name="GUI Install",
             class_type=InstallProfile)
         if profile is not None:
-            profile.set_disk_data(self._target_controller.minimum_target_size)
+            profile.set_disk_data(self._target_controller)
 
         LOGGER.info("Validation succeeded. Desired Targets in DOC:\n%s",
             desired_root.get_xml_tree_str())

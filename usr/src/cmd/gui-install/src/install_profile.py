@@ -58,7 +58,7 @@ class InstallProfile(DataObject):
         self.hostname = None
         self.log_final = None
         self.log_location = None
-        self.install_size = None
+        self.target_controller = None
 
     def to_xml(self):
         ''' Abstract method which must be defined in DataObject
@@ -97,8 +97,8 @@ class InstallProfile(DataObject):
         self.userpassword = userpassword
         self.hostname = hostname
 
-    def set_disk_data(self, install_size):
-        self.install_size = install_size
+    def set_disk_data(self, target_controller):
+        self.target_controller = target_controller
 
     def set_log(self, log_location, log_final):
         self.log_location = log_location
@@ -120,7 +120,11 @@ class InstallProfile(DataObject):
         prof += "\tLogin Name: [%s]\n" % self.loginname
         prof += "\tUser Password: [%s]\n" % self.userpassword
         prof += "\tHostname: [%s]\n" % self.hostname
-        prof += "\tInstall size: [%s]\n" % self.install_size
+        if self.target_controller is None:
+            prof += "\tInstall size: [%s]\n" % _("Unknown")
+        else:
+            prof += "\tInstall size: [%s]\n" % \
+                self.target_controller.minimum_target_size
         prof += "\tLog Location: [%s]\n" % self.log_location
         prof += "\tLog Final: [%s]\n" % self.log_final
 
