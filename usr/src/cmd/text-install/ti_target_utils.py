@@ -618,7 +618,7 @@ class UIPartition(object):
         elif self.ui_type == UI_TYPE_EMPTY_SPACE:
             obj = self.empty_space_obj
         else:
-            raise RuntimeErorr("Partition not in used")
+            raise RuntimeError("Partition not in used")
 
         size_in_sector = (obj.size).get(Size.sector_units)
         return (obj.start_sector + size_in_sector)
@@ -859,7 +859,7 @@ class UIPartition(object):
                 return True
             return False
         else:
-            raise RuntimeErorr("Partition not in used")
+            raise RuntimeError("Partition not in used")
 
     def cycle_type(self, new_type=None, extra_type=None):
         '''Cycle this partition's type. Potential types are based on
