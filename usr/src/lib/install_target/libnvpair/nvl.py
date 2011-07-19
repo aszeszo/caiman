@@ -522,8 +522,6 @@ class NVList(C.POINTER(cstruct.nvlist)):
 
     def __new__(cls, *args, **kwargs):
         """allocate space for new NVList"""
-        # Only defining this method as pylint won't look it up in
-        # C.POINTER(cstruct.nvlist)
         return NVList._type_.__new__(cls, *args, **kwargs)
 
     def __init__(self, flags=const.NV_UNIQUE_NAME):
@@ -587,8 +585,8 @@ class NVList(C.POINTER(cstruct.nvlist)):
     # SECTION: add/lookup scalar
     ##
     def add_nvpair(self, nvp):
-        """add_nvpair(libnvpair.nvpair.NVPair) -> add NVPair to this NVList"""
-        if not isinstance(nvp, nvpair.NVPair):
+        """add_nvpair(libnvpair.NVPair) -> add NVPair to this NVList"""
+        if not isinstance(nvp, NVPair):
             raise TypeError("nvp: '%s' object is not NVPair" %
                             (nvp.__class__.__name__))
         err = cfunc.nvlist_add_nvpair(self, nvp)
@@ -601,7 +599,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
 
     def lookup_nvpair(self, name):
         """lookup_nvpair(str) -> NVPair"""
-        val = nvpair.NVPair()
+        val = NVPair()
         err = cfunc.nvlist_lookup_nvpair(self, name, C.byref(val))
         if err != 0:
             if err == errno.ENOENT:
@@ -1362,12 +1360,7 @@ class NVList(C.POINTER(cstruct.nvlist)):
         elif isinstance(other, collections.Mapping):
             for key in other:
                 self[key] = other[key]
-        # Silly that we should have to disable an error about "other", we only
-        # get here if hasattr() is True. And pylint is ignoring this
-        # disable-msg.
-        # pylint: disable-msg=E1103
         elif hasattr(other, "keys") and callable(other.keys):
-            # pylint: disable-msg=E1103
             for key in other.keys():
                 self[key] = other[key]
         else:

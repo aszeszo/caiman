@@ -36,7 +36,7 @@ import tempfile
 
 from lxml import etree
 
-from solaris_install import Popen
+from solaris_install import Popen, run
 from solaris_install.data_object import DataObject, ParsingError
 from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target.libadm import const, cstruct, extvtoc
@@ -1084,8 +1084,7 @@ class Disk(DataObject):
             for line in fh.readlines():
                 if line.startswith(disk_dev):
                     cmd = [UMOUNT, "-f", disk_dev]
-                    Popen.check_call(cmd, stdout=Popen.STORE,
-                                     stderr=Popen.STORE, logger=ILN)
+                    run(cmd)
 
     def _release_swap(self):
         """ method to release all swap devices associated
@@ -1094,29 +1093,34 @@ class Disk(DataObject):
         disk_dev = "/dev/dsk/%s" % self.ctd
         # get a list of all swap devices on the system
         cmd = [SWAP, "-l"]
-        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN, check_result=Popen.ANY,
-                             stderr_loglevel=logging.DEBUG)
+        p = run(cmd, check_result=Popen.ANY)
 
-        # process the output of the 'swap' command. remove
-        # the header and trailing empty list item
+        # remove the header and trailing newline
         swap_list = p.stdout.split("\n")[1:-1]
         for swap in swap_list:
             swap_dev = swap.split()[0]
             if swap_dev.startswith(disk_dev):
                 cmd = [SWAP, "-d", disk_dev + "swap"]
-                Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+                run(cmd)
 
     def _create_ufs_swap(self, swap_slice_list, dry_run):
         disk_dev = "/dev/dsk/%s" % self.ctd
         self.logger.debug("Creating ufs swap slice(s)")
         for swap_slice in swap_slice_list:
             swap_dev = disk_dev + "s" + str(swap_slice.name)
+
+            # look to see if this slice is already being used as swap
+            cmd = [SWAP, "-l"]
+            p = run(cmd, check_result=Popen.ANY)
+            for line in p.stdout.splitlines():
+                if line.startswith(swap_dev):
+                    cmd = [SWAP, "-d", swap_dev]
+                    if not dry_run:
+                        run(cmd)
+
             cmd = [SWAP, "-a", swap_dev]
             if not dry_run:
-                Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+                run(cmd)
 
     def _update_partition_table(self, part_list, dry_run):
         # Need to destroy all zpools on the disk, unmount filesystems, and
@@ -1154,8 +1158,7 @@ class Disk(DataObject):
         rdisk_dev = "/dev/rdsk/%sp0" % self.ctd
         cmd = [FDISK, "-n", "-F", tmp_part_file, rdisk_dev]
         if not dry_run:
-            Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN)
+            run(cmd)
         os.unlink(tmp_part_file)
 
     def _update_vtoc_struct(self, vtoc_struct, slice_list, nsecs):
