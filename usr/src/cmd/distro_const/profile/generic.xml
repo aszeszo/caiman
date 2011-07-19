@@ -178,22 +178,6 @@
   <!--
       Dummy out start methods for services we need to run, but as no-ops
   -->
-    <service name='system/sysidtool' version='1' type='service'>
-    <instance name='system' enabled='false'>
-       <exec_method
-                type='method'
-                name='start'
-                timeout_seconds='0'
-                exec=':true'/>
-    </instance>
-    <instance name='net' enabled='true'>
-       <exec_method
-                type='method'
-                name='start'
-                timeout_seconds='0'
-                exec=':true'/>
-    </instance>
-  </service>
   <service name='system/boot-archive' version='1' type='service'>
     <instance name='default' enabled='true'>
        <exec_method

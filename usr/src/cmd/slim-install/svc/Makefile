@@ -22,7 +22,8 @@
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-SYSMANIFESTSRC= live-io-tracing.xml
+SYSMANIFESTSRC= live-io-tracing.xml media-config.xml \
+		media-network-physical.xml media-network-install.xml
 
 SYSFSMANIFESTSRC=	root-assembly.xml live-root-fs-minimal.xml
 

@@ -27,64 +27,39 @@
  operating system upgrade.  Make customizations in a different
  file.
 -->
-<service_bundle type='manifest' name='system:system-config'>
+<service_bundle type='manifest' name='system:milestone-config'>
 
 <service
-	name='system/config'
+	name='milestone/config'
 	type='service'
 	version='1'>
 
-	<create_default_instance enabled='false'/>
+	<create_default_instance enabled='true'/>
 
 	<single_instance/>
 
-	<!-- system/config should depend upon system/filesystem/root
+	<!-- milestone/config has to depend upon system/filesystem/minimal,
 	     since it works with following assumptions which in general
-	     are not guaranteed until system/filesystem/root comes online:
+	     are not guaranteed until system/filesystem/minimal comes online:
 	      - writable root filesystem
 	      - mounted /usr filesystem
-
-	     However, at this point system/config can't depend upon
-	     system/filesystem/root, since that would lead to following cyclic
-	     dependency:
-	     system/config -> system/filesystem/root -> system/metainit ->
-	     system/identity:node -> system/config
-
-	     The problem is tracked by CR7011249.
-
-	     That is not a big deal in standard running environment with
-	     root filesystem on ZFS (which is mounted as writable by
-	     kernel) and /usr not created on a separate ZFS dataset (thus it is
-	     available once root filesystem is mounted). -->
-<!--
-	<dependency name='fs'
+	      - mounted /var filesystem (can be created as a separate
+                filesystem in ROZR type of zone)
+        -->
+	<dependency name='fs-minimal'
 	    grouping='require_all'
 	    restart_on='none'
 	    type='service'>
 		<service_fmri
-		    value='svc:/system/filesystem/root:default' />
+		    value='svc:/system/filesystem/minimal:default' />
 	</dependency>
--->
 
 	<!-- system/device/local takes care of populating device tree
 	     during first post-install boot of global zone. This is one
 	     of prerequisites which dladm(1m) depends on (in global zone only)
 	     in order to work correctly. dladm(1m) is consumed by System
 	     Configuration Interactive tool for obtaining information about
-	     network interfaces.
-
-	     However, at this point system/config can't depend upon
-	     system/device/local, since that would lead to following cyclic
-	     dependency:
-	     system/config -> system/device/local -> system/filesystem/usr ->
-	     system/boot-archive -> system/filesystem/root -> system/metainit ->
-	     system/identity:node -> system/config
-
-	     Again, this is the problem tracked by CR7011249.
-
-	     As a stop-gap solution, system/config start method calls
-	     devfsadm(1m) in case SCI tool is to be invoked in global zone. -->
-<!--
+	     network interfaces. -->
 	<dependency name='device-local'
 	    grouping='require_all'
 	    restart_on='none'
@@ -92,7 +67,6 @@
 		<service_fmri
 		    value='svc:/system/device/local:default' />
 	</dependency>
--->
 
 	<!-- Dependency on network/datalink-management guarantees that network
              interfaces eligible for configuration can be discovered by System
@@ -105,68 +79,104 @@
 		    value='svc:/network/datalink-management' />
 	</dependency>
 
+	<!-- Make sure that unconfiguration step is finished before
+	     configuration one is initiated. -->
+	<dependency name='milestoneconfig_milestone_unconfig'
+	    grouping='require_all'
+	    restart_on='none'
+	    type='service'>
+		<service_fmri
+		    value='svc:/milestone/unconfig:default' />
+	</dependency>
+
+	<!-- manifest-import is expected to
+	     * apply System Configuration profiles residing
+	       in /etc/svc/profile/site/ directory.
+	     * clean up configuration of this service (as related smf profile
+	       was removed. -->
+	<dependent name='milestoneconfig_manifest_import'
+	    grouping='require_all'
+	    restart_on='none'>
+		<service_fmri
+		    value='svc:/system/manifest-import:default' />
+	</dependent>
+
+        <dependent
+                name='milestoneconfig_self-assembly-complete'
+                grouping='optional_all'
+                restart_on='none'>
+                <service_fmri value='svc:/milestone/self-assembly-complete' />
+        </dependent>
+
 	<dependent
-	    name='systemconfig_singleuser'
-            grouping='optional_all'
+	    name='milestoneconfig_singleuser'
+            grouping='require_all'
             restart_on='none'>
             <service_fmri value='svc:/milestone/single-user' />
 	</dependent>
 
-	<dependent
-	    name='systemconfig_manifest_import'
-            grouping='optional_all'
-            restart_on='none'>
-            <service_fmri value='svc:/system/manifest-import:default' />
-	</dependent>
-
 	<!-- Following services can be configured by System Configuration
-	     Interactive (SCI) tool invoked from this (system/config) smf
+	     Interactive (SCI) tool invoked from this (milestone/config) smf
 	     service. Thus make sure those services are not started before
 	     SCI tool finishes its job. -->
 	<dependent
-	    name='systemconfig_network_install'
+	    name='milestoneconfig_system_config-user'
             grouping='optional_all'
             restart_on='none'>
-            <service_fmri value='svc:/network/install' />
+            <service_fmri value='svc:/system/config-user' />
 	</dependent>
 
 	<dependent
-	    name='systemconfig_network_physical_default'
-            grouping='optional_all'
-            restart_on='none'>
-            <service_fmri value='svc:/network/physical:default' />
-	</dependent>
-
-	<dependent
-	    name='systemconfig_name_service_cache'
+	    name='milestoneconfig_name_service_switch'
 	    grouping='optional_all'
 	    restart_on='none'>
-	    <service_fmri value='svc:/system/name-service-cache:default' />
+	    <service_fmri value='svc:/system/name-service/switch:default' />
 	</dependent>
 
 	<dependent
-	    name='systemconfig_network_dns_client'
+	    name='milestoneconfig_network_dns_client'
             grouping='optional_all'
             restart_on='none'>
             <service_fmri value='svc:/network/dns/client' />
 	</dependent>
 
 	<dependent
-	    name='systemconfig_system_identity_node'
+	    name='milestoneconfig_network_ldap_client'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/network/ldap/client' />
+	</dependent>
+
+	<dependent
+	    name='milestoneconfig_network_nis_client'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/network/nis/client' />
+	</dependent>
+
+	<dependent
+	    name='milestoneconfig_network_nis_domain'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/network/nis/domain' />
+	</dependent>
+
+	<dependent
+	    name='milestoneconfig_system_identity_node'
             grouping='optional_all'
             restart_on='none'>
             <service_fmri value='svc:/system/identity:node' />
 	</dependent>
 
 	<dependent
-	    name='systemconfig_system_keymap'
+	    name='milestoneconfig_system_keymap'
             grouping='optional_all'
             restart_on='none'>
             <service_fmri value='svc:/system/keymap' />
 	</dependent>
 
 	<dependent
-	    name='systemconfig_console_login'
+	    name='milestoneconfig_console_login'
             grouping='optional_all'
             restart_on='none'>
             <service_fmri value='svc:/system/console-login' />
@@ -175,13 +185,7 @@
 	<exec_method
 		type='method'
 		name='start'
-		exec='/lib/svc/method/svc-system-config start'
-		timeout_seconds='0' />
-
-	<exec_method
-		type='method'
-		name='unconfigure'
-		exec='/lib/svc/method/svc-system-config unconfigure'
+		exec='/lib/svc/method/milestone-config start'
 		timeout_seconds='0' />
 
 	<exec_method
@@ -201,50 +205,9 @@
 			value='transient' />
 	</property_group>
 
-	<!-- The following property group is used only at install
-	     time to configure an initial user account -->
-	<property_group name='user_account' type='application'>
-		<stability value='Evolving'/>
-		<propval name='read_authorization' type='astring'
-		    value='solaris.smf.read.system-config' />
-		<propval name='login' type='astring' value=''/>
-		<propval name='password' type='astring' value=''/>
-		<propval name='description' type='astring' value=''/>
-		<propval name='shell' type='astring' value=''/>
-		<propval name='uid' type='count' value='0'/>
-		<propval name='gid' type='count' value='0'/>
-		<propval name='profiles' type='astring' value=''/>
-		<propval name='roles' type='astring' value=''/>
-		<propval name='sudoers' type='astring' value=''/>
-		<propval name='type' type='astring' value=''/>
-		<propval name='expire' type='astring' value=''/>
-		<propval name='home_zfs_dataset' type='astring' value=''/>
-		<propval name='home_mountpoint' type='astring' value=''/>
-		<propval name='autohome' type='astring' value=''/>
-	</property_group>
-
-	<!-- The following property group is used only at install
-	     time to configure an initial root account --> 
-	<property_group name='root_account' type='application'>
-		<stability value='Evolving' />
-		<propval name='read_authorization' type='astring'
-		    value='solaris.smf.read.system-config' />
-		<propval name='password' type='astring' value='' />
-		<propval name='type' type='astring' value=''/>
-		<propval name='expire' type='astring' value=''/>
-	</property_group>
-
-	<!-- The following property group is used only during unconfiguration
-	     of initial user account -->
-
-	<property_group name='configured_user' type='application'>
-		<stability value='Evolving' />
-		<propval name='login' type='astring' value=''/>
-	</property_group>
-
 	<!-- The following property group is used to control
 	     process of system configuration/unconfiguration --> 
-	<property_group name='configuration' type='application'>
+	<property_group name='sysconfig' type='application'>
 		<stability value='Evolving' />
 
 		<!-- Setting following property to 'true' triggers overall
@@ -269,18 +232,12 @@
 		      - system - everything is unconfigured (used as a default)
 		      - network
 		      - naming_services
-		      - location (locale, keyboard layout, timezone)
+		      - location (locale, timezone)
+		      - kbd_layout (keyboard layout)
 		      - users (user and root account)
 		      - identity (system hostname)
 		-->
 		<propval name='config_groups' type='astring' value='system'/>
-
-		<!-- Configuration group served by this smf service. -->
-		<propval name='group' type='astring' value='users'/>
-
-		<!-- Configuration of user/root acount does not support
-		     direct reconfiguration -->
-		<propval name='reconfigurable' type='boolean' value='false'/>
 	</property_group>
 
 	<stability value='Unstable' />
@@ -291,6 +248,13 @@
 			system configuration
 			</loctext>
 		</common_name>
+
+		<documentation>
+			<manpage
+				title='sysconfig'
+				section='1M'
+				manpath='/usr/share/man' />
+		</documentation>
 	</template>
 </service>
 </service_bundle>

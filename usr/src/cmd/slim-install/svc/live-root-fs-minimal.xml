@@ -38,18 +38,6 @@
 
 	<create_default_instance enabled='true' />
 
-	<!--
-	  We depend on identity-node so that the printing of
-	  the hostname doesn't mess up the keyboard layout prompt
-	-->
-	<dependency
-		name='identity-node'
-		type='service'
-		grouping='require_all'
-		restart_on='none' >
-		<service_fmri value='svc:/system/identity:node' />
-	</dependency>
-
 	<exec_method
 		type='method'
 		name='start'

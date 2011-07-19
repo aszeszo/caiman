@@ -38,7 +38,7 @@ See installadm(1M) for usage of 'create-profile' subcommand.
 
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type="profile" name="system configuration">
-    <service name="system/config" version="1">
+    <service name="system/config-user" version="1">
       <instance name="default" enabled="true">
         <property_group name="user_account">
           <propval name="login" value="jack"/>

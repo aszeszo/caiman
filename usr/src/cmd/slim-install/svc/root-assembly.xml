@@ -50,6 +50,21 @@
 	</dependency>
 
 	<!--
+	  network/physical:default brings up network on PXE/wanboot NIC.
+	  This is later needed in case of network booted installer
+	  for downloading compressed archives from server containing
+	  the rest of root filesystem (e.g. /usr).
+	-->
+
+	<dependency
+		name='network-physical-default'
+		type='service'
+		grouping='optional_all'
+		restart_on='none' >
+		<service_fmri value='svc:/network/physical:default' />
+	</dependency>
+
+	<!--
 	  filesystem/root runs after us to initialize devfs and mount libc
 	-->
 	<dependent
@@ -58,7 +73,18 @@
 		restart_on='none'>
 		<service_fmri value='svc:/system/filesystem/root:default' />
 	</dependent>
-	
+
+	<!--
+	  Postpone printing the hostname after we are done with media assembly
+	  task and with keyboard layout and language settings.
+	-->
+	<dependent
+		name='identity-node'
+		grouping='require_all'
+		restart_on='none' >
+		<service_fmri value='svc:/system/identity:node' />
+	</dependent>
+
 	<!--
 	  media instance is used for all boots from CD or USB
 	-->

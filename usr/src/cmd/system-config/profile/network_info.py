@@ -121,6 +121,14 @@ class NetworkInfo(SMFConfig):
                 n = nic
             else:
                 n = dladm_popen.stdout.strip()
+                #
+                # It was observed that in some cases (e.g. in non-global
+                # zone with exclusive IP stack) dladm reports success, but
+                # returns empty string. Use non-vanity NIC name in that case.
+                #
+                if not n:
+                    n = nic
+
             #
             # Add particular NIC to the list if 'allowed-ips' link property
             # is not configured (is empty).
@@ -292,9 +300,11 @@ class NetworkInfo(SMFConfig):
         net_default.insert_children(netcfg_prop)
 
         if self.type == NetworkInfo.AUTOMATIC:
-            netcfg_prop.setprop(name="active_ncp", ptype="astring", value="Automatic")
+            netcfg_prop.setprop(name="active_ncp", ptype="astring",
+                                value="Automatic")
         elif self.type == NetworkInfo.MANUAL:
-            netcfg_prop.setprop(name="active_ncp", ptype="astring", value="DefaultFixed")
+            netcfg_prop.setprop(name="active_ncp", ptype="astring",
+                                value="DefaultFixed")
 
             net_install = SMFConfig('network/install')
             data_objects.append(net_install)

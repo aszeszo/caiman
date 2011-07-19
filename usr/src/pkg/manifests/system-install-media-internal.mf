@@ -73,6 +73,11 @@ file path=lib/svc/manifest/system/filesystem/root-assembly.xml group=sys \
     mode=0444
 file path=lib/svc/manifest/system/live-a11y.xml group=sys mode=0444
 file path=lib/svc/manifest/system/live-io-tracing.xml group=sys mode=0444
+file path=lib/svc/manifest/system/media-config.xml group=sys mode=0444
+file path=lib/svc/manifest/system/media-network-install.xml group=sys \
+    mode=0444
+file path=lib/svc/manifest/system/media-network-physical.xml group=sys \
+    mode=0444
 file path=lib/svc/method/live-a11y mode=0555
 file path=lib/svc/method/live-fs-root-minimal mode=0555
 file path=lib/svc/method/live-io-tracing mode=0555

@@ -66,7 +66,7 @@ class UserInfoContainer(SMFConfig):
         self.user = user_account
 
     def to_xml(self):
-        smf_svc_config = SMFConfig('system/config')     
+        smf_svc_config = SMFConfig('system/config-user')
         smf_svc_config_default = SMFInstance('default')
         smf_svc_config.insert_children(smf_svc_config_default)
         smf_svc_config_default.insert_children(self.root)

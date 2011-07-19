@@ -30,7 +30,7 @@ install:=	TARGET=	install
 
 MSG_DOMAIN =	system-config
 
-SUBDIRS=	helpfiles profile svc tools xslt
+SUBDIRS=	helpfiles profile tools xslt
 
 PROGS=		sysconfig
 

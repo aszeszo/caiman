@@ -37,7 +37,7 @@ from distutils.text_file import TextFile
 from osol_install.install_utils import dir_size, encrypt_password
 from pkg.cfgfiles import PasswordFile
 from solaris_install import CalledProcessError, DC_LABEL, DC_PERS_LABEL, run, \
-     Popen
+    Popen
 from solaris_install.configuration.configuration import Configuration
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
@@ -90,6 +90,8 @@ class PrePkgImgMod(Checkpoint):
                 class_type=DataObjectDict)[0].data_dict
             self.ba_build = self.dc_dict["ba_build"]
             self.pkg_img_path = self.dc_dict["pkg_img_path"]
+            # path to the save directory
+            self.save_path = os.path.join(self.pkg_img_path, "save")
             self.img_info_path = os.path.join(self.pkg_img_path, ".image_info")
             self.tmp_dir = self.dc_dict.get("tmp_dir")
             svc_profile_list = self.doc.volatile.get_descendants(self.name,
@@ -150,9 +152,68 @@ class PrePkgImgMod(Checkpoint):
             fh.write("set zfs:zfs_arc_max=0x4002000\n")
             fh.write("set zfs:zfs_vdev_cache_size=0\n")
 
+    def save_files_directories(self, save_list=None):
+        """ class method for saving key files and directories for restoration
+        after installation. Missing target directories are created.
+        """
+
+        # If there is nothing to save, just return
+        if save_list is None or len(save_list) == 0:
+            return
+
+        for df in save_list:
+            # If object does not exist, skip it.
+            full_path = os.path.join(self.pkg_img_path, df)
+            dest_path = os.path.join(self.save_path, df)
+            if not os.path.exists(full_path):
+                self.logger.error("WARNING:  unable to find " + full_path + 
+                                  " to save for later restoration!")
+                continue
+
+            # If object is directory, just create it in save area.
+            if os.path.isdir(full_path) and not os.path.exists(dest_path):
+                os.makedirs(dest_path)
+                continue
+
+            # If object is file, move it to save area. Create missing
+            # directories as part of that process.
+            if os.path.isfile(full_path) and not os.path.exists(dest_path):
+                dir_path = os.path.dirname(dest_path)
+                if not os.path.exists(dir_path):
+                    os.makedirs(dir_path)
+
+                # move the file and preserve file metadata
+                shutil.move(full_path, dir_path)
+
     def configure_smf(self):
         """ class method for the configuration of SMF manifests
         """
+
+        #
+        # For purposes of System Configuration, network/physical
+        # and network/install services have to depend on manifest-import
+        # and milestone/config. That creates dependency cycle on install
+        # media, since network/physical (depending on network/install)
+        # takes care of bringing up PXE/wanboot NIC which is needed for
+        # purposes of mounting root filesystem (in case of network boot).
+        # And milestone/config and manifest-import depend on smf services
+        # responsible for assembling root filesystem.
+        #
+        # As a workaround, deliver media specific smf manifests
+        # for milestone/config, network/physical and network/install -
+        # import milestone/config and manifest-import without specifying
+        # network/physical and network/install as their dependents.
+        # We can do that, since media come pre-configured.
+        #
+        # Save the original manifests - they replace media specific ones
+        # on the target system in case of CPIO transfer method.
+        #
+        save_list = ["lib/svc/manifest/milestone/config.xml",
+                     "lib/svc/manifest/network/network-install.xml",
+                     "lib/svc/manifest/network/network-physical.xml"]
+
+        self.save_files_directories(save_list)
+
         self.logger.info("Preloading SMF repository")
 
         # create a unique file in /tmp for the construction of the SMF
@@ -377,37 +438,17 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         self.logger.debug("Creating the save directory with files and " +
                           "directories for restoration after installation")
 
-        os.chdir(self.pkg_img_path)
-
-        # path to the save directory
-        self.save_path = os.path.join(self.pkg_img_path, "save")
-
-        # create needed directory paths
-        save_dirs = ["usr/share/dbus-1/services", "etc/gconf/schemas",
-                     "usr/share/gnome/autostart", "etc/xdg/autostart"]
-        for d in save_dirs:
-            if not os.path.exists(os.path.join(self.save_path, d)):
-                os.makedirs(os.path.join(self.save_path, d))
-
         # remove gnome-power-manager, vp-sysmon, and updatemanagernotifier
         # from the liveCD and restore after installation
-        save_files = [
+        save_list = [
+            "etc/gconf/schemas",
             "etc/xdg/autostart/updatemanagernotifier.desktop",
             "usr/share/dbus-1/services/gnome-power-manager.service",
             "usr/share/gnome/autostart/gnome-power-manager.desktop",
             "usr/share/gnome/autostart/vp-sysmon.desktop", "etc/system"
         ]
 
-        for f in save_files:
-            # move the files and preserve the file metadata
-            full_path = os.path.join(self.pkg_img_path, f)
-            if os.path.exists(full_path):
-                shutil.move(full_path,
-                    os.path.join(self.save_path, os.path.dirname(f)))
-            else:
-                # log that the file doesn't exist
-                self.logger.error("WARNING:  unable to find " + full_path +
-                                  " to save for later restoration!")
+        self.save_files_directories(save_list)
 
         # fix /etc/gconf/schemas/panel-default-setup.entries to use the theme
         # background rather than image on live CD and restore it after
@@ -441,6 +482,13 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # area where these services can dump messages to. Once the caches
         # have been generated, the temporary 'dev/null' file needs to be
         # removed.
+
+        #
+        # Needed, otherwise it was observed that some binaries run within
+        # 'chroot' environment fail to determine 'current working directory'.
+        #
+        os.chdir(self.pkg_img_path)
+
         self.logger.debug("creating temporary /dev/null in pkg_image")
         cmd = [cli.TOUCH, os.path.join(self.pkg_img_path, "dev/null")]
         run(cmd)

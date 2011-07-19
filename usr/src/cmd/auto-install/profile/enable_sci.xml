@@ -25,17 +25,18 @@ Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 System Configuration profile which activates interactive configuration
 scenario.
 
-It configures system/config smf service to bring up System Configuration
+It configures milestone/config smf service to bring up System Configuration
 Interactive Tool during boot process.
 -->
 
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type="profile" name="enable_SCI_tool">
-    <service name="system/config" version="1" type="service">
+    <service name="milestone/config" version="1" type="service">
         <instance name="default" enabled="true">
-            <property_group name="configuration">
+            <property_group name="sysconfig">
                 <propval name="configure" value="true"/>
                 <propval name="interactive_config" value="true"/>
+                <propval name="config_groups" value="system"/>
             </property_group>
         </instance>
     </service>
