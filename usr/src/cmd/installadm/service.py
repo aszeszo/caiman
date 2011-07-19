@@ -876,8 +876,11 @@ class AIService(object):
         '''
         logging.debug("removing profiles...")
         dbn = self.database()
+        queue = dbn.getQueue()
+        if not AIdb.tableExists(queue, AIdb.PROFILES_TABLE):
+            return
         query = AIdb.DBrequest("SELECT file FROM " + AIdb.PROFILES_TABLE)
-        dbn.getQueue().put(query)
+        queue.put(query)
         query.waitAns()
         for row in iter(query.getResponse()):
             filename = row['file']
