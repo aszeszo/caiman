@@ -486,7 +486,7 @@ class DiskScreen(BaseScreen):
                 use_whole_disk=self._wholediskmode)
         except BadDiskError, err:
             LOGGER.error("ERROR: TargetController cannot " \
-                "select disk [%s]" % disk.ctd)
+                "select disk [%s]" % self._selected_disk.ctd)
             self._selected_disk = None
             modal_dialog(_("Internal Error"), "%s\n\n%s" % \
                 (_("See log file for details."), DEFAULT_LOG_LOCATION))
@@ -516,7 +516,7 @@ class DiskScreen(BaseScreen):
                 use_whole_disk=self._wholediskmode)
         except BadDiskError, err:
             LOGGER.error("ERROR: TargetController cannot " \
-                "select disk [%s]" % disk.ctd)
+                "select disk [%s]" % self._selected_disk.ctd)
             self._selected_disk = None
             modal_dialog(_("Internal Error"), "%s\n\n%s" % \
                 (_("See log file for details."), DEFAULT_LOG_LOCATION))

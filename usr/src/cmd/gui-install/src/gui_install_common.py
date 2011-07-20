@@ -30,6 +30,7 @@ import pygtk
 pygtk.require('2.0')
 
 import gettext
+import locale
 import linecache
 import logging
 import os
@@ -74,6 +75,10 @@ DEBUG_LOG_LEVEL = "debug"
 # default log format
 LOG_FORMAT = ("%(asctime)s - %(levelname)-8s: %(message)s")
 
+# default logging variables
+LOG_LEVEL_INPUT = 5
+LOG_NAME_INPUT = "INPUT"
+
 RELEASE = _("Oracle Solaris")
 
 COLOR_WHITE = gtk.gdk.Color("white")
@@ -84,6 +89,16 @@ FIREFOX = '/usr/bin/firefox'
 CLEANUP_CPIO_INSTALL = "cleanup-cpio-install"
 TRANSFER_PREP = "PrepareTransfer"
 TARGET_INIT = "TargetInitialization"
+
+
+def get_encoding():
+    ''' Get encoding of current locale
+    '''
+    enc = locale.getlocale(locale.LC_CTYPE)[1]
+    if enc is None:
+        enc = locale.getpreferredencoding()
+
+    return enc
 
 
 def empty_container(gtk_container, destroy=False):
