@@ -48,7 +48,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
       <target name="discovered">
 
         <disk whole_disk="false">
-          <disk_name name="c2t2d0" name_type="ctd"/>
+          <disk_name name="c99t2d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
           dev_size="625141760secs"/>
           <slice name="1" action="preserve" force="false" is_swap="false"
@@ -58,7 +58,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         </disk>
 
         <disk whole_disk="false">
-          <disk_name name="c2t0d0" name_type="ctd"/>
+          <disk_name name="c99t0d0" name_type="ctd"/>
           <disk_prop dev_type="scsi" dev_vendor="HITACHI"
            dev_size="143349312secs"/>
           <disk_keyword key="boot_disk"/>
@@ -72,7 +72,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </slice>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c2t1d0" name_type="ctd"/>
+          <disk_name name="c99t1d0" name_type="ctd"/>
           <disk_prop dev_type="scsi" dev_vendor="HITACHI"
            dev_size="143349312secs"/>
           <slice name="0" action="preserve" force="false" is_swap="false">
@@ -218,7 +218,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -279,7 +279,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -300,7 +300,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="True">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <logical noswap="true" nodump="true"/>
             </target>
@@ -311,7 +311,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -365,7 +365,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -386,10 +386,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="True">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="True">
-                <disk_name name="c2t1d0" name_type="ctd"/>
+                <disk_name name="c99t1d0" name_type="ctd"/>
               </disk>
               <logical noswap="true" nodump="true"/>
             </target>
@@ -400,7 +400,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -410,7 +410,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</slice>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t1d0" name_type="ctd"/>
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
@@ -437,10 +437,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="false">
-                <disk_name name="c2t1d0" name_type="ctd"/>
+                <disk_name name="c99t1d0" name_type="ctd"/>
                 <size val="390714880secs" start_sector="512"/>
                 <slice name="0" action="create" force="false"
                  is_swap="false">
@@ -468,10 +468,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="false">
-                <disk_name name="c2t1d0" name_type="ctd"/>
+                <disk_name name="c99t1d0" name_type="ctd"/>
                 <slice name="1" action="delete"/>
                 <slice name="0" action="create" force="false"
                  is_swap="false">
@@ -493,7 +493,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -503,7 +503,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</slice>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t1d0" name_type="ctd"/>
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<slice name="2" action="preserve" force="false" is_swap="false">
@@ -529,10 +529,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c2t0d0" name_type="ctd" />
+                <disk_name name="c99t0d0" name_type="ctd" />
               </disk>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c2t1d0" name_type="ctd" />
+                <disk_name name="c99t1d0" name_type="ctd" />
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true"/>
@@ -557,7 +557,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -567,7 +567,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</slice>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t1d0" name_type="ctd"/>
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
@@ -588,7 +588,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
                   <slice name="1" action="delete"/>
                   <slice name="0" action="create" force="false"
                       is_swap="false" in_zpool="ai_test_rpool">
@@ -596,7 +596,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                   </slice>
               </disk>
               <disk whole_disk="false">
-                <disk_name name="c2t1d0" name_type="ctd"/>
+                <disk_name name="c99t1d0" name_type="ctd"/>
                   <slice name="1" action="delete"/>
                   <slice name="0" action="create" force="false"
                     is_swap="false" in_zpool="ai_test_rpool">
@@ -626,7 +626,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -639,7 +639,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</slice>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t1d0" name_type="ctd"/>
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<slice name="2" action="preserve" force="false" is_swap="false">
@@ -666,10 +666,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="false">
-                <disk_name name="c2t1d0" name_type="ctd"/>
+                <disk_name name="c99t1d0" name_type="ctd"/>
                 <slice name="1" action="delete"/>
                 <slice name="0" action="create" force="false" is_swap="false"
                  in_zpool="ai_test_rpool">
@@ -706,7 +706,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -716,7 +716,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</slice>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t1d0" name_type="ctd"/>
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<slice name="2" action="preserve" force="false" is_swap="false">
@@ -743,10 +743,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_vdev="ai_test_vdev">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="true" in_vdev="ai_test_vdev">
-                <disk_name name="c2t1d0" name_type="ctd"/>
+                <disk_name name="c99t1d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
@@ -773,7 +773,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -783,7 +783,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</slice>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t1d0" name_type="ctd"/>
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
@@ -804,7 +804,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
@@ -835,7 +835,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -857,7 +857,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
@@ -890,7 +890,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -912,7 +912,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
@@ -972,7 +972,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -994,7 +994,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
@@ -1021,7 +1021,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -1043,7 +1043,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
                 <slice name="0" action="create" force="false"
                  is_swap="false"/>
               </disk>
@@ -1062,7 +1062,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -1087,7 +1087,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c2t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
                 <slice name="0" action="create" force="false"
                  is_swap="false">
                   <size val="30G"/>
@@ -1108,7 +1108,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -1133,7 +1133,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
            <ai_instance name="orig_default">
             <target>
              <disk>
-                <disk_name name_type="ctd" name="c2t0d0"/>
+                <disk_name name_type="ctd" name="c99t0d0"/>
                 <slice name="0" action="create" is_swap="false"
                  in_zpool="rpool" in_vdev="vdev">
                   <size val="20000001mb"/>
@@ -1151,7 +1151,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = ""
 
         self.__run_simple_test(test_manifest_xml, expected_xml,
-            fail_ex_str="Slice 0 has a size larger than the disk c2t0d0")
+            fail_ex_str="Slice 0 has a size larger than the disk c99t0d0")
 
     def test_target_selection_swap_and_dump_size(self):
         '''Test Success In Calc of Swap and Dump Size'''
@@ -1160,7 +1160,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name_type="ctd" name="c2t0d0"/>
+                <disk_name name_type="ctd" name="c99t0d0"/>
                 <slice name="0" action="create" is_swap="false"
                  in_zpool="ai_test_rpool" in_vdev="vdev">
                   <size val="6GB"/>
@@ -1191,7 +1191,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
@@ -1215,7 +1215,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
             <disk whole_disk="false">
-              <disk_name name="c2t2d0" name_type="ctd"/>
+              <disk_name name="c99t2d0" name_type="ctd"/>
               <slice name="1" action="create" is_swap="false"
                  in_zpool="ai_test_rpool" in_vdev="rpool-none">
                  <size val="276976665secs"/>
@@ -1241,7 +1241,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t2d0" name_type="ctd"/>
+        ....<disk_name name="c99t2d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<slice name="1" action="create" force="false" is_swap="false" \
@@ -1261,7 +1261,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
             <disk whole_disk="false">
-              <disk_name name="c2t2d0" name_type="ctd"/>
+              <disk_name name="c99t2d0" name_type="ctd"/>
               <slice name="1" action="create" is_swap="false"
                  in_zpool="ai_test_rpool" in_vdev="rpool-none">
                  <size val="276976665secs"/>
@@ -1296,7 +1296,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c2t2d0" name_type="ctd"/>
+        ....<disk_name name="c99t2d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<slice name="1" action="create" force="false" is_swap="false" \
@@ -1315,6 +1315,87 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ..</disk>
         </target>
         '''
+
+    def test_target_selection_whole_disk_true_with_kids_and_rpool(self):
+        '''Test Success if whole_disk=True, one disk with kids & root pool'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="true">
+                <disk_name name="c99t2d0" name_type="ctd"/>
+                  <slice name="1" action="create" is_swap="false"
+                  in_zpool="ai_test_rpool"/>
+              </disk>
+              <logical noswap="true" nodump="true">
+                <zpool name="ai_test_rpool" is_root="true"/>
+              </logical>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c99t2d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="625141760secs"/>
+        ....<slice name="1" action="create" force="false" is_swap="false" \
+        in_zpool="ai_test_rpool" in_vdev="vdev">
+        ......<size val="625141248secs" start_sector="512"/>
+        ....</slice>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_whole_disk_true_partition_create(self):
+        '''Test Success if whole_disk=True, partition with create'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="true">
+                <disk_name name="c99t1d0" name_type="ctd"/>
+                <slice action="create" name="1" in_zpool="ai_test_rpool"/>
+              </disk>
+              <logical noswap="true" nodump="true">
+                <zpool name="ai_test_rpool" is_root="true"/>
+              </logical>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
+        ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
+        dev_size="143349312secs"/>
+        ....<slice name="1" action="create" force="false" is_swap="false" \
+        in_zpool="ai_test_rpool" in_vdev="vdev">
+        ......<size val="143348736secs" start_sector="512"/>
+        ....</slice>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
 
 if __name__ == '__main__':
     unittest.main()

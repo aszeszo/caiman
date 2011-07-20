@@ -1,4 +1,4 @@
-#!/usr/bin/python
+
 #
 # CDDL HEADER START
 #
@@ -47,7 +47,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
     <root>
       <target name="discovered">
         <disk whole_disk="false">
-          <disk_name name="c10t4d0" name_type="ctd"/>
+          <disk_name name="c99t4d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
           dev_size="625141760secs"/>
           <partition action="preserve" name="1" part_type="191">
@@ -59,7 +59,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c10t3d0" name_type="ctd"/>
+          <disk_name name="c99t3d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
            dev_size="625141760secs"/>
           <partition action="preserve" name="1" part_type="11">
@@ -67,7 +67,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c10t2d0" name_type="ctd"/>
+          <disk_name name="c99t2d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
            dev_size="625141760secs"/>
           <partition action="preserve" name="1" part_type="191">
@@ -89,7 +89,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c10t1d0" name_type="ctd"/>
+          <disk_name name="c99t1d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
            dev_size="625141760secs"/>
           <partition action="preserve" name="1" part_type="191">
@@ -97,7 +97,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c10t0d0" name_type="ctd"/>
+          <disk_name name="c99t0d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
            dev_size="625141760secs"/>
           <partition action="preserve" name="1" part_type="131">
@@ -128,7 +128,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c7d0" name_type="ctd"/>
+          <disk_name name="c97d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_size="390715392secs"/>
           <disk_keyword key="boot_disk"/>
           <partition action="preserve" name="1" part_type="175">
@@ -160,7 +160,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c7d1" name_type="ctd"/>
+          <disk_name name="c97d1" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_size="390715392secs"/>
             <partition action="create" name="1" part_type="191">
             <size val="390714880secs" start_sector="512"/>
@@ -170,7 +170,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c8d0" name_type="ctd"/>
+          <disk_name name="c98d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_size="390715392secs"/>
             <partition action="create" name="1" part_type="191">
             <size val="390714880secs" start_sector="512"/>
@@ -180,7 +180,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c8d1" name_type="ctd"/>
+          <disk_name name="c98d1" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_size="390715392secs"/>
             <partition action="create" name="1" part_type="191">
             <size val="390714880secs" start_sector="512"/>
@@ -190,7 +190,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c9d0" name_type="ctd"/>
+          <disk_name name="c95d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_size="390715392secs"/>
             <partition action="create" name="1" part_type="191">
             <size val="390714880secs" start_sector="512"/>
@@ -200,7 +200,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c9d1" name_type="ctd"/>
+          <disk_name name="c95d1" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_size="390715392secs"/>
             <partition action="create" name="1" part_type="191">
             <size val="390714880secs" start_sector="512"/>
@@ -210,7 +210,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           </partition>
         </disk>
         <disk whole_disk="false">
-          <disk_name name="c3d0" name_type="ctd"/>
+          <disk_name name="c96d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_size="29.98gb"/>
             <partition action="preserve" name="1" part_type="12">
               <size val="2.99Gb" start_sector="16065"/>
@@ -372,7 +372,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -435,7 +435,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -458,7 +458,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <logical noswap="true" nodump="true"/>
             </target>
@@ -469,7 +469,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -525,7 +525,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -548,10 +548,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="true">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
               </disk>
               <logical noswap="true" nodump="true"/>
             </target>
@@ -562,7 +562,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -574,7 +574,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -604,7 +604,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="create" name="1" part_type="191">
                   <size val="625141248secs" start_sector="512"/>
@@ -615,7 +615,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 </partition>
               </disk>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
@@ -641,7 +641,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="delete" name="2" part_type="130">
@@ -656,7 +656,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -685,10 +685,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
@@ -714,7 +714,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -726,7 +726,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -755,10 +755,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c10t0d0" name_type="ctd" />
+                <disk_name name="c99t0d0" name_type="ctd" />
               </disk>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true"/>
@@ -783,7 +783,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -795,7 +795,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -819,7 +819,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="create" name="1" part_type="191">
                   <size val="625141248secs" start_sector="512"/>
@@ -830,7 +830,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 </partition>
               </disk>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
@@ -864,7 +864,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="delete" name="2" part_type="130">
@@ -879,7 +879,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -909,10 +909,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="false">
-            <disk_name name="c7d0" name_type="ctd"/>
+            <disk_name name="c97d0" name_type="ctd"/>
             <partition action="delete" name="2"/>
             <partition action="delete" name="3"/>
             <partition action="create" name="1" part_type="191">
@@ -953,7 +953,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -965,7 +965,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -995,10 +995,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_vdev="ai_test_vdev">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="true" in_vdev="ai_test_vdev">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
@@ -1025,7 +1025,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -1037,7 +1037,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -1061,7 +1061,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="create" name="1" part_type="191">
                   <size val="625141248secs" start_sector="512"/>
@@ -1072,7 +1072,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 </partition>
               </disk>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
@@ -1108,7 +1108,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="delete" name="2" part_type="130">
@@ -1123,7 +1123,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -1153,10 +1153,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_vdev="ai_test_vdev">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
@@ -1192,7 +1192,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -1204,7 +1204,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -1234,7 +1234,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
@@ -1265,7 +1265,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -1289,7 +1289,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
@@ -1322,7 +1322,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -1346,7 +1346,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
@@ -1373,7 +1373,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -1397,7 +1397,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="true" in_zpool="ai_test_rpool">
-                <disk_name name="c10t0d0" name_type="ctd"/>
+                <disk_name name="c99t0d0" name_type="ctd"/>
               </disk>
               <logical>
                 <zpool name="ai_test_rpool" is_root="true">
@@ -1457,7 +1457,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -1481,7 +1481,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
@@ -1506,7 +1506,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -1536,7 +1536,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
@@ -1559,7 +1559,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -1589,7 +1589,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
@@ -1615,7 +1615,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -1645,7 +1645,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
@@ -1671,7 +1671,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -1701,7 +1701,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
                   <size val="25G"/>
@@ -1729,7 +1729,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="3" part_type="130">
@@ -1759,7 +1759,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c7d0" name_type="ctd"/>
+                <disk_name name="c97d0" name_type="ctd"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="1" part_type="191">
@@ -1789,7 +1789,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -1822,13 +1822,13 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
               <target>
                 <disk whole_disk="true" in_zpool="ai_test_root">
-                  <disk_name name="c7d1" name_type="ctd"/>
+                  <disk_name name="c97d1" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data">
-                  <disk_name name="c8d0" name_type="ctd"/>
+                  <disk_name name="c98d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data">
-                  <disk_name name="c8d1" name_type="ctd"/>
+                  <disk_name name="c98d1" name_type="ctd"/>
                 </disk>
                 <logical>
                   <zpool name="ai_test_root" is_root="true" action="create">
@@ -1858,7 +1858,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d1" name_type="ctd"/>
+        ....<disk_name name="c97d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -1869,11 +1869,11 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="vdev" whole_disk="true">
-        ....<disk_name name="c8d0" name_type="ctd"/>
+        ....<disk_name name="c98d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="vdev" whole_disk="true">
-        ....<disk_name name="c8d1" name_type="ctd"/>
+        ....<disk_name name="c98d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ..</disk>
         </target>
@@ -1890,19 +1890,19 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
               <target>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="mirrored">
-                  <disk_name name="c7d0" name_type="ctd"/>
+                  <disk_name name="c97d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="mirrored">
-                  <disk_name name="c7d1" name_type="ctd"/>
+                  <disk_name name="c97d1" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="spared">
-                  <disk_name name="c8d0" name_type="ctd"/>
+                  <disk_name name="c98d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="spared">
-                  <disk_name name="c8d1" name_type="ctd"/>
+                  <disk_name name="c98d1" name_type="ctd"/>
                 </disk>
                 <logical>
                   <zpool name="ai_test_root" is_root="true" action="create">
@@ -1931,7 +1931,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -1943,7 +1943,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d1" name_type="ctd"/>
+        ....<disk_name name="c97d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -1954,7 +1954,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c8d0" name_type="ctd"/>
+        ....<disk_name name="c98d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -1965,7 +1965,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c8d1" name_type="ctd"/>
+        ....<disk_name name="c98d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -1988,23 +1988,23 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
               <target>
                 <disk whole_disk="true" in_zpool="ai_test_root">
-                  <disk_name name="c10t0d0" name_type="ctd"/>
+                  <disk_name name="c99t0d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data"
                  in_vdev="mirrored">
-                  <disk_name name="c7d0" name_type="ctd"/>
+                  <disk_name name="c97d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data"
                  in_vdev="mirrored">
-                  <disk_name name="c7d1" name_type="ctd"/>
+                  <disk_name name="c97d1" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data"
                  in_vdev="mirrored-log">
-                  <disk_name name="c8d0" name_type="ctd"/>
+                  <disk_name name="c98d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data"
                  in_vdev="mirrored-log">
-                  <disk_name name="c8d1" name_type="ctd"/>
+                  <disk_name name="c98d1" name_type="ctd"/>
                 </disk>
                 <logical>
                   <zpool name="ai_test_root" is_root="true" action="create"/>
@@ -2037,7 +2037,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -2049,22 +2049,22 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="mirrored" whole_disk="true">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="mirrored" whole_disk="true">
-        ....<disk_name name="c7d1" name_type="ctd"/>
+        ....<disk_name name="c97d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="mirrored-log" \
         whole_disk="true">
-        ....<disk_name name="c8d0" name_type="ctd"/>
+        ....<disk_name name="c98d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="mirrored-log" \
         whole_disk="true">
-        ....<disk_name name="c8d1" name_type="ctd"/>
+        ....<disk_name name="c98d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ..</disk>
         </target>
@@ -2080,16 +2080,16 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
               <target>
                 <disk whole_disk="true" in_zpool="ai_test_root">
-                  <disk_name name="c10t0d0" name_type="ctd"/>
+                  <disk_name name="c99t0d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data" in_vdev="raid">
-                  <disk_name name="c7d0" name_type="ctd"/>
+                  <disk_name name="c97d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data" in_vdev="raid">
-                  <disk_name name="c7d1" name_type="ctd"/>
+                  <disk_name name="c97d1" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data" in_vdev="raid">
-                  <disk_name name="c8d0" name_type="ctd"/>
+                  <disk_name name="c98d0" name_type="ctd"/>
                 </disk>
                 <logical>
                   <zpool name="ai_test_root" is_root="true" action="create"/>
@@ -2120,7 +2120,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -2132,16 +2132,16 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="raid" whole_disk="true">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="raid" whole_disk="true">
-        ....<disk_name name="c7d1" name_type="ctd"/>
+        ....<disk_name name="c97d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="raid" whole_disk="true">
-        ....<disk_name name="c8d0" name_type="ctd"/>
+        ....<disk_name name="c98d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ..</disk>
         </target>
@@ -2157,23 +2157,23 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
               <target>
                 <disk whole_disk="true" in_zpool="ai_test_root">
-                  <disk_name name="c10t0d0" name_type="ctd"/>
+                  <disk_name name="c99t0d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data"
                  in_vdev="ai_test_mirrored">
-                  <disk_name name="c7d0" name_type="ctd"/>
+                  <disk_name name="c97d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data"
                  in_vdev="ai_test_mirrored">
-                  <disk_name name="c7d1" name_type="ctd"/>
+                  <disk_name name="c97d1" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data"
                  in_vdev="ai_test_spare">
-                  <disk_name name="c8d0" name_type="ctd"/>
+                  <disk_name name="c98d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_data"
                  in_vdev="ai_test_log">
-                  <disk_name name="c8d1" name_type="ctd"/>
+                  <disk_name name="c98d1" name_type="ctd"/>
                 </disk>
                 <logical>
                   <zpool name="ai_test_root" is_root="true" action="create"/>
@@ -2208,7 +2208,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t0d0" name_type="ctd"/>
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -2221,23 +2221,23 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="ai_test_mirrored" \
         whole_disk="true">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="ai_test_mirrored" \
         whole_disk="true">
-        ....<disk_name name="c7d1" name_type="ctd"/>
+        ....<disk_name name="c97d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="ai_test_spare" \
         whole_disk="true">
-        ....<disk_name name="c8d0" name_type="ctd"/>
+        ....<disk_name name="c98d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="ai_test_log" \
         whole_disk="true">
-        ....<disk_name name="c8d1" name_type="ctd"/>
+        ....<disk_name name="c98d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ..</disk>
         </target>
@@ -2254,19 +2254,19 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
               <target>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="ai_test_mirrored">
-                  <disk_name name="c7d0" name_type="ctd"/>
+                  <disk_name name="c97d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="ai_test_mirrored">
-                  <disk_name name="c7d1" name_type="ctd"/>
+                  <disk_name name="c97d1" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="ai_test_spare">
-                  <disk_name name="c8d0" name_type="ctd"/>
+                  <disk_name name="c98d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="ai_test_cache">
-                  <disk_name name="c8d1" name_type="ctd"/>
+                  <disk_name name="c98d1" name_type="ctd"/>
                 </disk>
                 <logical>
                   <zpool name="ai_test_root" is_root="true" action="create">
@@ -2297,7 +2297,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -2309,7 +2309,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d1" name_type="ctd"/>
+        ....<disk_name name="c97d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -2320,7 +2320,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c8d0" name_type="ctd"/>
+        ....<disk_name name="c98d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -2331,7 +2331,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c8d1" name_type="ctd"/>
+        ....<disk_name name="c98d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -2353,7 +2353,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c10t1d0" name_type="ctd"/>
+                <disk_name name="c99t1d0" name_type="ctd"/>
                 <partition action="use_existing_solaris2"/>
               </disk>
               <logical noswap="true" nodump="true"/>
@@ -2371,7 +2371,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t1d0" name_type="ctd"/>
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="use_existing_solaris2" name="1" part_type="191">
@@ -2395,7 +2395,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name="c10t2d0" name_type="ctd"/>
+                <disk_name name="c99t2d0" name_type="ctd"/>
                 <partition action="use_existing_solaris2">
                   <slice name="0" action="create" force="true"
                    is_swap="false">
@@ -2426,7 +2426,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t2d0" name_type="ctd"/>
+        ....<disk_name name="c99t2d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="use_existing_solaris2" name="1" part_type="191">
@@ -2463,19 +2463,19 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
               <target>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="ai_test_mirrored">
-                  <disk_name name="c7d0" name_type="ctd"/>
+                  <disk_name name="c97d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="ai_test_mirrored">
-                  <disk_name name="c7d1" name_type="ctd"/>
+                  <disk_name name="c97d1" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="ai_test_spare">
-                  <disk_name name="c8d0" name_type="ctd"/>
+                  <disk_name name="c98d0" name_type="ctd"/>
                 </disk>
                 <disk whole_disk="true" in_zpool="ai_test_root"
                  in_vdev="ai_test_cache">
-                  <disk_name name="c8d1" name_type="ctd"/>
+                  <disk_name name="c98d1" name_type="ctd"/>
                 </disk>
                 <logical>
                   <zpool name="ai_test_root" is_root="true" action="create">
@@ -2506,7 +2506,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -2518,7 +2518,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d1" name_type="ctd"/>
+        ....<disk_name name="c97d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -2529,7 +2529,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c8d0" name_type="ctd"/>
+        ....<disk_name name="c98d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -2540,7 +2540,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</partition>
         ..</disk>
         ..<disk whole_disk="false">
-        ....<disk_name name="c8d1" name_type="ctd"/>
+        ....<disk_name name="c98d1" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -2566,7 +2566,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -2635,7 +2635,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
@@ -2664,7 +2664,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
            <ai_instance name="orig_default">
             <target>
              <disk>
-                <disk_name name_type="ctd" name="c7d0"/>
+                <disk_name name_type="ctd" name="c97d0"/>
                 <partition action="delete" name="1"/>
                 <partition action="delete" name="3"/>
                 <partition name="2" action="create" part_type="191">
@@ -2698,7 +2698,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
            <ai_instance name="orig_default">
             <target>
              <disk>
-                <disk_name name_type="ctd" name="c7d0"/>
+                <disk_name name_type="ctd" name="c97d0"/>
                 <partition action="delete" name="1"/>
                 <partition action="delete" name="3"/>
                 <partition name="2" action="create" part_type="191">
@@ -2721,7 +2721,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = ""
 
         self.__run_simple_test(test_manifest_xml, expected_xml,
-            fail_ex_str="Partition 2 has a size larger than the disk c7d0")
+            fail_ex_str="Partition 2 has a size larger than the disk c97d0")
 
     def test_target_selection_multiple_partitions_and_existing_partition(self):
         '''Test Success if multiple partitions and existing partition'''
@@ -2731,7 +2731,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
            <ai_instance name="orig_default">
             <target>
              <disk>
-                <disk_name name_type="ctd" name="c7d0"/>
+                <disk_name name_type="ctd" name="c97d0"/>
                 <partition name="3" action="delete"/>
                 <partition name="2" action="create" part_type="191">
                   <size val="20000mb"/>
@@ -2761,7 +2761,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name_type="ctd" name="c7d0"/>
+                <disk_name name_type="ctd" name="c97d0"/>
                   <partition name="2" action="delete"/>
                   <partition name="3" action="delete"/>
                   <partition name="1" action="create" part_type="191">
@@ -2796,7 +2796,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
@@ -2825,7 +2825,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk>
-                <disk_name name_type="ctd" name="c7d0"/>
+                <disk_name name_type="ctd" name="c97d0"/>
                 <partition action="delete" name="1"/>
                 <partition action="delete" name="2"/>
                 <partition action="delete" name="3"/>
@@ -2861,7 +2861,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="1" part_type="175">
@@ -2896,7 +2896,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance name="ai_test_manifest" auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name_type="ctd" name="c3d0"/>
+                <disk_name name_type="ctd" name="c96d0"/>
                 <partition action="delete" name="7" part_type="191">
                   <size val="0mb"/>
                 </partition>
@@ -2936,7 +2936,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk>
-                <disk_name name_type="ctd" name="c7d0"/>
+                <disk_name name_type="ctd" name="c97d0"/>
                 <partition action="delete" name="3"/>
                 <partition action="delete" name="4"/>
                 <partition action="create" name="2">
@@ -2968,7 +2968,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c7d0" name_type="ctd"/>
+        ....<disk_name name="c97d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="preserve" name="1" part_type="175">
@@ -2997,7 +2997,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance name="ai_test_manifest" auto_reboot="false">
             <target>
               <disk whole_disk="false">
-                <disk_name name_type="ctd" name="c3d0"/>
+                <disk_name name_type="ctd" name="c96d0"/>
                 <partition action="delete" name="1"/>
                 <partition action="delete" name="3"/>
                 <partition action="create" name="4" part_type="5">
@@ -3031,7 +3031,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
               <disk>
-                <disk_name name="c10t3d0" name_type="ctd"/>
+                <disk_name name="c99t3d0" name_type="ctd"/>
                 <partition action="create" name="2" part_type="191">
                     <size val="10240mb"/>
                     <slice name="0" action="create" in_zpool="ai_test_rpool" \
@@ -3057,7 +3057,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t3d0" name_type="ctd"/>
+        ....<disk_name name="c99t3d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="preserve" name="1" part_type="11">
@@ -3083,7 +3083,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
             <disk whole_disk="false">
-              <disk_name name="c10t4d0" name_type="ctd"/>
+              <disk_name name="c99t4d0" name_type="ctd"/>
               <partition action="create" name="1" part_type="191">
                 <slice name="1" action="create" is_swap="false"
                    in_zpool="ai_test_rpool" in_vdev="rpool-none">
@@ -3111,7 +3111,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t4d0" name_type="ctd"/>
+        ....<disk_name name="c99t4d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -3134,7 +3134,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
           <ai_instance auto_reboot="false">
             <target>
             <disk whole_disk="false">
-              <disk_name name="c10t4d0" name_type="ctd"/>
+              <disk_name name="c99t4d0" name_type="ctd"/>
               <partition action="create" name="1" part_type="191">
                 <slice name="1" action="create" is_swap="false"
                    in_zpool="ai_test_rpool" in_vdev="rpool-none">
@@ -3171,7 +3171,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</zpool>
         ..</logical>
         ..<disk whole_disk="false">
-        ....<disk_name name="c10t4d0" name_type="ctd"/>
+        ....<disk_name name="c99t4d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
@@ -3188,6 +3188,137 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......</slice>
         ......<slice name="7" action="create" force="false" is_swap="true">
         ........<size val="2096640secs" start_sector="281171456"/>
+        ......</slice>
+        ....</partition>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_whole_disk_true_with_kids_and_rpool(self):
+        '''Test Success if whole_disk=True, one disk with kids & root pool'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="true">
+                <disk_name name="c99t0d0" name_type="ctd" />
+                <partition action="create" name="1" part_type="191">
+                    <slice name="1" action="create" is_swap="false"
+                    in_zpool="ai_test_rpool"/>
+                </partition>
+              </disk>
+              <logical noswap="true" nodump="true">
+                <zpool name="ai_test_rpool" is_root="true"/>
+              </logical>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="625141760secs"/>
+        ....<partition action="create" name="1" part_type="191">
+        ......<size val="625141248secs" start_sector="512"/>
+        ......<slice name="1" action="create" force="false" is_swap="false" \
+        in_zpool="ai_test_rpool" in_vdev="vdev">
+        ........<size val="625139712secs" start_sector="512"/>
+        ......</slice>
+        ....</partition>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_whole_disk_true_partition_use_existing(self):
+        '''Test Success whole_disk=True, partition = use_existing_solaris2'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="true">
+                <disk_name name="c97d1" name_type="ctd" />
+                <partition action="use_existing_solaris2"/>
+              </disk>
+              <logical noswap="true" nodump="true">
+                <zpool name="ai_test_rpool" is_root="true"/>
+              </logical>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c97d1" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<partition action="use_existing_solaris2" name="1" part_type="191">
+        ......<size val="390714880secs" start_sector="512"/>
+        ......<slice name="0" action="create" force="true" is_swap="false" \
+        in_zpool="ai_test_rpool" in_vdev="vdev">
+        ........<size val="390713344secs" start_sector="512"/>
+        ......</slice>
+        ....</partition>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_whole_disk_true_partition_create(self):
+        '''Test Success if whole_disk=True, partition with create'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="true">
+                <disk_name name="c97d0" name_type="ctd" />
+                <partition action="create" name="2" part_type="191"/>
+              </disk>
+              <logical noswap="true" nodump="true">
+                <zpool name="ai_test_rpool" is_root="true"/>
+              </logical>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c97d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_keyword key="boot_disk"/>
+        ....<partition action="create" name="2" part_type="191">
+        ......<size val="390714880secs" start_sector="512"/>
+        ......<slice name="0" action="create" force="true" is_swap="false" \
+        in_zpool="ai_test_rpool" in_vdev="vdev">
+        ........<size val="390713344secs" start_sector="512"/>
         ......</slice>
         ....</partition>
         ..</disk>
