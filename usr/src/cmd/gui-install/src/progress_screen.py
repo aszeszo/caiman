@@ -116,12 +116,12 @@ class ProgressScreen(BaseScreen):
         if not os.path.exists(path):
             path = os.path.join(IMAGE_DIR, 'C')
             if not os.path.exists(path):
-                path = IMAGE_DIR
+                self.logger.debug("Unable to determine image directory")
 
         try:
             self.urlimage_dictionary = self.get_urlimage_dictionary(path)
         except IOError:
-            pass
+            self.urlimage_dictionary = dict()
         self.image_index = 0
         self.image_pause = False
 

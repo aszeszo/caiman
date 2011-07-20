@@ -103,6 +103,7 @@ ROOT.BIN= \
 	/usr/share/gui-install/help \
 	/usr/share/gui-install/help/C \
 	/usr/share/gui-install/installmessages \
+	/usr/share/gui-install/installmessages/C \
 	/usr/share/install \
 	/usr/share/lib \
 	/usr/share/lib/xml \

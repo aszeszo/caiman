@@ -39,16 +39,7 @@ HELPFILES= \
 	UPGRADE_REVIEW_PANEL.txt \
 	WELCOME_PANEL.txt
 
-IMGURLMAP= \
-	imageurl.txt
-
-PNGFILES= \
-	install-01.png \
-	install-02.png \
-	install-03.png \
-	install-04.png \
-	install-05.png \
-	install-06.png
+SUBDIRS=	C
 
 SCHEMAFILES= solaris-gui-install.schemas
 
@@ -59,9 +50,14 @@ ROOTPNGFILES= $(PNGFILES:%=$(ROOTGUIINST)/installmessages/%)
 
 ROOTSCHEMAFILES= $(SCHEMAFILES:%=$(ROOT)/etc/gconf/schemas/%)
 
-all: 
+all: $(SUBDIRS)
 
-install: all $(ROOTHELPFILES) $(ROOTPNGFILES) $(ROOTSCHEMAFILES) $(ROOTIMGURLMAP)
+install: all $(ROOTHELPFILES) $(SUBDIRS) $(ROOTSCHEMAFILES)
+
+$(SUBDIRS): FRC
+	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+
+FRC:
 
 install_h: 
 
