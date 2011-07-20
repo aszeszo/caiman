@@ -687,20 +687,6 @@ class XMLProfileData(object):
         zpool.set(common.ATTRIBUTE_NAME, pool_name)
         return zpool
 
-    def __create_zfs_mirror_swap(self, line_num, pool_name,
-                                 device1, device2, size):
-        """Create a zfs mirror pool and dedicate it to swap"""
-        if pool_name is None:
-            pool_name = DEFAULT_SWAP_POOL_NAME
-        vdev_name = pool_name + VDEV_SUFFIX
-        zpool = self._create_ZFS_pool(pool_name)
-        self.__create_vdev(zpool, REDUNDANCY_MIRROR, vdev_name)
-        # is_swap is for non ZFS swap only so we set it to None
-        self.__add_device(line_num=line_num, device=device1, size=size,
-                          in_pool=pool_name, in_vdev=vdev_name, is_swap=None)
-        self.__add_device(line_num=line_num, device=device2, size=size,
-                          in_pool=pool_name, in_vdev=vdev_name, is_swap=None)
-
     def __create_disk_node(self, disk_name, delete_existing_slices):
         """Create the <disk> structure used to represent a disk in the system
 
@@ -1346,7 +1332,7 @@ class XMLProfileData(object):
             self._report.add_conversion_error()
         return device
 
-    def __filesys_size_conversion(self, size):
+    def __filesys_size_conversion(self, line_num, keyword, size):
         """Perform the necessary conversion for fileys size.  Returns None
            and generates error if size is not supported or invalid.
 
@@ -1365,10 +1351,10 @@ class XMLProfileData(object):
             return None
         elif size not in [SIZE_AUTO, SIZE_ALL]:
             self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                "size '%(val)s' specified for filesys") % \
+                                "size '%(size)s' specified for filesys") % \
                                 {"file": self.profile_name, \
                                  "lineno": line_num,
-                                 "val": values[1]})
+                                 "size": size})
             self._report.add_conversion_error()
             return None
         return size
@@ -1381,7 +1367,17 @@ class XMLProfileData(object):
             return
 
         mirror_name = values[0]
+        if length > 4:
+            mount = values[4].lower()
+        else:
+            #
+            # From the Solaris 10 jumpstart documentation
+            # If file_system is not specified, unnamed is set by default
+            # use this as our default value
+            mount = FILESYS_DEFAULT_MOUNT_POINT
         pool_name = DEFAULT_POOL_NAME
+        if mount == "swap":
+            pool_name += "_swap"
         if mirror_name != "mirror":
             try:
                 mirror, pool_name = values[0].split(":")
@@ -1391,14 +1387,6 @@ class XMLProfileData(object):
         device1 = values[1]
         device2 = values[2]
         size = values[3].lower()
-        if length > 4:
-            mount = values[4].lower()
-        else:
-            #
-            # From the Solaris 10 jumpstart documentation
-            # If file_system is not specified, unnamed is set by default
-            # use this as our default value
-            mount = FILESYS_DEFAULT_MOUNT_POINT
 
         if length >= 6:
             self.logger.error(_("%(file)s: line %(lineno)d: ignoring "
@@ -1427,7 +1415,7 @@ class XMLProfileData(object):
         if device2 is None:
             return
 
-        size = self.__filesys_size_conversion(size)
+        size = self.__filesys_size_conversion(line_num, keyword, size)
         if size is None:
             return
 
@@ -1450,9 +1438,15 @@ class XMLProfileData(object):
             self._rootdisk = None
             self._rootdisk_set_by_keyword = None
 
-        self.__create_root_pool(keyword, pool_name)
-        self.__add_device(line_num, device1, size, self._root_pool_name)
-        self.__add_device(line_num, device2, size, self._root_pool_name)
+        vdev_name = pool_name + VDEV_SUFFIX
+        self.__add_device(line_num=line_num, device=device1, size=size,
+                          in_pool=pool_name,
+                          in_vdev=vdev_name, is_swap=None)
+        self.__add_device(line_num=line_num, device=device2, size=size,
+                          in_pool=pool_name,
+                          in_vdev=vdev_name, is_swap=None)
+        zpool = self.__create_root_pool(keyword, pool_name)
+        self.__create_vdev(zpool, REDUNDANCY_MIRROR, vdev_name)
 
     def __convert_filesys_entry(self, line_num, keyword, values):
         """Converts the filesys keyword/values from the profile into
@@ -1523,7 +1517,7 @@ class XMLProfileData(object):
         if device is None:
             return
 
-        size = self.__filesys_size_conversion(size)
+        size = self.__filesys_size_conversion(line_num, keyword, size)
         if size is None:
             return
 
@@ -1600,6 +1594,15 @@ class XMLProfileData(object):
         # valid
         if not self.__is_valid_to_add_slice(line_num, device2, size):
             return
+        if size == SIZE_ALL:
+            self.logger.error(_("%(file)s: line %(lineno)d: "
+                            "filesys mirror with a mount of swap and all is "
+                            "not supported. Change size to actual swap size "
+                            "desired") % \
+                            {"file": self.profile_name, \
+                             "lineno": line_num})
+            self._report.add_conversion_error()
+            return
         vdev_name = pool_name + VDEV_SUFFIX
         self.__add_device(line_num=line_num, device=device1, size=size,
                           in_pool=pool_name,
@@ -1609,6 +1612,9 @@ class XMLProfileData(object):
                           in_vdev=vdev_name, is_swap=None)
         zpool = self.__create_zfs_pool(pool_name)
         self.__create_vdev(zpool, REDUNDANCY_MIRROR, vdev_name)
+        if size not in [SIZE_ALL, SIZE_AUTO]:
+            self.__create_zvol(parent=zpool, name="swap", use="swap",
+                               zvol_size=size)
 
     def __convert_install_type_entry(self, line_num, keyword, values):
         """Converts the install_type keyword/values from the profile into

@@ -1,7 +1,7 @@
 '\" te
 .\" Copyright (c) 2011, Oracle and/or its affiliates.
 .\" All rights reserved.
-.TH js2ai 1M "17 Jun 2011" "SunOS 5.11" "System Administration Commands"
+.TH js2ai 1M "18 Jul 2011" "SunOS 5.11" "System Administration Commands"
 .SH NAME
 js2ai \- Translate JumpStart rules and profiles for use with the Automated Installer (AI).
 .SH SYNOPSIS
@@ -13,7 +13,7 @@ js2ai [\fB-h\fR | \fB --version \fR]
 .LP
 .nf
 js2ai \fB-r\fR | \fB -p \fR \fIprofile_name\fR [\fB-d\fR \fIjumpstart_dir\fR]
-    [\fB-D\fR \fIdestination_dir\fR] [-s \fIsysidcfg_dir\fR] [\fB-lSv\fR]
+    [\fB-D\fR \fIdestination_dir\fR] [\fB-lSv\fR]
 .fi
 
 .LP
@@ -24,13 +24,13 @@ js2ai \fB-s\fR [\fB -d \fR \fIjumpstart_dir\fR]
 
 .LP
 .nf
-js2ai [\fB-V\fR \fImanifest\fR]
+js2ai \fB-V\fR \fImanifest\fR
 .fi
 
 .SH DESCRIPTION
 .sp
 .LP
-\fBjs2ai\fR is a utility for converting Solaris 10 JumpStart \fBrules\fR, profile, and \fBsyscfg\fR configuration files to a format compatible with Automated Installer (AI). This utility makes a "best effort" to translate those JumpStart keywords that can be translated to the AI context. While this conversion does not create a complete one-to-one equivalence with JumpStart, it does provide AI manifest and system configuration (SC) profile entries that can then be used as a template for creating a complete AI configuration setup based on information gathered from JumpStart configuration files.
+\fBjs2ai\fR is a utility for converting Oracle Solaris 10 JumpStart \fBrules\fR, profile, and \fBsyscfg\fR configuration files to a format compatible with Automated Installer (AI). This utility makes a "best effort" to translate those JumpStart keywords that can be translated to the AI context. While this conversion does not create a complete one-to-one equivalence with JumpStart, it does provide AI manifest and system configuration (SC) profile entries that can then be used as a template for creating a complete AI configuration setup based on information gathered from JumpStart configuration files.
 .sp
 .LP
 Using \fBjs2ai\fR, you can do the following:
@@ -64,8 +64,8 @@ Direct the resulting output files to a specific directory. For more information 
 .sp
 .TS
 tab();
-cw(2.75i) cw(2.75i) 
-lw(2.75i) lw(2.75i) 
+cw(1.38i) cw(4.13i) 
+lw(1.38i) lw(4.13i) 
 .
 JumpStart Rule KeywordAI Criteria Keyword
 _
@@ -90,9 +90,9 @@ hostname        totaldisk
 .fi
 .in -2
 
-.SS "Translating Profile Keywords"
+.SS "Converting Profile Keywords"
 .sp
-\fBTable 2 \fRJumpStart Profile Keywords Translation
+\fBTable 2 \fRJumpStart Profile Keywords
 .sp
 .TS
 tab();
@@ -101,23 +101,32 @@ lw(1.38i) lw(4.13i)
 .
 JumpStart Profile KeywordNotes
 _
-\fBboot_device\fRSets the root disk.
-\fBfdisk\fRThe value of \fBdisk_name\fR cannot be \fBall\fR.
-\fBfilesys\fRThe mount point must be / or swap.
+\fBboot_device\fRT{
+The \fBrootdisk\fR is set to the specified device if not previously set by the \fBroot_device\fR keyword.
+T}
+\fBfdisk\fRT{
+The value of \fBdisk_name\fR must be a device, and the type must be \fBsolaris\fR. A size of 0 or \fBdelete\fR is not supported.
+T}
+\fBfilesys\fRT{
+The local and mirrored file systems are supported when the mount point specified is / or \fBswap\fR.
+T}
 \fBinstall_type\fRT{
 Only the value \fBinitial_install\fR is supported.
 T}
 \fBpackage\fRT{
-Limited package translations are supported.
+An attempt to convert the specified package to its Oracle Solaris 11 equivalent is performed. Specifying the location of the package is not supported. Package lookups can take a considerable amount of time. If your profiles contain a long list of packages, you might want to use the \fB--local\fR flag during the conversion process.
 T}
 \fBpartitioning\fRT{
-Supported values are \fBdefault\fR and \fBexplicit\fR.
+Supported types are \fBdefault\fR and \fBexplicit\fR. Unlike JumpStart, when \fBpartitioning default\fR is specified, only the disks that \fBjs2ai\fR knows about are used. If no disks are specified in any keywords, the generated profile tells AI to choose which disk to use.
 T}
 \fBpool\fRT{
-Mirror pools with one or more devices specified as \fBany\fR are not supported.
+If a pool is specified in a profile, the ZFS root pool is created using the specified devices. The \fBpool\fR keyword supersedes all other keywords when determining which devices to use for the ZFS root pool.
 T}
-\fBroot_device\fRSets the root disk.
+\fBroot_device\fRT{
+The \fBrootdisk\fR is set to the specified device.
+T}
 \fBsystem_type\fROnly the value \fBstandalone\fR is supported.
+\fBusedisk\fRThe specified device is used.
 .TE
 
 .sp
@@ -127,7 +136,7 @@ JumpStart profile keywords not supported by \fBjs2ai\fR:
 .in +2
 .nf
 archive_location       geo
-bakcup_media           layout_constraint
+backup_media           layout_constraint
 bootenv                local_customization
 client_arch            locale
 client_root            metabd
@@ -138,69 +147,105 @@ forced_deployment      patch
 .fi
 .in -2
 
-.SS "Determining the Root Pool"
+.SS "How the System's Root Disk is Determined During Profile Translation"
+.sp
+.LP
+Since \fBjs2ai\fR does not have access to the actual system a profile references during the profile translation process, \fBjs2ai\fR attempts to determine what the root disk is during the translation process using a process that matches JumpStart as much as possible.
+.sp
+.LP
+The \fBjs2ai\fR tool performs the following steps to determine what device to use for the root disk.
+.sp
+
+.sp
+.TS
+tab();
+cw(.44i) cw(5.06i) 
+lw(.44i) lw(5.06i) 
+.
+StageAction
+_
+1T{
+If the \fBroot_device\fR keyword is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the root device.
+T}
+2T{
+If \fBrootdisk\fR is not set and the \fBboot_device\fR keyword is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the boot device.
+T}
+3T{
+If \fBrootdisk\fR is not set and a \fBfilesys cwtxdysz size /\fR entry is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the \fBcwtxdysz\fR disk specified in the entry.
+T}
+4T{
+If \fBrootdisk\fR is not set and a \fBusedisk cwtxdy\fR entry is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the \fBcwtxdy\fR disk specified in the entry.
+T}
+5T{
+If \fBrootdisk\fR is not set, any occurrence where the device is specified as \fBrootdisk\fR generates a conversion error.
+T}
+.TE
+
+.SS "How the \fBany\fR Device Is Translated During Profile Translation"
+.sp
+.LP
+The \fBjs2ai\fR tool performs the following steps to determine what device to use when the \fBany\fR keyword is specified.
+.sp
+
+.sp
+.TS
+tab();
+cw(.44i) cw(5.06i) 
+lw(.44i) lw(5.06i) 
+.
+StageAction
+_
+1T{
+If the \fBany\fR device is specified and the keyword action specified (non-mirrored \fBpool\fR, or \fBfilesys\fR with a / mount point), the \fBany\fR device is set to \fBrootdisk\fR if \fBrootdisk\fR is set.
+T}
+2T{
+If the \fBany\fR device has not been translated and a \fBusedisk\fR statement exists in the profile, the \fBany\fR device is set to the device specified by the \fBusedisk\fR statement.
+T}
+3T{
+If the \fBany\fR device has not been translated and the action where the \fBany\fR device is specified causes the ZFS root pool to be created, AI chooses the device. This is not applicable when a mirrored \fBpool\fR is specified.
+T}
+.TE
+
+.SS "How the ZFS Root Pool is Determined During Profile Translation"
 .sp
 .LP
 The primary goal of translating a JumpStart profile is to determine the best choice for the ZFS root pool.
 .sp
 .LP
 The \fBjs2ai\fR tool performs the following steps to determine what device to use for the ZFS root pool. Once the ZFS root pool is determined, subsequent definitions encountered are flagged as errors if they conflict with the ZFS root pool that has already been determined.
-.RS +4
-.TP
-1.
-If the profile specifies the \fBpool\fR keyword, \fBjs2ai\fR sets the ZFS root pool to the devices specified by the \fBpool\fR keyword.
-.RE
-.RS +4
-.TP
-2.
-If the profile specifies the \fBfilesys\fR keyword with a mount point of /, \fBjs2ai\fR sets the ZFS root pool to the devices specified by the \fBfilesys\fR statement.
-.RE
-.RS +4
-.TP
-3.
-If no condition listed above has occurred during processing of the profile, the root pool is set based on the current \fBrootdisk\fR setting.
-.RS +4
-.TP
-a.
-If \fBroot_device\fR was specified, the ZFS root pool is set using the device specified by \fBroot_device\fR.
-.RE
-.RS +4
-.TP
-b.
-If \fBboot_device\fR was specified, the ZFS root pool is set using the device specified by \fBboot_device\fR.
-.RE
-.RE
-.RS +4
-.TP
-4.
-If the profile specifies the \fBpartitioning\fR  keyword with a value of \fBdefault\fR, \fBjs2ai\fR sets the ZFS root pool based on the current setting of \fBrootdisk\fR (through \fBroot_device\fR or \fBboot_device\fR). Any disks specified by the \fBusedisk\fR keyword are added to the ZFS root pool. If \fBrootdisk\fR is unknown, AI selects the disk to use for the ZFS root pool at client installation time.
-.RE
-.RS +4
-.TP
-5.
-If no ZFS root pool has been determined, an error is generated and no AI manifest is created for that profile. The following message is an example of an error message generated when no root pool was determined.
-.RE
 .sp
-.in +2
-.nf
-test_profile: line 6: incomplete profile, cannot create
-root pool. One of the following keywords must be specified
-in profile: root_device, boot_device, or pool.
-Alternatively the following keywords using the specified
-syntax may be used. fdisk <device> solaris <size>
-where device is not all or filesys with a mount of '/'
-.fi
-.in -2
 
 .sp
-.LP
-When \fBjs2ai\fR attempts to determine what profile statement to use in translation, a best effort is made to determine the appropriate device to use when the \fBrootdisk\fR variable is specified. Since no equivalent to \fBrootdisk\fR is supported by AI, the \fBrootdisk\fR is primarily determined based on the keywords \fBroot_device\fR, \fBboot_device\fR, and \fBfdisk\fR. When a device is specified by any of these keywords, the \fBrootdisk\fR value is set to the value specified by the keyword.
+.TS
+tab();
+cw(.44i) cw(5.06i) 
+lw(.44i) lw(5.06i) 
+.
+StageAction
+_
+1T{
+If the profile specifies the \fBpool\fR keyword, \fBjs2ai\fR sets the ZFS root pool to the devices specified by the \fBpool\fR keyword.
+T}
+2T{
+If the ZFS root pool has not been determined and the profile specifies a \fBfilesys\fR with a mount point of / or an \fBfdisk\fR with a type \fBsolaris\fR and a size other than 0 or \fBdelete\fR, the ZFS root pool is created using the devices specified.
+T}
+3T{
+If the ZFS root pool has not been determined and all keywords in the profile have been processed, and if \fBrootdisk\fR is set, the ZFS root pool is created using the \fBrootdisk\fR device.
+T}
+4T{
+If the ZFS root pool has not been determined and the partition type is \fBdefault\fR, AI chooses the device to use for the ZFS root pool.
+T}
+5T{
+If the ZFS root pool has not been determined and no errors have occurred during processing, AI chooses the device to use for the ZFS root pool.
+T}
+6T{
+If the ZFS root pool is not a mirrored pool and one or more \fBusedisk\fR devices that were specified have not been used for a \fBrootdisk\fR or \fBany\fR device translation, those disks are added to the ZFS root pool.
+T}
+.TE
+
+.SS "Converting \fBsysidcfg\fR Keywords"
 .sp
-.LP
-When a \fBdevice\fR of \fBany\fR is specified as part of a JumpStart statement, the setting for \fBrootdisk\fR is used to satisfy that request when appropriate.
-.SS "Translating \fBsysidcfg\fR Keywords"
-.sp
-\fBTable 3 \fRJumpStart \fBsysidcfg\fR Keyword Translation
+\fBTable 3 \fRJumpStart \fBsysidcfg\fR Keywords
 .sp
 .TS
 tab();
@@ -209,17 +254,26 @@ lw(1.38i) lw(4.13i)
 .
 \fBsysidcfg\fR KeywordNotes
 _
-\fBkeyboard\fR-
-\fBname_service\fRSupports values: \fBDNS\fR, \fBNone\fR
-\fBnetwork_interface\fRT{
-Only a single interface is supported. Limited support for \fBPRIMARY\fR.
+\fBkeyboard\fRT{
+No translation is performed. Make sure the keyboard specified in the \fBsysidcfg\fR file is supported in Oracle Solaris 11.
 T}
-\fBroot_password\fR-
+\fBname_service\fRT{
+Supports values \fBNone\fR, \fBDNS\fR, \fBNIS\fR, and \fBLDAP\fR. NIS+ name services are translated as NIS.
+T}
+\fBnetwork_interface\fRT{
+Only a single interface is supported. Limited support for \fBPRIMARY\fR. Only the first interface encountered in the \fBsysidcfg\fR file is processed.
+T}
+\fBroot_password\fRNo translation is necessary.
 \fBsecurity_policy\fRSupports value: \fBNone\fR
 \fBservice_profile\fRSupports value: \fBlimited_net\fR
-\fBterminal\fR-
+\fBsystem_locale\fRT{
+No translation is performed. Make sure the locale specified in the \fBsysidcfg\fR file is supported in Oracle Solaris 11.
+T}
+\fBterminal\fRT{
+No translation is performed. Make sure the terminal type specified in the \fBsysidcfg\fR file is supported in Oracle Solaris 11.
+T}
 \fBtimeserver\fRSupports value: \fBlocalhost\fR
-\fBtimezone\fR-
+\fBtimezone\fRNo translation is necessary.
 .TE
 
 .sp
@@ -229,7 +283,6 @@ JumpStart \fBsysidcfg\fR keywords not supported by \fBjs2ai\fR:
 .in +2
 .nf
 nfs4_domain
-system_locale
 .fi
 .in -2
 
@@ -366,11 +419,11 @@ The \fBjs2ai\fR tool generates an error report when one or more errors occurs du
 .in +2
 .nf
 # \fBjs2ai -r\fR
-            Process   Unsupported Conversion Validation
-Name        Errors    Items       Errors     Errors
-----------  -------   ----------- ---------- ----------
-rules             0             2          0          -
-profile1          0             0          2          1
+                    Process  Unsupported  Conversion  Validation
+Name      Warnings  Errors   Items        Errors      Errors
+--------  --------  -------  -----------  ----------  ----------
+rules            0        0            2           0           -
+profile1         0        0            0           2           1
 
 Conversion completed. One or more failures occurred.
 For errors see ./js2ai.log
@@ -383,7 +436,18 @@ For errors see ./js2ai.log
 The report contains one entry for each file in which \fBjs2ai\fR encountered an error. To generate an error report even when no errors occur, specify \fB-v\fR or \fB--verbose\fR.
 .sp
 .LP
-The report tells you what type of errors occurred in what files. Four error types are defined: Process Errors, Unsupported Items, Conversion Errors, and Validation Errors.
+The report tells you what type of errors occurred in what files. Five error types are defined: Warnings, Process Errors, Unsupported Items, Conversion Errors, and Validation Errors.
+.sp
+.ne 2
+.mk
+.na
+\fBWarnings\fR
+.ad
+.sp .6
+.RS 4n
+Items in these messages are not required to be corrected. For example, you might receive a warning message that information such as host name or root password was not provided, and default values will be used.
+.RE
+
 .sp
 .ne 2
 .mk
@@ -466,17 +530,17 @@ A one-to-one conversion between JumpStart and AI does not exist. The following s
 .RS +4
 .TP
 1.
-In the JumpStart configuration directory, run the JumpStart \fBcheck\fR script to validate the rules in the \fBrules\fR file. See the \fBinstall_scripts\fR(1M) man page for more information.
+The \fBjs2ai\fR utility attempts to flag any errors it encounters, but \fBjs2ai\fR assumes the rules, profiles, and \fBsysidcfg\fR files that are being converted are valid.
 .RE
 .RS +4
 .TP
 2.
-Copy the JumpStart configuration directory of \fBrules\fR and profile files to a Solaris 11 system that has the \fBinstalladm\fR package installed.
+Copy the JumpStart configuration directory of \fBrules\fR, profile, and \fBsyscfg\fR configuration files to an Oracle Solaris 11 system that has the \fBinstall/installadm\fR package installed.
 .RE
 .RS +4
 .TP
 3.
-In the JumpStart configuration directory that you copied to the Solaris 11 system in step 2, run the \fBjs2ai\fR conversion tool.
+In the JumpStart configuration directory that you copied to the Oracle Solaris 11 system in step 2, run the \fBjs2ai\fR conversion tool.
 .sp
 .in +2
 .nf
@@ -485,7 +549,7 @@ In the JumpStart configuration directory that you copied to the Solaris 11 syste
 .in -2
 .sp
 
-This command performs a conversion operation on the \fBrules\fR file and the profiles referenced by the \fBrules\fR file. Each profile referenced in the \fBrules\fR file is processed against the AI client provisioning manifest, \fB/usr/share/auto_install/manifest/default.xml\fR. This step creates a directory named \fBAI_\fIprofile_name\fR\fR for each profile specified in the JumpStart \fBrules\fR file. The \fBAI_\fIprofile_name\fR\fR directory contains the associated AI manifest file \fB\fIprofile_name\fR.xml\fR. See the "Files" section for more information.
+This command performs a conversion operation on the \fBrules\fR file and the profiles referenced by the \fBrules\fR file. Each profile referenced in the \fBrules\fR file is processed against the AI client provisioning manifest, \fB/usr/share/auto_install/manifest/default.xml\fR. This step creates a directory named \fBAI_\fIprofile_name\fR\fR for each profile specified in the JumpStart \fBrules\fR file. The \fBAI_\fIprofile_name\fR\fR directory contains one or more AI manifests for the translated profile in the form \fB\fIprofile_name\fR${arch}.xml\fR. See the "Files" section for more information.
 .sp
 The \fB-S\fR option skips the validation sequence. Validation is done in step 5.
 .RE
@@ -511,7 +575,12 @@ Examine the conversion errors and correct the errors if possible. Otherwise, rem
 .RS +4
 .TP
 d.
-Repeat step 3 until no errors are reported.
+Examine any warning messages and make sure no corrections are necessary.
+.RE
+.RS +4
+.TP
+e.
+Repeat step 3 until no processing errors, unsupported items, and conversion errors are reported.
 .RE
 .RE
 .RS +4
@@ -556,7 +625,7 @@ Correct any process errors.
 .RS +4
 .TP
 b.
-Remove any lines from the \fBsysidcfg\fR file that are listed as Unsupported Items.
+Remove any lines from the \fBsysidcfg\fR file that are listed as unsupported items.
 .RE
 .RS +4
 .TP
@@ -566,7 +635,12 @@ Examine the conversion errors and correct the errors if possible. Otherwise, rem
 .RS +4
 .TP
 d.
-Repeat step 6 until no errors are reported.
+Examine any warning messages and make sure no corrections are necessary.
+.RE
+.RS +4
+.TP
+e.
+Repeat step 6 until no processing errors, unsupported items, and conversion errors are reported.
 .RE
 .RE
 .RS +4
@@ -593,12 +667,13 @@ The \fBjs2ai\fR conversion process is complete. Perform a manual verification of
 10.
 Configure AI to use the newly generated files. Add the newly generated criteria, AI manifest, and SC profile files to an existing AI install service.
 .sp
-Use the \fBinstalladm\fR command with the \fBadd-manifest\fR subcommand to add each AI manifest with criteria for selecting that manifest. Each client can use only one AI manifest.
+Use the \fBinstalladm\fR command with the \fBcreate-manifest\fR subcommand to add each AI manifest with criteria for selecting that manifest. Each client can use only one AI manifest.
 .sp
 .in +2
 .nf
-# \fBinstalladm add-manifest -n \fIai_service_name\fR \\ \fR
-\fB-f \fImanifest_file\fR -C \fIcriteria_file\fR\fR
+# \fBinstalladm create-manifest -n \fIai_service_name\fR \e\fR
+\fB-f \fImanifest_file\fR -m \fImanifest_name\fR \e\fR
+\fB-C \fIcriteria_file\fR\fR
 .fi
 .in -2
 .sp
@@ -607,8 +682,9 @@ Use the \fBcreate-profile\fR subcommand to add each  profile with criteria for s
 .sp
 .in +2
 .nf
-# \fBinstalladm create-profile -n \fIai_service_name\fR \\ \fR
-\fB-f \fIprofile_file\fR -C \fIcriteria_file\fR\fR
+# \fBinstalladm create-profile -n \fIai_service_name\fR \e\fR
+\fB-f \fIprofile_file\fR -p \fIprofile_name\fR \e\fR
+\fB-C \fIcriteria_file\fR\fR
 .fi
 .in -2
 .sp
@@ -651,6 +727,10 @@ For more information about the output files, see Example 4 and the "Files" secti
 .LP
 \fBExample 3 \fRProcessing a Profile in a Specific JumpStart Directory and Separate Destination Directory
 .sp
+.LP
+The following command processes the JumpStart \fBrules\fR and profile files from the \fB/export/jumpstart\fR directory and places the output files in \fB/export/output\fR.
+
+.sp
 .in +2
 .nf
 # \fBjs2ai -p profile1 -d /export/jumpstart -D /export/output\fR
@@ -667,7 +747,7 @@ Rule:
 .sp
 .in +2
 .nf
-arch sparc && karch sun4u && \\
+arch sparc && karch sun4u && \e
     model 'SUNW,Serverblade1'  -   profile    -
 .fi
 .in -2
@@ -726,7 +806,7 @@ Files:
 .sp
 .in +2
 .nf
-/tmp/outputAI_profile/profile.sparc.xml
+/tmp/output/AI_profile/profile.sparc.xml
 /tmp/output/AI_profile/criteria-1.xml
 .fi
 .in -2
@@ -738,9 +818,24 @@ Files:
 .sp
 .in +2
 .nf
-# \fBinstalladm add-manifest -n svc-name \\ \fR
-\fB-f /tmp/outputAI_profile/profile.sparc.xml \\ \fR
+# \fBinstalladm create-manifest -n svc-name \e\fR
+\fB-f /tmp/output/AI_profile/profile.sparc.xml \e\fR
+\fB-m sparc_profile \e\fR
 \fB-C /tmp/output/AI_profile/criteria-1.xml\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 6 \fRProcessing a \fBsysidcfg\fR File
+.sp
+.LP
+The following command processes the \fBsysidcfg\fR file in the current directory and outputs the resulting SC profile as \fBsc_profile.xml\fR in the same directory.
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -s\fR
 .fi
 .in -2
 .sp
@@ -862,16 +957,16 @@ ATTRIBUTE TYPEATTRIBUTE VALUE
 _
 Availability\fBinstall/js2ai\fR
 _
-Interface StabilityNone / Under Development
+Interface StabilityUncommitted
 .TE
 
 .SH SEE ALSO
 .sp
 .LP
-installadm(1M), pkg(1)
+installadm(1M), \fBpkg\fR(1)
 .sp
 .LP
 \fITransitioning From Oracle Solaris 10 Custom JumpStart to Oracle Solaris 11 Automated Installer\fR
 .sp
 .LP
-\fIInstalling Oracle Solaris 11 Systems\fR
+Part\ III, \fIInstalling Using an Install Server,\fR in \fIInstalling Oracle Solaris 11 Systems\fR

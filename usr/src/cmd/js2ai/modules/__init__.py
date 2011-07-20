@@ -61,7 +61,7 @@ SPACE_PATTERN = re.compile("\s+")
 MULTILINE_PATTERN1 = re.compile("([^&]*)(\\\\)(.*)$")
 MULTILINE_PATTERN2 = re.compile("([^&]*)(&&)(.*)$")
 RULE_STRIP_PATTERN = re.compile("^\s*(\w+)\s+(\w+)\s+(\w+)\s+(\w+).+")
-KEY_EQUAL_VALUE_PATTERN = re.compile("(\S*)=(\S*)")
+KEY_EQUAL_VALUE_PATTERN = re.compile("([^=]+)=(\S*)")
 
 EXIT_SUCCESS = 0
 EXIT_IO_ERROR = 1
@@ -566,8 +566,11 @@ def read_sysidcfg(src_dir, verbose):
                     if match_pattern is not None:
                         key = match_pattern.group(1)
                         value = match_pattern.group(2)
-                        if not value:
-                            value = None
+                        if value is not None:
+                            # Values may optionally be enclosed in single
+                            # or double quotes
+                            value = value.lstrip("\"'")
+                            value = value.rstrip("\"'")
                     else:
                         key = data
                         value = None

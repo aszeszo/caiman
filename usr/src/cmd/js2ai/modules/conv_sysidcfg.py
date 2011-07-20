@@ -39,6 +39,7 @@ from StringIO import StringIO
 TYPE_APPLICATION = "application"
 TYPE_ASTRING = "astring"
 TYPE_COUNT = "count"
+TYPE_HOST = "host"
 TYPE_HOSTNAME = "hostname"
 TYPE_NET_ADDRESS = "net_address"
 TYPE_NET_ADDRESS_V4 = "net_address_v4"
@@ -102,6 +103,7 @@ class XMLSysidcfgData(object):
         self._root_passwd = None
         self._service_bundle = None
         self._service_profile = None
+        self._system_locale = None
         self._terminal = None
         self._timeserver = None
         self._timezone = None
@@ -279,9 +281,9 @@ class XMLSysidcfgData(object):
         #    <instance enabled="true" name="default"/>
         # </service>
 
-	if payload is None:
-	    self.__missing_required_op(line_num, "domain_name")
-	    return
+        if payload is None:
+            self.__missing_required_op(line_num, "domain_name")
+            return
 
         domain_name = payload.pop("domain_name", None)
         if domain_name is None:
@@ -291,7 +293,7 @@ class XMLSysidcfgData(object):
         name_server = payload.pop("name_server", None)
         if name_server is None:
             self.__missing_required_op(line_num, "name_server")
-	    return
+            return
 
         self.__adjust_nis(host="files dns mdns")
         self._name_service = \
@@ -440,9 +442,9 @@ class XMLSysidcfgData(object):
         #  </service>
         # </service_bundle>
 
-	if payload is None:
-	    self.__missing_required_op(line_num, "domain_name")
-	    return
+        if payload is None:
+            self.__missing_required_op(line_num, "domain_name")
+            return
 
         domain_name = payload.pop("domain_name", None)
         if domain_name is None:
@@ -493,8 +495,8 @@ class XMLSysidcfgData(object):
         #                    name_server=hostname(ip-address)}
 
         # NIS plus is no longer supported in Solaris.
-        # Convert this to standard NIS.  Output warning in log file
-        self.logger.warning(_("%(file)s: line %(lineno)d: NIS+ is no longer"
+        # Convert this to standard NIS.  Output error in log file
+        self.logger.error(_("%(file)s: line %(lineno)d: NIS+ is no longer "
                             "supported.  Using NIS instead.") % \
                             {"file": SYSIDCFG_FILENAME, \
                              "lineno": line_num})
@@ -529,31 +531,132 @@ class XMLSysidcfgData(object):
         #
         # name_service=LDAP {domain_name=domain_name
         #                    profile=profile_name profile_server=ip_address
-        #                    proxy_dn="proxy_bind_dn" proxy_password=password}
+        #                    proxy_dn="proxy_bind_dn"
+        #                    proxy_password=password}
         #
         # domain_name - profile_name Specifies the name of the LDAP profile you
         #       want to use to configure the system.
-        # profile
-        # profile_server
+        # profile_name - Specifies the name of the LDAP profile you want to
+        #       use to configure the system
+        # ip_address - Specifies the IP address of the LDAP profile server.
         # proxy_bind_dn (Optional) - Specifies the proxy bind distinguished
         #       name. You must enclose the proxy_bind_dn value in
         #       double quotes.
         #
         # proxy_password (Optional) - Specifies the client proxy password
         #
-
+        if payload is None:
+            self.__missing_required_op(line_num, "domain_name")
+            return
         domain_name = payload.pop("domain_name", None)
+        if domain_name is None:
+            self.__missing_required_op(line_num, "domain_name")
+            return
         profile_name = payload.pop("profile", None)
-        profile_server = payload.pop("ip_address", None)
-        proxy_bind_dn = payload.pop("proxy_bind_dn", None)
-        password = payload.pop("proxy_password", None)
+        if profile_name is None:
+            self.__missing_required_op(line_num, "profile")
+            return
+        profile_server = payload.pop("profile_server", None)
+        if profile_server is None:
+            self.__missing_required_op(line_num, "profile_server")
+            return
 
-        self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
-                            "name service specified. DNS or NONE is currently"
-                            " the only supported name servce selection.") % \
-                            {"file": SYSIDCFG_FILENAME, \
-                             "lineno": line_num})
-        self._report.add_unsupported_item()
+        # Optional parameters
+        proxy_bind_dn = payload.pop("proxy_dn", None)
+        proxy_password = payload.pop("proxy_password", None)
+
+        #
+        # <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/"
+        #           "service_bundle.dtd.1">
+        # <service_bundle type="profile" name="sysconfig">
+        #   <service version="1" type="service"
+        #           name="system/name-service/switch">
+        #    <property_group type="application" name="config">
+        #      <propval type="astring" name="default" value="files ldap"/>
+        #      <propval type="astring" name="printer" value="user files ldap"/>
+        #      <propval type="astring" name="netgroup" value="ldap"/>
+        #    </property_group>
+        #    <instance enabled="true" name="default"/>
+        # </service>
+        #  <service version="1" type="service"
+        #           name="system/name-service/cache">
+        #    <instance enabled="true" name="default"/>
+        #  </service>
+        #  <service version="1" type="service" name="network/dns/client">
+        #    <instance enabled="false" name="default"/>
+        #  </service>
+        #  <service version="1" type="service" name="network/ldap/client">
+        #    <property_group type="application" name="config">
+        #      <propval type="astring" name="profile" value="default"/>
+        #      <property type="host" name="server_list">
+        #        <host_list>
+        #          <value_node value="2.2.2.2"/>
+        #        </host_list>
+        #      </property>
+        #      <propval type="astring" name="search_base"
+        #               value="dc=my,dc=domain,dc=com"/>
+        #    </property_group>
+        #    <property_group type="application" name="cred">
+        #      <!-- note that the bind_dn is based on the search_base above -->
+        #      <propval type="astring" name="bind_dn"
+        #            value="cn=proxyagent,ou=profile,dc=my,dc=domain,dc=com"/>
+        #      <propval type="astring" name="bind_passwd"
+        #            value="{NS1}myencryptedpassword"/>
+        #    </property_group>
+        #    <instance enabled="true" name="default"/>
+        #  </service>
+        #  <service version="1" type="service" name="network/nis/domain">
+        #    <property_group type="application" name="config">
+        #      <propval type="hostname" name="domainname"
+        #               value="my.domain.com"/>
+        #    </property_group>
+        #    <instance enabled="true" name="default"/>
+        #  </service>
+        # </service_bundle>
+
+        self.__adjust_nis(default="files ldap",
+                          printer="usr files ldap",
+                          netgroup="ldap")
+        self.__configure_dns_client(enabled="false")
+
+        ldap_client = self.__create_service_node(self._service_bundle,
+                                                "network/ldap/client")
+
+        config_prop_grp = self.__create_propgrp_node(ldap_client,
+                                              "config",
+                                              TYPE_APPLICATION)
+        self.__create_propval_node(config_prop_grp, "profile",
+                                   TYPE_ASTRING, profile_name)
+
+        host_prop = self.__create_prop_node(config_prop_grp,
+                                            "server_list", TYPE_HOST)
+        host_list = etree.SubElement(host_prop, common.ELEMENT_HOST_LIST)
+        self.__create_value_node(host_list, profile_server)
+
+        cred_prop_grp = self.__create_propgrp_node(ldap_client,
+                                                   "cred",
+                                                   TYPE_APPLICATION)
+        if proxy_bind_dn is not None:
+            self.__create_propval_node(config_prop_grp, "search_base",
+                                       TYPE_ASTRING, proxy_bind_dn)
+            self.__create_propval_node(cred_prop_grp, "bind_dn",
+                                       TYPE_ASTRING, proxy_bind_dn)
+        if proxy_password is not None:
+            self.__create_propval_node(cred_prop_grp, "bind_password",
+                                       TYPE_ASTRING, proxy_password)
+        self.__create_instance_node(ldap_client)
+
+        nis = self.__create_service_node(self._service_bundle,
+                                         "network/nis/domain")
+        prop_grp = self.__create_propgrp_node(nis,
+                                              "config",
+                                              TYPE_APPLICATION)
+        self.__create_propval_node(prop_grp, "domainname",
+                                   TYPE_HOSTNAME, domain_name)
+        self.__create_instance_node(nis)
+
+        # Are there any more keys left in the dictionary that we need to flag
+        self.__check_payload(line_num, keyword, payload)
 
     name_service_conversion_dict = {
         "NIS": __convert_name_service_nis,
@@ -1170,8 +1273,35 @@ class XMLSysidcfgData(object):
         #
         # where locale is /usr/lib/locale (Solaris 10).
         #
+        # Convert to
+        # <service name='system/environment' version='1'>
+        #  <instance name='init' enabled='true'>
+        #   <property_group name='environment'>
+        #     <propval name='LANG' value='C'/>
+        #   </property_group>
+        #  </instance>
+        # </service>
         #
-        self.__unsupported_keyword(line_num, keyword, values)
+        if self._system_locale is not None:
+            # Generate duplicate keyword
+            self.__duplicate_keyword(line_num, keyword, values)
+            return
+
+        if len(values) != 1:
+            self.__invalid_syntax(line_num, keyword)
+            return
+
+        self._system_locale = \
+            self.__create_service_node(self._service_bundle,
+                                       "system/environment")
+        instance = self.__create_instance_node(parent=self._system_locale,
+                                               name="init",
+                                               enabled_state="true")
+        prop_group = self.__create_propgrp_node(instance,
+                                                "environment",
+                                                TYPE_APPLICATION)
+        self.__create_propval_node(prop_group, "LANG",
+                                   TYPE_ASTRING, values[0])
 
     def __convert_terminal(self, line_num, keyword, values):
         """Converts the terminal keyword/values from the sysidcfg into
@@ -1443,13 +1573,13 @@ class XMLSysidcfgData(object):
                              "key": keyword})
         self._report.add_process_error()
 
-    def __missing_required_op(self, line_num, op):
+    def __missing_required_op(self, line_num, operand):
         """Generate a missing required op error"""
         self.logger.error(_("%(file)s: line %(lineno)d: invalid entry, "
                             "missing requirement value for: %(op)s") % \
                             {"file": SYSIDCFG_FILENAME,
                              "lineno": line_num, \
-                             "op": op})
+                             "op": operand})
         self._report.add_process_error()
 
     def __fetch_service(self, name):
@@ -1652,15 +1782,16 @@ class XMLSysidcfgData(object):
         # unexpected conditions
         if self._hostname is None:
             self.logger.warning(_("%(file)s: line %(lineno)d: WARNING: no "
-                                "hostname specified, Auto Installer will "
+                                "hostname specified, Automated Installer will "
                                 "configure with default hostname.") % \
                                 {"file": SYSIDCFG_FILENAME, \
                                  "lineno": line_num + 1})
             self._report.add_warning()
         if self._root_passwd is None:
             self.logger.warning(_("%(file)s: line %(lineno)d: WARNING: no "
-                                "root password specified,  Auto Installer will"
-                                " configure with default root password.") % \
+                                "root password specified, Automated Installer "
+                                "will configure with default root "
+                                "password.") % \
                                 {"file": SYSIDCFG_FILENAME, \
                                  "lineno": line_num + 1})
             self._report.add_warning()

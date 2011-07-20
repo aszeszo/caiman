@@ -82,7 +82,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         js2ai.write_xml_data(xml_data.tree, None, filename)
         retcode = call("/usr/sbin/svccfg apply -n " + filename, shell=True)
         self.assertEquals(retcode, 0, "Validation of xml failed:\n\n" +
-            self.get_xml_contents(filename))
+        self.get_xml_contents(filename))
 
     def default_dict_setup(self):
         data = dict()
@@ -131,6 +131,39 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         payload["domain_name"] = "domain_name"
         payload["name_server"] = "host(129.91.159.000)"
         key_value = KeyValues("name_service", ["NIS", payload], 3)
+        data[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLSysidcfgData(data, report, None)
+        self.assertEquals(report.has_errors(), False,
+                          failure_report(report, self.log_file))
+        self.validate_xml_output(xml_data)
+
+    def test_sysidcfg_name_service_LDAP(self):
+        """Tests sysidcfg name_service=LDAP {args..}"""
+        data = self.default_dict_setup()
+        payload = dict()
+        payload["domain_name"] = "us.oracle.com"
+        payload["profile"] = "default"
+        payload["profile_server"] = "172.31.2.1"
+        payload["proxy_dn"] = \
+            "cn=proxyagent,ou=profile,dc=west,dc=example,dc=com"
+        payload["proxy_password"] = "password"
+        key_value = KeyValues("name_service", ["LDAP", payload], 3)
+        data[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLSysidcfgData(data, report, None)
+        self.assertEquals(report.has_errors(), False,
+                          failure_report(report, self.log_file))
+        self.validate_xml_output(xml_data)
+
+    def test_sysidcfg_name_service_LDAP_wo_opt_arg(self):
+        """Tests sysidcfg name_service=LDAP without opt args"""
+        data = self.default_dict_setup()
+        payload = dict()
+        payload["domain_name"] = "us.oracle.com"
+        payload["profile"] = "default"
+        payload["profile_server"] = "172.31.2.1"
+        key_value = KeyValues("name_service", ["LDAP", payload], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
         XMLSysidcfgData(data, report, None)
@@ -377,6 +410,16 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
 
+    def test_sysidcfg_system_locale(self):
+        """Tests system_locale=en.UTF-8"""
+        data = self.default_dict_setup()
+        data[3] = KeyValues("system_locale", ["en.UTF-8"], 1)
+        report = ConversionReport()
+        xml_data = XMLSysidcfgData(data, report, None)
+        self.assertEquals(report.has_errors(), False,
+                          self.sysidcfg_failure_report(xml_data, report))
+        self.validate_xml_output(xml_data)
+
     def test_sysidcfg_terminal(self):
         """Tests terminal=vt100"""
         data = self.default_dict_setup()
@@ -560,11 +603,11 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         XMLSysidcfgData(data, report, None)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
-        self.assertEquals(report.process_errors, 0,
+        self.assertEquals(report.process_errors, 2,
                           failure_report(report, self.log_file))
         self.assertEquals(report.conversion_errors, 0,
                           failure_report(report, self.log_file))
-        self.assertEquals(report.unsupported_items, 1,
+        self.assertEquals(report.unsupported_items, 0,
                           failure_report(report, self.log_file))
         self.assertEquals(report.validation_errors, 0,
                           failure_report(report, self.log_file))
@@ -1172,25 +1215,6 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 0,
                           failure_report(report, self.log_file))
         self.assertEquals(report.unsupported_items, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.validation_errors, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.warnings, 2,
-                          failure_report(report, self.log_file))
-
-    def test_sysidcfg_system_locale_unsupported(self):
-        """Tests system_locale=en.UTF-8"""
-        data = dict()
-        data[1] = KeyValues("system_locale", ["en.UTF-8"], 1)
-        report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
-        self.assertEquals(report.has_errors(), True,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.process_errors, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.conversion_errors, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.unsupported_items, 1,
                           failure_report(report, self.log_file))
         self.assertEquals(report.validation_errors, 0,
                           failure_report(report, self.log_file))

@@ -69,6 +69,18 @@ class Test_Profile(unittest.TestCase):
         # Delete everything when we are done
         shutil.rmtree(self.working_dir)
 
+    def validate_xml_output(self, xml_data):
+        """Outputs the xml data to a file and then performs a validation test
+           on the resulting file
+
+        """
+        self.assertNotEquals(xml_data.tree, None)
+        filename = os.path.join(self.working_dir, SYSIDCFG_FILENAME + ".xml")
+        js2ai.write_xml_data(xml_data.tree, None, filename)
+        retcode = call("/usr/sbin/svccfg apply -n " + filename, shell=True)
+        self.assertEquals(retcode, 0, "Validation of xml failed:\n\n" +
+            self.get_xml_contents(filename))
+
     def profile_failure_report(self, xml_profile_data, report):
         """Generate profile failure report"""
         rbuffer = "\nResulting XML Tree: "
@@ -1367,6 +1379,54 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.warnings, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry34(self):
+        """Tests filesys for / with bad size specified"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c0t0d0s0", "2000x", "/"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.warnings, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry35(self):
+        """Tests filesys for / with a size of existing specified"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c0t0d0s0", "existing", "/"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
