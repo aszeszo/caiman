@@ -41,7 +41,10 @@ import tempfile
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.dhcp as dhcp
+import osol_install.auto_install.grub as grub
 import osol_install.auto_install.installadm_common as com
+import osol_install.auto_install.service as svc
+import osol_install.auto_install.service_config as config
 import osol_install.libaiscf as smf
 
 from osol_install.auto_install import create_client
@@ -70,6 +73,7 @@ TFTPBOOT = '/tftpboot'
 NETBOOT = '/etc/netboot'
 SERVICE_DIR = '/var/ai/service'
 AI_SVC_FMRI = 'system/install/server:default'
+SOLARIS_DHCP_SVC_FMRI = 'network/dhcp-server:default'
 ISC_DHCP_CONFIG = '/var/ai/isc_dhcp.conf'
 NETBOOT_ERR = _("""
 Conversion continuing.  To manually complete this step:
@@ -221,10 +225,12 @@ class SUNDHCPData:
         if 'Include' in macros[name]:
             # Add the value of the Include keyword expansion
             include_value = macros[name]['Include']
-            include_expansion.update(macros[include_value])
-            # Recursively call this method to pick up any embedded Includes
-            include_expansion.update(SUNDHCPData._get_include_vals(
-                                  include_value, macros))
+            # Check to make sure that the included macro actually exists
+            if include_value in macros:
+                include_expansion.update(macros[include_value])
+                # Recursively call this method to pick up any embedded Includes
+                include_expansion.update(SUNDHCPData._get_include_vals(
+                                      include_value, macros))
 
         return include_expansion
 
@@ -1199,10 +1205,29 @@ def create_config(services, dryrun, ai_service):
             config_file.write(item + "\n")
         config_file.close()
 
+    # Check to see if installadm-convert has been run before by
+    # testing for the existence of install.conf.bak and install.conf
+    # existing as a sym link.  If this is the case then remove the 
+    # link and copy install.conf.bak to install.conf.  This will restore
+    # the file to its original contents and allow the convert to run
+    # successfully.
+    install_conf = os.path.join(service['path'], 'install.conf')
+    install_conf_bak = os.path.join(service['path'], 'install.conf.bak')
+    if not dryrun:
+        if os.path.islink(install_conf):
+            link_path = os.readlink(install_conf)
+            if not os.path.exists(link_path) and \
+                os.path.exists(install_conf_bak):
+                os.remove(install_conf)
+                shutil.copyfile(install_conf_bak, install_conf)
+        # Create the install.conf.bak file if it doesn't already exist
+        elif os.path.exists(install_conf) and not \
+            os.path.exists(install_conf_bak):
+            shutil.copyfile(install_conf, install_conf_bak)
+
     # If install.conf exists in the image directory then move it to
     # the service directory, rename it system.conf, and then create
     # a symlink back to install.conf
-    install_conf = os.path.join(service['path'], 'install.conf')
     if os.path.exists(install_conf):
         system_conf = os.path.join(SERVICE_DIR, ai_service, 'system.conf')
         print _("Move %s to %s") % (install_conf, system_conf)
@@ -1229,6 +1254,8 @@ def move_service_directory(services, dryrun, ai_service):
         /var/ai/service/<service name> and remove the symbolic link to
         /etc/netboot/wanboot.conf if it exists.
     - x86
+        translate the menu.lst from I86PC* boot format to service name format
+        eg. /I86PC.Solaris-2 --> /solaris-i386-170
         move menu.lst file from /tftpboot/menu.lst.<service name> to
         /var/ai/service/<service name>/menu.lst
         clean up pxegrub files
@@ -1305,6 +1332,13 @@ def move_service_directory(services, dryrun, ai_service):
                     shutil.move(grub_path, new_grub)
                 except OSError as err:
                     raise ServiceConversionError(str(err))
+
+                try:
+                    print _("     Update menu.lst format")
+                    grub.update_svcname(new_grub, ai_service, ai_service)
+                except IOError as err:
+                    raise ServiceConversionError(str(err))
+
         else:
             raise ServiceConversionError(_("Error: menu.lst for service: %s"
                                          "was not found" % ai_service))
@@ -1422,11 +1456,19 @@ def convert_client(clients, dry_run, ai_service):
         if service['arch'] == 'i386':
             print _("        boot_args: %s") % boot_args
         if not dry_run:
-            # recreate the client
-            create_client.create_new_client(service['arch'],
-                AIService(ai_service),
-                service['client'].replace(':', ''), boot_args)
+            mac_address = service['client'].replace(':', '')
 
+            # wrap the whole create_client to catch exceptions as they
+            # should not be thrown anywhere
+            try:
+                # recreate the client
+                create_client.create_new_client(service['arch'],
+                   AIService(ai_service), mac_address, boot_args)
+            except (OSError, aismf.ServicesError, config.ServiceCfgError,
+                    svc.MountError) as err:
+                sys.stderr.write("Client conversion failed:\n")
+                sys.stderr.write(str(err) + "\n")
+                
 
 def copy_netboot_files(dry_run):
     """
@@ -1610,18 +1652,22 @@ def convert_image_paths(services, dry_run):
             image[service['path']] = service_name
 
 
-def is_sun_dhcp_host():
+def is_solaris_dhcp_host():
     """
-    Is Solaris DHCP configured and enabled on this system
+    Is Solaris DHCP configured and online on this system
     """
 
-    cmd = ['/usr/sbin/dhtadm', '-P']
+    # Verify that the service is online
+    cmd = ['/bin/svcs', '-H', '-o', 'STATE', SOLARIS_DHCP_SVC_FMRI]
     try:
-        Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.DEVNULL)
+        pipe = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.DEVNULL)
     except CalledProcessError:
         return False
 
-    return True
+    if pipe.stdout.strip() == 'online':
+        return True
+
+    return False
 
 
 def create_isc_dhcp_configuration(dhcp_config):
@@ -1782,10 +1828,11 @@ def main():
     # Create an ISC DHCP configuration from the existing Solaris DHCP if
     # the AI server has been setup as the DHCP server
     # If the --dhcp option was specified then exit after creating the config
-    if is_sun_dhcp_host():
+    if is_solaris_dhcp_host():
         create_isc_dhcp_configuration(ISC_DHCP_CONFIG)
     else:
-        print _("There is no DHCP configuration to convert on the AI server")
+        print _("The Solaris DHCP service is not online - DHCP "
+                "conversion bypassed")
 
     if options.dhcp:
         sys.exit(EXIT_SUCCESS)
@@ -1816,6 +1863,11 @@ def main():
     # Disable the AI service
     if not options.dryrun:
         aismf.disable_instance()
+
+    # if /etc/netboot doesn't already exist - create it
+    if not options.dryrun:
+        if not os.path.exists(NETBOOT):
+            os.mkdir(NETBOOT)
 
     # If multiple services use the same image path then convert them so that
     # they each have their own copy
