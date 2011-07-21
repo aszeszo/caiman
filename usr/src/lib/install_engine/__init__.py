@@ -1111,7 +1111,7 @@ class InstallEngine(object):
             cache_file = cp_data.data_cache_path
             snap_name = cp_data.zfs_snap
             if cache_file is None:
-                raise RollbackError(rollback_cp,
+                raise RollbackError(before_cp,
                                     "Checkpoint has no data cache")
         else:
             # Out of process resume
