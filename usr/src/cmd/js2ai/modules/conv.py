@@ -86,6 +86,28 @@ REDUNDANCY_MIRROR = "mirror"
 DEVICE_ANY = "any"
 SIZE_ALL = "all"
 SIZE_AUTO = "auto"
+SIZE_DELETE = "delete"
+SIZE_EXISTING = "existing"
+SIZE_FREE = "free"
+SIZE_MAXFREE = "maxfree"
+
+PARTITIONING_DEFAULT = "default"
+PARTITIONING_EXPLICIT = "explicit"
+
+# Prefix for keyword operations like fdisk that specify the <device> as
+# rootdisk.
+#
+# fdisk rootdisk <type> <size>
+#
+PREFIX_ROOTDISK = "rootdisk"
+
+
+# Prefix for keyword operations like filesys that specify the <slice> as
+# a rootdisk slice.
+#
+# filesys rootdisk.s1 10000 swap
+#
+PREFIX_ROOTDISK_DOT = "rootdisk."
 
 FILESYS_DEFAULT_MOUNT_POINT = "unnamed"
 
@@ -514,14 +536,15 @@ class XMLProfileData(object):
     def __change_arch(self, arch, line_num):
         """Change the architecture setting that this profile is
            being generated for.  Check for the one possible conflict
-           condition and update error report appropriately
+           condition and update error report appropriately.  Returns True
+           if change represents no conflict, False otherwise
 
         """
         if self._arch == common.ARCH_GENERIC:
             self._arch = arch
         elif arch == self._arch:
             # Already set
-            pass
+            return True
         else:
             # Error we've got a profile that is mixing x86 and sparc syntax
             # There only one way this can happen.
@@ -534,6 +557,8 @@ class XMLProfileData(object):
                 "linenum": line_num,
                 "dev": self._boot_device})
             self._report.add_conversion_error()
+            return False
+        return True
 
     def __invalid_syntax(self, line_num, keyword):
         """Generate invalid keyword error"""
@@ -687,57 +712,23 @@ class XMLProfileData(object):
         zpool.set(common.ATTRIBUTE_NAME, pool_name)
         return zpool
 
-    def __create_disk_node(self, disk_name, delete_existing_slices):
-        """Create the <disk> structure used to represent a disk in the system
+    def __create_disk_node(self, disk_name, whole_disk):
+        """Create the <disk><disk_name></disk> structure used to represent a
+           disk in the system
 
-           <disk>
+           <disk whole_disk="true">
                <disk_name name="${disk_name}"/>
            </disk>
-
-           For x86 system the default partition will be added
-
-           <disk>
-               <disk_name name="${disk_name}"/>
-               <partition action="create" force="true" name="1"
-                          part_type="191" />
-           </disk>
-
-           If delete_existing_slices is specified entries will be added
-           that cause all the existing slices to be deleted prior to the first
-           slice create operation.
-
-           Returns the node that represents the insertion point for adding
-           slices to the disk structure.  On x86 this is the <partition> node
-           On sparc this is the <disk> node
 
         """
-        if self._arch == common.ARCH_GENERIC:
-            # The architecture of the manifest represented by the xml tree
-            # associated with this object is currently set as GENERIC.
-            # The Jumpstart profile operation (via keyword) now being processed
-            # cannot be performed in a generic fashion.  As such when completed
-            # it will be necessary to generate 2 different manifests.  One for
-            # SPARC and one for x86.  We accomplish this by setting the _arch
-            # flag to None and then internally generating the manifest as an
-            # x86 tree. The None value for architecture returned via
-            # conv.arch() tells the caller (in this case, __init__.py
-            # convert_profile()) that a call to fetch both trees (x86, SPARC)
-            # via fetch_tree(arch) will be necessary
-            self._arch = None
-
         disk = etree.Element(common.ELEMENT_DISK)
         self._target.insert(0, disk)
         diskname_node = etree.SubElement(disk, common.ELEMENT_DISK_NAME)
         diskname_node.set(common.ATTRIBUTE_NAME, disk_name)
         diskname_node.set(common.ATTRIBUTE_NAME_TYPE, "ctd")
-        if self._arch == common.ARCH_SPARC:
-            slice_node_parent = disk
-        else:
-            slice_node_parent = self.__add_partition(disk)
-        if delete_existing_slices:
-            for slice_num in [0, 1, 3, 4, 5, 6, 7]:
-                self.__add_slice(slice_node_parent, "%s" % slice_num, "delete")
-        return slice_node_parent
+        if whole_disk:
+            disk.set(common.ATTRIBUTE_WHOLE_DISK, "true")
+        return disk
 
     def __add_device(self, line_num, device, size=None,
                      in_pool=DEFAULT_POOL_NAME,
@@ -759,28 +750,47 @@ class XMLProfileData(object):
             # This tells the AI to automatically discover the root disk to use
             return
         if size == SIZE_ALL:
-            delete_existing_slices = True
+            delete_existing = True
         else:
-            delete_existing_slices = False
+            delete_existing = False
         try:
             disk_name, slice_num = device.split("s")
         except ValueError:
             disk_name = device
             # For Solaris 11 we default to s0 if no slice is specified
             slice_num = "0"
-            delete_existing_slices = True
+            delete_existing = True
 
         # Check to make sure that the device we are adding isn't in the
         # usedisk list.  If it is remove it so we don't try to use it later
         if self._usedisk.count(disk_name):
             self._usedisk.remove(disk_name)
-            if self._partitioning == "default":
-                delete_existing_slices = True
+            if self._partitioning == PARTITIONING_DEFAULT:
+                delete_existing = True
 
         disk_node = self.__fetch_disk_node(disk_name)
         if disk_node is None:
-            slice_parent_node = self.__create_disk_node(disk_name,
-                                                        delete_existing_slices)
+            if self._arch == common.ARCH_GENERIC:
+                # The architecture of the manifest represented by the xml tree
+                # associated with this object is currently set as GENERIC.
+                # The Jumpstart profile operation (via keyword) now being
+                # processed cannot be performed in a generic fashion.  As such
+                # when completed it will be necessary to generate 2 different
+                # manifests.  One for SPARC and one for x86.  We accomplish
+                # this by setting the _arch flag to None and then internally
+                # generating the manifest as an x86 tree. The None value for
+                # architecture returned via conv.arch() tells the caller
+                # (in this case, __init__.py convert_profile()) that a call
+                # to fetch both trees (x86, SPARC) via fetch_tree(arch)
+                # will be necessary
+                if not self.__change_arch(None, line_num):
+                    return
+
+            disk = self.__create_disk_node(disk_name, delete_existing)
+            if self._arch == common.ARCH_SPARC:
+                slice_parent_node = disk
+            else:
+                slice_parent_node = self.__add_partition(disk)
         else:
             if self._arch in [None, common.ARCH_X86]:
                 # We return the partition
@@ -1081,6 +1091,12 @@ class XMLProfileData(object):
             # a direct comparision should be performed
             cmp_device = disk_slice
         else:
+            if self._rootdisk_set_by_keyword == "fdisk":
+                # fdisk keyword never represents a conflict
+                # it may be overriden by any keyword that causes rootdisk
+                # to be set
+                return
+
             # root_disk wasn't set but boot_device was so our comparision
             # has to be made at the disk level instead of the slice level
             cmp_device = self.__device_name_conversion(disk_slice)
@@ -1098,41 +1114,42 @@ class XMLProfileData(object):
             return True
         return False
 
-    def __rootdisk_device_conversion(self, device, line_num):
-        """Checks the device for the presence of 'rootdisk."  if found
-        and the root disk has been determined the 'rootdisk.' will be
+    def __rootdisk_conversion(self, line_num, device, prefix):
+        """Checks the 'device' for the presence of 'prefix'  if found
+        and the root disk has been determined the 'prefix' will be
         replaced with the name of the root disk
 
         """
         # Jumpstart profiles may have commands in the format
         #
         # filesys rootdisk.s0 size mount_point
+        # fdisk solaris rootdisk all
         #
         # This routines simply looks for that pattern in the device
         # and substitutes it for the rootdisk if we've determined
         # what that rootdisk is
         #
-        if not None and device.startswith("rootdisk."):
+        if device is not None and device.startswith(prefix):
             # We can only support the rootdisk keyword if
             # root_device, boot_device, pool, or  filesys /
             # has been specified in the profile
             # If filesys / is used then it must proceed rootdisk usage
             # in order for this substitution to suceed
             if self._rootdisk is None:
-                self.logger.error(_("%(file)s: line %(linenum)d: "
-                    "unsupported syntax: '%(device)s' is only "
-                    "supported if root_device, boot_disk, or fdisk was "
-                    "defined in profile") % \
-                    {"file": self.profile_name,
-                    "linenum": line_num,
-                    "device": device})
-                self._report.add_unsupported_item()
+                self.logger.error(_("%(file)s: line %(lineno)d: "
+                                    "unable to convert '%(device)s'.  Replace"
+                                    "'%(prefix)s' with actual device name") % \
+                                    {"file": self.profile_name, \
+                                     "lineno": line_num,
+                                     "device": device,
+                                     "prefix": prefix})
+                self._report.add_conversion_error()
                 return None
             # The root device specification has a slice associated with it
             # we need to strip this off before we substitute "rootdisk."
             # with it
             disk = self.__device_name_conversion(self._rootdisk)
-            device = device.replace("rootdisk.", disk, 1)
+            device = device.replace(prefix, disk, 1)
         return device
 
     def __convert_fdisk_entry(self, line_num, keyword, values):
@@ -1157,7 +1174,8 @@ class XMLProfileData(object):
             self.__unsupported_value(line_num, _("<diskname>"), disk_name)
             return
 
-        disk_name = self.__rootdisk_device_conversion(disk_name, line_num)
+        disk_name = self.__rootdisk_conversion(line_num, disk_name,
+                                               PREFIX_ROOTDISK)
         if disk_name is None:
             return
 
@@ -1186,7 +1204,7 @@ class XMLProfileData(object):
         #                       maxfree
         #                       ###
         size = values[2].lower()
-        if size in ["delete", "maxfree", "0"]:
+        if size in [SIZE_MAXFREE, SIZE_DELETE, "0"]:
             # maxfree - An fdisk partition is created in the largest
             #           contiguous free space on the specified disk. If an
             #           fdisk partition of the specified type already exists
@@ -1210,33 +1228,45 @@ class XMLProfileData(object):
                                      "lineno": line_num,
                                      "size": size})
                 self._report.add_conversion_error()
-                return
+            # fdisk partition size is specified in MB
+            size += "mb"
 
-        if self._root_pool is not None:
-            self.logger.error(_("%(file)s: line %(lineno)d: conflicting "
-                                "definition: ZFS pool was "
-                                "already defined via keyword "
-                                "'%(rp_kw)s', ignoring fdisk entry") % \
-                                {"file": self.profile_name, \
-                                 "lineno": line_num,
-                                 "rootdisk": self._rootdisk,
-                                 "rp_kw": self._root_pool_create_via_keyword})
-            self._report.add_conversion_error()
-        elif self._rootdisk is not None:
-            self.logger.error(_("%(file)s: line %(lineno)d: conflicting "
-                                "definition: rootdisk was "
-                                "defined as '%(rootdisk)s via keyword "
-                                "'%(rd_kw)s', ignoring fdisk entry") % \
-                                {"file": self.profile_name, \
-                                 "lineno": line_num,
-                                 "rootdisk": self._rootdisk,
-                                 "rd_kw": self._rootdisk_set_by_keyword})
-            self._report.add_conversion_error()
-        else:
+        if self._root_pool is None and \
+          self._partitioning == PARTITIONING_DEFAULT and \
+          self._rootdisk is None:
+            # Only set rootdisk to the value held by fdisk if
+            # "partitioning = default".  A value of explicit implies
+            # the user is going to specify the layout
             self._rootdisk = disk_name
             if size != SIZE_ALL:
                 self._rootdisk_size = size
             self._rootdisk_set_by_keyword = "fdisk"
+
+        # Go ahead and create entry for partition
+        disk_node = self.__fetch_disk_node(disk_name)
+        if disk_node is None:
+            disk_node = self.__create_disk_node(disk_name, size == SIZE_ALL)
+        else:
+            if size == SIZE_ALL:
+                disk_node.set(common.ATTRIBUTE_WHOLE_DISK, "true")
+        part_node = self.__add_partition(disk_node)
+        size_node = part_node.find(common.ELEMENT_SIZE)
+        if size != SIZE_ALL:
+            if size_node is None:
+                size_node = etree.Element(common.ELEMENT_SIZE)
+                part_node.insert(0, size_node)
+                size_node.set(common.ATTRIBUTE_VAL, size)
+            else:
+                spec_size = size_node.get(common.ATTRIBUTE_VAL)
+                if size != spec_size:
+                    self.logger.error(_("%(file)s: line %(lineno)d: "
+                                        "conflicting fdisk <size> specified: "
+                                        "size was previously defined as "
+                                        "%(size)s. Ignoring entry") % \
+                                        {"file": self.profile_name,
+                                         "lineno": line_num,
+                                         "size": spec_size})
+                    self._report.add_conversion_error()
 
     def __is_valid_filesys_mount(self, line_num, mount):
         """Check whether this is a valid supported mount point.  Return True
@@ -1319,7 +1349,8 @@ class XMLProfileData(object):
                     self._report.add_conversion_error()
                     return None
         else:
-            device = self.__rootdisk_device_conversion(device, line_num)
+            device = self.__rootdisk_conversion(line_num, device,
+                                                PREFIX_ROOTDISK_DOT)
             if device is None:
                 return None
 
@@ -1330,6 +1361,7 @@ class XMLProfileData(object):
                                "linenum": line_num,
                                "device": device})
             self._report.add_conversion_error()
+            return None
         return device
 
     def __filesys_size_conversion(self, line_num, keyword, size):
@@ -1345,7 +1377,7 @@ class XMLProfileData(object):
             else:
                 # Jumpstart uses m and g not mb and gb like installer wants
                 size += "b"
-        elif size in ["free", "existing"]:
+        elif size in [SIZE_FREE, SIZE_EXISTING]:
             self.__unsupported_syntax(line_num, keyword,
                 _("sizes other than a number, auto, or all are not supported"))
             return None
@@ -1961,9 +1993,11 @@ class XMLProfileData(object):
             # specified for boot device the architecuture is SPARC.
             # Otherwise it's x86
             if self.__is_valid_slice(device):
-                self.__change_arch(common.ARCH_SPARC, line_num)
+                if not self.__change_arch(common.ARCH_SPARC, line_num):
+                    return
             else:
-                self.__change_arch(common.ARCH_X86, line_num)
+                if not self.__change_arch(common.ARCH_X86, line_num):
+                    return
 
         if length == 2:
             eeprom = values[1].lower()
@@ -2062,7 +2096,8 @@ class XMLProfileData(object):
             self.__invalid_syntax(line_num, keyword)
             return
         self._partitioning = values[0].lower()
-        if self._partitioning not in ["default", "explicit"]:
+        if self._partitioning not in [PARTITIONING_DEFAULT,
+                                      PARTITIONING_EXPLICIT]:
             self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
                                 "profile, partitioning must be "
                                 "'default' or 'explicit'") % \
@@ -2330,7 +2365,8 @@ class XMLProfileData(object):
                 self.__store_usedisk_entry(line_num, keyword, values)
                 del self.prof_dict[key]
             elif keyword == "fdisk":
-                self.__change_arch(common.ARCH_X86, line_num)
+                if not self.__change_arch(common.ARCH_X86, line_num):
+                    return
 
         self.__find_xml_entry_points()
 
@@ -2357,18 +2393,17 @@ class XMLProfileData(object):
                 if function_to_call is not None:
                     function_to_call(self, line_num, keyword, values)
 
-        # If the user specified a root_device or boot_disk but didn't create a
-        # root pool via filesys, fdisk or pool create one now and add the
-        # specified root_device as that disk for that pool
+        # If the root pool is not created attempt to create it now
         if self._root_pool is None:
             if self._rootdisk is not None:
+                # rootdisk is set create the pool using the specified rootdisk
                 zpool = self.__create_root_pool(self._rootdisk_set_by_keyword)
                 self.__create_vdev(zpool)
                 self.__add_device(line_num, self._rootdisk,
                                   self._rootdisk_size, self._root_pool_name)
 
             elif self._partitioning is not None and \
-                 self._partitioning == "default":
+                 self._partitioning == PARTITIONING_DEFAULT:
                 # Root pool doesn't exist.  User specified partitioning
                 # default.  Go ahead and create it now
                 zpool = self.__create_root_pool("partitioning")
