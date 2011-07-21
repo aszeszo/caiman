@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 LANGUAGE_FILE=/etc/sysconfig/language
@@ -202,7 +202,7 @@ for ((;;)) ; do
 	# Launch commands as a subprocess.
 	# However, launch the functions within the context 
 	# of the current process.
-	if [[ "${!menu_items[$input].do_subprocess}" = "true" ]] ; then
+	if [[ "${menu_items[$input].do_subprocess}" = "true" ]] ; then
 		(
 		trap - TSTP INT TERM ABRT QUIT
 		# Print out a message if requested
