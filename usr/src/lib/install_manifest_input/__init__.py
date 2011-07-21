@@ -70,9 +70,9 @@ class MimDTDError(MimError):
     pass
 
 
-class MimDTDInvalid(MimError):
+class MimMultMsgError(MimError):
     '''
-    DTD did not validate
+    Exception class handling multiple error messages
     '''
 
     def __init__(self, validation_error_list):
@@ -82,7 +82,7 @@ class MimDTDInvalid(MimError):
         Args:
           validation_error_list: list of validation errors.
         '''
-        super(MimDTDInvalid, self).__init__()
+        super(MimMultMsgError, self).__init__()
         self._errors = validation_error_list
 
     @property
@@ -93,7 +93,14 @@ class MimDTDInvalid(MimError):
         return self._errors
 
 
-class MimEtreeParseError(MimError, IOError):
+class MimDTDInvalid(MimMultMsgError):
+    '''
+    DTD did not validate
+    '''
+    pass
+
+
+class MimEtreeParseError(MimMultMsgError, IOError):
     '''
     Etree parsing error
     '''
@@ -137,7 +144,6 @@ ERR_ETREE_PROC = _("Etree error processing DTD data from "
                    "file \"%(mfile)s\": %(merr)s")
 ERR_SCHDATA_PROC = _("SchemaData error processing "
                      "DTD data from file \"%(mfile)s\": %(merr)s")
-ERR_ETREE_PARSE_FILE = _("Error parsing XML manifest file %(mfile)s: %(merr)s")
 ERR_EMPTY_TREE = _("No XML data present.")
 ERR_AMBIG_PATH = _("Ambiguity error:  Path matches more than one element")
 ERR_AMBIG_PARENT_PATH = _("Ambiguity error: "

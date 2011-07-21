@@ -73,7 +73,7 @@ def parse_options(cmd_options=None):
 
     if not config.is_service(options.service_name):
         raise SystemExit(_("Not a valid service: %s") % options.service_name)
-    
+
     options.svcdir_path = AIService(options.service_name).config_dir
     logging.debug("options = %s", options)
     return options
@@ -94,7 +94,7 @@ def delete_manifest_from_db(db, manifest_instance, service_name, data_loc):
                              manifest_instance[0]))
     else:
         man_name = manifest_instance[0]
-    
+
     service = AIService(service_name)
     # Do not delete if this manifest is set up as the default.
     if man_name == service.get_default_manifest():
@@ -129,8 +129,8 @@ def delete_manifest_from_db(db, manifest_instance, service_name, data_loc):
                               AIdb.numInstances(man_name, db.getQueue()))))
 
         # remove instance from database
-        query = "DELETE FROM manifests WHERE name = '%s' AND " + \
-                "instance = '%i'" % (AIdb.sanitizeSQL(man_name), instance)
+        query = ("DELETE FROM manifests WHERE name = '%s' AND "
+                "instance = '%i'") % (AIdb.sanitizeSQL(man_name), instance)
         query = AIdb.DBrequest(query, commit=True)
         db.getQueue().put(query)
         query.waitAns()
@@ -146,8 +146,8 @@ def delete_manifest_from_db(db, manifest_instance, service_name, data_loc):
         for num in range(instance, AIdb.numInstances(man_name,
                                                      db.getQueue()) + 1):
             # now decrement the instance number
-            query = "UPDATE manifests SET instance = '%i' WHERE " + \
-                    "name = '%s' " % (num - 1, AIdb.sanitizeSQL(man_name))
+            query = ("UPDATE manifests SET instance = '%i' WHERE "
+                    "name = '%s' ") % (num - 1, AIdb.sanitizeSQL(man_name))
             query += "AND instance = '%i'" % num
             query = AIdb.DBrequest(query, commit=True)
             db.getQueue().put(query)

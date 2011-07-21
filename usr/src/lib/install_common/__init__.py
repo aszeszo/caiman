@@ -49,11 +49,6 @@ from solaris_install.logger import INSTALL_LOGGER_NAME
 
 _ = gettext.translation('AI', '/usr/share/locale', fallback=True).gettext
 
-# Shebang lines to tell a (derived manifest) script apart from an XML manifest.
-# Note their appearance in scripts may have "/usr" prepended to them.
-KSH93_SHEBANG = "/bin/ksh93"
-PYTHON_SHEBANG = "/bin/python"
-
 # Useful common directories and path pieces
 
 # System Temporary Directory - for secure processes

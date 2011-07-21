@@ -44,7 +44,7 @@ from osol_install.auto_install import delete_service
 from osol_install.auto_install import export
 from osol_install.auto_install import list as ai_list
 from osol_install.auto_install import publish_manifest
-from osol_install.auto_install import rename_service 
+from osol_install.auto_install import rename_service
 from osol_install.auto_install import set_criteria
 from osol_install.auto_install import set_service
 from osol_install.auto_install import validate_profile
@@ -149,7 +149,7 @@ def do_disable_service(cmd_options=None):
     Raises:
         SystemExit if missing permissions, invalid service name, or
         if attempt to place smf service in maintenance fails.
-    
+
     '''
     logging.debug('**** START do_disable_service ****')
 
@@ -177,7 +177,7 @@ def do_disable_service(cmd_options=None):
         validate_service_name(svcname)
     except ValueError as err:
         raise SystemExit(err)
- 
+
     if not config.is_service(svcname):
         err_msg = _("The service does not exist: %s\n") % svcname
         parser.error(err_msg)
@@ -191,7 +191,7 @@ def do_disable_service(cmd_options=None):
     if prop_data[config.PROP_STATUS] == config.STATUS_OFF:
         err_msg = _("The service is not running: %s\n") % svcname
         parser.error(err_msg)
-    
+
     try:
         logging.debug("Disabling install service %s", svcname)
         service = AIService(svcname)
@@ -236,10 +236,10 @@ def main():
                               create_profile.get_usage()),
         'delete-client':     (delete_client.do_delete_client,
                               delete_client.get_usage()),
-        'add-manifest':      (publish_manifest.do_publish_manifest,
-                              publish_manifest.get_add_usage()),
-        'add':               (publish_manifest.do_publish_manifest,  # alias
-                              publish_manifest.get_add_usage()),
+        'create-manifest':   (publish_manifest.do_publish_manifest,
+                              publish_manifest.get_create_usage()),
+        'add-manifest':      (publish_manifest.do_publish_manifest,  # alias
+                              publish_manifest.get_create_usage()),
         'update-manifest':   (publish_manifest.do_update_manifest,
                               publish_manifest.get_update_usage()),
         'delete-manifest':   (delete_manifest.do_delete_manifest,
@@ -268,7 +268,7 @@ def main():
             "disable",
             "create-client",
             "delete-client",
-            "add-manifest",
+            "create-manifest",
             "update-manifest",
             "delete-manifest",
             "create-profile",

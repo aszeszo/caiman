@@ -44,8 +44,6 @@ import osol_install.auto_install.common_profile as sc
 import osol_install.auto_install.verifyXML as verifyXML
 from osol_install.auto_install.installadm_common import _
 
-from solaris_install import KSH93_SHEBANG, PYTHON_SHEBANG
-
 IMG_AI_MANIFEST_DTD = "auto_install/ai.dtd"
 SYS_AI_MANIFEST_DTD = "/usr/share/install/ai.dtd"
 
@@ -282,7 +280,7 @@ def place_manifest(files, manifest_path):
     Returns: None
     Raises : Error, Unable to write destination manifest.
              Errors if _copy_file fails.
-    
+
     '''
     if files.manifest_is_script:
         root = None
@@ -290,10 +288,10 @@ def place_manifest(files, manifest_path):
         root = files.AI_root
     else:
         root = files.criteria_root
-    
+
     #service = AIService(files.service_name)
     #manifest_path = os.path.join(service.manifest_dir, files.manifest_name)
-    
+
     # Write out the manifest.
     if root:
 
@@ -392,7 +390,7 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
     # for all errors
     if errmsg:
         if verbose:
-            print raw_profile # dump unparsed profile for perusal
+            print raw_profile  # dump unparsed profile for perusal
 
         print >> sys.stderr
         print >> sys.stderr, errmsg  # print error message
@@ -483,12 +481,12 @@ class DataFiles(object):
     criteriaSchema = "/usr/share/auto_install/criteria_schema.rng"
     # DTD for validating an SMF SC manifest
     smfDtd = "/usr/share/lib/xml/dtd/service_bundle.dtd.1"
-    
+
     @classmethod
     def from_service(cls, service, **kwargs):
         '''Creates a DataFiles object, filling in a subset of kwargs
         from the passed in AIService object
-        
+
         '''
         return cls(service_dir=service.config_dir,
                    image_path=service.image.path,
@@ -974,7 +972,7 @@ class DataFiles(object):
         else:
             name = os.path.basename(self.manifest_path)
         return name
-    
+
     def verify_AI_manifest(self):
         """
         Used for verifying and loading AI manifest as defined by
@@ -1083,20 +1081,11 @@ class DataFiles(object):
     @classmethod
     def manifest_is_a_script(cls, manifest_filepath):
         """
-        Returns True if given manifest is supported by Derived Manifests.
-
-        Raises a SystemExit exception if an unsupported script type is found.
+        Returns True if given "manifest" is really a script.
         """
         linecache.checkcache(manifest_filepath)
         first_line = linecache.getline(manifest_filepath, 1)
-        if first_line.startswith("#!"):
-            if not (KSH93_SHEBANG in first_line or
-                    PYTHON_SHEBANG in first_line):
-                print >> sys.stderr, "Unsupported script format.  " \
-                    "Python and ksh93 scripts are supported."
-                raise SystemExit(errno.EINVAL)
-            return True
-        return False
+        return first_line.startswith("#!")
 
     def set_criteria_root(self, root=None):
         """

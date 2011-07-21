@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
-# 
+#
 '''
 AI create-client / delete-client
 '''
@@ -50,13 +50,13 @@ def _cleanup_files(client_id, more_files=()):
     # old versions of installadm, etc.
     # More care must be taken to avoid unintentionally clobbering desired
     # config.
-    cleanup = [_menulst_path(client_id),              # x86 menu.lst file
-               _pxegrub_path(client_id)[1],           # x86 pxegrub symlink
-               os.path.join(com.BOOT_DIR, client_id)] # SPARC symlink
+    cleanup = [_menulst_path(client_id),               # x86 menu.lst file
+               _pxegrub_path(client_id)[1],            # x86 pxegrub symlink
+               os.path.join(com.BOOT_DIR, client_id)]  # SPARC symlink
 
     # Now add in any files passed by the caller
     cleanup.extend(more_files)
-    
+
     # Search for pre-multihomed, subnet-specific SPARC directories
     # (e.g., /etc/netboot/192.168.0.0/010011AABB/) and add those.
     subnet = re.compile(dhcp.IP_PATTERN)
@@ -65,13 +65,13 @@ def _cleanup_files(client_id, more_files=()):
             d = os.path.join(com.BOOT_DIR, f, client_id)
             if os.path.isdir(d):
                 cleanup.append(d)
-    
+
     # Finally, delete any files or directories from our list that
     # might exist on the system.
     for f in cleanup:
         if os.access(f, os.F_OK) or os.path.islink(f):
             force_delete(f)
-    
+
 
 def _menulst_path(client_id):
     return os.path.join(com.BOOT_DIR, grub.MENULST + "." + client_id)
@@ -88,10 +88,10 @@ def setup_x86_client(service, mac_address, bootargs=''):
         /etc/netboot/<client_id>
     Creates /etc/netboot/menu.lst.<client_id> boot configuration file
     Adds client info to AI_SERVICE_DIR_PATH/<svcname>/.config file
- 
+
     Arguments:
               image_path - directory path to AI image
-              mac_address - client MAC address (as formed by 
+              mac_address - client MAC address (as formed by
                             MACAddress class, i.e., 'ABABABABABAB')
               bootargs = bootargs of client (x86)
     Returns: Nothing
@@ -104,23 +104,28 @@ def setup_x86_client(service, mac_address, bootargs=''):
     client_menulst = _menulst_path(client_id)
 
     # copy service's menu.lst file to menu.lst.<client_id>
-    shutil.copy(menulst, client_menulst)
-    
+    try:
+        shutil.copy(menulst, client_menulst)
+    except IOError as err:
+        print >> sys.stderr, cw(_("Unable to copy grub menu.lst file: %s") %
+           err.strerror)
+        return
+
     # create a symlink from the boot directory to the sevice's bootfile.
     # note this must be relative from the boot directory.
     bootfile, pxegrub_path = _pxegrub_path(client_id)
     os.symlink("./" + service.dhcp_bootfile, pxegrub_path)
-    
+
     clientinfo = {config.FILES: [client_menulst, pxegrub_path]}
-    
+
     # if the client specifies bootargs, use them. Otherwise, inherit
     # the bootargs specified in the service (do nothing)
     if bootargs:
         grub.update_bootargs(client_menulst, service.bootargs, bootargs)
         clientinfo[config.BOOTARGS] = bootargs
-    
+
     config.add_client_info(service.name, client_id, clientinfo)
-    
+
     # Configure DHCP for this client if the configuration is local, otherwise
     # suggest the configuration addition. Note we only need to do this for
     # x86-based clients, not SPARC.
@@ -135,7 +140,7 @@ def setup_x86_client(service, mac_address, bootargs=''):
             server.add_host(full_mac, bootfile)
         except dhcp.DHCPServerError as err:
             print >> sys.stderr, cw(_("Unable to add host (%s) to DHCP "
-                                      "configuration: %s") % full_mac, err)
+                                      "configuration: %s") % (full_mac, err))
             return
 
         if server.is_online():
@@ -164,7 +169,7 @@ def setup_sparc_client(service, mac_address):
     Adds client info to AI_SERVICE_DIR_PATH/<svcname>/.config file
     Arguments:
               image_path - directory path to AI image
-              mac_address - client MAC address (as formed by 
+              mac_address - client MAC address (as formed by
                             MACAddress class, i.e., 'ABABABABABAB')
     Returns: Nothing
 
@@ -197,7 +202,7 @@ def remove_client(client_id):
         if AIService(service).arch == 'i386':
             # suggest dhcp unconfiguration
             remove_client_dhcp_config(client_id)
-    
+
     # remove client specific symlinks/files
     _cleanup_files(client_id, more_files)
 

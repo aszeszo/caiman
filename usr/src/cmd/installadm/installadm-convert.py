@@ -284,7 +284,7 @@ class SUNDHCPData:
         #  "0100093D143663", "Macro",
         #  ":BootSrvA=172.20.25.12:BootFile="0100093D143663":"]
 
-        # split into fields and create a dictionary with the name and 
+        # split into fields and create a dictionary with the name and
         # keyword/value pairs
         config_list = [ln.split(None, 2) for ln in
                        pipe.stdout.splitlines()][2:]
@@ -295,12 +295,12 @@ class SUNDHCPData:
                 macro_dict[config_line[0]] = \
                     SUNDHCPData._parse_macro_options(config_line[2])
 
-        # Each Solaris DHCP macro is comprised of keyword value pairs as 
+        # Each Solaris DHCP macro is comprised of keyword value pairs as
         # shown above.  The following block will expand the Include keyword
         # into its keyword value pairs
         # {v20z-brm-02 :  {Include : Locale, Timeserv : 10.80.127.2}
         #  Locale : {UTCoffset : -25200}}
-        # will be expanded to  
+        # will be expanded to
         # {v20z-brm-02 : {UTCoffset : -25200, Timeserv : 10.80.127.2} ...}
         for mname in macro_dict:
             # Add the expansion of the Include keywords to the macro
@@ -746,7 +746,7 @@ def remove_boot_archive_from_vfstab(ai_service, service):
                     sys.stderr.write(str(err) + "\n")
             # boot archive was not found in /etc/vfstab
             except (ValueError, IndexError):
-                sys.stderr.write(cw(_("Boot archive (%s) for service %s not " 
+                sys.stderr.write(cw(_("Boot archive (%s) for service %s not "
                                       "in vfstab.\n") % (boot_archive,
                                       service_name)))
 
@@ -1537,7 +1537,7 @@ def upgrade_svc_vers_0_1(services, dry_run, ai_service):
     else:
         sdpath = os.path.join('/var/ai/service', ai_service)
 
-    print cw(_("Upgrade existing default manifests for %s to version 1") % 
+    print cw(_("Upgrade existing default manifests for %s to version 1") %
             ai_service)
 
     if os.path.exists(sdpath) and os.path.isdir(sdpath):
@@ -1572,8 +1572,8 @@ def upgrade_svc_vers_0_1(services, dry_run, ai_service):
             # Create a temp file and move the manifest into it
             temp_fd, temp_nm = tempfile.mkstemp()
             shutil.move(default_file, temp_nm)
-            # call add-manifest with the default
-            cmd = ['/usr/sbin/installadm', 'add-manifest', '-n',
+            # call create-manifest with the default
+            cmd = ['/usr/sbin/installadm', 'create-manifest', '-n',
                 ai_service, '-d', '-f', temp_nm]
 
             try:
@@ -1588,7 +1588,7 @@ def upgrade_svc_vers_0_1(services, dry_run, ai_service):
                                       (default_file, ai_service))))
                 return
 
-            # delete the temporary file 
+            # delete the temporary file
             try:
                 os.remove(temp_nm)
             except OSError:
@@ -1622,7 +1622,7 @@ def copy_image_path(service_name, service_info, dry_run):
             break
         iter += 1
 
-    print cw(_("Create a unique instance of image path for %s at %s") % 
+    print cw(_("Create a unique instance of image path for %s at %s") %
             (service_name, new_image_path))
     if not dry_run:
         # copy the image directory
@@ -1736,7 +1736,7 @@ def create_isc_dhcp_configuration(dhcp_config):
             for subnet_range in macros[mname]['ip_ranges']:
                 try:
                     config_file.write(dhcp.CFGFILE_SUBNET_RANGE_STRING %
-                                  subnet_range + "\n") 
+                                  subnet_range + "\n")
                 except KeyError:
                     if not cfg_error_found:
                         print DHCP_ERR
@@ -1756,7 +1756,7 @@ def create_isc_dhcp_configuration(dhcp_config):
 
             # Save off the server IP value for use in the Sparc class stanza
             server_ip = macros[mname]['nextserver']
-            
+
     # Build the architecture class stanzas
     config_file.write(dhcp.CFGFILE_PXE_CLASS_STANZA % {'bootfile':
                       '<x86 service name>/boot/grub/pxegrub'} + "\n")
@@ -1774,12 +1774,12 @@ def create_isc_dhcp_configuration(dhcp_config):
             raw_mac = mname[2:]
             macros[mname].update({'macaddr': ':'.join(a + b for a, b in
                                   zip(raw_mac[::2], raw_mac[1::2])),
-                                  'hostname': raw_mac}) 
+                                  'hostname': raw_mac})
             config_file.write(dhcp.CFGFILE_HOST_STANZA % macros[mname] + "\n")
 
     config_file.close()
 
-        
+
 def main():
     """
     Server Image Management Conversion
@@ -1894,7 +1894,7 @@ def main():
 
             if not 'default-manifest' in service_attributes:
                 # Upgrade the service version from 0 to 1
-                # It is necessary to call upgrade_svc_vers_0_1 after 
+                # It is necessary to call upgrade_svc_vers_0_1 after
                 # upgrade_svc_vers_1_2 because it is necessary to upgrade the
                 # service to ISIM before calling installadm to upgrade
                 # the manifests
@@ -1934,7 +1934,7 @@ def main():
                 # Create a new service entry in the service dictionary
                 # and delete the old entry
                 services[new_service_name] = services[service_name]
-                del services[service_name]        
+                del services[service_name]
 
                 if not options.dryrun:
                     svc = AIService(service_name)
@@ -1945,14 +1945,14 @@ def main():
         for errored_service in unconverted_services:
             # Print out the service and the reason that it wasn't converted
             print cw(_("  %s: %s\n" % (errored_service,
-                str(unconverted_services[errored_service]).lstrip("Error: ")))) 
+                str(unconverted_services[errored_service]).lstrip("Error: "))))
 
     # Enable the AI service
     print _("Enable the AI SMF service")
     if not options.dryrun:
         try:
             aismf.service_enable_attempt()
-        except aismf.ServicesError as err: 
+        except aismf.ServicesError as err:
             raise SystemExit(err)
 
     sys.exit(EXIT_SUCCESS)

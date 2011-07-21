@@ -40,16 +40,16 @@ from osol_install.auto_install.service import AIService
 INFINITY = str(0xFFFFFFFFFFFFFFFF)
 
 # Modes of operation.
-DO_ADD = True
+DO_CREATE = True
 DO_UPDATE = False
 
 # Eventually rename functions to convention.
 
 
-def get_add_usage():
-    '''usage for add-manifest'''
-    return _('add-manifest\t-n|--service <svcname>\n'
-             '\t\t-f|--file <manifest_file/script file> \n'
+def get_create_usage():
+    '''usage for create-manifest'''
+    return _('create-manifest\t-n|--service <svcname>\n'
+             '\t\t-f|--file <manifest/script file> \n'
              '\t\t[-m|--manifest <manifest/script name>]\n'
              '\t\t[-c|--criteria <criteria=value|range> ... | \n'
              '\t\t -C|--criteria-file <criteria.xml>]  \n'
@@ -60,26 +60,27 @@ def get_update_usage():
     '''get usage for update-manifest'''
     return _('update-manifest\t-n|--service <svcname>\n'
              '\t\t-f|--file <manifest/script file> \n'
-             '\t\t-m|--manifest <manifest/script name>')
+             '\t\t[-m|--manifest <manifest/script name>]')
 
 
-def parse_options(do_add, cmd_options=None):
+def parse_options(do_create, cmd_options=None):
     """
     Parse and validate options
-    Args: Optional cmd_options, used for unit testing. Otherwise, cmd line
-          options handled by OptionParser
+    Args: - do_create (True) or do_update (False)
+          - Optional cmd_options, used for unit testing. Otherwise, cmd line
+            options handled by OptionParser
     Returns: the DataFiles object populated and initialized
     Raises: The DataFiles initialization of manifest(s) A/I, SC, SMF looks for
             many error conditions and, when caught, are flagged to the user
             via raising SystemExit exceptions.
 
     """
-    if do_add:
-        usage = '\n' + get_add_usage()
+    if do_create:
+        usage = '\n' + get_create_usage()
     else:
         usage = '\n' + get_update_usage()
     parser = OptionParser(usage=usage)
-    if do_add:
+    if do_create:
         parser.add_option("-c", "--criteria", dest="criteria_c",
                           action="append", default=list(), help=_("Criteria: "
                           "<-c criteria=value|range> ..."), metavar="CRITERIA")
@@ -102,15 +103,15 @@ def parse_options(do_add, cmd_options=None):
     if len(args):
         parser.error(_("Unexpected argument(s): %s" % args))
 
-    if not do_add:
+    if not do_create:
         options.criteria_file = None
         options.criteria_c = None
         options.set_as_default = False
 
     # options are:
-    #    -c  criteria=<value/range> ...       (add only)
-    #    -C  XML file with criteria specified (add only)
-    #    -d  set manifest as default          (add only)
+    #    -c  criteria=<value/range> ...       (create only)
+    #    -C  XML file with criteria specified (create only)
+    #    -d  set manifest as default          (create only)
     #    -n  service name
     #    -f  path to manifest file
     #    -m  manifest name
@@ -122,9 +123,9 @@ def parse_options(do_add, cmd_options=None):
     logging.debug("options = %s", options)
 
     criteria_dict = None
-    if do_add:
+    if do_create:
         # check that we aren't mixing -c and -C
-        # Note: -c and -C will be accepted for add, not for update.
+        # Note: -c and -C will be accepted for create, not for update.
         if options.criteria_c and options.criteria_file:
             parser.error(_("Options used are mutually exclusive."))
 
@@ -139,10 +140,10 @@ def parse_options(do_add, cmd_options=None):
             if not os.path.exists(options.criteria_file):
                 parser.error(_("Unable to find criteria file: %s") %
                              options.criteria_file)
-    
+
     if not config.is_service(options.service_name):
         raise SystemExit(_("Failed to find service %s") % options.service_name)
-    
+
     # Get the service's imagepath. If service is an alias, the
     # base service's imagepath is obtained.
     service = AIService(options.service_name)
@@ -151,10 +152,10 @@ def parse_options(do_add, cmd_options=None):
     except KeyError as err:
         raise SystemExit(_("Data for service %s is corrupt. Missing "
                            "property: %s\n") % (options.service_name, err))
-    
+
     service_dir = service.config_dir
     dbname = service.database_path
-    
+
     try:
         files = df.DataFiles(service_dir=service_dir, image_path=image_path,
                              database_path=dbname,
@@ -481,7 +482,7 @@ def find_colliding_manifests(criteria, db, collisions, append_manifest=None):
             # to check, we can break out knowing we diverge for this
             # manifest/instance)
             elif not db_criterion and not man_criterion:
-                # Neither the value for this criteria in the db nor 
+                # Neither the value for this criteria in the db nor
                 # the value for for this criteria in the given set of
                 # criteria to check are populated.  Loop around to
                 # check the next criteria.
@@ -517,8 +518,8 @@ def do_publish_manifest(cmd_options=None):
                            "this command."))
 
     # load in all the options and file data.  Validate proper manifests.
-    data = parse_options(DO_ADD, cmd_options)
-    
+    data = parse_options(DO_CREATE, cmd_options)
+
     service = AIService(data.service_name)
     # Disallow multiple manifests or scripts with the same mname.
     manifest_path = os.path.join(service.manifest_dir, data.manifest_name)
@@ -555,16 +556,17 @@ def do_update_manifest(cmd_options=None):
 
     # load in all the options and file data.  Validate proper manifests.
     data = parse_options(DO_UPDATE, cmd_options)
-    
+
     service = AIService(data.service_name)
     manifest_path = os.path.join(service.manifest_dir, data.manifest_name)
-    
+
     if not os.path.exists(manifest_path):
         raise SystemExit(_("Error:\tNo manifest or script with name "
                            "%s is registered with this service.\n"
-                           "\tPlease use installadm add-manifest instead.") %
+                           "\tPlease use installadm "
+                           "create-manifest instead.") %
                            data.manifest_name)
-    
+
     # move the manifest into place
     df.place_manifest(data, manifest_path)
 

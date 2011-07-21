@@ -54,6 +54,7 @@ import os
 import re
 
 from lxml import etree
+from urllib2 import urlopen
 
 import solaris_install.manifest_input as milib
 import solaris_install.manifest_input.process_dtd as pdtd
@@ -186,7 +187,7 @@ class ManifestInput(object):
         # the manifest and it exists.  Else use the schema passed in as an arg.
         if (self.tree and self.tree.docinfo and
             self.tree.docinfo.system_url and
-            os.access(self.tree.docinfo.system_url, os.R_OK)):
+            ManifestInput._is_accessible(self.tree.docinfo.system_url)):
             schema_file = self.tree.docinfo.system_url
 
         if schema_file is None:
@@ -210,6 +211,33 @@ class ManifestInput(object):
         except milib.MimError as err:
             raise milib.MimDTDError(milib.ERR_SCHDATA_PROC %
                                 {"mfile": schema_file, "merr": str(err)})
+
+    @staticmethod
+    def _is_accessible(url):
+        '''
+        Return true if url is accessible.
+
+        Checks for local files as well as proper URLs.
+
+        Args:
+          url: A string that is either a URL or a local filename.
+
+        Returns:
+          True: The url is accessible.
+          False: The url is not accessible.
+        '''
+        if os.access(url, os.R_OK):
+            return True
+
+        try:
+            # Send no additional data to the server.
+            # Allow up to 5 seconds for connection to be made.
+            fd = urlopen(url, data=None, timeout=5)
+            fd.close()
+        except IOError:
+            return False
+
+        return True
 
     def _add_warning(self, message):
         '''
@@ -260,17 +288,14 @@ class ManifestInput(object):
 
         Raises:
           MimEtreeParseError: Error parsing XML manifest.
+          IOError: Error reading manifest
         '''
         try:
             tree = etree.parse(manifest_name, parser)
-        except IOError as err:
-            # Note: errno or strerror not currently initialized
-            # in IOErrors raised by etree.parse().
-            raise milib.MimEtreeParseError(str(err))
-        except StandardError as err:
-            raise milib.MimEtreeParseError(milib.ERR_ETREE_PARSE_FILE %
-                                     {"mfile": manifest_name,
-                                      "merr": str(err)})
+        except etree.XMLSyntaxError as err:
+            raise milib.MimEtreeParseError(
+                [msg.__repr__() for msg in
+                 parser.error_log.filter_from_errors()])
         return tree
 
     def load(self, overlay_filename, incremental=False):
@@ -285,6 +310,7 @@ class ManifestInput(object):
               False: replace existing data.
 
         Raises:
+          IOError - Error reading overlay_filename
           MimInvalidError - Argument is missing or invalid
           MimEtreeParseError - IO errors or parser errors while parsing.
         '''
@@ -382,6 +408,10 @@ class ManifestInput(object):
 
           value: Value to set.
 
+        Returns:
+          rpath: Xpath-like expression of retrieved element.
+              Narrowing-values are expressed via element IDs.
+
         Raises:
           MimInvalidError - Argument is missing or invalid
           MimEmptyTreeError - No XML data present
@@ -411,10 +441,7 @@ class ManifestInput(object):
             # Create/update an attribute.
             orig_list[0].set(attr, value)
 
-        rpath = self.getpath(orig_list[0])
-        if attr is not None:
-            rpath += "@" + attr
-        return rpath
+        return self.getpath(orig_list[0])
 
     def get(self, path):
         '''
@@ -428,7 +455,7 @@ class ManifestInput(object):
         Returns:
           rval: value requested, stripped of any enveloping white space
 
-          rpath: Xpath-like expression of retrieved element or attribute.
+          rpath: Xpath-like expression of retrieved element.
               Narrowing-values are expressed via element IDs rather than
               "element=value or attr=value expressions.
 
@@ -461,14 +488,10 @@ class ManifestInput(object):
         else:
             rval = orig_list[0].text
 
-        rpath = self.getpath(orig_list[0])
-        if attr is not None:
-            rpath += "@" + attr
-
         if rval is not None:
             rval = rval.strip()
 
-        return rval, rpath
+        return rval, self.getpath(orig_list[0])
 
     @staticmethod
     def find_insertion_index(list_insert_before, curr_elem):
@@ -543,7 +566,7 @@ class ManifestInput(object):
           value: Value to set.
 
         Returns:
-          rpath: Xpath-like expression of retrieved element or attribute.
+          rpath: Xpath-like expression of retrieved element.
               Narrowing-values are expressed via element IDs.
 
         Raises:
@@ -563,6 +586,8 @@ class ManifestInput(object):
         # pylint: disable-msg=W0612
         xpath, final_val, attr = ManifestInput._path_preprocess(path,
                                                not STRIP_FINAL_UNBKT_VALUE)
+        midstart = xpath.startswith("//")
+
         # left_set has all branches, temporarily...
         left_set = milib.branch_split(xpath)
 
@@ -574,10 +599,20 @@ class ManifestInput(object):
             # Split off the root from the path, and create a tree based on it.
             new_element = etree.Element(left_set[0])
             self.tree = etree.ElementTree(new_element)
-        elif (len(left_set) == 1 or
-             (IDENT_ONLY_RE.match(left_set[0]) and
-              left_set[0] != self.tree.getroot().tag)):
-            raise milib.MimInvalidError(milib.ERR_2ND_ROOT)
+        elif not midstart:
+            # Second root if only 1 branch in path
+            # or if first branch matches root.
+            if (len(left_set) == 1 or
+                (IDENT_ONLY_RE.match(left_set[0]) and
+                 left_set[0] != self.tree.getroot().tag)):
+                raise milib.MimInvalidError(milib.ERR_2ND_ROOT)
+        else:
+            # Second root if only 1 branch in path (remember it doesn't have
+            # to start at the root, in general) and that branch matches root.
+            if (len(left_set) == 1 and
+                (IDENT_ONLY_RE.match(left_set[0]) and
+                 left_set[0] == self.tree.getroot().tag)):
+                raise milib.MimInvalidError(milib.ERR_2ND_ROOT)
 
         # Split branches into the left set which can contain non-simple
         # branches (and possibly simple branches too), and the right set which
@@ -599,6 +634,8 @@ class ManifestInput(object):
                 left_set, final_branch_value = self._strip_final_value(
                                                                      left_set)
             left_path = '/' + '/'.join(left_set)
+            if midstart:
+                left_path = "/" + left_path
             nonsimple_targets = self._xpath_search(left_path,
                                                    final_branch_value)
             if len(nonsimple_targets) > 1:
@@ -684,9 +721,8 @@ class ManifestInput(object):
         # Add the value (element value or attribute) to the final node.
         if attr is not None:
             curr_elem.set(attr, value)
-            return (self.getpath(curr_elem) + "@" + attr)
-
-        curr_elem.text = value
+        else:
+            curr_elem.text = value
         return self.getpath(curr_elem)
 
     def _xpath_search(self, xpath, final_val=None):
@@ -814,7 +850,8 @@ class ManifestInput(object):
           - If the overlay_element has children, keep the like-tagged element
             already in the tree.  It will be used to get to the next node in
             the path, to travel to the spot where something new can be added.
-            Add any attributes of the new element to the original one.
+            Add value and any attributes of the new element to the original
+            one.
           - If the overlay_element is a leaf node, then replace the node in
             the main tree with the overlay_element.
 
@@ -902,12 +939,15 @@ class ManifestInput(object):
                     return None
 
                 else:
-                    # Overlay element is not a leaf.  Don't add.  However, add
-                    # any attributes of new element to original one.
+                    # Overlay element is not a leaf.  Don't add.  However,
+                    # set the value of the original element to the overlay
+                    # value, and add any attributes of overlay element to
+                    # original one.
                     # Prepare to return main_parent[insert_at_idx]
                     ret_element = main_parent[insert_at_idx]
                     ret_element.attrib.update(
                         overlay_element.attrib.iteritems())
+                    ret_element.text = overlay_element.text
                     if comments_to_install is not None:
                         for comment in comments_to_install:
                             main_parent.insert(insert_at_idx, comment)
@@ -1099,6 +1139,10 @@ class ManifestInput(object):
         if " " in path:
             raise milib.MimInvalidError(milib.ERR_INVALID_CHARS)
 
+        # Set second char to append to the final path (after first "/"), so
+        # if user input doesn't start with "/", final path starts with "//".
+        midstartslash = "/" if (path[0] != "/") else ""
+
         # Split path into branches, handling multiple consecutive slashes.
         branches = [branch for branch in milib.branch_split(path) if branch]
 
@@ -1209,5 +1253,5 @@ class ManifestInput(object):
 
             # Other (simple) cases not caught above fall through unchanged.
 
-        path = "/" + "/".join(branches)
+        path = "/" + midstartslash + "/".join(branches)
         return path, final_branch_value, attr

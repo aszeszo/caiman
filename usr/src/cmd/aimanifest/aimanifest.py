@@ -193,7 +193,7 @@ def _do_aimanifest(argv):
     parser.add_option("-i", "--incremental", dest="is_incremental",
                       default=False, action="store_true",
                       help=_("Do not clear data before adding new data"))
-    parser.add_option("-r", dest="show_path", default=False,
+    parser.add_option("-r", "--return-path", dest="show_path", default=False,
                       action="store_true",
                       help=_("Return unique path to affected node"))
 
@@ -225,6 +225,12 @@ def _do_aimanifest(argv):
     # Pass AIM_MANIFEST as the output file.
     try:
         mim = ManifestInput(os.environ.get("AIM_MANIFEST"), SCHEMA_FILE)
+    except milib.MimEtreeParseError as err:
+        for error in err.errors:
+            # These messages come already localized.
+            print >> sys.stderr, error
+            AIM_LOGGER.error(error)
+        return errno.EINVAL
     except (milib.MimError, IOError) as err:
         return (_handle_error(err))
 
@@ -261,7 +267,7 @@ def _do_aimanifest(argv):
         except (milib.MimError, IOError) as err:
             return (_handle_error(err))
 
-        if value is None:
+        if value is None or not len(value):
             value = "\"\""
 
         AIM_LOGGER.info(_("successful: returns value:%(mvalue)s, "
@@ -282,6 +288,12 @@ def _do_aimanifest(argv):
         try:
             mim.load(path, options.is_incremental)
             mim.commit(NO_VALIDATE)
+        except milib.MimEtreeParseError as err:
+            for error in err.errors:
+                # These messages come already localized.
+                print >> sys.stderr, error
+                AIM_LOGGER.error(error)
+            return errno.EINVAL
         except (milib.MimError, IOError) as err:
             return (_handle_error(err))
 

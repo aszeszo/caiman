@@ -77,12 +77,14 @@ def parse_options(cmd_options=None):
 
     if not config.is_service(options.service_name):
         raise SystemExit(_("No such service: %s") % options.service_name)
-    
+
     service = AIService(options.service_name)
     options.service = service
 
     if not len(options.mnames) and not len(options.pnames):
         parser.error(_("A manifest or profile name is required."))
+
+    options.file_count = len(options.mnames) + len(options.pnames)
 
     if not options.output_name:
         options.output_name = SCREEN
@@ -100,17 +102,15 @@ def parse_options(cmd_options=None):
         # if file or dir doesn't exist with output name and one file desired:
         #     write the one file to that output name
 
-        file_count = len(options.mnames) + len(options.pnames)
-
         options.output_isdir = False
         if os.path.isdir(options.output_name):
             options.output_isdir = True
         elif os.path.exists(options.output_name):
-            if (file_count > 1):
+            if (options.file_count > 1):
                 parser.error(_("-o must specify a directory when multiple "
                                "files are requested."))
         else:
-            if (file_count > 1):
+            if (options.file_count > 1):
                 os.mkdir(options.output_name)
                 options.output_isdir = True
 
@@ -145,22 +145,13 @@ def do_export_manifest(options):
 
     for mname in options.mnames:
         # Get the pathname of the manifest to export.
-        if mname == "default":
-            try:
-                mname = options.service.get_default_manifest()
-            except StandardError as err:
-                print >> sys.stderr, _("Error translating \"default\" into a "
-                                       "manifest.")
-                save_errno = err.errno if err.errno != 0 else errno.ENOENT
+        input_mname = os.path.join(options.service.manifest_dir, mname)
 
         if options.output_isdir:
             output_name = "/".join([options.output_name, mname])
         else:
             output_name = options.output_name
-
-        input_mname = os.path.join(options.service.manifest_dir, mname)
-
-        if output_name == SCREEN:
+        if output_name == SCREEN and options.file_count > 1:
             display_file_header(_("manifest: ") + mname)
 
         # Find the file in the directory and copy it to screen or file.
@@ -209,7 +200,7 @@ def do_export_profile(options):
             else:
                 output_name = options.output_name
 
-            if output_name == SCREEN:
+            if output_name == SCREEN and options.file_count > 1:
                 display_file_header(_("profile: ") + pname)
 
             try:

@@ -34,7 +34,8 @@ DTD sample manifest for Automatic Installer input manifest specification.
         behavior. If auto_reboot is not desired, set auto_reboot="false".
 
         The name of the manifest is obtained from (in this order):
-        1) the name from the installadm add-manifest command line "-m" option.
+        1) the name from the installadm create-manifest
+           command line "-m" option.
         2) a name attribute in the manifest, e.g.: 
            <ai_instance name="my_ai_manifest" auto_reboot="true">
         3) manifest filename 

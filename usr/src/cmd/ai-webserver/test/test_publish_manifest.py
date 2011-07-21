@@ -185,16 +185,16 @@ class ParseOptions(unittest.TestCase):
     def test_parse_no_options(self):
         '''Ensure no options caught'''
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, [])
+            publish_manifest.DO_CREATE, [])
         myargs = ["mysvc"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
         myargs = ["manifest"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
         myargs = ["mysvc", "manifest"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
 
         self.assertRaises(SystemExit, publish_manifest.parse_options,
             publish_manifest.DO_UPDATE, [])
@@ -212,10 +212,10 @@ class ParseOptions(unittest.TestCase):
         '''Ensure invalid option flagged'''
         myargs = ["-n", "mysvc", "-m", "manifest"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
         myargs = ["-n", "mysvc", "-f", "manifest", "-u"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
 
         myargs = ["-n", "mysvc", "-m", "manifest"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
@@ -228,16 +228,16 @@ class ParseOptions(unittest.TestCase):
         '''Ensure options with missing value caught'''
         myargs = ["-n", "mysvc", "-f", "manifest", "-c"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
         myargs = ["-n", "mysvc", "-f", "manifest", "-C"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
         myargs = ["-n", "-f", "manifest"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
         myargs = ["-n", "mysvc", "-f"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
 
         myargs = ["-n", "-f", "manifest"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
@@ -250,21 +250,21 @@ class ParseOptions(unittest.TestCase):
         '''Ensure -C with no such file caught'''
         myargs = ["-n", "mysvc", "-f", "manifest", "-C", tempfile.mktemp()]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
 
     def test_parse_mutually_exclusive(self):
         '''Ensure mutually exclusive -c and -C options caught'''
         myargs = ["-n", "mysvc", "-f", "manifest", "-c", "arch=i86pc", "-C",
                   tempfile.mktemp()]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
 
     def test_parse_no_such_service(self):
         '''Ensure no such service is caught'''
         MockAIservice.KEYERROR = True
         myargs = ["-n", "mysvc", "-f", "manifest", "-c", "arch=i86pc"]
         self.assertRaises(SystemExit, publish_manifest.parse_options,
-            publish_manifest.DO_ADD, myargs)
+            publish_manifest.DO_CREATE, myargs)
 
 
 class CriteriaToDict(unittest.TestCase):

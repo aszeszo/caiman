@@ -29,8 +29,6 @@ set name=info.classification \
     value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global
-dir path=etc group=sys
-dir path=etc/user_attr.d group=sys
 dir path=lib
 dir path=lib/svc
 dir path=lib/svc/manifest group=sys

@@ -30,6 +30,8 @@ set name=info.classification \
     value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
+dir path=etc group=sys
+dir path=etc/user_attr.d group=sys
 dir path=usr group=sys
 dir path=usr/bin
 dir path=usr/lib
@@ -162,6 +164,8 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/process_dtd.pyc \
     mode=0444
+file path=usr/share/auto_install/derived_manifest_test_env.sh group=sys \
+    mode=0555
 file path=usr/share/auto_install/manifest/ai_manifest.xml group=sys mode=0444
 file path=usr/share/auto_install/manifest/default.xml group=sys mode=0444
 file path=usr/share/auto_install/manifest/zone_default.xml group=sys mode=0444
