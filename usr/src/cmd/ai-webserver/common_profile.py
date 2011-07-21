@@ -54,7 +54,8 @@ TEMPLATE_VARIABLES = [
             'AI_MEM',
             'AI_NETWORK',
             'AI_PLATFORM',
-            'AI_SERVICE'
+            'AI_SERVICE',
+            'AI_ZONENAME'
             ]
 
 
@@ -95,10 +96,10 @@ def perform_templating(profile_str, validate_only=True):
     # look for all supported criteria in process environment
     for replacement_tag in TEMPLATE_VARIABLES:
         if replacement_tag in os.environ:
-            val = os.environ[replacement_tag]
+            envval = os.environ[replacement_tag]
             if replacement_tag == 'AI_MAC':
                 try:
-                    val = verifyXML.checkMAC(val).upper()
+                    macval = verifyXML.checkMAC(envval).upper()
                 except ValueError:
                     print >> sys.stderr, _(
                             "Warning: MAC address in enviroment is invalid "
@@ -107,26 +108,23 @@ def perform_templating(profile_str, validate_only=True):
             elif replacement_tag == 'AI_NETWORK' or \
                     replacement_tag == 'AI_IPV4':
                 try:
-                    val = verifyXML.checkIPv4(val)
+                    verifyXML.checkIPv4(envval)
                 except ValueError:
                     print >> sys.stderr, _(
                             "Warning: IP or network address in enviroment is "
                             "invalid and will be ignored.")
                     continue
-            template_dict[replacement_tag] = val
-            # if the MAC address is defined,
-            # and the client ID not already defined in the environment,
-            # then derive client ID from the MAC address
-            if replacement_tag == 'AI_MAC' and ('AI_CID' not in os.environ or
-                    os.environ['AI_CID'] is None):
-                client_mac_parts = val.split(":")
-                template_dict['AI_CID'] = "01%s%s%s%s%s%s" % \
-                    (client_mac_parts[0].zfill(2).lower(),
-                     client_mac_parts[1].zfill(2).lower(),
-                     client_mac_parts[2].zfill(2).lower(),
-                     client_mac_parts[3].zfill(2).lower(),
-                     client_mac_parts[4].zfill(2).lower(),
-                     client_mac_parts[5].zfill(2).lower())
+            # load template dictionary with criteria found in environment
+            if replacement_tag == 'AI_MAC':
+                template_dict[replacement_tag] = envval.upper()
+                # if the MAC address is defined,
+                # and the client ID not already defined in the environment,
+                # then derive client ID from the MAC address
+                if 'AI_CID' not in os.environ or os.environ['AI_CID'] is None:
+                    cid = "01%s" % macval
+                    template_dict['AI_CID'] = cid.upper()
+            else:
+                template_dict[replacement_tag] = envval
     # instantiate our template object derived from string Template class
     tmpl = AICriteriaTemplate(profile_str)
     if validate_only:
@@ -141,7 +139,7 @@ def perform_templating(profile_str, validate_only=True):
 def sql_values_from_criteria(criteria, queue, table, gbl=False):
     ''' Given a criteria dictionary, for the indicated DB table
     and queue, return a tuple composed of lists whose elements can be used
-    to construct SQLite clauses.  If gbl is true, build a clause that 
+    to construct SQLite clauses.  If gbl is true, build a clause that
     will affect all database records if criteria is missing - a global effect.
     Args:
         criteria - criteria dictionary
@@ -322,8 +320,11 @@ def validate_criteria_from_user(criteria, dbo, table):
     Returns: nothing
     '''
     # find all possible profile criteria expressed as DB table columns
-    critlist = AIdb.getCriteria(dbo.getQueue(), table, onlyUsed=False,
-                                strip=False)
+    critlist = []
+    # take criteria from generator
+    for crit in AIdb.getCriteria(dbo.getQueue(), table, onlyUsed=False,
+                                 strip=False):
+        critlist.append(crit)
     # verify each range criteria is well formed
     for crit in criteria:
         # gather this criteria's values
@@ -377,8 +378,8 @@ def validate_criteria_from_user(criteria, dbo, table):
                     "Error:\tCriteria %s is not a valid criteria!") % crit)
 
 
-def validate_profile_external_dtd(prof_str, 
-                    dtd='/usr/share/lib/xml/dtd/service_bundle.dtd.1'):
+def validate_profile_external_dtd(prof_str,
+                            dtd='/usr/share/lib/xml/dtd/service_bundle.dtd.1'):
     ''' Given a profile in string format, a root directory and a DTD name,
     validate the profile against the external DTD using svccfg
     Args:

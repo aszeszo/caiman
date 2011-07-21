@@ -36,6 +36,7 @@ import tempfile
 import unittest
 
 import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.common_profile as com
 import osol_install.auto_install.create_profile as create_profile
 import osol_install.auto_install.publish_manifest as publish_manifest
 import osol_install.auto_install.service_config as config
@@ -44,9 +45,11 @@ import osol_install.libaiscf as smf
 
 gettext.install("create-profile-test")
 
+
 def do_nothing(*args, **kwargs):
     '''does nothing'''
     pass
+
 
 class MockGetManNames(object):
     '''Class for mock AIdb.getManNames '''
@@ -55,6 +58,7 @@ class MockGetManNames(object):
 
     def __call__(self, queue):
         return self.name
+
 
 class MockGetCriteria(object):
     '''Class for mock getCriteria '''
@@ -69,6 +73,7 @@ class MockGetCriteria(object):
         else:
             return self.crit_unstripped
 
+
 class MockGetColumns(object):
     '''Class for mock getCriteria '''
     def __init__(self):
@@ -82,11 +87,13 @@ class MockGetColumns(object):
         else:
             return self.crit_unstripped
 
+
 class MockDataFiles(object):
     '''Class for mock DataFiles'''
     def __init__(self):
         self.criteria = None
         self.database = MockDataBase()
+
 
 class MockQuery(object):
     '''Class for mock query '''
@@ -103,6 +110,7 @@ class MockQuery(object):
     def getResponse(self):
         return
 
+
 class MockQueue(object):
     '''Class for mock database '''
     def __init__(self):
@@ -111,36 +119,42 @@ class MockQueue(object):
     def put(self, query):
         return
 
+
 class MockDataBase(object):
     '''Class for mock database '''
     def __init__(self):
-        self.queue  = MockQueue()
+        self.queue = MockQueue()
 
     def getQueue(self):
         return self.queue
+
 
 class MockGetManifestCriteria(object):
     '''Class for mock getCriteria '''
     def __init__(self):
         self.criteria = {"arch": "sparc", 
                          "MINmem": None, "MAXmem": None, "MINipv4": None,
-                         "MAXipv4":None, "MINmac": None, "MAXmac": None}
+                         "MAXipv4": None, "MINmac": None, "MAXmac": None}
 
     def __call__(self, name, instance, queue, humanOutput=False,
                  onlyUsed=True):
         return self.criteria
 
+
 class MockAIservice(object):
     '''Class for mock AIservice'''
     KEYERROR = False
+
     def __init__(self, *args, **kwargs):
         if MockAIservice.KEYERROR:
             raise KeyError() 
+
 
 class MockAISCF(object):
     '''Class for mock AISCF '''
     def __init__(self, *args, **kwargs):
         pass  
+
 
 class MockAIRoot(object):
     '''Class for mock _AI_root'''
@@ -157,6 +171,7 @@ class MockAIRoot(object):
     def find(self, *args, **kwargs):
         return self.root
 
+
 class MockIsService(object):
     '''Class for mock is_service '''
     def __init__(self, *args, **kwargs):
@@ -164,6 +179,7 @@ class MockIsService(object):
 
     def __call__(self, name):
         return True
+
 
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''
@@ -209,6 +225,7 @@ class ParseOptions(unittest.TestCase):
         myargs = ["-n", "mysvc", "-p"] 
         self.assertRaises(SystemExit, create_profile.parse_options, myargs) 
 
+
 class CriteriaToDict(unittest.TestCase):
     '''Tests for criteria_to_dict'''
     def setUp(self):
@@ -243,7 +260,6 @@ class CriteriaToDict(unittest.TestCase):
         cri_dict = publish_manifest.criteria_to_dict(criteria)
         self.assertEquals(len(cri_dict), 1)
         self.assertTrue(cri_dict['zonename'], 'z1 z2 Z3')
-
 
     def test_multiple_entries(self):
         '''Ensure multiple criteria handled correctly'''
@@ -294,6 +310,37 @@ class CriteriaToDict(unittest.TestCase):
         myargs = ["-n", "mysvc", "-f", "profile", "-f", "profile2"] 
         options = create_profile.parse_options(myargs)
         self.assertEquals(options.profile_file, ["profile", "profile2"])
+
+    def test_perform_templating(self):
+        '''Test SC profile templating'''
+        # preserve our environment
+        saveenv = {}
+        for replacement_tag in com.TEMPLATE_VARIABLES:
+            if replacement_tag in os.environ:
+                saveenv[replacement_tag] = os.environ[replacement_tag]
+        # load environment variables for translation
+        os.environ['AI_ARCH'] = 'sparc'
+        os.environ['AI_MAC'] = '0a:0:0:0:0:0'
+        os.environ['AI_ZONENAME'] = 'myzone'
+        # provide template to test
+        tmpl_str = "{{AI_ARCH}} {{AI_MAC}} {{AI_ZONENAME}} {{AI_CID}}" 
+        # do the templating
+        profile = com.perform_templating(tmpl_str, False)
+        # check for expected results
+        self.assertNotEquals(profile.find('sparc'), -1)
+        self.assertNotEquals(profile.find('0A:0:0:0:0:0'), -1)  # to upper
+        self.assertNotEquals(profile.find('010A0000000000'), -1)  # client ID
+        self.assertNotEquals(profile.find('myzone'), -1)
+        # simulate situation in which criteria are missing
+        del os.environ['AI_ARCH']
+        self.assertRaises(KeyError, com.perform_templating, tmpl_str, False)
+        # restore our environment
+        for replacement_tag in com.TEMPLATE_VARIABLES:
+            if replacement_tag in saveenv:
+                os.environ[replacement_tag] = saveenv[replacement_tag]
+            elif replacement_tag in os.environ:
+                del os.environ[replacement_tag]
+
 
 if __name__ == '__main__':
     unittest.main()

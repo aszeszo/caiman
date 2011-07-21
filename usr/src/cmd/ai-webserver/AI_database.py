@@ -33,8 +33,8 @@ import sys
 from osol_install.auto_install.installadm_common import _
 from sqlite3 import dbapi2 as sqlite
 
-MANIFESTS_TABLE = 'manifests' # DB table name for manifests
-PROFILES_TABLE = 'profiles' # DB table name for profiles
+MANIFESTS_TABLE = 'manifests'  # DB table name for manifests
+PROFILES_TABLE = 'profiles'  # DB table name for profiles
 
 # Defined list of criteria that we treat as case sensitive.
 CRIT_LIST_CASE_SENSITIVE = ['zonename']
@@ -105,7 +105,7 @@ class DBrequest(object):
         self._committable = commit
 
     def __repr__(self):
-        result =  ["DBrequest:_sql:%s" % self._sql]
+        result = ["DBrequest:_sql:%s" % self._sql]
         result += ["          _ans:%s" % self._ans]
         result += ["          _committable:%s" % self._committable]
         return "\n".join(result)
@@ -157,7 +157,7 @@ class DBrequest(object):
 
 class DBthread(threading.Thread):
     '''Class to interface with SQLite as the provider is single threaded'''
-    
+
     def __init__(self, db, queue, commit):
         ''' Here we create a new thread object, create a DB connection object,
         keep track of the DB filename and track the request queue to run on.
@@ -540,7 +540,7 @@ def getTableCriteria(name, instance, queue, table, humanOutput=False,
             query_str += "HEX(" + str(crit) + ") AS " + str(crit) + ", "
         else:
             query_str += str(crit) + ", "
-    
+
     # Now narrow down to the desired manifest.
     if found_crit:
         query_str = query_str[:-2]

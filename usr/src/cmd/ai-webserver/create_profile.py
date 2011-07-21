@@ -262,7 +262,7 @@ def do_create_profile(cmd_options=None):
                                 int(val[6:8], 16),
                                 int(val[8:10], 16),
                                 int(val[10:12], 16))
-                    os.environ["AI_CID"] = "01" + str(val)
+                    os.environ["AI_CID"] = "01" + str(val).upper()
                 # IP or NETWORK specified in criteria
                 elif crit == 'network' or crit == 'ipv4':
                     val = val[0]
@@ -329,6 +329,13 @@ def do_create_profile(cmd_options=None):
                 AIdb.PROFILES_TABLE):
             os.unlink(full_profile_path)  # failure, back out internal profile
 
+print >> sys.stderr, "including create profile"
+print >> sys.stderr, "including create profile"
+print >> sys.stderr, "including create profile"
+print >> sys.stderr, "including create profile"
+print >> sys.stderr, "including create profile"
+print >> sys.stderr, "including create profile"
+print >> sys.stderr, "including create profile"
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")
     do_create_profile()
