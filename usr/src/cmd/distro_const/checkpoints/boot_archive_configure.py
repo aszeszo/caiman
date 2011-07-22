@@ -127,8 +127,9 @@ class BootArchiveConfigure(Checkpoint):
 
         # create volume set id file, use system name + date for uniqueness
         with open(".volsetid", "w") as v:
-       	    volsetid = os.uname()[1] + '-' + datetime.datetime.now().isoformat()
-       	    self.logger.debug("setting .volsetid to %s" % volsetid)
+            volsetid = os.uname()[1] + '-' + \
+                       datetime.datetime.now().isoformat()
+            self.logger.debug("setting .volsetid to %s" % volsetid)
             v.write(volsetid)
 
         # chmod it to 444 and set the ownership to root:root (0:0)

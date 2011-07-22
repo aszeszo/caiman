@@ -50,18 +50,4 @@
   <service name='application/auto-installer' version='1' type='service'>
     <instance name='default' enabled='true' />
   </service>
-
-  <service name='system/name-service/switch' version='1' type='service'>
-    <exec_method
-      type='method'
-      name='start'
-      timeout_seconds='0'
-      exec=':true'/>
-    <exec_method
-      type='method'
-      name='refresh'
-      timeout_seconds='0'
-      exec=':true'/>
-  </service> 
-
 </service_bundle>

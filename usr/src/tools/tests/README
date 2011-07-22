@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 This directory contains configuration files for Nose, the PyUnit test runner
@@ -28,10 +28,22 @@ for the slim_source gate. In order to run the tests you should:
 	* Installing the Python setup tools and runtime/python-26/tests
 		pkg install library/python-2/setuptools-26
 		pkg install runtime/python-26/tests
+		pkg install library/python-2/coverage
 	* Running the command:
 		easy_install-2.6 nose coverage
 		(The warning messages during installation may be ignored)
 
+	  Then you need to edit /usr/lib/python2.6/site-packages/easy-install.pth
+          as follow:
+
+          Need to comment out the following line:
+	  
+          /usr/lib/python2.6/vendor-packages
+
+          i.e:
+
+	  #/usr/lib/python2.6/vendor-packages
+  
 	Note:	As of June 22, 2010, Nose is currently in the JUCR process,
 		and may be available from the contrib repository at a
 		later date.
@@ -85,4 +97,10 @@ flag:
 
 To add a set of tests to the suite, update the tests.nose file. See that
 file for more details.
+
+To run the nosexunit test, you will need to do this:
+
+
+source ${WORKSPACE}/developer.sh
+${WORKSPACE}/usr/src/tools/tests/slim_test -c ${WORKSPACE}/usr/src/tools/tests/tests.nose --with-nosexunit --source-folder=${ROOT}/usr/lib/python2.6/vendor-packages --enable-audit --audit-config=${WORKSPACE}/usr/src/tools/env/install.pylintrc
 
