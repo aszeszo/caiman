@@ -174,7 +174,6 @@ def setup_x86_client(service, mac_address, bootargs=''):
                        "'Boot server IP' is correct.\n"))
 
 
-
 def setup_sparc_client(service, mac_address):
     '''
     Creates symlink from /etc/netboot/<client_id> to
