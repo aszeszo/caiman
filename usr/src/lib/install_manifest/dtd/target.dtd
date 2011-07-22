@@ -134,14 +134,23 @@
 <!--
     iscsi does not have an action attribute. We use iSCSI devices but
     we do not operate directly on them.
+
+    If the source attribute is set to 'dhcp', we will use dhcp to
+    retrieve the Rootpath of the iSCSI boot parameters.  No other
+    attributes should be specified.
+
+    If the source attribute is set to 'manifest', target_lun and
+    target_ip must be specified.
+
+    If the target_name attribute is not provided, we will use iscsiadm
+    in sendtargets mode, otherwise we will set up static discovery.
 -->
-<!ELEMENT iscsi (ip)>
-<!ATTLIST iscsi name CDATA #REQUIRED>
-<!ATTLIST iscsi source CDATA #IMPLIED>
+<!ELEMENT iscsi EMPTY>
+<!ATTLIST iscsi source (manifest|dhcp) "manifest">
+<!ATTLIST iscsi target_name CDATA #IMPLIED>
 <!ATTLIST iscsi target_lun CDATA #IMPLIED>
 <!ATTLIST iscsi target_port CDATA #IMPLIED>
-
-<!ELEMENT ip (#PCDATA)>
+<!ATTLIST iscsi target_ip CDATA #IMPLIED>
 
 <!ELEMENT logical (zpool*)>
 <!ATTLIST logical noswap (true|false) "false">

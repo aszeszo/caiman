@@ -38,7 +38,7 @@ import solaris_install.target.vdevs as vdevs
 
 from bootmgmt.pysol import di_find_prop
 
-from solaris_install import CalledProcessError, Popen
+from solaris_install import CalledProcessError, Popen, run
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
@@ -50,14 +50,19 @@ from solaris_install.target.libdiskmgt import const, diskmgt
 from solaris_install.target.libdiskmgt.attributes import DMMediaAttr
 from solaris_install.target.logical import BE, Filesystem, Logical, Zpool, Zvol
 from solaris_install.target.physical import Disk, DiskProp, DiskGeometry, \
-    DiskKeyword, Iscsi, IP, Partition, Slice
+    DiskKeyword, Iscsi, Partition, Slice
 from solaris_install.target.size import Size
 
 
 CROINFO = "/usr/sbin/croinfo"
+DEVFSADM = "/usr/sbin/devfsadm"
+DHCPINFO = "/sbin/dhcpinfo"
 EEPROM = "/usr/sbin/eeprom"
 FSTYP = "/usr/sbin/fstyp"
+ISCSIADM = "/usr/sbin/iscsiadm"
 PRTVTOC = "/usr/sbin/prtvtoc"
+SVCS = "/usr/bin/svcs"
+SVCADM = "/usr/bin/svcadm"
 ZFS = "/usr/sbin/zfs"
 ZPOOL = "/usr/sbin/zpool"
 ZVOL_PATH = "/dev/zvol/dsk"
@@ -163,8 +168,7 @@ class TargetDiscovery(Checkpoint):
             if not self.sparc_diag_mode:
                 # check eeprom settings
                 cmd = [EEPROM, "diag-switch?"]
-                p = Popen.check_call(cmd, stdout=Popen.STORE,
-                                     stderr=Popen.STORE, logger=ILN)
+                p = run(cmd)
                 diag_switch_value = p.stdout.partition("=")[2]
                 if diag_switch_value.strip().lower() == "true":
                     # set a variable so we don't check every single disk and
@@ -240,10 +244,7 @@ class TargetDiscovery(Checkpoint):
                     elif new_partition.part_type == 238:
                         # call fstyp to try to figure out the slice type
                         cmd = [FSTYP, slc.name]
-                        p = Popen.check_call(cmd, stdout=Popen.STORE,
-                                             stderr=Popen.STORE, logger=ILN,
-                                             check_result=Popen.ANY,
-                                             stderr_loglevel=logging.DEBUG)
+                        p = run(cmd, check_result=Popen.ANY)
                         if p.returncode == 0:
                             if p.stdout.strip() == "zfs":
                                 # add the slice since it's used by zfs
@@ -362,8 +363,7 @@ class TargetDiscovery(Checkpoint):
                 # solaris1 partition.
                 slice2 = root_path + "s2"
                 cmd = [PRTVTOC, slice2]
-                Popen.check_call(cmd, stdout=Popen.DEVNULL,
-                                 stderr=Popen.STORE, logger=ILN)
+                run(cmd, stdout=Popen.DEVNULL)
             except CalledProcessError:
                 # the call to prtvtoc failed which means this partition is
                 # Linux swap. To be sure, prtvtoc failure might also mean an
@@ -419,8 +419,7 @@ class TargetDiscovery(Checkpoint):
 
         # retreive the list of zpools
         cmd = [ZPOOL, "list", "-H", "-o", "name"]
-        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN)
+        p = run(cmd)
 
         # Get the list of zpools
         zpool_list = p.stdout.splitlines()
@@ -441,15 +440,13 @@ class TargetDiscovery(Checkpoint):
 
             # check to see if the zpool is the boot pool
             cmd = [ZPOOL, "list", "-H", "-o", "bootfs", zpool_name]
-            p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+            p = run(cmd)
             if p.stdout.rstrip() != "-":
                 zpool.is_root = True
 
             # get the mountpoint of the zpool
             cmd = [ZFS, "get", "-H", "-o", "value", "mountpoint", zpool_name]
-            p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+            p = run(cmd)
             zpool.mountpoint = p.stdout.strip()
 
             # set the vdev_mapping on each physical object in the DOC tree for
@@ -459,8 +456,7 @@ class TargetDiscovery(Checkpoint):
             # for each zpool, get all of its datasets
             cmd = [ZFS, "list", "-r", "-H", "-o",
                    "name,type,used,mountpoint", zpool_name]
-            p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+            p = run(cmd)
 
             # walk each dataset and create the appropriate DOC objects for
             # each.  Skip the first line of list output, as the top level
@@ -645,89 +641,141 @@ class TargetDiscovery(Checkpoint):
 
     def setup_iscsi(self):
         """ set up the iSCSI initiator appropriately (if specified)
-            such that any physical/logical iSCSI devices can be
-            discovered
+        such that any physical/logical iSCSI devices can be discovered.
         """
-        ISCSIADM = "/usr/sbin/iscsiadm"
-        DHCPINFO = "/sbin/dhcpinfo"
+        SVC = "svc:/network/iscsi/initiator:default"
 
-        iscsi_list = self.doc.get_descendants(class_type=Iscsi)
-        if not iscsi_list:
-            return
-
+        # verify iscsiadm is available
         if not os.path.exists(ISCSIADM):
             raise RuntimeError("iSCSI discovery enabled but %s does " \
                 "not exist" % ISCSIADM)
 
-        iscsi = iscsi_list[0]
-        ip_list = iscsi.get_children(class_type=IP)
-        ip = ip_list[0]
+        # ensure the iscsi/initiator service is online
+        state_cmd = [SVCS, "-H", "-o", "STATE", SVC]
+        p = run(state_cmd, check_result=Popen.ANY)
+        if p.returncode != 0:
+            # iscsi/initiator is not installed
+            raise RuntimeError("%s not found - is it installed?" % SVC)
 
-        if iscsi.source is not None:
-            # iscsi parameters are supplied as part of the DHCP
-            # Rootpath variable and must override those specified
-            # in the manifest
-            cmd = [DHCPINFO, "Rootpath"]
-            p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+        # if the service is offline, enable it
+        state = p.stdout.strip()
+        if state == "offline":
+            cmd = [SVCADM, "enable", "-s", SVC]
+            run(cmd)
 
-            # RFC 4173 defines the format of iSCSI boot parameters
-            # in DHCP Rootpath as follows:
-            # Rootpath=iscsi:<IP>:<protocol>:<port>:<LUN>:<target>
-            iscsi_str = p.stdout.partition('=')[2]
-            params = iscsi_str.split(':')
-            ip.address = params[1]
-            iscsi.target_port = params[3]
-            iscsi.target_lun = params[4]
-            iscsi.name = params[5]
+            # verify the service is now online
+            p = run(state_cmd, check_result=Popen.ANY)
+            state = p.stdout.strip()
 
-        # XXX need to understand how restrict discovery based
-        # on target_lun if one is specified
-        if iscsi.name is not None:
-            # set up static discovery of targets
-            discovery_str = iscsi.name + "," + ip.address
-            if iscsi.target_port is not None:
-                discovery_str += ":" + iscsi.target_port
-            cmd = [ISCSIADM, "add", "static-config", discovery_str]
-            Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN)
+            if state != "online":
+                raise RuntimeError("Unable to start %s" % SVC)
 
-            cmd = [ISCSIADM, "modify", "discovery", "--static", "enable"]
-            Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN)
+        elif state != "online":
+            # the service is in some other kind of state, so raise an error
+            raise RuntimeError("%s requires manual servicing" % SVC)
 
-            cmd = [ISCSIADM, "list", "target", "-S", discovery_str]
-            p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+        for iscsi in self.doc.get_descendants(class_type=Iscsi):
+            # check iscsi.source for dhcp.  If set, query dhcpinfo for the
+            # iSCSI boot parameters and set the rest of the Iscsi object
+            # attributes
+            if iscsi.source == "dhcp":
+                p = run([DHCPINFO, "Rootpath"])
 
-            # Device path (/dev/rdsk/...) is last thing output when split over
-            # whitespace
-            dev_path = p.stdout.split()[-1]
-            # Extract ctds from the devpath
-            ctd = dev_path.split("/")[-1]
-            # Extract ctd from the ctds, and set the ctd of the disk so
-            # matching works correctly later.
-            iscsi.parent.ctd = ctd.partition("s2")[0]
-        else:
-            # set up discovery of sendtargets targets
-            discovery_str = ip.address
-            if iscsi.target_port is not None:
-                discovery_str += ":" + iscsi.target_port
-            cmd = [ISCSIADM, "add", "discovery-address", discovery_str]
-            Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN)
+                # RFC 4173 defines the format of iSCSI boot parameters in DHCP
+                # Rootpath as follows:
+                # Rootpath=iscsi:<IP>:<protocol>:<port>:<LUN>:<target>
+                iscsi_str = p.stdout.partition('=')[2]
+                params = iscsi_str.split(':')
+                iscsi.target_ip = params[1]
+                iscsi.target_port = params[3]
+                iscsi.target_lun = params[4]
+                iscsi.target_name = params[5]
 
-            cmd = [ISCSIADM, "modify", "discovery", "--sendtargets", "enable"]
-            Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN)
+            if iscsi.target_name is not None:
+                # set up static discovery of targets
+                discovery_str = iscsi.target_name + "," + iscsi.target_ip
+                if iscsi.target_port is not None:
+                    discovery_str += ":" + iscsi.target_port
+                cmd = [ISCSIADM, "add", "static-config", discovery_str]
+                run(cmd)
+
+                cmd = [ISCSIADM, "modify", "discovery", "--static", "enable"]
+                run(cmd)
+
+                iscsi_list_cmd = [ISCSIADM, "list", "target", "-S",
+                                  discovery_str]
+            else:
+                # set up discovery of sendtargets targets
+                discovery_str = iscsi.target_ip
+                if iscsi.target_port is not None:
+                    discovery_str += ":" + iscsi.target_port
+                cmd = [ISCSIADM, "add", "discovery-address", discovery_str]
+                run(cmd)
+
+                cmd = [ISCSIADM, "modify", "discovery", "--sendtargets",
+                       "enable"]
+                run(cmd)
+
+                iscsi_list_cmd = [ISCSIADM, "list", "target", "-S"]
+
+            # run devfsadm and wait for the iscsi devices to configure
+            run([DEVFSADM, "-i", "iscsi"])
+
+            # list all the targets found
+            iscsi_list = run(iscsi_list_cmd)
+
+            # the output will look like:
+            #
+            # Target: <iqn string>
+            #        Alias: -
+            #        TPGT: 1
+            #        ISID: 4000002a0000
+            #        Connections: 1
+            #        LUN: 1
+            #             Vendor:  SUN     
+            #             Product: COMSTAR         
+            #             OS Device Name: <ctd>
+            #        LUN: 0
+            #             Vendor:  SUN     
+            #             Product: COMSTAR         
+            #             OS Device Name: <ctd>
+            #
+            # The LUN number and ctd strings are the only values we're
+            # interested in.
+            iscsi_dict = dict()
+
+            # walk the output from iscsiadm list target to create a mapping
+            # between ctd and LUN number.
+            for line in iscsi_list.stdout.splitlines():
+                line = line.lstrip()
+                if line.startswith("LUN:"):
+                    lun_num = line.split(": ")[1]
+                if line.startswith("OS Device Name:") and lun_num is not None:
+                    iscsi_ctd = line.rpartition("/")[2]
+                    iscsi_dict[iscsi_ctd] = lun_num
+
+                    # reset the lun_num for the next lun
+                    lun_num = None
+
+            # try to map iscsi_lun back to iscsi.target_lun
+            for iscsi_ctd, iscsi_lun in iscsi_dict.items():
+                if iscsi.target_lun is not None:
+                    if iscsi.target_lun == iscsi_lun:
+                        iscsi.parent.ctd = iscsi_ctd.partition("s2")[0]
+                        break
+                else:
+                    iscsi.parent.ctd = iscsi_ctd.partition("s2")[0]
+                    break
+            else:
+                raise RuntimeError("target_lun: %s not found on target"
+                                   % iscsi.target_lun)
 
     def setup_croinfo(self):
         """ set up a DataObjectDict representing the output from
         /usr/sbin/croinfo
         """
         cmd = [CROINFO, "-h", "-O", "cAR"]
-        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN, stderr_loglevel=logging.DEBUG)
+        p = run(cmd)
 
         # for systems that do not support CRO, nothing will be returned in
         # stdout so simply return.
@@ -748,7 +796,7 @@ class TargetDiscovery(Checkpoint):
         if self.cro_dict:
             # Only insert if there is something in it
             self.doc.persistent.insert_children(
-                DataObjectDict(CRO_LABEL, self.cro_dict, 
+                DataObjectDict(CRO_LABEL, self.cro_dict,
                                generate_xml=True))
 
     def execute(self, dry_run=False):

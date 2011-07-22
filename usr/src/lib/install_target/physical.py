@@ -1373,18 +1373,23 @@ class Iscsi(DataObject):
         super(Iscsi, self).__init__(name)
 
         self.source = None
+        self.target_name = None
         self.target_lun = None
         self.target_port = None
+        self.target_ip = None
 
     def to_xml(self):
         element = etree.Element("iscsi")
-        element.set("name", self.name)
         if self.source is not None:
             element.set("source", self.source)
+        if self.target_name is not None:
+            element.set("target_name", self.target_name)
         if self.target_lun is not None:
             element.set("target_lun", self.target_lun)
         if self.target_port is not None:
             element.set("target_port", self.target_port)
+        if self.target_ip is not None:
+            element.set("target_ip", self.target_ip)
         return element
 
     @classmethod
@@ -1400,51 +1405,44 @@ class Iscsi(DataObject):
 
     @classmethod
     def from_xml(cls, element):
-        name = element.get("name")
         source = element.get("source")
+        target_name = element.get("target_name")
         target_lun = element.get("target_lun")
         target_port = element.get("target_port")
+        target_ip = element.get("target_ip")
 
-        iscsi = Iscsi(name)
-        if source is not None:
+        iscsi = Iscsi("iscsi")
+        if source == "dhcp":
             iscsi.source = source
-        if target_lun is not None:
-            iscsi.target_lun = target_lun
-        if target_port is not None:
-            iscsi.target_port = target_port
+        else:
+            # ensure target_lun is not None
+            if target_lun is None:
+                raise ParsingError("Iscsi element must specify 'target_lun' "
+                                   "attribute")
+            else:
+                iscsi.target_lun = target_lun
+
+            # ensure target_ip is not None
+            if target_ip is None:
+                raise ParsingError("Iscsi element must specify 'target_ip' "
+                                   "attribute")
+            else:
+                iscsi.target_ip = target_ip
+
+            if target_name is not None:
+                iscsi.target_name = target_name
+            if target_port is not None:
+                iscsi.target_port = target_port
         return iscsi
 
     def __repr__(self):
-        s = "Iscsi: name=%s" % self.name
+        s = ""
         if self.source is not None:
-            s += "source=%s" % self.source
+            s += "; source=%s" % self.source
+        if self.target_name is not None:
+            s += "; target_name=%s" % self.target_name
         if self.target_lun is not None:
-            s += "target_lun=%s" % self.target_lun
+            s += "; target_lun=%s" % self.target_lun
         if self.target_port is not None:
-            s += "target_port=%s" % self.target_port
+            s += "; target_port=%s" % self.target_port
         return s
-
-
-class IP(DataObject):
-    def __init__(self, name):
-        super(IP, self).__init__(name)
-
-        self.address = ""
-
-    def to_xml(self):
-        element = etree.Element("ip")
-        element.text = self.address
-        return element
-
-    @classmethod
-    def can_handle(cls, element):
-        if element.tag == "ip":
-            return True
-        return False
-
-    @classmethod
-    def from_xml(cls, element):
-        ip = IP("ip")
-        ip.address = element.text
-
-        return ip

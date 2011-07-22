@@ -41,7 +41,7 @@ from solaris_install.target.controller import TargetController, \
     DEFAULT_VDEV_NAME, SwapDumpGeneralError, SwapDumpSpaceError
 from solaris_install.target.logical import Logical, Zpool, Vdev, BE, Zvol, \
     Filesystem, DatasetOptions, PoolOptions
-from solaris_install.target.physical import Disk, Partition, Slice
+from solaris_install.target.physical import Disk, Iscsi, Partition, Slice
 from solaris_install.target.size import Size
 
 DISK_RE = "c\d+(?:t\d+)?d\d+"
@@ -2595,7 +2595,14 @@ class TargetSelection(Checkpoint):
         self.__check_valid_zpool_vdev(disk)
         self._wipe_disk = False
 
-        if disk.whole_disk and not disk.has_children:
+        # create an anonymous function for testing if an object is an Iscsi DOC
+        # object
+        is_iscsi = lambda(child): isinstance(child, Iscsi)
+
+        # check first to see if the user has requested to use the whole disk
+        # and that disk either has no children or only Iscsi children
+        if disk.whole_disk and \
+           (not disk.has_children or all(map(is_iscsi, disk.children))):
             # Traditional whole_disk scenario where we apply default layout
             # Only copy the disk, not it's children.
             disk_copy = copy.copy(discovered_disk)

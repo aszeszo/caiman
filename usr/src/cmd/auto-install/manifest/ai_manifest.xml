@@ -103,9 +103,14 @@ DTD sample manifest for Automatic Installer input manifest specification.
         <!--
           ISCSI target device
 
-        <iscsi name="c0d2E0001010F68">
-          <ip>192.168.1.34</ip>
-        </iscsi> 
+          DHCP Rootpath
+        <iscsi source="dhcp"/>
+
+          with static-discovery
+        <iscsi target_name="<iqn string>" target_lun="0" target_ip="192.168.1.34"/>
+
+          with sendtargets
+        <iscsi target_lun="0" target_ip="192.168.1.34"/>
         -->
         <!-- receptacle name - e.g. can be obtained by means of 
           croinfo(1M) -o cR
