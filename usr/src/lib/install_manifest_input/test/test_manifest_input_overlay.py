@@ -37,9 +37,10 @@ from lxml import etree
 from solaris_install import Popen
 from solaris_install.manifest_input.mim import ManifestInput
 
-# Eventually bring names into convention.  Skip missing docstrings.
-# pylint: disable-msg= C0111, C0103
-
+# Note: Some python strings split across lines have a "+" at the end of their
+# non-final lines. To the python interpreter these are superfluous, but the
+# unit test framework looks at them to know the length of the full message
+# string to print.  Please do not delete them.
 
 class TestMIMOverlayCommon(unittest.TestCase):
     '''
@@ -234,11 +235,11 @@ class TestOverlayBCommon(TestMIMOverlayCommon):
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
         (value, path) = mim.get("/auto_install/ai_instance@name")
-        self.assertEquals(path, "/auto_install[1]/ai_instance[1]@name",
-                          "Error: incorrect pathname returned when getting "
+        self.assertEquals(path, "/auto_install[1]/ai_instance[1]",
+                          "Error: incorrect pathname returned when getting " +
                           "\"name\" attribute")
         self.assertEquals(value, "secondname",
-                          "Error changing existing attribute "
+                          "Error changing existing attribute " +
                           "of non-leaf node.")
 
 
@@ -331,8 +332,8 @@ class TestOverlay4(TestMIMOverlayCommon):
         (value, path) = mim.get("/auto_install/ai_instance@auto_reboot")
         self.assertEquals(value, "true",
             "Error adding new element with new attribute")
-        self.assertEquals(path, "/auto_install[1]/ai_instance[1]@auto_reboot",
-                          "Error: incorrect pathname returned when getting "
+        self.assertEquals(path, "/auto_install[1]/ai_instance[1]",
+                          "Error: incorrect pathname returned when getting " +
                           "\"auto_reboot\" attribute")
 
 
@@ -375,17 +376,17 @@ class TestOverlay5(TestMIMOverlayCommon):
         # Verify auto_reboot attribute was added to existing element.
         (value, path) = mim.get("/auto_install/ai_instance@name")
         self.assertEquals(value, "firstname",
-            "Error finding original attribute of existing node")
-        self.assertEquals(path, "/auto_install[1]/ai_instance[1]@name",
-                          "Error: incorrect pathname returned when getting "
-                          "\"auto_reboot\" attribute")
+                          "Error finding original attribute of existing node")
+        self.assertEquals(path, "/auto_install[1]/ai_instance[1]",
+                          "Error: incorrect pathname returned when getting" +
+                          "\"name\" attr")
 
         (value, path) = mim.get("/auto_install/ai_instance@auto_reboot")
         self.assertEquals(value, "true",
-            "Error adding new attribute to existing node")
-        self.assertEquals(path, "/auto_install[1]/ai_instance[1]@auto_reboot",
-                          "Error: incorrect pathname returned when getting "
-                          "\"auto_reboot\" attribute")
+                          "Error adding new attribute to existing node")
+        self.assertEquals(path, "/auto_install[1]/ai_instance[1]",
+                          "Error: incorrect pathname returned when getting " +
+                          "\"auto_reboot\" attr")
 
 
 class TestOverlay6(TestMIMOverlayCommon):
@@ -511,10 +512,10 @@ class TestOverlay8(TestMIMOverlayCommon):
                           "Error adding new same-tagged element")
 
         # Target[2] means a second element was (properly) added.
-        self.assertEquals(path, "/auto_install[1]/ai_instance[1]/software[2]"
-                          "/software_data[1]@action",
-                          "Error: incorrect pathname returned when getting "
-                          "newly added element.")
+        self.assertEquals(path, "/auto_install[1]/ai_instance[1]/software[2]" +
+                          "/software_data[1]",
+                          "Error: incorrect pathname returned when getting " +
+                          "\"action\" attr.")
 
 
 class TestOverlay9(TestMIMOverlayCommon):
@@ -548,16 +549,14 @@ class TestOverlay9(TestMIMOverlayCommon):
         '''
         Add new leaf elem where same-tagged elements are allowed and none exist
         '''
-        #pylint: disable-msg=W0201
         self.mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         self.mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         self.mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
 
         # Software[1] means a first software element was (properly) added.
-        #pylint: disable-msg=W0612
         (value, path) = self.mim.get("/auto_install/ai_instance/software")
         self.assertEquals(path, "/auto_install[1]/ai_instance[1]/software[1]",
-                          "Error adding leaf element where like-tagged "
+                          "Error adding leaf element where like-tagged " +
                           "elements are allowed.")
 
 
@@ -571,7 +570,6 @@ class TestOverlay10(TestOverlay9):
         self.mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
 
         # software[2] means a second software element was (properly) added.
-        #pylint: disable-msg=W0612
         (value, path) = self.mim.get("/auto_install/ai_instance/software[2]")
         self.assertEquals(path, "/auto_install[1]/ai_instance[1]/software[2]",
                           "Error adding second like-tagged leaf element.")
@@ -588,25 +586,24 @@ class TestOverlayInsertionOrderCommon(TestMIMOverlayCommon):
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
-        #pylint: disable-msg=W0212
         ai_instance_node = mim._xpath_search("/auto_install[1]/ai_instance[1]")
         found_target = found_software = found_add_drivers = False
         for child in ai_instance_node[0]:
             if child.tag == "target":
                 self.assertTrue(not found_software and not found_add_drivers,
-                                "Target element not added before software or "
-                                "add_drivers elements")
+                                "Target element not added before software " + 
+                                "or add_drivers elements")
                 found_target = True
                 continue
             if child.tag == "software":
                 self.assertTrue(found_target and not found_add_drivers,
-                                "Software element not added between target "
+                                "Software element not added between target " +
                                 "and add_drivers elements")
                 found_software = True
                 continue
             if child.tag == "add_drivers":
                 self.assertTrue(found_target and found_software,
-                                "Add_drivers element not added after target "
+                                "Add_drivers element not added after target " +
                                 "and software elements")
                 return
         self.assertTrue(found_target, "Target element not added")
@@ -789,19 +786,18 @@ class TestOverlay14(TestMIMOverlayCommon):
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
-        #pylint: disable-msg=W0212
         ai_instance_node = mim._xpath_search("/auto_install[1]/ai_instance[1]")
         found_target = found_add_drivers = False
         for child in ai_instance_node[0]:
             if child.tag == "target":
                 self.assertTrue(not found_add_drivers,
-                                "Target element not added before software or "
-                                "add_drivers elements")
+                                "Target element not added before software " +
+                                "or add_drivers elements")
                 found_target = True
                 continue
             if child.tag == "add_drivers":
                 self.assertTrue(found_target,
-                                "Add_drivers element not added after target "
+                                "Add_drivers element not added after target " +
                                 "and software elements")
                 return
         self.assertTrue(found_target, "Target element not added")
@@ -861,13 +857,12 @@ class TestOverlay15(TestMIMOverlayCommon):
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
 
-        #pylint: disable-msg=W0212
         ai_instance_node = mim._xpath_search("/auto_install[1]/ai_instance[1]")
         values_order_index = 0
         for child in ai_instance_node[0]:
             self.assertEquals(child.text, values_order[values_order_index],
-                "Child \"%s\" is out of order.  "
-                "Found \"%s\" in its place at index %d.\n" %
+                ("Child \"%s\" is out of order.  " +
+                "Found \"%s\" in its place at index %d.\n") %
                 (child.tag, values_order[values_order_index],
                 values_order_index))
             values_order_index += 1

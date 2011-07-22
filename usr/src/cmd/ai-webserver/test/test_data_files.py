@@ -38,12 +38,6 @@ import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.data_files as df
 import osol_install.libaiscf as smf
 
-# Eventually rename variables per convention
-# pylint: disable-msg=C0103
-
-# Disable unused-arg warnings as this file is full of dummy routines.
-# pylint: disable-msg=W0613
-
 gettext.install("ai-test")
 
 
@@ -86,8 +80,6 @@ class MockDataFiles(object):
 class MockQuery(object):
     '''Class for mock query '''
 
-    # Disable "method could be a function" warnings: inapprop for dummy methods
-    # pylint: disable-msg=R0201
     def __init__(self):
         self.query = None
 
@@ -107,8 +99,6 @@ class MockQuery(object):
 class MockQueue(object):
     '''Class for mock database '''
 
-    # Disable "method could be a function" warnings: inapprop for dummy methods
-    # pylint: disable-msg=R0201
     def __init__(self):
         self.criteria = None
 
@@ -310,16 +300,6 @@ class Manifest_Name(unittest.TestCase):
             f.write("<?xml \"version=1.0\" encoding=\"UTF-8\"?>")
         self.assertFalse(
             df.DataFiles.manifest_is_a_script(myfile))
-        os.unlink(myfile)
-
-    def test_identify_bad_manifest(self):
-        '''Identify a bad manifest file as such'''
-        myfile = "/tmp/fake_manifest"
-        with open(myfile, "w") as f:
-            f.write("#!/bin/csh")
-        self.assertRaises(SystemExit,
-                          df.DataFiles.manifest_is_a_script,
-                          myfile)
         os.unlink(myfile)
 
 
