@@ -135,12 +135,12 @@ def setup_x86_client(service, mac_address, bootargs=''):
         # rather than the non-delimited string that 'mac_address' is.
         full_mac = AIdb.formatValue('mac', mac_address)
         try:
-            print >> sys.stdout, cw(_("Adding host entry for %s to local DHCP "
-                                      "configuration.") % full_mac)
+            print cw(_("Adding host entry for %s to local DHCP configuration.")
+                       % full_mac)
             server.add_host(full_mac, bootfile)
         except dhcp.DHCPServerError as err:
-            print >> sys.stderr, cw(_("Unable to add host (%s) to DHCP "
-                                      "configuration: %s") % (full_mac, err))
+            print cw(_("Unable to add host (%s) to DHCP configuration: %s") %
+                      (full_mac, err))
             return
 
         if server.is_online():
@@ -157,9 +157,22 @@ def setup_x86_client(service, mac_address, bootargs=''):
                        "for further information.\n") % 
                        dhcp.DHCP_SERVER_IPV4_SVC)
     else:
-        print cw(_("No local DHCP configuration found. The DHCP server "
-                   "should be configured with the bootfile '%s' for this "
-                   "client.\n") % bootfile)
+        # No local DHCP, tell the user all about their boot configuration
+        valid_nets = list(com.get_valid_networks())
+        if valid_nets:
+            server_ip = valid_nets[0]
+
+        print cw(_("No local DHCP configuration found. If not already "
+                   "configured, the following should be added to the DHCP "
+                   "configuration:"))
+        print _("\t%-20s : %s\n\t%-20s : %s" %
+               ("Boot server IP", server_ip, "Boot file", bootfile))
+
+        if len(valid_nets) > 1:
+            print cw(_("\nNote: determined more than one IP address "
+                       "configured for use with AI. Please ensure the above "
+                       "'Boot server IP' is correct.\n"))
+
 
 
 def setup_sparc_client(service, mac_address):
@@ -221,8 +234,8 @@ def remove_client_dhcp_config(client_id):
         mac_address = client_id[2:]
         mac_address = AIdb.formatValue('mac', mac_address)
         if server.host_is_configured(mac_address):
-            print >> sys.stdout, cw(_("Removing host entry for %s from local "
-                                      "DHCP configuration.") % mac_address)
+            print cw(_("Removing host entry '%s' from local DHCP "
+                       "configuration.") % mac_address)
             server.remove_host(mac_address)
 
             if server.is_online():
@@ -235,6 +248,6 @@ def remove_client_dhcp_config(client_id):
     else:
         # No local DHCP configuration, inform user that it needs to be
         # unconfigured elsewhere.
-        print cw(_("No local DHCP configuration found. Ensure the DHCP "
-                   "server no longer references the bootfile for this "
-                   "client.\n"))
+        print cw(_("No local DHCP configuration found. Unless it will be "
+                   "reused, the bootfile '%s' may be removed from the DHCP "
+                   "configuration\n" % client_id))

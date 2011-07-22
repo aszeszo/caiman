@@ -1262,89 +1262,68 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
             if not server.is_configured():
                 # We need to configure and enable a new DHCP server. Lay the
                 # base configuration down and then enable the SMF service.
-                # Otherwise, the service is configured but the SMF service is
-                # offline. Do not online it after configuration, so leave
-                # svc_cmd as its default False.
-                print >> sys.stdout, cw(_("\nStarting DHCP server...\n"))
+                # Note we will not enable an existing DHCP configuration if the
+                # SMF service is offline.
+                print cw(_("\nStarting DHCP server..."))
                 server.init_config()
                 svc_cmd = 'enable'
 
         try:
-            print >> sys.stdout, cw(_("Adding IP range to local DHCP "
-                                      "configuration\n"))
+            print cw(_("Adding IP range to local DHCP configuration"))
             server.add_address_range(ip_start, ip_count, bootserver) 
         except dhcp.DHCPServerError as err:
             print >> sys.stderr, cw(_("\nUnable to add IP range: %s\n" % err))
             print >> sys.stderr, _incomplete_msg
             return
     
-    # Regardless of whether the IP arguments are passed or not, we'll now check
-    # the current DHCP configuration for this architecture's bootfile setting.
-    if server.is_configured():
-        # Given where we are in configuration, all of the following should
-        # succeed. If we incur a failure, it's likely that something is very
-        # wrong, and we're unlikely to be able to recover without administrator
-        # intervention. Thus, if any of the following configuration steps fail,
-        # warn and return.
-        try:
-            if server.arch_class_is_set(arch):
-                current_bootfile = server.get_bootfile_for_arch(arch)
-                if current_bootfile is not None:
-                    # There is already a bootfile set in this architecture's
-                    # class configuration. There is a chance that we're setting
-                    # up the default service for this architecture, or
-                    # otherwise setting up an alias for the currently set
-                    # default for this arch class. If so, we should set the
-                    # alias' bootfile instead of the base service's. Note, this
-                    # is the only time we'll update an existing setting.
-                    if service.is_alias():
-                        # It is an alias, so get the basesvc's bootfile and see
-                        # if it's the currently set bootfile.
-                        basesvc = AIService(service.basesvc)
-                        if basesvc.dhcp_bootfile == current_bootfile:
-                            # Yes, this new alias maps to the currently set
-                            # bootfile. So, just swap it out for the alias'
-                            # bootfile. Also, we'll set up svc_cmd here to
-                            # 'restart', since this invocation would have been
-                            # called without IP arguments (setting up an
-                            # alias).
-                            print >> sys.stdout, cw(_("Updating the %s "
-                                                      "bootfile in the local "
-                                                      "DHCP configuration\n") %
-                                                      arch)
-                            server.update_bootfile_for_arch(arch, bootfile)
-                            svc_cmd = 'restart'
-                    else:
-                        # This is not a new default alias for the
-                        # architecture's existing bootfile. Inform the user
-                        # that they'll need to configure this service in DHCP
-                        # if they wish to use it.
-                        print cw(_("\nA default bootfile is configured for "
-                                   "this architecture. This service may be "
-                                   "set as the default, or it may be used "
-                                   "for specific clients via create-client. "
-                                   "See installadm(1M) for further "
-                                   "information.\n"))
-                else:
-                    # There is no bootfile set, so we can add this one.
-                    print >> sys.stdout, cw(_("Setting the %s bootfile in the "
-                                              "local DHCP configuration\n") %
-                                              arch)
-                    server.add_bootfile_to_arch(arch, bootfile)
-            else:
-                # This configuration doesn't have a class stanza for this
-                # architecture. We can now set one up and set the bootfile.
-                print >> sys.stdout, cw(_("Setting the %s bootfile in the "
-                                          "local DHCP configuration\n") % arch)
-                server.add_arch_class(arch, bootfile)
-        except dhcp.DHCPServerError as err:
-            print >> sys.stderr, cw(_("\nUnable to update the current DHCP "
-                                      "configuration: %s\n" % err))
-            print >> sys.stderr, _incomplete_msg
-            return
+    # Regardless of whether the IP arguments are passed or not, now check the
+    # current DHCP configuration for default service configuration. If we're
+    # creating a new default alias for this architecture, set this service's
+    # bootfile as the default in the DHCP local server.
+    if arch == 'sparc':
+        bfile = dhcp.fixup_sparc_bootfile(bootfile)
+        client_type = 'SPARC'
+    else:
+        bfile = bootfile
+        client_type = 'PXE'
 
-        # The configuration is in our desired state, finally update the SMF
-        # service according to our 'svc_cmd' setting.
+    if server.is_configured():
+        if service.is_default_arch_service():
+            try:
+                if server.arch_class_is_set(arch):
+                    # There is a class for this architecture already in place
+                    cur_bootfile = server.get_bootfile_for_arch(arch)
+                    if cur_bootfile is None:
+                        # No bootfile set for this arch
+                        print cw(_("Setting the default %s bootfile in the "
+                                   "local DHCP configuration to '%s'\n") %
+                                   (client_type, bfile))
+                        server.add_bootfile_to_arch(arch, bootfile)
+                    elif cur_bootfile != bfile:
+                        # Update the existing bootfile to our default
+                        print cw(_("Updating the default %s bootfile in the "
+                                   "local DHCP configuration from '%s' to "
+                                   "'%s'\n") %
+                                   (client_type, cur_bootfile, bfile))
+                        server.update_bootfile_for_arch(arch, bootfile)
+                else:
+                    # Set up a whole new architecture class
+                    print cw(_("Setting the default %s bootfile in the local "
+                               "DHCP configuration to '%s'\n") %
+                               (client_type, bfile))
+                    server.add_arch_class(arch, bootfile)
+
+            except dhcp.DHCPServerError as err:
+                print >> sys.stderr, cw(_("Unable to update the local DHCP "
+                                          "configuration: %s\n" % err))
+                print >> sys.stderr, _incomplete_msg
+                return
+
+            # Make sure we kick the DHCP server, if needed
+            if server.is_online and not svc_cmd:
+                svc_cmd = 'restart'
+
+        # Configuration is complete, update the SMF service accordingly
         if svc_cmd:
             try:
                 server.control(svc_cmd)
@@ -1358,14 +1337,25 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
                                           "SMF service requires attention. "
                                           "Please see dhcpd(8) for further "
                                           "information.\n"))
-                return
-    else:
-        print cw(_("\nNo local DHCP configuration found. The DHCP server may "
-                   "enable this service as a default by referencing its "
-                   "bootfile, if not already enabled. Client-specific "
-                   "bindings may also be created via the 'create-client' "
-                   "subcommand. See installadm(1M) for further "
-                   "information.\n"))
+    elif service.is_default_arch_service():
+        # DHCP configuration is not local and this is the default service for
+        # this this architecture. Provide DHCP boot configuration information.
+        valid_nets = list(com.get_valid_networks())
+        if valid_nets:
+            server_ip = valid_nets[0]
+
+        print cw(_("No local DHCP configuration found. This service is the "
+                   "default alias for all %s clients. If not already in "
+                   "place, the following should be added to the DHCP "
+                   "configuration:") % client_type)
+        print _("\t%-20s : %s\n\t%-20s : %s" %
+               ("Boot server IP", server_ip, "Boot file", bfile))
+
+        if len(valid_nets) > 1:
+            print cw(_("\nNote: determined more than one IP address " 
+                       "configured for use with AI. Please ensure the above "
+                       "'Boot server IP' is correct.\n"))
+
 
 if __name__ == '__main__':
     if sys.argv[1] == "mount-all":

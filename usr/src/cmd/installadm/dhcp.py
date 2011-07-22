@@ -461,7 +461,7 @@ class DHCPArchClass(DHCPData):
             vci_re = re.compile(X86_VCI_PATTERN)
         elif self.arch == 'sparc':
             vci_re = re.compile(SPARC_VCI_PATTERN)
-            bootfile = _fixup_sparc_bootfile(bootfile)
+            bootfile = fixup_sparc_bootfile(bootfile, True)
         else:
             raise DHCPServerError(_("unsupported architecture: %s") % \
                 self.arch)
@@ -1008,7 +1008,7 @@ class DHCPServer(object):
         if arch == 'i386':
             new_stanza = _DHCPConfigPXEClass(bootfile)
         elif arch == 'sparc':
-            bootfile = _fixup_sparc_bootfile(bootfile)
+            bootfile = fixup_sparc_bootfile(bootfile, True)
             new_stanza = _DHCPConfigSPARCClass(bootfile)
         else:
             raise ValueError(_("invalid architecture: %s") % arch)
@@ -1279,7 +1279,7 @@ def _get_default_route_for_subnet(subnet_ip):
     return INVALID_IP
 
 
-def _fixup_sparc_bootfile(bootfile):
+def fixup_sparc_bootfile(bootfile, verbose=False):
     '''
     For a SPARC bootfile, ensure that a useful IP address is set on the
     webserver portion of the address string. From service.py, we have a
@@ -1293,25 +1293,27 @@ def _fixup_sparc_bootfile(bootfile):
     if valid_nets:
         ipaddr = valid_nets[0] 
     else:
-        print >> sys.stderr, cw(_("\nNo networks are currently set to work "
-                                  "with install services. Verify that the "
-                                  "install server's SMF properties are set "
-                                  " properly. Please see installadm(1M) for "
-                                  "further information. The SPARC bootfile "
-                                  "setting in the local DHCP server requires "
-                                  "manual configuration. Please see dhcpd(8) "
-                                  "for further information.\n"))
-        logging.debug("dhcp._fixup_sparc_bootfile: no IP found")
+        if verbose:
+            print >> sys.stderr, cw(_("\nNo networks are currently set to "
+                                      "work with install services. Verify the "
+                                      "install/server SMF properties are set "
+                                      "properly. See installadm(1M) for "
+                                      "further information. The SPARC "
+                                      "bootfile setting in the local DHCP "
+                                      "server requires manual configuration. "
+                                      "Please see dhcpd(8) for further "
+                                      "information.\n"))
+        logging.debug("dhcp.fixup_sparc_bootfile: no IP found")
         return bootfile
 
     # If we have more than one network configured, warn and use the first.
-    if (len(valid_nets) > 1):
+    if len(valid_nets) > 1 and verbose:
         print >> sys.stderr, cw(_("\nMore than one subnet is configured for "
-                                  "DHCP service; this is likely unsupported. "
-                                  "Using first available address (%s). Please "
+                                  "use with AI. Using IP address '%s'. Please "
                                   "ensure this is a suitable address to use "
-                                  "for install clients. See installadm(1M) "
-                                  "further information.\n") % ipaddr)
+                                  "for SPARC install clients. See "
+                                  "installadm(1M) further information.\n") %
+                                  ipaddr)
 
-    logging.debug("dhcp._fixup_sparc_bootfile: setting IP address %s", ipaddr)
+    logging.debug("dhcp.fixup_sparc_bootfile: setting IP address %s", ipaddr)
     return re.sub('\$serverIP', ipaddr, bootfile)

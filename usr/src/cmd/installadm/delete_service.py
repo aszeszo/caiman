@@ -107,11 +107,12 @@ def remove_dhcp_configuration(service):
                                       "%s\n" % err))
             return
 
+        # Skip SPARC services, since they share a global bootfile
         if (service.arch != 'sparc' and arch_class is not None and 
             arch_class.bootfile == service.dhcp_bootfile):
             try:
-                print >> sys.stdout, cw(_("Removing this service's bootfile "
-                                          "from local DHCP configuration\n"))
+                print cw(_("Removing this service's bootfile from local DHCP "
+                           "configuration\n"))
                 arch_class.unset_bootfile()
             except dhcp.DHCPServerError as err:
                 print >> sys.stderr, cw(_("\nUnable to unset this service's "
@@ -125,16 +126,6 @@ def remove_dhcp_configuration(service):
                 except dhcp.DHCPServerError as err:
                     print >> sys.stderr, cw(_("\nUnable to restart the DHCP "
                                               "SMF service: %s\n" % err))
-                    return
-    else:
-        # The local DHCP server isn't configured. If this is an x86 service,
-        # inform the end-user that they need to remove this service from the
-        # DHCP configuration. Note this isn't necessary for SPARC as we only
-        # require one global bootfile for SPARC clients.
-        if service.arch == 'i386':
-            print cw(_("\nNo local DHCP configuration found. Ensure that the "
-                       "bootfile for this service is no longer referenced by "
-                       "the DHCP server in use.\n"))
 
 
 def delete_specified_service(service_name, auto_remove, noprompt):
@@ -190,7 +181,7 @@ def delete_specified_service(service_name, auto_remove, noprompt):
                    'arch': ('x86', 'SPARC')[arch == 'sparc'],
                    'name': sname}
 
-            print >> sys.stdout, cw(_(_warning))
+            print >> sys.stderr, cw(_(_warning))
             prompt = _("Are you sure you want to delete this alias? [y/N]: ")
             if not com.ask_yes_or_no(prompt):
                 raise SystemExit(1)
