@@ -77,6 +77,16 @@ VDEV_SUFFIX = "_vdev"
 
 DEFAULT_SWAP_POOL_NAME = "swap_pool"
 
+# The text form when adding a localization facet
+# in a manifest
+# <software name="ips" type="IPS">
+#      <destination>
+#        <image>
+#          <facet set="false">facet.locale.*</facet>
+#          ....
+#
+FACET_LOCALE_FORM = "facet.locale.%s"
+
 SOFTWARE_INSTALL = "install"
 SOFTWARE_UNINSTALL = "uninstall"
 
@@ -354,6 +364,7 @@ class XMLProfileData(object):
                                 "layout": expected_layout})
 
         self._target = None
+        self._image_node = None
         self._local = local
         self.inst_type = "ips"
         self.prof_dict = prof_dict
@@ -667,10 +678,7 @@ class XMLProfileData(object):
         xpath = "./vdev[@name='%s']" % name
         vdev = fetch_xpath_node(parent, xpath)
         if vdev is None:
-            if parent is None:
-                vdev = etree.Element(common.ELEMENT_VDEV)
-            else:
-                vdev = etree.SubElement(parent, common.ELEMENT_VDEV)
+            vdev = etree.SubElement(parent, common.ELEMENT_VDEV)
         vdev.set(common.ATTRIBUTE_NAME, name)
         vdev.set(common.ATTRIBUTE_REDUNDANCY, redundancy)
 
@@ -936,7 +944,7 @@ class XMLProfileData(object):
 
     def __fetch_solaris_software_node(self):
         """Fetch the software publisher node instance in the xml tree"""
-        xpath = "./software/source/publisher[@name='solaris']"
+        xpath = "./software[@type='IPS']/source/publisher[@name='solaris']"
         publisher = fetch_xpath_node(self._ai_instance, xpath)
         if publisher is not None:
             # We found the proper node
@@ -1656,6 +1664,60 @@ class XMLProfileData(object):
         # We've check the install type up front so there's nothing to do here
         pass
 
+    def __convert_locale_entry(self, line_num, keyword, values):
+        """Converts the install_type keyword/values from the profile into
+        the new xml format
+
+        """
+        # Convert
+        #   locale locale_name
+        #
+        # to
+        #
+        # <software name="ips" type="IPS">
+        #  <destination>
+        #   <image>
+        #     <facet set="false">facet.locale.*</facet>
+        #     <facet set="true">facet.locale.${locale_name}</facet>
+        #     <facet set="true">facet.locale.de_DE</facet>
+        #     <facet set="true">facet.locale.en</facet>
+        #     <facet set="true">facet.locale.en_US</facet>
+        #     <facet set="true">facet.locale.es</facet>
+        #   </image>
+        #  </destination>
+        #  ...
+        # </software
+
+        if len(values) != 1:
+            self.__invalid_syntax(line_num, keyword)
+            return
+        if self._image_node is None:
+            # We haven't done a local setting operation yet.
+            #
+            # Find the local settings and delete all the child nodes if
+            # they exist, otherwise create the initial structure needed
+            #
+            software = self.__fetch_solaris_software_node()
+            dest = software.find(common.ELEMENT_DESTINATION)
+            if dest is None:
+                dest = etree.Element(common.ELEMENT_DESTINATION)
+                software.insert(0, dest)
+            else:
+                image = dest.find(common.ELEMENT_IMAGE)
+                if image is not None:
+                    dest.remove(image)
+            self._image_node = etree.SubElement(dest, common.ELEMENT_IMAGE)
+
+            # <facet set="false">facet.locale.*</facet>
+            facet = etree.SubElement(self._image_node, common.ELEMENT_FACET)
+            facet.set(common.ATTRIBUTE_SET, "false")
+            facet.text = FACET_LOCALE_FORM % "*"
+
+        # <facet set="true">facet.locale.${locale}</facet>
+        facet = etree.SubElement(self._image_node, common.ELEMENT_FACET)
+        facet.set(common.ATTRIBUTE_SET, "true")
+        facet.text = FACET_LOCALE_FORM % values[0]
+
     def __convert_package_entry(self, line_num, keyword, values):
         """Converts the package keyword/values from the profile into
         the new xml format
@@ -2165,27 +2227,6 @@ class XMLProfileData(object):
             return False
         return True
 
-    profile_conversion_dict = {
-        "boot_device": None,
-        "bootenv": __unsupported_keyword,
-        "client_arch": __unsupported_keyword,
-        "client_swap": __unsupported_keyword,
-        "cluster": __unsupported_keyword,
-        "dontuse": __unsupported_keyword,
-        "fdisk": __convert_fdisk_entry,
-        "filesys": __convert_filesys_entry,
-        "geo": __unsupported_keyword,
-        "install_type": __convert_install_type_entry,
-        "locale": __unsupported_keyword,
-        "num_clients": __unsupported_keyword,
-        "package": __convert_package_entry,
-        "partitioning": __store_partitioning_entry,
-        "pool": __convert_pool_entry,
-        "root_device": None,
-        "system_type": __convert_system_type_entry,
-        "usedisk": None
-        }
-
     @property
     def tree(self):
         """Returns the xml tree associated with this object"""
@@ -2274,6 +2315,27 @@ class XMLProfileData(object):
         # <ai_instance> node
         self._target = etree.Element(common.ELEMENT_TARGET)
         self._ai_instance.insert(0, self._target)
+
+    profile_conversion_dict = {
+        "boot_device": None,
+        "bootenv": __unsupported_keyword,
+        "client_arch": __unsupported_keyword,
+        "client_swap": __unsupported_keyword,
+        "cluster": __unsupported_keyword,
+        "dontuse": __unsupported_keyword,
+        "fdisk": __convert_fdisk_entry,
+        "filesys": __convert_filesys_entry,
+        "geo": __unsupported_keyword,
+        "install_type": __convert_install_type_entry,
+        "locale": __convert_locale_entry,
+        "num_clients": __unsupported_keyword,
+        "package": __convert_package_entry,
+        "partitioning": __store_partitioning_entry,
+        "pool": __convert_pool_entry,
+        "root_device": None,
+        "system_type": __convert_system_type_entry,
+        "usedisk": None
+        }
 
     def __process_profile(self):
         """Process the profile by taking all keyword/values pairs and

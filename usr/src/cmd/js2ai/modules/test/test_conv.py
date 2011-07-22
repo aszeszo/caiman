@@ -1574,6 +1574,45 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
 
+    def test_locale_entry1(self):
+        """Tests locale for unsupported syntax"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("locale", ["en", "bogus"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.warnings, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.validate_xml_output(xml_data)
+
+    def test_locale_entry2(self):
+        """Tests locale with 2 different locals specifed"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("locale", ["en"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("locale", ["zh"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), False,
+                          self.profile_failure_report(xml_data, report))
+        self.validate_xml_output(xml_data)
+
     def test_partitioning_entry1(self):
         """Tests partitioning default"""
         kv_dict = {}
