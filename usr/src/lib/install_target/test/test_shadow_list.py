@@ -37,6 +37,7 @@ import osol_install.errsvc as errsvc
 
 from osol_install.liberrsvc import ES_DATA_EXCEPTION
 
+from solaris_install import Popen
 from solaris_install.target import Target
 from solaris_install.target.physical import Disk, DiskGeometry, DiskProp, \
     Slice, Partition
@@ -1675,8 +1676,19 @@ class TestFinalValidation(unittest.TestCase):
 class TestInUse(unittest.TestCase):
 
     def setUp(self):
+        # find the list of vdevs for the root pool
+        cmd = ["/usr/sbin/zpool", "list", "-H", "-o", "name,bootfs"]
+        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE)
+        for line in p.stdout.splitlines():
+            (name, bootfs) = line.split()
+            if bootfs != "-":
+                root_pool = name
+                break
+        else:
+            raise SkipTest("unable to find root pool name")
+
         # find the list of vdevs that compose the 'rpool' zpool
-        rpool_map = _get_vdev_mapping("rpool")
+        rpool_map = _get_vdev_mapping(root_pool)
 
         # take the first key in the rpool_map and use the first slice that
         # makes up that key's mapping
