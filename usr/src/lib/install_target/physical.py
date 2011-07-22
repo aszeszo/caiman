@@ -739,8 +739,8 @@ class Disk(DataObject):
         Returns: (name, summary)
         - name, a string indicating the size and controller type of disk.  This
           is suitable for use as the label for the disk icon.
-        - summary, a 5-line text string summary of the Disk's details.  This is
-          suitable for use as a Gtk+ Tooltip for the disk icon.
+        - summary, a 5 (or 7) line text string summary of the Disk's details.
+          This is suitable for use as a Gtk+ Tooltip for the disk icon.
         """
         _ = gettext.gettext
 
@@ -749,6 +749,8 @@ class Disk(DataObject):
         vendor_label = _("Vendor")
         device_label = _("Device")
         bootdev_label = _("Boot device")
+        chassis_label = _("Chassis")
+        receptacle_label = _("Receptacle")
         unknown_label = _("Unknown")
         unknown_size_label = _("???GB")
         yes_label = _("Yes")
@@ -760,6 +762,8 @@ class Disk(DataObject):
         device = None
         ctrl_type = None
         bootdev = None
+        chassis = None
+        receptacle = None
 
         if self.disk_prop is not None:
             if self.disk_prop.dev_size is not None:
@@ -773,8 +777,8 @@ class Disk(DataObject):
                 size = self.disk_prop.dev_size.get(units=units)
                 size_str = locale.format("%.1f", size) + units_str
 
-            if self.disk_prop.dev_vendor is not None:
-                vendor = self.disk_prop.dev_vendor
+            vendor = self.disk_prop.dev_vendor
+            chassis = self.disk_prop.dev_chassis
 
         if self.ctd is not None:
             device = self.ctd
@@ -810,6 +814,7 @@ class Disk(DataObject):
             bootdev = yes_label
         else:
             bootdev = no_label
+        receptacle = self.receptacle
 
         if size_str is None:
             size_str = unknown_size_label
@@ -825,6 +830,11 @@ class Disk(DataObject):
         summary = "%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s" % \
             (size_label, size_str, ctrl_type_label, ctrl_type, vendor_label,
              vendor, device_label, device, bootdev_label, bootdev)
+        # Only append the CRO info if it is present
+        if chassis is not None:
+            summary = "%s\n%s: %s" % (summary, chassis_label, chassis)
+        if receptacle is not None:
+            summary = "%s\n%s: %s" % (summary, receptacle_label, receptacle)
 
         return name, summary
 

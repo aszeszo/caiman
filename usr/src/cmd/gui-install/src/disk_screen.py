@@ -35,6 +35,7 @@ import logging
 import glib
 import gobject
 import gtk
+import numpy
 
 import osol_install.errsvc as errsvc
 import osol_install.liberrsvc as liberrsvc
@@ -847,10 +848,27 @@ class DiskScreen(BaseScreen):
         '''
         disk_iconinfo = self._icon_theme.lookup_icon("gnome-dev-harddisk",
             48, 0)
-        disk_filename = disk_iconinfo.get_filename()
-        disk_pixbuf = gtk.gdk.pixbuf_new_from_file(disk_filename)
-        disk_width = disk_pixbuf.get_width()
-        disk_height = disk_pixbuf.get_height()
+        if disk_iconinfo is None:
+            # If we cannot get the icon info from the theme, then
+            # just fall back to making up a blank image
+            markup = '<span font_desc="Bold">%s</span>' % _("Unable "
+                "to display correct 'disk' graphics, but all other "
+                "information is available.")
+            self._diskstatuslabel.set_markup(markup)
+            self._diskerrorimage.show()
+            self._diskstatuslabel.show()
+            LOGGER.warn("WARNING - couldn't get harddisk icon from theme - "
+                 "using blank icon.")
+            disk_width = 48
+            disk_height = 48
+            pixbuf_array = numpy.zeros((disk_height, disk_width, 4), 'B')
+            disk_pixbuf = gtk.gdk.pixbuf_new_from_array(pixbuf_array,
+                gtk.gdk.COLORSPACE_RGB, 8)
+        else:
+            disk_filename = disk_iconinfo.get_filename()
+            disk_pixbuf = gtk.gdk.pixbuf_new_from_file(disk_filename)
+            disk_width = disk_pixbuf.get_width()
+            disk_height = disk_pixbuf.get_height()
 
         emblem_iconinfo = None
         # Apply any additional emblems appropriate for the disk
