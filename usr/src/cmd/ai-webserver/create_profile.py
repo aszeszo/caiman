@@ -329,13 +329,7 @@ def do_create_profile(cmd_options=None):
                 AIdb.PROFILES_TABLE):
             os.unlink(full_profile_path)  # failure, back out internal profile
 
-print >> sys.stderr, "including create profile"
-print >> sys.stderr, "including create profile"
-print >> sys.stderr, "including create profile"
-print >> sys.stderr, "including create profile"
-print >> sys.stderr, "including create profile"
-print >> sys.stderr, "including create profile"
-print >> sys.stderr, "including create profile"
+
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")
     do_create_profile()
