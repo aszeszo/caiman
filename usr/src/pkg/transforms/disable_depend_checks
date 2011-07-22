@@ -23,12 +23,3 @@
 
 # This is a workaround the existing bug in pkgdepend - 18194
 <transform file path=usr/lib/python2.6/vendor-packages/bootmgmt/.+ -> default pkg.depend.bypass-generate .*>
-
-# Bypass the automatically generated dependency that would result in a
-# dependency on the version of the lxml-26 package on the build system.
-# For those packages that do depend on lxml-26, we've defined an explicit
-# dependency in their .mf file.
-<transform file path=usr/lib/installadm/.* -> add pkg.depend.bypass-generate usr/lib/python2.6/vendor-packages/lxml/.* >
-<transform file path=usr/lib/python2.6/vendor-packages/osol_install/.* -> add pkg.depend.bypass-generate usr/lib/python2.6/vendor-packages/lxml/.* >
-<transform file path=usr/lib/python2.6/vendor-packages/solaris_install/.* -> add pkg.depend.bypass-generate usr/lib/python2.6/vendor-packages/lxml/.* >
-<transform file path=var/ai/image-server/cgi-bin/.* -> add pkg.depend.bypass-generate usr/lib/python2.6/vendor-packages/lxml/.* >
