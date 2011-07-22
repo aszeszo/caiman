@@ -74,7 +74,8 @@ def be_list(name=None):
 
 def be_init(new_be_name, new_be_pool, zfs_properties=None, nested_be=False,
         fs_list=None, fs_zfs_properties=None,
-        shared_fs_list=None, shared_fs_zfs_properties=None):
+        shared_fs_list=None, shared_fs_zfs_properties=None,
+        allow_auto_naming=True):
     """ be_init() - function to initialize a new BE layout.  Creates default
     zfs datasets as well.
 
@@ -88,9 +89,10 @@ def be_init(new_be_name, new_be_pool, zfs_properties=None, nested_be=False,
     shared_fs_list - list of paths to convert to datasets in the shared area.
     shared_fs_zfs_properties - list of Options objects containing property
                                settings
+    allow_auto_naming - Ensures BE created will have a uniquely generated name.
 
-    Returns - for nested BEs, the created name of the BE if different from
-              the BE's original name.  None otherwise.
+    Returns - for BE's with allow_auto_naming enabled, the created name of the
+              BE if different from the BE's original name. None otherwise.
     """
     # create a new NVList object
     nvlist = nvl.NVList()
@@ -108,10 +110,9 @@ def be_init(new_be_name, new_be_pool, zfs_properties=None, nested_be=False,
     # Add whether or not we're initializing a nested BE.
     nvlist.add_boolean_value(const.BE_ATTR_NEW_BE_NESTED_BE, nested_be)
 
-    # If initializing a nested BE, pass in flag to allow
-    # auto naming if there is a naming conflict.
-    if nested_be:
-        nvlist.add_boolean_value(const.BE_ATTR_NEW_BE_ALLOW_AUTO_NAMING, True)
+    # Add whether or not to generate a unique BE name
+    nvlist.add_boolean_value(const.BE_ATTR_NEW_BE_ALLOW_AUTO_NAMING,
+        allow_auto_naming)
 
     # Add the BE datasets
     if fs_list is not None and len(fs_list) > 0:
@@ -151,10 +152,10 @@ def be_init(new_be_name, new_be_pool, zfs_properties=None, nested_be=False,
     if err != 0:
         raise RuntimeError("be_init failed:  %s" % const.BE_ERRNO_MAP[err])
 
-    # For nested BEs, the initialized BE might have been created with a
-    # different name than requested (it was auto named to something else).
-    # If so, return new name.
-    if nested_be:
+    # If auto-naming is allowed, the initialized BE might have been created
+    # with a different name than requested (it was auto named to something
+    # else). If so, return new name.
+    if allow_auto_naming:
         created_be_name = nvlist.lookup_string(const.BE_ATTR_NEW_BE_NAME)
         if (created_be_name != new_be_name):
             return created_be_name

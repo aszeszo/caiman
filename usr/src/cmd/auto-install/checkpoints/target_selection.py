@@ -1315,11 +1315,6 @@ class TargetSelection(Checkpoint):
                                 "non root pool '%s'." %
                                 (child.name, zpool.name))
 
-                        # Verify BE does not already exist
-                        if child.exists:
-                            raise SelectionError("BE '%s' already exists. "
-                                "BE must be unique." % (child.name))
-
                         if found_be:
                             raise SelectionError(
                                 "More than one BE specified in zpool '%s'." % \

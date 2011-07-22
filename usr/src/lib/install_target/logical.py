@@ -929,7 +929,8 @@ class BE(DataObject):
 
     def init(self, dry_run, pool_name="rpool", nested_be=False,
             fs_list=None, fs_zfs_properties=None,
-            shared_fs_list=None, shared_fs_zfs_properties=None):
+            shared_fs_list=None, shared_fs_zfs_properties=None,
+            allow_auto_naming=True):
         """ method to initialize a BE by creating the empty datasets for
             the BE.
         """
@@ -940,15 +941,15 @@ class BE(DataObject):
                 zfs_properties=be_options,
                 fs_list=fs_list, fs_zfs_properties=fs_zfs_properties,
                 shared_fs_list=shared_fs_list,
-                shared_fs_zfs_properties=shared_fs_zfs_properties)
+                shared_fs_zfs_properties=shared_fs_zfs_properties,
+                allow_auto_naming=allow_auto_naming)
 
-            # For a nested BE, the processes of initialize a new BE
+            # If auto-naming is allowed, the processes of initialize a new BE
             # may have ended up creating a different name.  We reap that
             # here and update the stored name in this BE object accordingly.
-            if nested_be and new_name is not None:
+            if allow_auto_naming and new_name is not None:
                 logger = logging.getLogger(ILN)
-                logger.debug("Initialized nested BE with auto name: %s" % \
-                            new_name)
+                logger.debug("Initialized BE with auto name: %s" % new_name)
                 self.created_name = new_name
 
             # if a mountpoint was specified, mount the freshly
