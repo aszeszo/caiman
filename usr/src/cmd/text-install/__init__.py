@@ -27,6 +27,24 @@ Text / (n)Curses based UI for installing Oracle Solaris
 '''
 
 import gettext
+import os
+
+from solaris_install.getconsole import get_console, SERIAL_CONSOLE
+
+#
+# Determining whether LC_MESSAGES environment variable needs to be set
+# or not must be done before the gettext.translation() call so the
+# correct localized messages are used.
+#
+console_type = get_console()
+
+#
+# If running from a serial console, translation will be enabled.
+# If running on a physical console, translation will
+# be disabled by setting LC_MESSAGES to C
+#
+if console_type != SERIAL_CONSOLE:
+    os.environ["LC_MESSAGES"] = "C"
 
 # Variables used by modules this module imports
 # Defined here to avoid circular import errors

@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.lib
@@ -30,7 +30,7 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-PYMODS =	__init__.py
+PYMODS =	__init__.py getconsole.py
 
 PYCMODS=	$(PYMODS:%.py=%.pyc)
 

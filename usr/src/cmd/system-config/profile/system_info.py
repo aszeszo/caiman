@@ -39,8 +39,10 @@ import logging
 import platform
 from subprocess import Popen, PIPE
 
-from solaris_install.logger import INSTALL_LOGGER_NAME
 import solaris_install.data_object as data_object
+from solaris_install.getconsole import get_console, SERIAL_CONSOLE,\
+    PHYSICAL_CONSOLE
+from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig.profile import SMFConfig, SMFInstance, \
                                               SMFPropertyGroup, SYSTEM_LABEL
 
@@ -72,7 +74,7 @@ class SystemInfo(data_object.DataObject):
     MAX_HOSTNAME_LEN = 256
     
     LABEL = SYSTEM_LABEL
-    
+
     def __init__(self, hostname=None, tz_region=None,
                  tz_country=None, tz_timezone=None, time_offset=0,
                  keyboard=None, locale=None, actual_lang=None,
@@ -218,87 +220,25 @@ class SystemInfo(data_object.DataObject):
         Use following algorithm:
          - If connected to SPARC via keyboard/monitor, use "sun"
          - If connected to X86 via keyboard/monitor, use "sun-color"
+         - If connected to X86 and unable to determine whether we are using
+           physical or serial console, use "sun-color"
          - If running on serial console, use "vt100"
          - Otherwise, use "vt100"'''
 
         term_type = "vt100"
 
-        #
-        # x86 platform
-        # Obtain value of 'console' kernel property.
-        # If it starts with 'tty', machine has console redirected to serial
-        # line.
-        #
+        console_type = get_console()
+
+        LOGGER().info("console type: %s", console_type)
+
         if platform.processor() == "i386":
-            argslist = ['/sbin/devprop', 'console']
-
-            try:
-                (console_prop, devprop_err) = Popen(argslist, stdout=PIPE,
-                                              stderr=PIPE).communicate()
-            except OSError, err:
-                LOGGER().warn("devprop(1m) failed to obtain value for console"
-                              "property, Popen raised OSError: err %s", err)
-                return term_type
-
-            if devprop_err:
-                LOGGER().warn("Error occurred when calling devprop(1m): %s",
-                              devprop_err)
-                return term_type
-
-            # pylint: disable-msg=E1103
-            # process returned value. Strip new line first.
-            console_prop = console_prop.rstrip()
-            if console_prop:
-                LOGGER().info("console property is set to %s", console_prop)
-
-                if not console_prop.startswith("tty"):
-                    term_type = "sun-color"
-            else:
-                LOGGER().info("console property is not set")
+            if console_type != SERIAL_CONSOLE:
+                # not on physical console or unable to determine console type
                 term_type = "sun-color"
         else:
-            #
-            # Sparc platform
-            # Obtain value of 'output-device' eeprom(1m) property.
-            # If set to 'screen', assume that this is machine with head.
-            # Otherwise assume user is connected via serial console
-            #
-            argslist = ['/usr/sbin/eeprom', 'output-device']
-
-            try:
-                (odevice_prop, eeprom_err) = Popen(argslist, stdout=PIPE,
-                                                   stderr=PIPE).communicate()
-            except OSError, err:
-                LOGGER().warn("eeprom(1m) failed to obtain value"
-                              " of output-device property, Popen raised"
-                              " OSError: err %s", err)
-                return term_type
-
-            if eeprom_err:
-                LOGGER().warn("Error occurred when calling eeprom(1m): %s",
-                              eeprom_err)
-                return term_type
-
-            #
-            # pylint: disable-msg=E1103
-            # output-device property does not exist on some Sparc machines.
-            # Since in that case eeprom(1m) neither returns error nor emits
-            # error message to stderr, we need to check if returned string
-            # really carries property value.
-            #
-            if odevice_prop.startswith('output-device='):
-                #
-                # parse returned name-value property pair.
-                # Strip new line first.
-                #
-                odevice_prop = odevice_prop.rstrip().split('=')[1]
-                LOGGER().info("output-device property is set to <%s>",
-                              odevice_prop)
-
-                if odevice_prop == "screen":
-                    term_type = "sun"
-            else:
-                LOGGER().info("output-device property is not set")
+            # SPARC
+            if console_type == PHYSICAL_CONSOLE:
+                term_type = "sun"
 
         return term_type
 
