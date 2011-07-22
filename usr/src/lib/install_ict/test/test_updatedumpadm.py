@@ -76,13 +76,6 @@ class TestUpdateDumpAdm(unittest.TestCase):
         # Check to see if the test dumpadm.conf file exists
         self.assertTrue(os.path.isfile(self.test_file))
 
-        # Read in the contents of the test file
-        with open(self.test_file, "r") as fh:
-            dump_data = fh.readlines()
-
-        # The 'DUMPADM_SAVDIR' parameter should not exist
-        self.assertTrue('DUMPADM_SAVDIR' not in dump_data)
-
     def test_update_dumpadm_dry(self):
         '''Test update dumpadm dry run'''
 

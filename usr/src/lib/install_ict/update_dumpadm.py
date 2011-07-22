@@ -84,11 +84,6 @@ class UpdateDumpAdm(ICT.ICTBaseClass):
         if not dry_run:
             if not os.path.exists(os.path.dirname(dumpadmfile_dest)):
                 os.makedirs(os.path.dirname(dumpadmfile_dest))
+            
+            shutil.copyfile(self.dumpadmfile, dumpadmfile_dest)
 
-            # Read the contents into a list and remove the
-            # line containing DUMPADM_SAVDIR.
-            with open(dumpadmfile_dest, "w+") as dest_fhndl:
-                with open(self.dumpadmfile, "r") as fhndl:
-                    for line in fhndl:
-                        if ICT.DUMPADM_SAVDIR not in line:
-                            dest_fhndl.write(line)

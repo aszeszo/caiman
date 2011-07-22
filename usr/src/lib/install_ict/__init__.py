@@ -40,7 +40,6 @@ from solaris_install.target.logical import BE
 BOOTADM = '/usr/sbin/bootadm'
 DEVFSADM = '/usr/sbin/devfsadm'
 DUMPADM_CONF = 'etc/dumpadm.conf'
-DUMPADM_SAVDIR = 'DUMPADM_SAVDIR'
 GENERIC_XML = 'etc/svc/profile/generic.xml'
 GEN_LTD_NET_XML = 'generic_limited_net.xml'
 INETD_XML = 'inetd_generic.xml'

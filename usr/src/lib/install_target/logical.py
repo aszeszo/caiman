@@ -728,7 +728,7 @@ class Zvol(DataObject):
                                      stderr=Popen.STORE, logger=ILN,
                                      stderr_loglevel=logging.DEBUG)
                 elif self.use == "dump":
-                    cmd = [DUMPADM, "-n", "-d",
+                    cmd = [DUMPADM, "-d",
                            os.path.join("/dev/zvol/dsk", self.full_name)]
                     Popen.check_call(cmd, stdout=Popen.STORE,
                                      stderr=Popen.STORE, logger=ILN,
