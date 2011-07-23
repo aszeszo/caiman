@@ -1193,6 +1193,9 @@ def create_config(services, dryrun, ai_service):
             config_list.append("global_menu = True")
         else:
             config_list.append("global_menu = False")
+        if 'default-manifest' in service:
+            config_list.append("default-manifest = %s" %
+                               service['default-manifest'])
 
     # Write the .config file output to the log
     print _("Create configuration file for service: %s") % ai_service
