@@ -1,9 +1,9 @@
 #
 # File for mapping image files with a URL for gui-install
 #
-install-01.png=
-install-02.png=
-install-03.png=
-install-04.png=
-install-05.png=
-install-06.png=http://www.oracle.com/solaris
+install-01.png=http://www.oracle.com/us/products/servers-storage/solaris/reliability/index.html
+install-02.png=http://www.oracle.com/us/products/servers-storage/solaris/virtualization/index.html
+install-03.png=http://www.oracle.com/us/products/servers-storage/solaris/key-features/index.html
+install-04.png=http://www.oracle.com/goto/solaris-podcasts/index.html
+install-05.png=http://www.oracle.com/technetwork/server-storage/solarisstudio/overview/index.html
+install-06.png=http://www.oracle.com/solaris/
