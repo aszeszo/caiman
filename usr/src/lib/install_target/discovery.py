@@ -605,8 +605,6 @@ class TargetDiscovery(Checkpoint):
                             di_props = list()
 
                         if const.DI_FLOPPY in di_props:
-                            self.logger.debug("skipping USB drive at: "
-                                "%s" % new_disk.devpath)
                             continue
 
                     # query libdiskmgt for the drive's information
