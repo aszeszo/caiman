@@ -746,7 +746,8 @@ class XMLSysidcfgData(object):
         # Solaris installer:
         #
         # The only support we can provide in Solaris for PRIMARY is
-        # via nwam and DHCP.  Not a perfect match but it's the best fit
+        # via automated network configuration and DHCP.  Not a perfect
+        # match but it's the best fit
         #
         self.__create_net_interface(auto_netcfg=True)
 
@@ -760,17 +761,18 @@ class XMLSysidcfgData(object):
             if dhcp is not None:
                 if ipv6 is None or ipv6 == "yes":
                     # This configuration is 100% compatible
-                    # with the default behavior of NWAM
+                    # with the default behavior of automated network
+                    # configuration setup
                     pass
                 else:
                     self.logger.error(
                         _("%(file)s: line %(lineno)d: when the "
                           "PRIMARY interface is specified, by default the "
                           "system will be configured for both IPv4 and IPv6 "
-                          "via NWAM. Disabling IPv6 is not supported.  If "
-                          "you wish to ensure that that only IPv4 is "
-                          "configured it will be necessary to replace "
-                          "the PRIMARY option with the interface you "
+                          "via automatic network configuration. Disabling "
+                          "IPv6 is not supported.  If you wish to ensure that"
+                          " only IPv4 is  configured it will be necessary to "
+                          "replace  the PRIMARY option with the interface you "
                           "wish to configure.") % \
                           {"file": SYSIDCFG_FILENAME, \
                            "lineno": line_num})
@@ -800,9 +802,10 @@ class XMLSysidcfgData(object):
                     _("%(file)s: line %(lineno)d: when the "
                       "PRIMARY interface is specified, by default the "
                       "system will be configured for both IPv4 and IPv6 "
-                      "via NWAM.  The options specified will be ignored. "
-                      "If you wish to configure the interface with the "
-                      "specified options replace PRIMARY with the name of the "
+                      "via automatic network configuration. The options "
+                      "specified will be ignored. If you wish to configure "
+                      "the interface with the specified options replace "
+                      "PRIMARY with the name of the "
                       "interface that should be configured.") % \
                     {"file": SYSIDCFG_FILENAME, \
                      "lineno": line_num})
@@ -872,21 +875,19 @@ class XMLSysidcfgData(object):
                                 "complete configuration of IPv4 interface for "
                                 "'%(interface)s', values must be specified for"
                                 " both ip_address and netmask.  Configuring"
-                                " system for NWAM") %
+                                " system for automatic network "
+                                "configuration") %
                                 {"file": SYSIDCFG_FILENAME,
                                  "lineno": line_num,
                                  "interface": interface})
             self._report.add_conversion_error()
 
             # Since we only support a single interface at this time, we want
-            # to make the system usable.  To ensure that we will use NWAM
-            # we clear _default_network since it may have been set in the
-            # creation of a IPv6 network.  This is the key we use to determine
-            # whether or not to create a NWAM or default network
-            #
-            # At the point in time when the installer supports multiple network
-            # interfaces this should be removed and a simple check of
-            # whether there are any defined networks should be performed.
+            # to make the system usable.  To ensure that we will use
+            # the automated network configuration we clear _default_network
+            # since it may have been set in the creation of a IPv6 network.
+            # This is the key we use to determine whether or not to do an
+            # automated network or default network configuration
             #
             self._default_network = None
             return
@@ -1042,8 +1043,7 @@ class XMLSysidcfgData(object):
         if len(self._defined_net_interfaces) == 0:
             # User didn't define any network interfaces.  Make sure the
             # default_xml object has a defined network interface.  If not
-            # create one
-            # Setup a nwam interface
+            # create one via automated network configuration
             svc_network_physical = \
                 fetch_xpath_node(self._service_bundle,
                                  "./service[@name='network/physical']")
