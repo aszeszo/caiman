@@ -1228,16 +1228,9 @@ class XMLProfileData(object):
             self.__unsupported_value(line_num, _("<size>"), size)
             return
         if size != SIZE_ALL:
-            match_pattern = NUM_PATTERN.match(size)
-            if not match_pattern:
-                self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                    "fdisk <size> specified: %(size)s") % \
-                                    {"file": self.profile_name,
-                                     "lineno": line_num,
-                                     "size": size})
-                self._report.add_conversion_error()
-            # fdisk partition size is specified in MB
-            size += "mb"
+            size = self.__size_conversion(line_num, keyword, size)
+            if size is None:
+                return
 
         if self._root_pool is None and \
           self._partitioning == PARTITIONING_DEFAULT and \
@@ -1372,9 +1365,9 @@ class XMLProfileData(object):
             return None
         return device
 
-    def __filesys_size_conversion(self, line_num, keyword, size):
+    def __size_conversion(self, line_num, keyword, size):
         """Perform the necessary conversion for fileys size.  Returns None
-           and generates error if size is not supported or invalid.
+           and generates error if not a valid numeric size.
 
         """
         match_pattern = SIZE_PATTERN.match(size)
@@ -1385,18 +1378,15 @@ class XMLProfileData(object):
             else:
                 # Jumpstart uses m and g not mb and gb like installer wants
                 size += "b"
-        elif size in [SIZE_FREE, SIZE_EXISTING]:
-            self.__unsupported_syntax(line_num, keyword,
-                _("sizes other than a number, auto, or all are not supported"))
-            return None
-        elif size not in [SIZE_AUTO, SIZE_ALL]:
+        else:
             self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                "size '%(size)s' specified for filesys") % \
+                                "size '%(size)s' specified for %(key)s") % \
                                 {"file": self.profile_name, \
                                  "lineno": line_num,
+                                 "key": keyword,
                                  "size": size})
             self._report.add_conversion_error()
-            return None
+            size = None
         return size
 
     def __convert_filesys_mirror_entry(self, line_num, keyword, values):
@@ -1440,9 +1430,6 @@ class XMLProfileData(object):
         if not self.__is_valid_filesys_mount(line_num, mount):
             return
 
-        if mount == "swap" and self._root_pool is None:
-            if not self.__swap_force_root_pool_creation(line_num):
-                return
         device1 = self.__device_conversion(line_num=line_num, device=device1,
                                            allow_any_value=False,
                                            use_rootdisk=False)
@@ -1455,7 +1442,13 @@ class XMLProfileData(object):
         if device2 is None:
             return
 
-        size = self.__filesys_size_conversion(line_num, keyword, size)
+        if size in [SIZE_FREE, SIZE_EXISTING, SIZE_ALL, SIZE_AUTO]:
+            self.__unsupported_syntax(line_num, keyword,
+                _("sizes other than a number are not supported for "
+                  "filesys mirror swap"))
+            return None
+
+        size = self.__size_conversion(line_num, keyword, size)
         if size is None:
             return
 
@@ -1547,9 +1540,6 @@ class XMLProfileData(object):
             self._report.add_conversion_error()
         if not self.__is_valid_filesys_mount(line_num, mount):
             return
-        if mount == "swap" and self._root_pool is None:
-            if not self.__swap_force_root_pool_creation(line_num):
-                return
 
         device = self.__device_conversion(line_num=line_num, device=device,
                                           allow_any_value=(size == SIZE_ALL),
@@ -1557,9 +1547,14 @@ class XMLProfileData(object):
         if device is None:
             return
 
-        size = self.__filesys_size_conversion(line_num, keyword, size)
-        if size is None:
-            return
+        if size in [SIZE_FREE, SIZE_EXISTING, SIZE_AUTO]:
+            self.__unsupported_syntax(line_num, keyword,
+                _("sizes other than a number or all are not supported"))
+            return None
+        if size != SIZE_ALL:
+            size = self.__size_conversion(line_num, keyword, size)
+            if size is None:
+                return
 
         if mount == "swap":
             self.__create_filesys_swap(line_num, device, size)
@@ -1759,7 +1754,7 @@ class XMLProfileData(object):
         #                                       <slice> | mirror [<slice>]+
         #
         # Input:        ${1}    - pool name
-        #               ${2}    - pool size (num, all, auto)
+        #               ${2}    - pool size (num, existing, auto)
         #               ${3}    - swap size (num, auto)
         #               ${4}    - dump size (num, auto)
         #               ${5}    - (mirror, <slice>, rootdisk.s??, any)
@@ -1785,65 +1780,37 @@ class XMLProfileData(object):
         self._root_pool_name = pool_name
 
         pool_size = values[1].lower()
-        match_pattern = SIZE_PATTERN.match(pool_size)
-        if match_pattern:
-            if match_pattern.group(2) == "":
-                # No size specified.  Default size is assumed to be in MB
-                pool_size += "mb"
-            else:
-                # Jumpstart uses m and g not mb and gb like installer wants
-                pool_size += "b"
-        elif pool_size not in [SIZE_AUTO, SIZE_ALL]:
-            self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                "size '%(val)s' specified for pool") % \
-                                {"file": self.profile_name, \
-                                 "lineno": line_num,
-                                 "val": values[1]})
-            self._report.add_conversion_error()
-            return
+        if pool_size == SIZE_EXISTING:
+            self.__unsupported_syntax(line_num, keyword,
+                _("pool sizes other than a number or auto are not supported"))
+            return None
+        elif pool_size != SIZE_AUTO:
+            pool_size = self.__size_conversion(line_num, "<pool_size>",
+                                               pool_size)
+            if pool_size is None:
+                return
 
         swap_size = values[2].lower()
         noswap = "false"
-        match_pattern = SIZE_PATTERN.match(swap_size)
-        if match_pattern:
-            if match_pattern.group(1) == "0":
-                swap_size = None
-                noswap = "true"
-            elif match_pattern.group(2) == "":
-                # No size specified.  Default size is assumed to be in MB
-                swap_size += "mb"
-            else:
-                # Jumpstart uses m and g not mb and gb like installer wants
-                swap_size += "b"
+        if swap_size == "0":
+            swap_size = None
+            noswap = "true"
         elif swap_size != SIZE_AUTO:
-            self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                "size '%(val)s' specified for swap") % \
-                                {"file": self.profile_name, \
-                                 "lineno": line_num, \
-                                 "val": values[2]})
-            self._report.add_conversion_error()
-            return
+            swap_size = self.__size_conversion(line_num, "<swap_size>",
+                                               swap_size)
+            if swap_size is None:
+                return
 
         dump_size = values[3].lower()
         nodump = "false"
-        match_pattern = SIZE_PATTERN.match(dump_size)
-        if match_pattern:
-            if match_pattern.group(1) == "0":
-                dump_size = None
-                nodump = "true"
-            if match_pattern.group(2) == "":
-                # No size specified.  Default size is assumed to be in MB
-                dump_size += "mb"
-            else:
-                # Jumpstart uses m and g not mb and gb like installer wants
-                dump_size += "b"
+        if dump_size == "0":
+            dump_size = None
+            nodump = "true"
         elif dump_size != SIZE_AUTO:
-            self.logger.error(_("%(file)s: line %(lineno)d: invalid size "
-                                "'%(val)s' specified for dump") % \
-                                {"file": self.profile_name, \
-                                 "lineno": line_num, "val": values[3]})
-            self._report.add_conversion_error()
-            return
+            dump_size = self.__size_conversion(line_num, "<dump_size>",
+                                               dump_size)
+            if dump_size is None:
+                return
 
         if values[4] == "mirror":
             # Mirror must have at least 2 slices
@@ -1865,7 +1832,7 @@ class XMLProfileData(object):
 
         updated_list = list()
         for device in devices:
-            allow_any = mirror == False and pool_size in [SIZE_AUTO, SIZE_ALL]
+            allow_any = mirror == False and pool_size == SIZE_AUTO
             update_device = \
                 self.__device_conversion(line_num=line_num,
                                          device=device,

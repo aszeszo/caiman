@@ -1017,7 +1017,9 @@ class TestCommandArgs2(unittest.TestCase):
     def test_p_option_valid_profile(self):
         """Tests calling js2ai with -p option set against a valid profile"""
 
-        sys.argv = ["js2ai", "-Sd", self.working_dir, "-p", self.profile_name,
+        sys.argv = ["js2ai", "-Sd", self.working_dir,
+                    "-D", self.working_dir,
+                    "-p", self.profile_name,
                     "-i", "none"]
         try:
             js2ai.main()
@@ -1176,7 +1178,8 @@ class TestCommandArgs7(unittest.TestCase):
         rules/profiles, no errors
 
         """
-        sys.argv = ["js2ai", "-Srd", self.working_dir, "-i", "none"]
+        sys.argv = ["js2ai", "-Srd", self.working_dir,
+                    "-D", self.working_dir, "-i", "none"]
         try:
             js2ai.main()
         except SystemExit, err:
@@ -1239,7 +1242,8 @@ class TestCommandArgs8(unittest.TestCase):
         with errors
 
         """
-        sys.argv = ["js2ai", "-rSd", self.working_dir, "-v", "-i", "none"]
+        sys.argv = ["js2ai", "-rSd", self.working_dir,
+                    "-D", self.working_dir, "-v", "-i", "none"]
         try:
             js2ai.main()
         except SystemExit, err:
@@ -1314,7 +1318,8 @@ class TestCommandOption_S_No_Failures(unittest.TestCase):
         """Tests calling js2ai with -s option against valid sysidcfg, no errors
 
         """
-        sys.argv = ["js2ai", "-d", self.working_dir, "-s", self.working_dir]
+        sys.argv = ["js2ai", "-d", self.working_dir,
+                    "-D", self.working_dir, "-s"]
         try:
             js2ai.main()
         except SystemExit, err:
