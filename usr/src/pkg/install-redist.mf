@@ -23,7 +23,9 @@
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-set name=pkg.fmri value=pkg:/consolidation/install/install-redistributable@0.5.11,5.11-0.171
+set name=pkg.fmri \
+    value=pkg:/consolidation/install/install-redistributable@0.5.11,5.11-0.171
 set name=pkg.renamed value=true
 set name=variant.arch value=$(ARCH)
-depend fmri=pkg:/consolidation/install/install-all@0.5.11,5.11-0.171 type=require
+depend fmri=pkg:/consolidation/install/install-all@0.5.11,5.11-0.171 \
+    type=require

@@ -273,7 +273,7 @@ PROC_PKGS= $(PKGS:%=$(PDIR)/%.mog)
 # build rules and dependencies.  The synthetic and real packages use
 # different sets of transforms and macros for pkgmogrify.
 #
-SYNTH_PKGS= install-incorporation install-all
+SYNTH_PKGS= install-incorporation install-all install-redist
 DEP_SYNTH_PKGS= $(SYNTH_PKGS:%=$(PDIR)/%.dep)
 PROC_SYNTH_PKGS= $(SYNTH_PKGS:%=$(PDIR)/%.mog)
 
