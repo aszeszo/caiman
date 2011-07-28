@@ -51,9 +51,11 @@ Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
     </service>
 
     <service name="system/console-login" version="1">
-      <property_group name="ttymon">
-        <propval name="terminal_type" value="sun"/>
-      </property_group>
+      <instance name='default' enabled='true'>
+        <property_group name="ttymon">
+          <propval name="terminal_type" value="sun"/>
+        </property_group>
+      </instance>
     </service>
 
     <service name='system/keymap' version='1'>
@@ -68,6 +70,14 @@ Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
       <instance name='default' enabled='true'>
         <property_group name='timezone'>
           <propval name='localtime' value='UTC'/>
+        </property_group>
+      </instance>
+    </service>
+
+    <service name='system/environment' version='1'>
+      <instance name='default' enabled='true'>
+        <property_group name='environment'>
+          <propval name='LC_ALL' value='en_US.UTF-8'/>
         </property_group>
       </instance>
     </service>

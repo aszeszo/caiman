@@ -71,9 +71,11 @@ SAMPLE_SYSINFO_XML = '''<root>
     </instance>
   </service>
   <service version="1" type="service" name="system/console-login">
-    <property_group type="application" name="ttymon">
-      <propval type="astring" name="terminal_type" value="vt100"/>
-    </property_group>
+    <instance enabled="true" name="default">
+      <property_group type="application" name="ttymon">
+        <propval type="astring" name="terminal_type" value="vt100"/>
+      </property_group>
+    </instance>
   </service>
 </root>
 '''

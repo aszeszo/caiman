@@ -282,16 +282,6 @@ def do_ti_install(install_data, screen, update_status_func):
     new_be = get_desired_target_be(doc)
     install_mountpoint = new_be.mountpoint
 
-    #
-    # associate system hostname with loopback address in hosts(4) file.
-    # This is just a temporary solution until CR6996436 is fixed.
-    # Once it happens, it will be taken care by svc:/network/install smf(5)
-    # service and this ICT task can be removed.
-    #
-    cmd = [ICT_PROG, "ict_set_hosts", install_mountpoint, hostname]
-    Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                     logger=LOGGER)
-
     # If swap was created, add appropriate entry to <target>/etc/vfstab
     LOGGER.debug("install mountpoint: %s", install_mountpoint)
     LOGGER.debug("new_be: %s", new_be)

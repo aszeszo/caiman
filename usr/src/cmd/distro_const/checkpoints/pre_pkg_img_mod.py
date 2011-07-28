@@ -152,6 +152,21 @@ class PrePkgImgMod(Checkpoint):
             fh.write("set zfs:zfs_arc_max=0x4002000\n")
             fh.write("set zfs:zfs_vdev_cache_size=0\n")
 
+    def save_etc_inet_hosts(self):
+        """ class method to save pristine hosts(4) file. hosts(4) file
+        is modified by identity:node smf service and we don't want those
+        changes to be propagated to the target system.
+        """
+        # create save/etc/inet directory, if needed
+        if not os.path.exists(os.path.join(self.save_path, "etc/inet")):
+            os.makedirs(os.path.join(self.save_path, "etc/inet"))
+
+        # save a copy of /etc/inet/hosts
+        etc_inet_hosts = os.path.join(self.pkg_img_path, "etc/inet/hosts")
+        if os.path.exists(etc_inet_hosts):
+            shutil.copy2(etc_inet_hosts, os.path.join(self.save_path,
+                                                      "etc/inet/hosts"))
+
     def save_files_directories(self, save_list=None):
         """ class method for saving key files and directories for restoration
         after installation. Missing target directories are created.
@@ -264,19 +279,6 @@ class PrePkgImgMod(Checkpoint):
         self.logger.debug("moving repo from /tmp into pkg_image directory")
         shutil.move(repo_name, os.path.join(self.pkg_img_path,
             "etc/svc/repository.db"))
-
-        # update /etc/inet/hosts with the hostname
-        hostsfile = os.path.join(self.pkg_img_path, "etc/inet/hosts")
-        l = []
-        with open(hostsfile, "r") as fh:
-            for line in fh.readlines():
-                if line.startswith("127"):
-                    line = "%s\t%s\n" % (line.rstrip(), self.hostname)
-                l.append(line)
-
-        # re-write the file
-        with open(hostsfile, "w") as fh:
-            fh.writelines(l)
 
         # unset the SMF environment variables
         for key in smf_env_vars:
@@ -433,7 +435,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
     def save_files(self):
         """ class method for saving key files and directories for restoration
-        after installation
+        after installation. Files are moved to the 'save' area.
         """
         self.logger.debug("Creating the save directory with files and " +
                           "directories for restoration after installation")
@@ -445,7 +447,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
             "etc/xdg/autostart/updatemanagernotifier.desktop",
             "usr/share/dbus-1/services/gnome-power-manager.service",
             "usr/share/gnome/autostart/gnome-power-manager.desktop",
-            "usr/share/gnome/autostart/vp-sysmon.desktop", "etc/system"
+            "usr/share/gnome/autostart/vp-sysmon.desktop"
         ]
 
         self.save_files_directories(save_list)
@@ -593,6 +595,9 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # modify /etc/system
         self.modify_etc_system()
 
+        # save pristine /etc/inet/hosts file
+        self.save_etc_inet_hosts()
+
         # create the gnome caches
         self.generate_gnome_caches()
 
@@ -630,6 +635,9 @@ class TextPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # modify /etc/system
         self.modify_etc_system()
+
+        # save pristine /etc/inet/hosts file
+        self.save_etc_inet_hosts()
 
         # write out the .image_info file
         self.calculate_size()

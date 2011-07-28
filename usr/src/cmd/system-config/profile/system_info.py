@@ -287,6 +287,24 @@ class SystemInfo(data_object.DataObject):
 
         #
         # fmri:
+        #  svc:/system/environment:init
+        #
+        # configures:
+        #  locale - environment/LC_ALL smf property
+        #
+        if self.locale is not None:
+            smf_svc_env = SMFConfig('system/environment')
+            data_objects.append(smf_svc_env)
+        
+            smf_svc_env_init = SMFInstance('init')
+            smf_svc_env.insert_children(smf_svc_env_init)
+            smf_pg_env = SMFPropertyGroup('environment')
+            smf_svc_env_init.insert_children(smf_pg_env)
+
+            smf_pg_env.add_props(LC_ALL=self.locale)
+
+        #
+        # fmri:
         #  svc:/system/identity:node
         #
         # configures:
@@ -323,7 +341,7 @@ class SystemInfo(data_object.DataObject):
         
         #
         # fmri:
-        #  svc:/system/console-login
+        #  svc:/system/console-login:default
         #
         # configures:
         #  terminal type - ttymon/terminal_type smf property
@@ -331,9 +349,11 @@ class SystemInfo(data_object.DataObject):
         
         smf_svc_console = SMFConfig('system/console-login')
         data_objects.append(smf_svc_console)
+        smf_instance_console = SMFInstance('default')
+        smf_svc_console.insert_children([smf_instance_console])
         
         smf_pg_ttymon = SMFPropertyGroup('ttymon')
-        smf_svc_console.insert_children([smf_pg_ttymon])
+        smf_instance_console.insert_children([smf_pg_ttymon])
         
         smf_pg_ttymon.add_props(terminal_type=self.terminal_type)
         

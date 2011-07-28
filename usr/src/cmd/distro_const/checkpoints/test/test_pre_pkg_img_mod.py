@@ -209,9 +209,10 @@ class TestSaveFiles(unittest.TestCase):
             "usr/share/dbus-1/services/gnome-power-manager.service",
             "usr/share/gnome/autostart/gnome-power-manager.desktop",
             "usr/share/gnome/autostart/vp-sysmon.desktop",
-            "etc/gconf/schemas/panel-default-setup.entries", "etc/system"
+            "etc/gconf/schemas/panel-default-setup.entries"
         ]
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
+        self.ppim.save_path = os.path.join(self.ppim.pkg_img_path, "save")
 
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
@@ -242,8 +243,15 @@ class TestConfigureSMF(unittest.TestCase):
         self.pi_filelist = ["/etc/svc/", "/lib/svc/manifest/system/",
                             "/var/svc/manifest/system/", "/lib/", "/usr/lib/",
                             "/usr/sbin/", "/etc/inet/hosts", "/lib/svc/bin/",
-                            "/usr/share/lib/xml/dtd/"]
+                            "/usr/share/lib/xml/dtd/",
+                            "lib/svc/manifest/milestone/",
+                            "lib/svc/manifest/network/",
+                            "lib/svc/manifest/milestone/config.xml",
+                            "lib/svc/manifest/network/network-physical.xml",
+                            "lib/svc/manifest/network/network-install.xml"]
+
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
+        self.ppim.save_path = os.path.join(self.ppim.pkg_img_path, "save")
 
         # create two manifests in the pkg_image area
         testlib.create_smf_xml_file("manifest", "varstub", os.path.join(
@@ -270,11 +278,6 @@ class TestConfigureSMF(unittest.TestCase):
         shutil.copy2("/usr/share/lib/xml/dtd/service_bundle.dtd.1",
             os.path.join(self.ppim.pkg_img_path,
                          "usr/share/lib/xml/dtd/service_bundle.dtd.1"))
-
-        # add an entry for localhost to /etc/inet/hosts
-        with open(os.path.join(
-            self.ppim.pkg_img_path, "etc/inet/hosts"), "a") as fh:
-            fh.write("127.0.0.1\tlocalhost")
 
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
@@ -309,13 +312,6 @@ class TestConfigureSMF(unittest.TestCase):
         #                            ^^^^
         self.assertEqual(p.stdout.split()[2], "true", p.stdout)
 
-        # verify the first line of /etc/inet/hosts has "solaris" in it
-        with open(os.path.join(
-            self.ppim.pkg_img_path, "etc/inet/hosts"), "r") as fh:
-            line = fh.readline()
-
-        self.assertTrue("solaris" in line)
-
         del os.environ["SVCCFG_REPOSITORY"]
 
     def test_configure_smf_custom_hostname(self):
@@ -348,13 +344,6 @@ class TestConfigureSMF(unittest.TestCase):
         # 'general/enabled  boolean  true\n'
         #                            ^^^^
         self.assertEqual(p.stdout.split()[2], "true", p.stdout)
-
-        # verify the first line of /etc/inet/hosts has "hostnametest" in it
-        with open(os.path.join(
-            self.ppim.pkg_img_path, "etc/inet/hosts"), "r") as fh:
-            line = fh.readline()
-
-        self.assertTrue(hostname in line)
 
         del os.environ["SVCCFG_REPOSITORY"]
 

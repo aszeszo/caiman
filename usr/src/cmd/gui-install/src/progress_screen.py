@@ -71,9 +71,6 @@ IMAGES_TIMEOUT_SECONDS = 4.0
 # Installation callback timeout
 INSTALLATION_TIMEOUT_SECONDS = 0.2
 
-# location of the init file -- used for LOCALE hack
-INIT_FILE = "/etc/default/init"
-
 
 class ProgressScreen(BaseScreen):
     '''Progress Screen Class'''
@@ -360,18 +357,6 @@ class ProgressScreen(BaseScreen):
             if profile is None:
                 raise RuntimeError("INTERNAL ERROR: Unable to retrieve "
                     "InstallProfile from DataObjectCache")
-
-            # begin LOCALE hack
-            # setup the LOCALE data - when system-configuration
-            # includes locale then this portion of code will not
-            # be necessary as the system profile already contains
-            # the locale data.
-            locale_cmd = '/bin/echo "LANG=%s" >> %s%s' % \
-                         (profile.default_locale, '/a', INIT_FILE)
-            cmd = locale_cmd.split()
-            Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=self.logger)
-            # end LOCALE hack
 
             # If swap was created, add appropriate entry to <target>/etc/vfstab
             desired_root = doc.persistent.get_descendants(name=Target.DESIRED,

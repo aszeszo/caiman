@@ -395,14 +395,15 @@ def create_config_profiles(sub_cmd, options):
     # Set to true if no profiles were provided in reconfiguration scenario.
     # Othwerwise set it to false.
     if sub_cmd == CONFIGURE and not options.profile:
-        fhdl.writelines("<propval name=\"interactive_config\" type=\"boolean\" "
-                        "value=\"true\"/>\n")
+        fhdl.writelines("<propval name=\"interactive_config\" type=\"boolean\""
+                        " value=\"true\"/>\n")
     else:
-        fhdl.writelines("<propval name=\"interactive_config\" type=\"boolean\" "
-                        "value=\"false\"/>\n")
+        fhdl.writelines("<propval name=\"interactive_config\" type=\"boolean\""
+                        " value=\"false\"/>\n")
 
     # config_group from -g option
-    fhdl.writelines("<propval name=\"config_groups\" type=\"astring\" value=\"")
+    fhdl.writelines("<propval name=\"config_groups\" type=\"astring\""
+                    " value=\"")
     for grp in options.grouping:
         fhdl.writelines("%s " % grp)
     fhdl.writelines("\"/>\n")
@@ -485,6 +486,31 @@ def create_config_profiles(sub_cmd, options):
     shutil.move(TMP_UNCONFIG_PROFILE, profile)
 
 
+def profile_is_valid(profile_name):
+    '''Validate system configuration profile:
+        - profile has to have .xml extension,
+          otherwise smf(5) refuses to apply it
+        - profile has to syntactically validate using 'svccfg apply -n'
+
+        Return: True if profile is valid, otherwise False
+    '''
+    # Check if profile contains .xml suffix.
+    if not profile_name.endswith(".xml"):
+        print _("Custom site profile %s is invalid, missing .xml suffix."
+                 % profile_name)
+        return False
+
+    # Validate file syntactically.
+    try:
+        Popen.check_call(["svccfg", "apply", "-n", profile_name])
+    except CalledProcessError:
+        print _("Custom site profile %s is invalid or has"
+                 "invalid permissions." % profile_name)
+        return False
+
+    return True
+
+
 def apply_profiles(profile_list):
     '''Apply config profiles to the SMF repository.'''
 
@@ -498,6 +524,7 @@ def apply_profiles(profile_list):
             print _("Unable to apply SMF profile %s." % profile)
             raise
 
+
 def valid_group_check(groupings, sub_cmd, parser):
     '''Check to see if the grouping(s) specified are valid.'''
     if sub_cmd[0] == CREATE_PROFILE:
@@ -505,8 +532,9 @@ def valid_group_check(groupings, sub_cmd, parser):
         cmd = [SVCCFG, "-s", "milestone/unconfig", "listprop",
            "sysconfig/valid_groups"]
         try:
-            p_ret = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.PIPE,
-                                 check_result=(Popen.STDERR_EMPTY, 0))
+            p_ret = Popen.check_call(cmd, stdout=Popen.STORE,
+                                     stderr=Popen.PIPE,
+                                     check_result=(Popen.STDERR_EMPTY, 0))
         except CalledProcessError as err:
             print err.popen.stderr
             print _("System is not properly configured. You are likely")
@@ -670,7 +698,8 @@ def parse_unconfig_args(parser, args):
         else:
             print _("This program will unconfigure your system.")
             print _("The system will be reverted to a \"pristine\" state.")
-            print _("It will not have a name or know about other systems or networks.")
+            print _("It will not have a name or know about other systems"
+                    " or networks.")
 
         confirm = raw_input(_("Do you want to continue (y/[n])? "))
         if confirm.lower() != "y":
@@ -725,52 +754,72 @@ def parse_unconfig_args(parser, args):
                         "of %s" % opt_grp)
                 sys.exit(1)
 
-    # The user specified a profile file to use on the configure. Syntactically
-    # validate it here and then copy it to the proper location on the image,
-    # /etc/svc/profile/sc_profile.xml. The unconfig milestone will move
-    # it to the site area when it run. We can't have sc_profile.xml in site
-    # right now because then it will get applied during EMI which will be
-    # before the unconfiguration occurs in the alternate root case.
+    #
+    # The user specified a profile file or a directory with profiles to use
+    # on the configure. Verify that supplied profiles contain .xml suffix
+    # (otherwise smf(5) will not apply them) and syntactically
+    # validate them. Then copy them to the temporary location,
+    # /etc/svc/profile/sc/ directory. The unconfig milestone will move
+    # them to the site area when it runs. We can't put profiles
+    # to site directory right now because they may end up applied before
+    # unconfiguration runs and then removed during unconfiguration.
+    #
     if sub_cmd[0] == CONFIGURE and options.profile:
+        # Verify that supplied path (file or directory) exists.
         if not os.path.exists(options.profile):
             parser.error("%s does not exist." % options.profile)
+
         # Remove all of /etc/svc/profile/sc
         custom_profile_dir = CUSTOM_PROFILE_DIR
         if options.alt_root:
-            custom_profile_dir = os.path.join(options.alt_root, custom_profile_dir)
+            custom_profile_dir = os.path.join(options.alt_root,
+                                              custom_profile_dir)
         else:
             custom_profile_dir = os.path.join("/", custom_profile_dir)
+
         if os.path.exists(custom_profile_dir):
             for root, dirs, files in os.walk(custom_profile_dir):
                 for profile_file in files:
                     os.unlink(os.path.join(root, profile_file))
         else:
             os.mkdir(custom_profile_dir)
-        if options.profile.lower()  != "none":
-            # This implies that the user wants configuration to happen.
-            if os.path.isdir(options.profile):
-                # Profile directory is specified
-                # A profile dir was specified. Validate all files syntactically.
-                for root, dirs, files in os.walk(options.profile):
-                    for pfile in files:
-                        profile_file = os.path.join(root, pfile)
-                        try:
-                            Popen.check_call(["svccfg", "apply", "-n", profile_file])
-                        except CalledProcessError:
-                            print "Custom site profile % s is invalid or has invalid permissions." % profile_file
-                            sys.exit(SU_FATAL_ERR)
-                        # And place it in the site profile area.
-                        shutil.copyfile(profile_file, os.path.join(custom_profile_dir, pfile))
-            else:
-                # Profile is a file
-                # validate file syntactically
-                try:
-                    Popen.check_call(["svccfg", "apply", "-n", options.profile])
-                except CalledProcessError:
-                    print "Custom site profile % s is invalid or has invalid permissions." % options.profile
-                    sys.exit(SU_FATAL_ERR)
-                # And place it in the site profile area.
-                shutil.copyfile(options.profile, os.path.join(custom_profile_dir, os.path.basename(options.profile)))
+
+        if os.path.isdir(options.profile):
+            #
+            # Profile directory is specified.
+            # Directory has to contain at least one profile. Start with
+            # assumption that given directory does not contain any
+            # profile.
+            #
+            profile_dir_is_empty = True
+
+            # Validate profiles - all supplied profiles have to validate.
+            for root, dirs, files in os.walk(options.profile):
+                for pfile in files:
+                    profile_file = os.path.join(root, pfile)
+                    # Abort if profile is invalid.
+                    if not profile_is_valid(profile_file):
+                        sys.exit(SU_FATAL_ERR)
+
+                    # Place profile in the temporary site profile area.
+                    shutil.copyfile(profile_file,
+                                    os.path.join(custom_profile_dir, pfile))
+                    profile_dir_is_empty = False
+
+            # If no profile was found in given directory, abort.
+            if profile_dir_is_empty:
+                print _("Directory %s does not contain any profile."
+                         % options.profile)
+                sys.exit(SU_FATAL_ERR)
+
+        else:
+            # Profile is a file - validate it.
+            if not profile_is_valid(options.profile):
+                sys.exit(SU_FATAL_ERR)
+
+            # Place profile in the temporary site profile area.
+            shutil.copyfile(options.profile, os.path.join(custom_profile_dir,
+                            os.path.basename(options.profile)))
 
     #
     # if there is a request to re-configure system in interactive way
@@ -813,7 +862,7 @@ def _parse_options(arguments):
     usage = "\t%prog unconfigure [-s] [-g system] " + \
             "[--destructive]" + \
             "\n\t%prog configure [-s] [-g system] " + \
-            "[-c profile] [--destructive]" + \
+            "[-c config_profile.xml | dir] [--destructive]" + \
             "\n\t%prog create-profile [-g system] " + \
             "[-o output_file] [-l logfile] [-v verbosity] [-b]"
 
@@ -822,7 +871,7 @@ def _parse_options(arguments):
     try:
         i = arguments.index(DASH_G)
         try:
-            if ' ' in arguments[i+1]:
+            if ' ' in arguments[i + 1]:
                 parser.error("groupings must be a comma separated list")
                 sys.exit(SU_FATAL_ERR)
         except IndexError:
@@ -844,7 +893,6 @@ def _parse_options(arguments):
         parser.error("Subcommand not specified\n"
             "Please select one of the following subcommands: "
             "%s" % SUBCOMMANDS)
-
 
     if sub_cmd[0] == CONFIGURE or sub_cmd[0] == UNCONFIGURE:
         # Set up valid options shared by configure and unconfigure subcommands.
@@ -896,7 +944,6 @@ def _parse_options(arguments):
         parser.error("Invalid subcommand \n"
             "Please select one of the following subcommands: "
             "%s" % SUBCOMMANDS)
-
 
     return (options, sub_cmd)
 

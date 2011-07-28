@@ -23,15 +23,12 @@
 # Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-export PATH=/usr/bin
+export PATH=/usr/bin:/usr/sbin
 
 # exit on any errors
 set -o errexit
 # enable gmacs mode for editing "read" values
 set -o gmacs
-
-# load builtin commands
-builtin mkdir
 
 # global variables
 integer i j
@@ -70,6 +67,22 @@ function readintval
 
 	# convert value
 	(( intval=${strval} ))
+
+	return 0
+}
+
+# Configure locale via environment/LC_ALL property
+# of environment:init smf service.
+function set_locale
+{
+	typeset lang="$1"
+
+	svccfg -s environment:init setprop environment/LC_ALL = "$lang"
+	# Remove /etc/default/init file. It's re-generated
+	# during refresh of environment:init smf service.
+	rm /etc/default/init
+
+	svcadm refresh environment:init
 
 	return 0
 }
@@ -139,12 +152,9 @@ for (( j=0, i=0 ; i < languages.list_len ; i++ )) ; do
 done
 languages.list_len=${#languages.list[@]}
 
-mkdir -p "/etc/sysconfig"
-
 if [[ ${languages.list_len} -eq 0 ]]; then
 	# No language is found.  Default to C.
 	printf "No language is found.  Defaulting to C locale.\n"
-	printf "RC_LANG=C\n" > "/etc/sysconfig/language"
 	exit 0
 fi
 
@@ -152,7 +162,7 @@ fi
 if [[ ${languages.list_len} -eq 1 ]]; then
 	# Only 1 language is available.  Use that language.
 	printf "Only %s found. Selected: %s\n" "${languages.list[0].name}" "${languages.list[0].name}"
-	printf "RC_LANG=%s\n" "${languages.list[0].lang}" > "/etc/sysconfig/language"
+	set_locale "${languages.list[0].lang}"
 	exit 0
 fi
 
@@ -160,7 +170,6 @@ fi
 if [[ ${languages.default} -eq 0 ]]; then
 	if [ ${pickup_default_choice} == true  ] ; then
 		printf "English is not found.  Defaulting to C locale.\n"
-		printf "RC_LANG=C\n" > "/etc/sysconfig/language"
 		exit 0
 	else
 		# Adjust default to the first item on the list
@@ -214,7 +223,8 @@ else
 	printf "Default selected: %s\n" "${languages.list[choice-1].name}"
 fi
 
-# store the selected language to the gdm configuration file
-printf "RC_LANG=%s\n" "${languages.list[choice-1].lang}" > "/etc/sysconfig/language"
+# let environment:init smf service populate LC_ALL environment variable
+# with the selected language
+set_locale "${languages.list[choice-1].lang}"
 
 exit 0
