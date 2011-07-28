@@ -668,8 +668,9 @@ class SystemBootMenu(BootMenu):
 
     def _set_instance_bootenv(self, instance, mountpoint):
         """
-            Updates instance's bootenv.rc 'console' property.
-            'console' property determined from bootenv.rc and
+            Sets console property for the boot instance in
+            bootenv.rc and kernel boot args.
+            'console' property is determined from bootenv.rc and
             devprop(1M) values for 'output-device' and 'console'
         """
         # First, bootmgmt needs to read from the bootenv.rc of the BE
@@ -694,6 +695,11 @@ class SystemBootMenu(BootMenu):
             self.config.boot_loader.setprop(
                 BootLoader.PROP_CONSOLE,
                 BootLoader.PROP_CONSOLE_TEXT)
+        else:
+            # Enable happy face boot to compliment PROP_CONSOLE_GFX
+            self.logger.info("Enabling happy face boot on boot instance: %s" \
+                             % instance.title)
+            instance.kargs = "-B $ZFS-BOOTFS,console=graphics"
 
     def _set_instance_title(self, instance):
         """ Sets the title of instance to match self.boot_title
@@ -818,7 +824,8 @@ class SystemBootMenu(BootMenu):
         self._set_as_default_instance(self.target_boot_instance)
         # Set its boot title
         self._set_instance_title(self.target_boot_instance)
-        # Set up bootenv.rc console properties on the target instance
+        # Set up bootenv.rc console properties and
+        # happy face boot on the target instance
         if self.arch == 'i386':
             self._set_instance_bootenv(
                 instance=self.target_boot_instance,
