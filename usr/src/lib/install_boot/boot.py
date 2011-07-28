@@ -45,7 +45,8 @@ from bootmgmt import bootconfig, BootmgmtUnsupportedPropertyError
 from bootmgmt.bootconfig import BootConfig, DiskBootConfig, ODDBootConfig, \
     SolarisDiskBootInstance, SolarisODDBootInstance, ChainDiskBootInstance
 from bootmgmt.bootloader import BootLoader
-from solaris_install import DC_LABEL, DC_PERS_LABEL, CalledProcessError, Popen
+from solaris_install import DC_LABEL, DC_PERS_LABEL, \
+    CalledProcessError, Popen, run
 from solaris_install.boot.boot_spec import BootMods, BootEntry
 from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.data_object.data_dict import DataObjectDict
@@ -546,10 +547,25 @@ class SystemBootMenu(BootMenu):
         if len(boot_devs) < 1:
             raise RuntimeError("No boot devices identified!")
 
+        cur_prom_boot_devs = list()
+        new_prom_boot_devs = list()
+        prom_arg_str = None
+
+        # Get the current boot device(s) using eeprom
+        try:
+            cmd = ["/usr/sbin/eeprom", "boot-device"]
+            p = run(cmd)
+            result = p.stdout.replace('boot-device=', '', 1)
+            cur_prom_boot_devs = result.split()
+        except CalledProcessError as cpe:
+            # Treat this as non-fatal. We can still attempt to set the
+            # boot-device property.
+            self.logger.warning("Error querying openprom boot-device:")
+            self.logger.warning(str(cpe))
+
         self.logger.debug("Opening prom device: %s" % prom_device)
         try:
             with open(prom_device, "r") as prom:
-                prom_arg_str = None
                 # Set boot-device as a sequence for mirrored root pools since
                 # the OBP will try to boot each successive device specifier
                 # in the list until something opens successfully.
@@ -582,22 +598,25 @@ class SystemBootMenu(BootMenu):
                         'I%ds' % oprommaxparam,
                         buf)
 
-                    # Device names are a list of null-terminated tokens, with a
-                    # double null on the final token.
+                    # Device names are a list of null-terminated tokens, with
+                    # a double null on the final token.
                     # We use only the first token.
                     prom_name = new_dev.split('\0')[0]
+                    new_prom_boot_devs.append(prom_name)
                     self.logger.debug("%s prom device name: %s" \
                                       % (boot_dev, prom_name))
-                    if prom_arg_str is None:
-                        prom_arg_str = prom_name
-                    else:
-                        prom_arg_str += " " + prom_name
         except StandardError as std:
             # Treat this as non-fatal. It can be manually fixed later
             # on reboot.
             self.logger.warning("Failed to set openprom boot-device " \
                                 "parameter:\n%s" % str(std))
             return
+
+        # Append old boot-device list onto new list, filtering out any
+        # duplicate device names already in the new list.
+        new_prom_boot_devs.extend([d for d in cur_prom_boot_devs if \
+                                   d not in new_prom_boot_devs])
+        prom_arg_str = " ".join(new_prom_boot_devs)
 
         # Set the boot device using eeprom
         cmd = ["/usr/sbin/eeprom", "boot-device=%s" % prom_arg_str]
