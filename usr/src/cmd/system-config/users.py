@@ -78,7 +78,7 @@ class UserScreen(BaseScreen):
     
     HELP_DATA = (SCI_HELP + "/%s/users.txt", _("Users"))
     
-    PASS_SCREEN_LEN = 16
+    PASS_SCREEN_LEN = 16  # also used as column width for user input
     ITEM_OFFSET = 2
     
     def __init__(self, main_win):
@@ -101,9 +101,9 @@ class UserScreen(BaseScreen):
         self.edit_area = WindowArea(1, UserScreen.PASS_SCREEN_LEN + 1,
                                     0, self.text_len,
                                     scrollable_columns=scrollable_columns)
-        self.username_edit_area = WindowArea(1, 
-                                    UserInfo.MAX_USERNAME_LEN + 1,
-                                    0, self.text_len)
+        self.username_edit_area = WindowArea(1, UserScreen.PASS_SCREEN_LEN + 1,
+                              0, self.text_len,
+                              scrollable_columns=UserInfo.MAX_USERNAME_LEN + 1)
         err_x_loc = 2 * self.max_text_len - self.text_len
         err_width = (self.text_len + UserScreen.PASS_SCREEN_LEN)
         self.error_area = WindowArea(1, err_width, 0, err_x_loc)

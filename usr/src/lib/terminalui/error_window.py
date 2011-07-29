@@ -30,6 +30,7 @@ import curses
 
 import terminalui
 from terminalui.inner_window import InnerWindow
+from terminalui.i18n import fit_text_truncate
 
 
 class ErrorWindow(InnerWindow):
@@ -74,7 +75,8 @@ class ErrorWindow(InnerWindow):
         cursor_loc = curses.getsyx()
         self.clear()
         terminalui.LOGGER.debug("displaying err '%s'", text)
-        self.add_text(text, centered=self.centered)
+        self.add_text(fit_text_truncate(text, self.area.columns - 1),
+                      centered=self.centered)
         self.make_active()
         curses.setsyx(cursor_loc[0], cursor_loc[1])
         curses.doupdate()
