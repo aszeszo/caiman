@@ -26,6 +26,7 @@
 Common screen functionality for text installer UI
 '''
 
+from terminalui import _
 
 class QuitException(StandardError):
     '''Raised when a function needs to force the program to quit gracefully'''
@@ -78,7 +79,7 @@ class BaseScreen(object):
     CANCEL_BUTTON = None
     CONFIRM_BUTTON = None
     
-    HELP_DATA = (None, "No Help Available")
+    HELP_DATA = (None, _("No Help Available"))
     HELP_FORMAT = "%s"
     
     @classmethod

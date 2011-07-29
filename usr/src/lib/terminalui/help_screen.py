@@ -32,6 +32,7 @@ import os
 import platform
 
 import terminalui
+from terminalui import _
 from terminalui.action import Action
 from terminalui.base_screen import BaseScreen
 from terminalui.i18n import convert_paragraph, textwidth
@@ -177,12 +178,12 @@ class HelpScreen(BaseScreen):
         help_header = "%s: %s"
         terminalui.LOGGER.debug("self.screen is =%s", self.screen)
         if self.screen in self.help_dict:
-            help_header = help_header % ("Help",
+            help_header = help_header % (_("Help"),
                                          self.help_dict[self.screen][1])
             help_text = self.get_help_text(self.help_dict[self.screen][0])
         else:
-            help_header = help_header % ("Help", "Not Available")
-            help_text = "Help for this screen is not available"
+            help_header = help_header % (_("Help"), _("Not Available"))
+            help_text = _("Help for this screen is not available")
 
         self.main_win.set_header_text(help_header)
 
@@ -239,7 +240,7 @@ class HelpScreen(BaseScreen):
                 terminalui.LOGGER.debug("Done reading help file %s", full_path)
         except IOError:
             terminalui.LOGGER.debug("Unable to open help file %s", full_path)
-            help_text = "Help for this screen is not available"
+            help_text = _("Help for this screen is not available")
         return help_text
 
     def _get_locids(self):
