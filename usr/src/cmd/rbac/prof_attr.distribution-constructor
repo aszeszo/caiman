@@ -19,6 +19,6 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
-Distribution Constructor::::profiles=ZFS File System Management,Device Security
+Distribution Constructor:RO:::profiles=ZFS File System Management,Device Security
