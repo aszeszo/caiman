@@ -31,7 +31,7 @@ from curses.textpad import Textbox
 from curses.ascii import isprint, ctrl, ismeta
 
 import terminalui
-from terminalui import LOG_LEVEL_INPUT
+from terminalui import _, LOG_LEVEL_INPUT
 from terminalui.base_screen import UIMessage
 from terminalui.i18n import charwidth, rjust_columns, textwidth
 from terminalui.inner_window import consume_action, no_action
@@ -338,7 +338,7 @@ class EditField(ScrollWindow):
         win_size_x = self.window.getmaxyx()[1]
         if len(self.get_text().lstrip(self.numeric_pad)) >= win_size_x:
             if self.error_win is not None:
-                self.error_win.display_err("Max supported field length: %s"
+                self.error_win.display_err(_("Max supported field length: %s")
                     % (win_size_x - 1))
             return False
         elif callable(self.validate):

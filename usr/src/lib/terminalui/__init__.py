@@ -37,10 +37,13 @@ __all__ = ["action", "base_screen", "color_theme", "edit_field",
            "scroll_window"]
 
 import curses
+import gettext
 import logging
 import os
 os.environ.setdefault("ESCDELAY", "200")
 
+_ = gettext.translation("terminalui", "/usr/share/locale",
+                        fallback=True).ugettext
 LOG_NAME_INPUT = "INPUT"
 LOG_LEVEL_INPUT = 5
 logging.addLevelName(LOG_LEVEL_INPUT, LOG_NAME_INPUT)
