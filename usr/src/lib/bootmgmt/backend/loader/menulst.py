@@ -26,8 +26,17 @@
 menu.lst parser implementation for pybootmgmt
 """
 
+import errno
+import grp
+import os
+import pwd
 import re
-
+import shutil
+import stat
+import tempfile
+from ... import BootmgmtConfigWriteError, BootmgmtArgumentError
+from ...bootloader import BootLoaderInstallError
+from ...bootconfig import BootConfig
 
 class MenuLstError(Exception):
     def __init__(self, msg):
@@ -38,18 +47,44 @@ class MenuLstError(Exception):
         return self.msg
 
 
+class MenuLstComment(object):
+    def __init__(self, comment):
+        self._comment = comment
+
+    def update_comment(self, comment):
+        self._comment = comment
+
+    def __str__(self):
+        return self._comment.rstrip('\n')
+
 class MenuLstCommand(object):
     """A menu.lst command and its arguments from the menu.lst file"""
 
     def __init__(self, command, args=None):
         self._command = command
-        self._args = list(args) if not args is None else []
+        self.set_args(args)
 
     def get_command(self):
         return self._command
 
     def get_args(self):
         return self._args
+
+    def set_args(self, args):
+        if args is None:
+            self._args = []
+        else:
+            # Args can either be a string or a list-like object
+            if isinstance(args, basestring):
+                # If a plain string is supplied, turn it into a
+                # list of arguments:
+                pattern = (r'([^ \t"]+"([^\\"]|\\.)*"[^ \t]*|'
+                           r'([^ \t\\"]|\\.)*"[^"]*(?![^"]*")|'
+                           r'[^ "\t]+)')
+                argv = [v[0] for v in re.compile(pattern).findall(args)]
+                self._args = argv
+            else:
+                self._args = args
 
     def __str__(self):
         if not self._command is None and not self._args is None:
@@ -78,31 +113,44 @@ class MenuLstMenuEntry(object):
         else:
             self._cmdlist = list(args) # make a copy
 
+    def add_comment(self, comment):
+        self._cmdlist.append(MenuLstComment(comment))
+
     def add_command(self, mlcmd):
         self._cmdlist.append(mlcmd)
 
-    def add_non_command(self, noncmd):
-        "Add a string (blank line or comment) to the command list"
-        self._cmdlist.append(noncmd)
+    def delete_command(self, cmd):
+        for idx, _cmd in enumerate(self._cmdlist):
+            if not isinstance(_cmd, MenuLstCommand):
+                continue
+            if cmd == _cmd.get_command():
+                del self._cmdlist[idx]
+                return
 
     def find_command(self, name):
         for cmd in self._cmdlist:
             if isinstance(cmd, MenuLstCommand) and name == cmd.get_command():
-                return True
-        return False
+                return cmd
+        return None
+
+    def update_command(self, cmd, args, create=False):
+       entity = self.find_command(cmd)
+       if not entity is None:
+           entity.set_args(args)
+       elif create is True:
+           self.add_command(MenuLstCommand(cmd, args))
 
     def commands(self):
-        return self._cmdlist
+        return [cmd for cmd in self._cmdlist if type(cmd) == MenuLstCommand]
 
     def __str__(self):
-        ostr = 'MenuLstMenuEntry {\n'
+        ostr = ''
         for cmd in self._cmdlist:
-            ostr += '\t' + str(cmd).rstrip('\n') + '\n'
-        ostr += '}'
-        return ostr
+            ostr += str(cmd).rstrip('\n') + '\n'
+        return ostr.rstrip('\n')
 
     def __repr__(self):
-        ostr = '['
+        ostr = 'MenuLstMenuEntry = ['
         i = 0
         if len(self._cmdlist) >= 1:
             for i in range(len(self._cmdlist) - 1):
@@ -124,12 +172,37 @@ class MenuDotLst(object):
         self._parse()
 
     def entities(self):
-        "Return a list of entities encapsulated by this MenuDotLst"
-        return self._entitylist
+        """Return a list of entities encapsulated by this MenuDotLst. A new
+        list is returned so that deletions can occur in for-loop.
+        """
+        return list(self._entitylist)
+
+    def delete_entity(self, entity):
+        for idx, cur in enumerate(self._entitylist):
+            # Yes, I really mean "is" here:
+            if cur is entity:
+                del self._entitylist[idx]
+                return
+
+    def add_comment(self, comment):
+        self._entitylist.append(MenuLstComment(comment))
 
     def add_command(self, cmd):
-        "Add a MenuLstCommand to the entitylist"
+        "Add a MenuLstCommand or MenuLstMenuEntry to the entitylist"
         self._entitylist.append(cmd)
+
+    def add_global(self, cmd_plus_args):
+        "Add a command & args to the end of the global command section"
+        # First, find the first menu entry and save that insertion point
+        for idx, item in enumerate(self._entitylist):
+            if isinstance(item, MenuLstMenuEntry):
+                break
+        argv = cmd_plus_args.split(' ', 1)
+        if len(argv) > 1:
+            args = argv[1]
+        else:
+            args = None
+        self._entitylist.insert(idx, MenuLstCommand(argv[0], args))
 
     def __str__(self):
         ostr = ''
@@ -222,10 +295,10 @@ class MenuDotLst(object):
 
         self._line += 1
 
-        # Remove the comment portion of the line
+        # If found, add whitespace line/comment to the target
         stripped = nextline.strip()
         if stripped == '' or stripped[0] == '#':
-            self.target.add_non_command(nextline)
+            self.target.add_comment(nextline)
             return
 
         # Remove escape sequences from the line:
@@ -259,3 +332,130 @@ class MenuDotLst(object):
             argv = argv[0].split('=', 1) + argv[1:]
 
             self.target.add_command(MenuLstCommand(argv[0], argv[1:]))
+
+
+#
+# This MixIn allows us to share some code that would otherwise be cut and
+# pasted between several BootLoader implementations
+#
+class MenuLstBootLoaderMixIn(object):
+    def _write_config_generic(self, basepath, boot_data_root_dir):
+
+        # If basepath is not None, the menu.lst should be written to a file
+        # under basepath (instead of to the actual location
+        # (boot_data_root_dir))
+        if basepath is None:
+            realmenu = boot_data_root_dir + self.__class__.MENU_LST_PATH
+            tempmenu = realmenu + '.new'
+
+            # Create the parent directories for the menu.lst file here:
+            try:
+                menu_lst_parent = realmenu.rpartition('/')[0]
+                os.makedirs(menu_lst_parent, 0755)
+            except OSError as ose:
+                # Error during making the directory or the chmod
+                # If this is anything other an an EEXIST, we'll probably
+                # fail below when trying to write the menu.lst, but that'll
+                # be handled below.
+                if ose.errno != errno.EEXIST:
+                    self._debug('Error while making dirs for menu.lst: ' +
+                                str(ose))
+
+            try:
+                # Don't open the new menu.lst over the old -- create a
+                # temporary file, then, if the write is successful, move the
+                # temporary file over the old one.
+                outfile = open(tempmenu, 'w')
+                self._write_menu_lst(outfile)
+                self._debug('menu.lst written to %s' % tempmenu)
+                outfile.close()
+            except IOError as err:
+                raise BootmgmtConfigWriteError("Couldn't write to %s" %
+                                               tempmenu, err)
+
+            try:
+                shutil.move(tempmenu, realmenu)
+                self._debug('menu.lst moved into place as %s' % realmenu)
+            except IOError as err:
+                try:
+                    os.remove(tempmenu)
+                except OSError as oserr:
+                    self._debug('Error while trying to remove %s: %s' %
+                                (tempmenu, oserr.strerror))
+                raise BootmgmtConfigWriteError("Couldn't move %s to %s" %
+                                               (tempmenu, realmenu), err)
+
+            # Move was successful, so now set the owner and mode properly:
+            try:
+                os.chmod(realmenu, 0644)
+                os.chown(realmenu, pwd.getpwnam('root').pw_uid,
+                         grp.getgrnam('root').gr_gid)
+            except OSError as oserr:
+                raise BootmgmtConfigWriteError("Couldn't set mode/perms on "
+                      + realmenu, oserr)
+
+            return None
+
+        # basepath is set to a path.  Use it to form the path to a temporary
+        # file
+        try:
+            tmpfile = tempfile.NamedTemporaryFile(dir=basepath, delete=False)
+            self._write_menu_lst(tmpfile)
+            tmpfile.close()
+        except IOError as err:
+            raise BootmgmtConfigWriteError("Couldn't create a temporary "
+                  'file for menu.lst', err)
+
+        return [(BootConfig.OUTPUT_TYPE_FILE,
+                tmpfile.name,
+                None,
+                self.__class__.MENU_LST_PATH,
+                'root',
+                'root',
+                0644)]
+
+    def _install_generic(self, location):
+        """Invoke the current instance's methods to performing the real
+        work of installing the boot loader and its configuration files."""
+
+        data_root = self._get_boot_loader_data_root()
+
+        if isinstance(location, basestring):
+            try:
+                filemode = os.stat(location).st_mode
+            except OSError as err:
+                raise BootLoaderInstallError('Error stat()ing %s' % location,
+                                             err)
+
+            if stat.S_ISDIR(filemode):
+                # We have been given an output directory.  Produce the menu.lst
+                # there.
+                return self._write_config(location)
+
+            elif stat.S_ISCHR(filemode):
+                self._write_loader(location, data_root)
+                # Now write the menu.lst:
+                self._write_config(None)
+            else:
+                raise BootmgmtArgumentError('Invalid location argument (%s)'
+                                            % location)
+        else:
+            for devname in location:
+                try:
+                    filemode = os.stat(devname).st_mode
+                except OSError as err:
+                    self._debug('Error stat()ing %s' % devname)
+                    raise BootLoaderInstallError('Error stat()ing %s'
+                                                  % devname, err)
+                if stat.S_ISCHR(filemode):
+                    self._write_loader(devname, data_root)
+                else:
+                    raise BootmgmtArgumentError('%s is not a \
+                                                characters-special'
+                                                ' file' % devname)
+
+            self._write_config(None)
+
+        return None
+
+

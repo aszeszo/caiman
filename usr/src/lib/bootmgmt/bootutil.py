@@ -26,9 +26,10 @@
 Various support code for the bootmgmt package
 """
 
+import inspect
 import logging
-import platform
 import os
+import platform
 
 from . import BootmgmtNotSupportedError
 
@@ -51,4 +52,5 @@ class LoggerMixin(object):
 
     @classmethod
     def _debug(cls, log_msg):
-        LoggerMixin.logger.debug(cls.__name__ + ': ' + log_msg)
+        func = inspect.stack()[1][3]
+        LoggerMixin.logger.debug(cls.__name__ + '.' + func + ': ' + log_msg)

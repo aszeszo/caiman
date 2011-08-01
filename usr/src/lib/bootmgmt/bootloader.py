@@ -43,9 +43,16 @@ class BootLoader(LoggerMixin):
     PROP_CONSOLE_GFX = 'graphics'
     PROP_CONSOLE_SERIAL = 'serial'
 
+    PROP_SERIAL_PARAMS = 'serial_params'
+
     PROP_QUIET = 'quiet'
 
     PROP_BOOT_TARGS = 'boot-targets'
+
+    PROP_SPLASH = "splashimage"
+    PROP_FORECOLOR = "foreground"
+    PROP_BACKCOLOR = "background"
+
 
     # When console=serial, this property should be set:
     PROP_SERIAL_PARAMS = 'serial_params'
@@ -82,8 +89,9 @@ class BootLoader(LoggerMixin):
         self.old_loader = None
         self.devices = kwargs.get('devices', None)
         self.firmware = SystemFirmware.get(kwargs.get('fwtype', None))
-        self.version = None
+        self.version = kwargs.get('version', None)
         self._boot_config = kwargs.get('bootconfig', None)
+        self.data_source_boot_instance = None
         self._bl_props = {}
 
         # If there is a root dir defined in the bootconfig passed in,
@@ -95,6 +103,13 @@ class BootLoader(LoggerMixin):
 
         self.rootpath = kwargs.get('rootpath', bc_sysroot)
         
+    def _get_boot_loader_data_root(self):
+        """Returns the root to use as the path to boot loader data files"""
+        if (not self.data_source_boot_instance is None and
+            not self.data_source_boot_instance.rootpath is None):
+            return self.data_source_boot_instance.rootpath
+        return self.rootpath # Initted in __init__; includes the fallback to '/'
+
     def _write_config(self, basepath):
         pass
 
@@ -102,26 +117,103 @@ class BootLoader(LoggerMixin):
         pass
 
     def new_config(self):
-        pass
+        # Clear out the boot loader properties dictionary, except for the
+        # boot targets supported by the boot loader
+        boot_targs = self._bl_props[BootLoader.PROP_BOOT_TARGS]
+        self._bl_props = { BootLoader.PROP_BOOT_TARGS: boot_targs }
 
     def migrate_config(self):
         pass
 
+    # Property-specific handlers
+    def _serial_parameters(self):
+        """Parse serial parameters and return a tuple of (serial port number,
+        serial port speed, data bits, parity (one of 'no', 'odd' or 'even'),
+        stop bits (0 or 1)) (all tuple members must be strings).
+
+        The form of the serial_params property is:
+
+               serial_params | A tuple containing (<portspec>,<speed>,<d>,
+                             | <p>,<s>,<f>).
+                             | <portspec> is currently defined to be a
+                             | number (valid valid depend on the platform,
+                             | but 0 is ttya (com1) and 1 is ttyb (com2)).
+                             | Serial console parameters (<d>=data bits,
+                             | <p>=parity ('N','E','O'),<s>=stop bits (0,1),
+                             | <f>=flow control ('H','S',None) for hardware,
+                             | software, or none).  The default is:
+                             | (0,9600,8,'N',1,None).
+        """
+
+        params = self.getprop('serial_params')
+
+        if not params is None:
+            if not params[BootLoader.PROP_SP_PARITY] is None:
+                try:
+                    parity = {'N': 'no',
+                              'E': 'even',
+                              'O': 'odd'}[params[BootLoader.PROP_SP_PARITY]]
+                except KeyError:
+                    self._debug('Bad parity value in serial_params')
+                    parity = None
+
+            ret_params = (params[BootLoader.PROP_SP_PORT],
+                          params[BootLoader.PROP_SP_SPEED],
+                          params[BootLoader.PROP_SP_DATAB],
+                          parity,
+                          params[BootLoader.PROP_SP_STOPB])
+
+            # if port is not indicated, force use of port 0.
+            if ret_params[0] is None:
+                ret_params[0] = '0'
+
+            return ret_params
+            
+        return ('0', '9600', None, None, None)
+
+
     # Property-related methods
     def _prop_validate(self, key, value=None, validate_value=False):
+        """Validate the property key and optionally value"""
+
         props = getattr(self, 'SUPPORTED_PROPS', [])
         if not key in props:
             raise BootmgmtUnsupportedPropertyError(key + ' is not a supported '
                                                    'property')
 
     def setprop(self, key, value):
-        pass
+        """Set a Boot Loader property.  Raises BootmgmtUnsupportedPropertyError
+        if the property is not supported"""
+
+        self._prop_validate(key, value, True)
+
+        # XXX - Check that the value for each property is well-formed
+        if self._bl_props.get(key, None) != value:
+            self._bl_props[key] = value
+            self.dirty = True
 
     def getprop(self, key):
-        pass
+        "Get a Boot Loader property"
+
+        self._prop_validate(key, validate_value=False)
+        return self._bl_props.get(key, None)
 
     def delprop(self, key):
-        pass
+        "Delete a Boot Loader property"
+
+        self._prop_validate(key, validate_value=False)
+
+        # Check pseudoproperties:
+        if key == BootLoader.PROP_BOOT_TARGS:
+            raise BootmgmtUnsupportedOperationError("key `%s' may not be "
+                                                    "deleted" % key)
+        try:
+            del self._bl_props[key]
+            self.dirty = True
+        except KeyError as err:
+            raise BootmgmtUnsupportedOperationError("key `%s' does not exist"
+                   % key, err)
+
 
     def install(self, location):
         """Install the boot loader onto a disk or set of disks.  location

@@ -41,7 +41,9 @@ from . import BootmgmtNotSupportedError, BootmgmtArgumentError
 from . import BootmgmtMissingInfoError
 from . import bootinfo, bootloader
 from .bootutil import LoggerMixin, get_current_arch_string
-
+from .pysol import (libzfs_init, libzfs_fini, zpool_open, zpool_close,
+                    zpool_get_physpath, zpool_set_prop, zpool_get_prop,
+                    ZPOOL_PROP_BOOTFS, libzfs_error_description)
 _ = gettext.translation("SUNW_OST_OSCMD", "/usr/lib/locale",
     fallback=True).gettext
 
@@ -79,10 +81,8 @@ class BootConfig(LoggerMixin):
 
     @dirty.setter
     def dirty(self, val):
-        if not self._dirty and val is True:
-            self._debug('dirty set')
-            self._dirty = True
-        else:
+        if self._dirty != val:
+            self._debug('dirty => %s' % str(val))
             self._dirty = val
 
     def __init__(self, flags, **kwargs):
@@ -170,6 +170,7 @@ class BootConfig(LoggerMixin):
         else:
             # _load_boot_config raises BootmgmtConfigurationReadError
             self._load_boot_config(**kwargs)
+            self.dirty = False
 
         if BootConfig.BCF_AUTOGEN in self._flags:
             self._autogenerate_config(**kwargs)
@@ -238,7 +239,6 @@ class BootConfig(LoggerMixin):
             defaults = [x for x in self.boot_instances
                         if x.default is True]
             if len(defaults) > 0:
-                # XXX - assert here that len(defaults) is 1?
                 prevDefault = defaults[0]
                 self._debug("Previous default was:\n%s" % str(prevDefault))
 
@@ -308,7 +308,7 @@ class BootConfig(LoggerMixin):
         for inst in filter(filter_func, self.boot_instances):
             mod_func(inst)
 
-    def commit_boot_config(self, temp_dir=None, boot_devices=None):
+    def commit_boot_config(self, temp_dir=None, boot_devices=None, force=False):
         """Writes the boot configuration (including boot instances and boot
         loader settings) to stable storage.
 
@@ -375,25 +375,26 @@ class BootConfig(LoggerMixin):
         ----------------------------------------------------------------
         """
         if temp_dir is None:
-            if self.dirty is True:
+            if force is True or self.dirty is True:
                 for inst in self.boot_instances:
                     if (not inst.boot_vars is None and
-                       inst.boot_vars.dirty is True):
+                       (force is True or inst.boot_vars.dirty is True)):
                         inst.boot_vars.write(inst=inst)
 
-            if self.dirty is True or self.boot_loader.dirty is True:
+            if (force is True or self.dirty is True or
+               self.boot_loader.dirty is True):
                 self.boot_loader.install(boot_devices)
 
             return None
         else:
             tuple_list = []
-            if self.dirty is True:
-                for inst in self.boot_instances:
-                    if (not inst.boot_vars is None and
-                       inst.boot_vars.dirty is True):
-                        tuple_list.append(inst.boot_vars.write(inst, temp_dir))
+            # If a temp dir is specified, ignore the dirty flag and just write
+            # all the config to the temporary directory
+            for inst in self.boot_instances:
+                if not inst.boot_vars is None:
+                    tuple_list.append(inst.boot_vars.write(inst, temp_dir))
 
-            if self.dirty is True or self.boot_loader.dirty is True:
+            if not self.boot_loader is None:
                 tuple_list.append(self.boot_loader.install(temp_dir))
 
             return tuple_list
@@ -427,6 +428,7 @@ class DiskBootConfig(BootConfig):
     ARG_ZFS_RPNAME = 'rpname'         # ZFS root pool name
     ARG_ZFS_TLDPATH = 'tldpath'       # ZFS top-level dataset mounted path
     ARG_ZFS_SYSROOT_PATH = 'zfspath'  # ZFS system root mounted path
+    ARG_ZFS_SET_BOOTFS_ON_COMMIT = 'set_bootfs_on_commit'
     ARG_UFS_ROOT = 'ufsroot'          # UFS root mounted path
     
     # Tokens returned from commit_boot_config()
@@ -442,12 +444,13 @@ class DiskBootConfig(BootConfig):
         fstype = None
 
         if (DiskBootConfig.ARG_ZFS_RPNAME in kwargs and
-            DiskBootConfig.ARG_ZFS_TLDPATH in kwargs and
-            DiskBootConfig.ARG_ZFS_SYSROOT_PATH in kwargs):
+            DiskBootConfig.ARG_ZFS_TLDPATH in kwargs):
             fstype = 'zfs'
-            self.sysroot = kwargs[DiskBootConfig.ARG_ZFS_SYSROOT_PATH]
+            self.sysroot = kwargs.get(DiskBootConfig.ARG_ZFS_SYSROOT_PATH, '/')
             self.zfstop = kwargs[DiskBootConfig.ARG_ZFS_TLDPATH]
             self.zfsrp = kwargs[DiskBootConfig.ARG_ZFS_RPNAME]
+            self.set_bootfs = kwargs.get(
+                             DiskBootConfig.ARG_ZFS_SET_BOOTFS_ON_COMMIT, False)
         elif DiskBootConfig.ARG_UFS_ROOT in kwargs:
             fstype = 'ufs'
             self.sysroot = kwargs[DiskBootConfig.ARG_UFS_ROOT]
@@ -467,9 +470,98 @@ class DiskBootConfig(BootConfig):
         """Loads the boot configuration"""
         self.boot_loader.load_config()
 
+        fstype = getattr(self, 'boot_fstype', None)
+        if (fstype is None or fstype != 'zfs' or
+           getattr(self, 'zfsrp', None) is None):
+            self._debug('(skipping bootfs check)')
+            return
+
+        # If, after loading the boot loader's config, we do not have a
+        # default bootfs, check the root pool's bootfs property and use
+        # it to find a boot instance.  In the event there are multiple
+        # boot instances with the same bootfs, choose the first one.
+        default_instances = [inst for inst in self.boot_instances
+                             if inst.default is True]
+
+        if len(default_instances) > 0:
+            self._debug('This BootConfig already has a default boot instance')
+            return
+
+        # Get the default bootfs for this root pool:
+        lzfsh = libzfs_init()
+        zph = zpool_open(lzfsh, self.zfsrp)
+        pool_default_bootfs = zpool_get_prop(lzfsh, zph, ZPOOL_PROP_BOOTFS)
+        zpool_close(zph)
+        libzfs_fini(lzfsh)
+
+        # If there is no default or we couldn't get it, bail
+        if pool_default_bootfs is None:
+            return
+
+        default_instances = [inst for inst in self.boot_instances
+                             if getattr(inst, 'bootfs', None) ==
+                                pool_default_bootfs]
+
+        # If there is at least one boot instance with a bootfs that matches,
+        # set the first as default
+        if len(default_instances) > 0:
+            default_instances[0].default = True
+
     def _new_boot_config(self, **kwargs):
         """Initializes this instance with a new boot configuration"""
         self.boot_loader.new_config()
+
+    def _set_default_bootfs(self):
+
+        if len(self.boot_instances) == 0:
+            return # Nothing to do
+
+        # Look for the default boot instance.  If there is none, use the first
+        # one.
+        default_inst = None
+        for inst in self.boot_instances:
+            if inst.default is True:
+                default_inst = inst
+                break
+
+        if default_inst is None:
+            self._debug('No default boot instance found-- using first one')
+            default_inst = self.boot_instances[0]
+
+        default_bootfs = getattr(default_inst, 'bootfs', None)
+
+        if default_bootfs is None:
+            self._debug('Could not find a boot instance with a bootfs '
+                        'attribute; Not setting root pool bootfs property')
+            return # Nothing to do!
+
+        # Use libzfs to set the bootfs property
+        lzfsh = libzfs_init()
+        rootpool = default_bootfs.split('/')[0]
+        zph = zpool_open(lzfsh, rootpool)
+        pool_default_bootfs = zpool_get_prop(lzfsh, zph, ZPOOL_PROP_BOOTFS)
+        if pool_default_bootfs != default_bootfs:
+            setprop_rv = zpool_set_prop(zph, 'bootfs', default_bootfs)
+            if setprop_rv == 0:
+                self._debug('pool %s bootfs was %s now %s' % (rootpool,
+                             pool_default_bootfs, default_bootfs))
+        else:
+            setprop_rv = 0
+            self._debug('pool %s bootfs is already set to %s' %
+                        (rootpool, default_bootfs))
+        zpool_close(zph)
+        libzfs_fini(lzfsh)
+        if setprop_rv != 0:
+            raise BootmgmtError(libzfs_error_description(lzfsh))
+
+    def commit_boot_config(self, temp_dir=None, boot_devices=None, force=False):
+        tuples = super(DiskBootConfig, self).commit_boot_config(temp_dir,
+                                                                boot_devices,
+                                                                force)
+        if temp_dir is None and self.set_bootfs is True:
+            self._set_default_bootfs()
+
+        return tuples
 
 
 class ODDBootConfig(BootConfig):
@@ -526,8 +618,8 @@ class BootInstance(LoggerMixin):
         # Only add attributes to this instance if they were not overridden
         # by the caller's keyword arguments
         for key, value in self._attributes.items():
-            # If the key wasn't already set in this instance (in
-            # init_from_rootpath), init it to a default value here
+            # If the key wasn't already set in this instance,
+            # init it to a default value here
             if not key in kwargs and not key in self.__dict__:
                 self._debug('DEFAULT: Setting %s="%s"' %
                             (str(key), str(value)))
@@ -535,8 +627,8 @@ class BootInstance(LoggerMixin):
 
         # If the user passed in keyword args, add them as attributes
         for key, value in kwargs.items():
-            # If the key wasn't already set in this instance (in
-            # init_from_rootpath), init it to a default value here
+            # If the key wasn't already set in this instance,
+            # init it to a default value here
             if key in self.__dict__:
                 continue
             self._debug('KWARGS: Setting %s="%s"' % (str(key), str(value)))
@@ -553,7 +645,9 @@ class BootInstance(LoggerMixin):
 
     def init_from_rootpath(self, rootpath):
         """Initialize the boot instance with information from the root path
-        given."""
+        given.  This can be done after the object has been constructed, so
+        that consumers do not have to complete the cumbersome task of
+        mounting each BootInstance that's created."""
         self.rootpath = rootpath
         self.boot_vars = self._get_boot_vars(rootpath)
 
@@ -635,12 +729,21 @@ class BootInstance(LoggerMixin):
             s += 'default = True\n'
         for item in self._attributes.keys():
             s += str(item) + ' = '
-            s += str(self.__dict__.get(item, '<Not Defined>')) + '\n'
+            s += str(getattr(self, item, '<Not Defined>')) + '\n'
         if not self.boot_vars is None:
             s += '===[ %d Boot variables ]===\n' % len(self.boot_vars)
             s += '\n'.join(map(str, self.boot_vars))
             s += '\n===[ End Boot Variables ]==='
         return s
+
+    def __eq__(self, other):
+        # XXX Ugh
+        for key in self._attributes:
+            if key not in other._attributes:
+                return False
+            if getattr(self, key) != getattr(other, key):
+                return False
+        return True
 
 
 class ChainDiskBootInstance(BootInstance):
@@ -659,11 +762,16 @@ class ChainDiskBootInstance(BootInstance):
 
 class SolarisBootInstance(BootInstance):
     """Abstraction for a Solaris Boot Instance.  Supported attributes are:
-               - kernel [string] [optional]
-               - boot_archive [string] [optional]
-               - kargs [string] [optional]: Kernel argument string
-               - signature [string] [optional]: The "boot signature" of this
-                                                boot instance.
+               - kernel [string] [optional] [x86-only]
+               - boot_archive [string] [optional] [x86-only]
+               - kargs [string] [optional] [x86-only]: Kernel argument string
+               - signature [string] [optional] [x86-only]: The "boot
+                                                           signature" of this
+                                                           boot instance.
+               - Public Methods:
+                 - expanded_kargs(): [x86-only] Expands all macros in kargs
+                                     and returns the expanded kernel argument
+                                     string.
     """
 
     if get_current_arch_string() == 'x86':
@@ -672,6 +780,9 @@ class SolarisBootInstance(BootInstance):
                       'boot_archive': '/platform/i86pc/%(karch)s/boot_archive',
                       'kargs': None,
                       'signature': None,
+                      'splashimage' : None,
+                      'foreground' : None,
+                      'background' : None
                       }
     else:
         _attributes = {}
@@ -682,7 +793,46 @@ class SolarisBootInstance(BootInstance):
         (self.__dict__.setdefault('_attributes', {})
                       .update(SolarisBootInstance._attributes))
 
-        super(SolarisBootInstance, self).__init__(rootpath, **kwargs)        
+        super(SolarisBootInstance, self).__init__(rootpath, **kwargs)
+
+    def expanded_kargs(self):
+        """Expands all macros found in self.kargs and returns the string
+        with all macros expanded.  Currently, only $ZFS-BOOTFS is a
+        supported macro."""
+
+        if get_current_arch_string() != 'x86':
+            raise BootmgmtUnsupportedPlatformError('expanded_kargs() not '
+                  'supported on the %s platform' % get_current_arch_string())
+
+        if self.kargs is None:
+            return
+
+        if not "$ZFS-BOOTFS" in self.kargs:
+            return self.kargs
+
+        # ZFS-BOOTFS expands to a string that contains two elements:
+        # The zfs-bootfs element and the bootpath element.  Retrieve
+        # Them both from libzfs here, then perform the substitution.
+        return self.kargs.replace("$ZFS-BOOTFS", self._expand_zfs_bootfs())
+
+    def _expand_zfs_bootfs(self):
+        """Use libzfs (via ctypes) to get the zpool properties and return a
+        string that consists of the kernel arguments needed to specify the
+        zfs root pool and bootfs associated with this BootInstance
+        """
+
+        lzfsh = libzfs_init()
+        zph = zpool_open(lzfsh, self.bootfs.split('/')[0])
+        physpaths = zpool_get_physpath(lzfsh, zph)
+        if self.bootfs is None:
+            bootfs = zpool_get_prop(lzfsh, zph, ZPOOL_PROP_BOOTFS)
+        else:
+            bootfs = self.bootfs
+        zpool_close(zph)
+        libzfs_fini(lzfsh)
+
+	# XXX: We're just using the first physpath for now
+        return ('zfs-bootfs=' + bootfs + ',bootpath="' + physpaths[0] + '"')
 
 
 class SolarisDiskBootInstance(SolarisBootInstance):
@@ -714,10 +864,11 @@ class SolarisDiskBootInstance(SolarisBootInstance):
 
         # If title is STILL None, try an alternate (the last component of the
         # bootfs):
-        try:
-            self.title = self.bootfs.split('/', 2)[2]
-        except:
-            pass
+        if self.title is None:
+            try:
+                self.title = self.bootfs.split('/', 2)[2]
+            except:
+                pass
 
     def init_from_rootpath(self, rootpath):
         # Invoke the parent's init_from_rootpath first

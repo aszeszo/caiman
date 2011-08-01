@@ -45,6 +45,8 @@ _msgs = {
 #
 FSTYPSZ = 16
 
+MAX_PATH = 1024
+
 _libc = CDLL('libc.so', use_errno=True)
 _platwidth = platform.architecture()[0][:2]
 _libc.fopen.restype = c_void_p
@@ -539,21 +541,60 @@ def fstyp_fini(handle):
 
 # ================================[ isalist ]=================================
 
+SI_MACHINE = 5
+SI_PLATFORM = 513
 SI_ISALIST = 514     # return supported isa list
-ISALIST_LEN = 257    # max buffer size, as per manpage
+SYSINFO_LEN = 257    # max buffer size, as per manpage
 
 _libc.sysinfo.argtypes = [c_int, c_char_p, c_long]
 _libc.sysinfo.restype = c_int
 
-
+_isalist_cache = None
 def isalist():
         "Returns a list of ISAs supported on the currently-running system"
 
-        b = create_string_buffer(ISALIST_LEN)
-        r = _libc.sysinfo(SI_ISALIST, b, ISALIST_LEN)
+        global _isalist_cache
+
+        if not _isalist_cache is None:
+            return _isalist_cache
+
+        b = create_string_buffer(SYSINFO_LEN)
+        r = _libc.sysinfo(SI_ISALIST, b, SYSINFO_LEN)
         if r < 0:
                 raise OSError(get_errno(), os.strerror(get_errno()))
-        return b.value.split()
+
+        _isalist_cache = b.value.split()
+        return _isalist_cache
+
+_platform_name_cache = None
+def platform_name():
+        global _platform_name_cache
+
+        if not _platform_name_cache is None:
+            return _platform_name_cache
+
+        b = create_string_buffer(SYSINFO_LEN)
+        r = _libc.sysinfo(SI_PLATFORM, b, SYSINFO_LEN)
+        if r < 0:
+                raise OSError(get_errno(), os.strerror(get_errno()))
+
+        _platform_name_cache = b.value
+        return b.value
+
+_machine_name_cache = None
+def machine_name():
+        global _machine_name_cache
+
+        if not _machine_name_cache is None:
+            return _machine_name_cache
+
+        b = create_string_buffer(SYSINFO_LEN)
+        r = _libc.sysinfo(SI_MACHINE, b, SYSINFO_LEN)
+        if r < 0:
+                raise OSError(get_errno(), os.strerror(get_errno()))
+
+        _machine_name_cache = b.value
+        return b.value
 
 
 # =================================[ libscf ]=================================
@@ -608,34 +649,149 @@ def smf_enable_instance(svc, flags=0):
 
 # =================================[ libzfs ]=================================
 
+LIBZFS_PROPLEN_MAX = 1024
+
 _libzfs = CDLL('libzfs.so.1', use_errno=True)
 _libzfs.libzfs_init.restype = c_void_p
+
+_libzfs.libzfs_fini.argtypes = [c_void_p]
+_libzfs.libzfs_fini.restype = None
+
+_libzfs.libzfs_error_description.argtypes = [c_void_p]
+_libzfs.libzfs_error_description.restype = c_char_p
+
 _libzfs.zfs_open.restype = c_void_p
 _libzfs.zfs_open.argtypes = [c_void_p, c_char_p, c_int]
+
 _libzfs.zfs_close.argtypes = [c_void_p]
+_libzfs.zfs_close.restype = None
+
 zif_callback = CFUNCTYPE(c_int, c_void_p, c_void_p)
 _libzfs.zfs_iter_filesystems.argtypes = [c_void_p, zif_callback, c_void_p]
+
+_libzfs.zfs_get_type.argtypes = [c_void_p]
+
+_libzfs.zfs_get_name.restype = c_char_p
+_libzfs.zfs_get_name.argtypes = [c_void_p]
+
+_libzfs.zfs_name_valid.argtypes = [c_char_p, c_int]
+
+_libzfs.zpool_open.restype = c_void_p
+_libzfs.zpool_open.argtypes = [c_void_p, c_char_p]
+
+_libzfs.zpool_close.restype = None
+_libzfs.zpool_close.argtypes = [c_void_p]
+
+_libzfs.zpool_get_physpath.argtypes = [c_void_p, c_char_p, c_int]
+
+_libzfs.zpool_get_prop.argtypes = [c_void_p, c_int, c_char_p, c_int, POINTER(c_int)]
+
+_libzfs.zpool_set_prop.argtypes = [c_void_p, c_char_p, c_char_p]
+
+
+# zprop_source_t values:
+ZPROP_SRC_NONE = 0x1
+ZPROP_SRC_DEFAULT = 0x2
+ZPROP_SRC_TEMPORARY = 0x4
+ZPROP_SRC_LOCAL = 0x8
+ZPROP_SRC_INHERITED = 0x10
+ZPROP_SRC_RECEIVED = 0x20
+
 
 ZFS_TYPE_FILESYSTEM = 1
 ZFS_TYPE_SNAPSHOT = 2
 ZFS_TYPE_VOLUME = 4
 ZFS_TYPE_POOL = 8
 
+# ZPOOL_PROP values:
+
+(ZPOOL_PROP_NAME,
+ZPOOL_PROP_SIZE,
+ZPOOL_PROP_CAPACITY,
+ZPOOL_PROP_ALTROOT,
+ZPOOL_PROP_HEALTH,
+ZPOOL_PROP_GUID,
+ZPOOL_PROP_VERSION,
+ZPOOL_PROP_BOOTFS,
+ZPOOL_PROP_DELEGATION,
+ZPOOL_PROP_AUTOREPLACE,
+ZPOOL_PROP_CACHEFILE,
+ZPOOL_PROP_FAILUREMODE,
+ZPOOL_PROP_LISTSNAPS,
+ZPOOL_PROP_AUTOEXPAND,
+ZPOOL_PROP_DEDUPDITTO,
+ZPOOL_PROP_DEDUPRATIO,
+ZPOOL_PROP_FREE,
+ZPOOL_PROP_ALLOCATED,
+ZPOOL_PROP_READONLY) = range(19)
+
+
 
 def libzfs_init():
         hdl = _libzfs.libzfs_init()
-        if hdl.value is None:
+        if hdl is None:
                 raise IOError(0, _msgs[LIBZFS_INIT_FAILURE])
-        return hdl
+        return c_void_p(hdl)
 
+def libzfs_error_description(lzfsh):
+	return _libzfs.libzfs_error_description(lzfsh)
 
-def zfs_open(handle, devpath, type=ZFS_TYPE_FILESYSTEM):
-        pass
+def zfs_open(lzfsh, zfsname, type=ZFS_TYPE_FILESYSTEM):
+	hdl = _libzfs.zfs_open(lzfsh, zfsname, type)
+	if hdl is None:
+		raise IOError(0, libzfs_error_description(lzfsh))
+	return c_void_p(hdl)
 
+def zfs_close(zfsh):
+	_libzfs.zfs_close(zfsh)
+
+def zfs_get_type(zfsh):
+	return _libzfs.zfs_get_type(zfsh)
+
+def zfs_get_name(zfsh):
+	return _libzfs.zfs_get_name(zfsh)
+
+def zfs_name_valid(beName, type):
+        ret = _libzfs.zfs_name_valid(beName, type)
+        return False if ret is 0 else True
+
+def zpool_open(lzfsh, poolname):
+	hdl = _libzfs.zpool_open(lzfsh, poolname)
+	if hdl is None:
+		raise IOError(0, libzfs_error_description(lzfsh))
+	return c_void_p(hdl)
+
+def zpool_close(zph):
+	_libzfs.zpool_close(zph)
+
+def zpool_get_physpath(lzfsh, zph):
+	buf = create_string_buffer(MAX_PATH)
+	ret = _libzfs.zpool_get_physpath(zph, buf, MAX_PATH)
+	if not ret is 0:
+		raise IOError(0, libzfs_error_description(lzfsh))
+	return buf.value.split()
+
+def zpool_get_prop(lzfsh, zph, propid, get_source=False):
+	buf = create_string_buffer(LIBZFS_PROPLEN_MAX)
+	if get_source is True:
+		src = c_int()
+		srcp = pointer(src)
+	else:
+		srcp = None
+
+	ret = _libzfs.zpool_get_prop(zph, propid, buf, LIBZFS_PROPLEN_MAX, srcp)
+	if not ret is 0:
+		raise IOError(0, libzfs_error_description(lzfsh))
+	if get_source is True:
+		return [buf.value, src.value]
+	else:
+		return buf.value
+
+def zpool_set_prop(zph, propname, propval):
+	return _libzfs.zpool_set_prop(zph, propname, propval)
 
 def libzfs_fini(handle):
         _libzfs.libzfs_fini(handle)
-
 
 __all__ = ["statvfs",
            "mnttab_open",
@@ -667,4 +823,21 @@ __all__ = ["statvfs",
            "fstyp_init",
            "fstyp_ident",
            "fstyp_fini",
-           "isalist"]
+           "isalist",
+	   "platform_name",
+	   "machine_name",
+           "ZFS_TYPE_FILESYSTEM",
+           "ZFS_TYPE_POOL",
+           "ZPOOL_PROP_BOOTFS",
+           "libzfs_init",
+           "libzfs_fini",
+           "zfs_open",
+           "zfs_close",
+           "zpool_open",
+           "zpool_close",
+           "zfs_get_type",
+           "zfs_get_name",
+           "zfs_name_valid",
+           "zpool_get_physpath",
+           "zpool_get_prop",
+	   "zpool_set_prop" ]

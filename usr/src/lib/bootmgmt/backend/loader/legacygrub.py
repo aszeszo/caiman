@@ -29,16 +29,16 @@ Legacy GRUB BootLoader Implementation for pybootmgmt
 import tempfile
 import shutil
 import os
-import pwd
-import grp
 import gettext
 import stat
 import re
 
 from .menulst import MenuDotLst, MenuLstError, MenuLstMenuEntry, MenuLstCommand
+from .menulst import MenuLstBootLoaderMixIn
 from ...bootloader import BootLoader, BootLoaderInstallError
 from ...bootconfig import BootConfig, DiskBootConfig, SolarisDiskBootInstance
 from ...bootconfig import ChainDiskBootInstance
+from ...bootutil import get_current_arch_string
 from ... import BootmgmtArgumentError
 from ... import BootmgmtUnsupportedOperationError, BootmgmtInterfaceCodingError
 from ... import BootmgmtIncompleteBootConfigError, BootmgmtConfigReadError
@@ -46,11 +46,11 @@ from ... import BootmgmtConfigWriteError, BootmgmtMalformedPropertyValueError
 from ... import BootmgmtUnsupportedPlatformError, BootmgmtNotSupportedError
 from solaris_install import Popen, CalledProcessError
 
-_ = gettext.translation("SUNW_OST_OSCMD", "/usr/lib/locale",
+_ = gettext.translation('SUNW_OST_OSCMD', '/usr/lib/locale',
     fallback=True).gettext
 
 
-class LegacyGRUBBootLoader(BootLoader):
+class LegacyGRUBBootLoader(BootLoader, MenuLstBootLoaderMixIn):
     """Implementation of a Legacy GRUB (GRUB 0.97) BootLoader.  Handles parsing
     the menu.lst file (reading and writing), though reading it and creating
     BootInstance objects is rather fragile"""
@@ -59,50 +59,58 @@ class LegacyGRUBBootLoader(BootLoader):
 
     MENU_LST_PATH = '/boot/grub/menu.lst'
 
+    DEFAULT_GRUB_SPLASH = '/boot/grub/splash.xpm.gz'
+    DEFAULT_TIMEOUT = 30         # 30 seconds is the default timeout
+    DEFAULT_FORECOLOR = '343434'
+    DEFAULT_BACKCOLOR = 'F7FBFF'
+
+    # This dict is applied to the menu.lst template (below)
     DEFAULT_PROPDICT = {
-         'default_command'     : 'default 0',
-         'timeout_command'     : 'timeout 10',
-         'serial_command'      : '#   serial --unit=0 --speed=9600',
-         'terminal_command'    : '#   terminal serial',
-         'splashimage_command' : '#   splashimage /boot/grub/splash.xpm.gz',
-         # if foreground or background are used, they MUST start with
-         # a newline (see the MENU_LST_PREAMBLE, below)
-         'foreground'          : '',
-         'background'          : '',
-         'minmem64'            : '',
-         'hidemenu'            : '' }
+         'default'     : 'default 0',
+         'timeout'     : 'timeout ' + str(DEFAULT_TIMEOUT),
+         'serial'      : '#   serial --unit=0 --speed=9600',
+         'terminal'    : '#   terminal serial',
+         'splashimage' : '#   splashimage ' + DEFAULT_GRUB_SPLASH,
+         'foreground'  : '#   foreground ' + DEFAULT_FORECOLOR,
+         'background'  : '#   background ' + DEFAULT_BACKCOLOR,
+         'minmem64'    : '#',
+         'hiddenmenu'  : '#' }
 
     INSTALLGRUB_NOUPDT = 4       # from src/cmd/boot/common/boot_utils.h
     INSTALLGRUB_NOEINFO = 6      # (ditto)
 
-    DEFAULT_TIMEOUT = 10         # 10 seconds is the default timeout
-    DEFAULT_FORECOLOR = '343434'
-    DEFAULT_BACKCOLOR = 'F7FBFF'
-
     # Supported properties for setprop()
-    SUPPORTED_PROPS = [BootLoader.PROP_CONSOLE,
-                       BootLoader.PROP_SERIAL_PARAMS,
-                       BootLoader.PROP_MINMEM64,
-                       BootLoader.PROP_TIMEOUT,
-                       BootLoader.PROP_QUIET]
+    SUPPORTED_PROPS = [
+      BootLoader.PROP_CONSOLE,
+      BootLoader.PROP_SERIAL_PARAMS,
+      BootLoader.PROP_MINMEM64,
+      BootLoader.PROP_TIMEOUT,
+      BootLoader.PROP_QUIET,
+      BootLoader.PROP_SPLASH,
+      BootLoader.PROP_FORECOLOR,
+      BootLoader.PROP_BACKCOLOR
+    ]
 
+    # Template for NEW menu.lst files:
     MENU_LST_PREAMBLE = (
 r"""# default menu entry to boot
-%(default_command)s
+%(default)s
 #
 # menu timeout in second before default OS is booted
 # set to -1 to wait for user input
-%(timeout_command)s
+%(timeout)s
 #
 # To enable grub serial console to ttya uncomment the following lines
 # and comment out the splashimage line below
 # WARNING: do not enable grub serial console when BIOS console serial
 #       redirection is active.
-%(serial_command)s
-%(terminal_command)s
+%(serial)s
+%(terminal)s
 #
 # Uncomment the following line to enable GRUB splashimage on console
-%(splashimage_command)s%(foreground)s%(background)s
+%(splashimage)s
+%(foreground)s
+%(background)s
 #
 # To chainload another OS
 #
@@ -110,30 +118,27 @@ r"""# default menu entry to boot
 #       root (hd<disk no>,<partition no>)
 #       chainloader +1
 #
-# To chainload a Solaris release not based on grub
+# To chainload a Solaris release not based on GRUB:
 #
 # title Solaris 9
 #       root (hd<disk no>,<partition no>)
 #       chainloader +1
 #       makeactive
 #
-# To load a Solaris instance based on grub
-# If GRUB determines if the booting system is 64-bit capable,
-# the kernel$ and module$ commands expand $ISADIR to "amd64"
+# To load a Solaris instance based on GRUB:
 #
 # title Solaris <version>
-#       findroot (pool_<poolname>,<partition no>,x)   --x = Solaris root slice
 #       bootfs <poolname>/ROOT/<BE_name>
-#       kernel$ /platform/i86pc/kernel/$ISADIR/unix
-#       module$ /platform/i86pc/$ISADIR/boot_archive
+#       kernel /platform/i86pc/kernel/amd64/unix
+#       module /platform/i86pc/amd64/boot_archive
 
 #
 # To override Solaris boot args (see kernel(1M)), console device and
 # properties set via eeprom(1M) edit the "kernel" line to:
 #
-#   kernel /platform/i86pc/kernel/unix <boot-args> -B prop1=val1,prop2=val2,...
+#   kernel /platform/i86pc/kernel/amd64/unix <boot-args> -B prop1=val1,prop2=val2,...
 #
-%(hidemenu)s
+%(hiddenmenu)s
 %(minmem64)s
 """)
 
@@ -142,13 +147,17 @@ r"""# default menu entry to boot
         """Probe for Legacy GRUB files for use with the BootConfig passed
         in"""
 
+        if get_current_arch_string() != 'x86':
+            cls._debug('Legacy GRUB boot loader not supported on this platform')
+            return (None, None)
+
         bootconfig = kwargs.get('bootconfig', None)
 
         if (bootconfig is None or bootconfig.boot_class is None):
             return (None, None)
 
         if (bootconfig.boot_class == BootConfig.BOOT_CLASS_DISK and
-           not bootconfig.boot_fstype is None):
+           bootconfig.boot_fstype is not None):
             return LegacyGRUBBootLoader._probe_disk(**kwargs)
         elif bootconfig.boot_class == BootConfig.BOOT_CLASS_ODD:
             return LegacyGRUBBootLoader._probe_odd(**kwargs)
@@ -232,51 +241,6 @@ r"""# default menu entry to boot
             raise BootmgmtNotSupportedError('IOError when checking for '
                                             'datafiles')
 
-    def _serial_parameters(self):
-        """Parse serial parameters and return a tuple of (serial port number,
-        serial port speed, data bits, parity (one of 'no', 'odd' or 'even'),
-        stop bits (0 or 1)) (all tuple members must be strings).
-
-        The form of the serial_params property is:
-
-               serial_params | A tuple containing (<portspec>,<speed>,<d>,
-                             | <p>,<s>,<f>).
-                             | <portspec> is currently defined to be a
-                             | number (valid valid depend on the platform,
-                             | but 0 is ttya (com1) and 1 is ttyb (com2)).
-                             | Serial console parameters (<d>=data bits,
-                             | <p>=parity ('N','E','O'),<s>=stop bits (0,1),
-                             | <f>=flow control ('H','S',None) for hardware,
-                             | software, or none).  The default is:
-                             | (0,9600,8,'N',1,None).
-        """
-
-        params = self.getprop('serial_params')
-
-        if not params is None:
-            if not params[BootLoader.PROP_SP_PARITY] is None:
-                try:
-                    parity = {'N': 'no',
-                              'E': 'even',
-                              'O': 'odd'}[params[BootLoader.PROP_SP_PARITY]]
-                except KeyError:
-                    self._debug('Bad parity value in serial_params')
-                    parity = None
-
-            ret_params = (params[BootLoader.PROP_SP_PORT],
-                          params[BootLoader.PROP_SP_SPEED],
-                          params[BootLoader.PROP_SP_DATAB],
-                          parity,
-                          params[BootLoader.PROP_SP_STOPB])
-
-            # if port is not indicated, force use of port 0.
-            if ret_params[0] is None:
-                ret_params[0] = '0'
-
-            return ret_params
-            
-        return ('0', '9600', None, None, None)
-
     def __init__(self, **kwargs):
         self.pkg_names = ['system/boot/grub', 'SUNWgrub']
         self.name = 'Legacy GRUB'
@@ -288,7 +252,11 @@ r"""# default menu entry to boot
         """The configuration for Legacy GRUB consists solely of the menu.lst
         file.  The default new configuration is an empty menu.lst file,
         with a graphical splashscreen and appropriate fore/back colors."""
+
+        super(LegacyGRUBBootLoader, self).new_config()
+        # Set boot loader default properties after the config reset:
         self._bl_props[BootLoader.PROP_CONSOLE] = BootLoader.PROP_CONSOLE_GFX
+        self._menufile = None
 
     def load_config(self):
         """Load boot instances and GRUB properties from the menu.lst file"""
@@ -354,7 +322,7 @@ r"""# default menu entry to boot
                 # Make sure we have everything first:
                 # XXX - Recognize non-disk boot instances in the menu.lst
                 argdict = {}
-                if entity.find_command('bootfs'):
+                if entity.find_command('bootfs') is not None:
                     for cmd in entity.commands():
                         # Skip non-commands
                         if not isinstance(cmd, MenuLstCommand):
@@ -383,46 +351,62 @@ r"""# default menu entry to boot
                                 argdict['rpool'] = pool
                                 argdict['fstype'] = 'zfs'
 
-                elif entity.find_command('chainloader'):
+                elif entity.find_command('chainloader') is not None:
                     for cmd in entity.commands():
                         if cmd.get_command() == 'title':
                             argdict['title'] = ' '.join(cmd.get_args())
                         elif (cmd.get_command() == 'root' or
                             cmd.get_command() == 'rootnoverify'):
                             argdict['root'] = ' '.join(cmd.get_args())
+                            args = cmd.get_args()[0]
+                            if args.startswith('(hd'):
+                                args = tuple(map(int, args[3:-1].split(',')))
+                                argdict['chaininfo'] = args
                         elif cmd.get_command() == 'chainloader':
                             argdict['chainload'] = ' '.join(cmd.get_args())
 
-                elif entity.find_command('findroot'):
+                elif entity.find_command('findroot') is not None:
                     # XXX - Look up ZFS bootfs property for the pool
                     raise BootmgmtUnsupportedOperationError('XXX - Fix Me')
 
-                if not argdict.get('chainload', None) is None:
+                if argdict.get('chainload', None) is not None:
                     inst = ChainDiskBootInstance(None, **argdict)
                 else:
                     inst = SolarisDiskBootInstance(None, **argdict)
+
+                entity.boot_instance = inst
+                inst._menulst_entity = entity
 
                 boot_instances += [inst]
 
             elif isinstance(entity, MenuLstCommand) is True:
                 # Add the command as a property
                 arglist = entity.get_args()
-                if not arglist is None and len(arglist) > 0:
+                if arglist is not None and len(arglist) > 0:
                     argstring = ' '.join(arglist)
                 else:
                     argstring = ''
-                # XXX - Don't use setprop here; if the entity contains a
-                # XXX - command we don't recognize, we'll get an exception
-                # XXX - instead, just record that command as-is so it can
-                # XXX - be replayed when the menu.lst is written
-                # XXX - In any case, we need to parse the command and turn it
-                # XXX - into a valid property key/value.
-                if entity.get_command() == 'default':
+
+                entity_cmd = entity.get_command()
+
+                if entity_cmd == 'default':
                     default_index = argstring
                 else:
-                    self.setprop(entity.get_command(), argstring)
+                    try:
+                        # Note that the property names in BootLoader were
+                        # chosen to overlap the menu.lst keywords used to
+                        # express them, so that we could just call setprop()
+                        # and not special-case each of them.  When the
+                        # menu.lst is reconsitituted, the BootLoader instance
+                        # is interrogated as each command is encountered,
+                        # enabling in-place "editing" of those lines from
+                        # a loaded menu.lst file.
+                        self.setprop(entity_cmd, argstring)
+                    except BootmgmtUnsupportedPropertyError:
+                        # Just ignore unsupported properties
+                        self._debug('Unsupported property: %s' % entity_cmd)
 
-        if not default_index is None:
+        if default_index is not None:
             try:
                 default_index = int(default_index)
                 self._debug('default GRUB entry is: ' + str(default_index))
@@ -430,7 +414,11 @@ r"""# default menu entry to boot
                 self._debug("Could not convert `default' index (%s) to "
                             "an int -- setting to 0" % default_index)
                 default_index = 0
-            if default_index < len(self._boot_config.boot_instances):
+            # XXX What to do when we have boot instances from both the menu.lst
+            # file and from the zfs/be configuration?  What we do here, though,
+            # is to mark the default boot instance as read from the menu.lst
+            # file.
+            if default_index < len(boot_instances):
                 boot_instances[default_index].default = True
         elif len(boot_instances) > 0:
             # Set the default to be the first one
@@ -444,14 +432,7 @@ r"""# default menu entry to boot
         so figure out which filesystem we're dealing with, and write the
         menu.lst file to that location."""
 
-        fstype = self._boot_config.boot_fstype
-        if fstype != 'zfs' and fstype != 'ufs':
-            raise BootmgmtUnsupportedOperationError('Unknown filesystem: %s'
-                                                     % fstype)
-        if fstype == 'zfs':
-            menu_lst_dir = self._boot_config.zfstop
-        elif fstype == 'ufs':
-            menu_lst_dir = self._boot_config.get_root()
+        menu_lst_dir = self._menu_lst_dir_disk()
 
         tuples = self._write_config_generic(basepath, menu_lst_dir)
 
@@ -459,8 +440,10 @@ r"""# default menu entry to boot
             self._debug('No tuples returned from _write_config_generic')
             return None
 
+        fstype = self._boot_config.boot_fstype
+
         for idx, item in enumerate(tuples):
-            if (item[BootConfig.IDX_FILETYPE] is BootConfig.OUTPUT_TYPE_FILE
+            if (item[BootConfig.IDX_FILETYPE] == BootConfig.OUTPUT_TYPE_FILE
                and
                item[BootConfig.IDX_DESTNAME] ==
                     LegacyGRUBBootLoader.MENU_LST_PATH):
@@ -486,70 +469,12 @@ r"""# default menu entry to boot
                                     LegacyGRUBBootLoader.MENU_LST_PATH)
                     item[BootConfig.IDX_INSTANCE] = inst
 
-                # Update item in the list:
-                item = tuple(item)
-                tuples[idx] = item
+                # Update tuple in the list:
+                tuples[idx] = tuple(item)
 
         return tuples
 
-    def _write_config_generic(self, basepath, menu_lst_dir):
-
-        # If basepath is not None, the menu.lst should be written to a file
-        # under basepath (instead of to the actual location)
-        if basepath is None:
-            realmenu = menu_lst_dir + LegacyGRUBBootLoader.MENU_LST_PATH
-            tempmenu = realmenu + '.new'
-
-            try:
-                # Don't open the new menu.lst over the old -- create a
-                # temporary file, then, if the write is successful, move the
-                # temporary file over the old one.
-                outfile = open(tempmenu, 'w')
-                self._write_menu_lst(outfile)
-                outfile.close()
-            except IOError as err:
-                raise BootmgmtConfigWriteError("Couldn't write to %s" %
-                                               tempmenu, err)
-
-            try:
-                shutil.move(tempmenu, realmenu)
-            except IOError as err:
-                try:
-                    os.remove(tempmenu)
-                except OSError as oserr:
-                    self._debug('Error while trying to remove %s: %s' %
-                                (tempmenu, oserr.strerror))
-                raise BootmgmtConfigWriteError("Couldn't move %s to %s" %
-                                               (tempmenu, realmenu), err)
-
-            # Move was successful, so now set the owner and mode properly:
-            try:
-                os.chmod(realmenu, 0644)
-                os.chown(realmenu, pwd.getpwnam('root').pw_uid,
-                         grp.getgrnam('root').gr_gid)
-            except OSError as oserr:
-                raise BootmgmtConfigWriteError("Couldn't set mode/perms on "
-                      + realmenu, oserr)
-
-            return None
-
-        # basepath is set to a path.  Use it to form the path to a temporary
-        # file
-        try:
-            tmpfile = tempfile.NamedTemporaryFile(dir=basepath, delete=False)
-            self._write_menu_lst(tmpfile)
-            tmpfile.close()
-        except IOError as err:
-            raise BootmgmtConfigWriteError("Couldn't create a temporary "
-                  'file for menu.lst', err)
-
-        return [(BootConfig.OUTPUT_TYPE_FILE,
-                tmpfile.name,
-                None,
-                LegacyGRUBBootLoader.MENU_LST_PATH,
-                'root',
-                'root',
-                0644)]
+    # _write_config_generic is taken from the MenuLstBootLoaderMixIn
 
     def _write_config_odd(self, basepath):
 
@@ -583,63 +508,196 @@ r"""# default menu entry to boot
     # Generic support methods for all BootConfig classes
 
     def _write_menu_lst(self, outfile):
+        """Invoked by the MenuLstBootLoaderMixIn.
+        These are two cases that _write_menu_lst has to handle.  The
+        first is when there was a menu.lst that was previously loaded.
+        In that case, portions of that file may change, depending on
+        modifications made to the BootLoader properties or to the
+        individual BootInstance objects that comprise the BootConfig.
+        The second case is a new menu.lst file.  For this case, we
+        just fill the propdict with defaults, then update those
+        defaults with values from BootLoader properties and then
+        apply the propdict to the menu.lst template (above).
+        Additional entries not previously present in the menu.lst
+        file are appended.  In this way, the ordering of the file
+        and user comments can be preserved.
+        """
+        
         propdict = LegacyGRUBBootLoader.DEFAULT_PROPDICT.copy()
 
         minmem64 = self._bl_props.get(BootLoader.PROP_MINMEM64, None)
-        if not minmem64 is None:
+        if minmem64 is not None:
             propdict['minmem64'] = 'min_mem64 ' + str(minmem64)
+        elif self._menufile:
+            propdict['minmem64'] = None
 
         timeout = self._bl_props.get(BootLoader.PROP_TIMEOUT, None)
-        if timeout is None:
-            timeout = LegacyGRUBBootLoader.DEFAULT_TIMEOUT
-        propdict['timeout_command'] = 'timeout ' + str(timeout)
+        if timeout is not None:
+            propdict['timeout'] = 'timeout ' + str(timeout)
+        elif self._menufile:
+            propdict['timeout'] = None
 
         hidemenu = self._bl_props.get(BootLoader.PROP_QUIET, None)
         if hidemenu is True:
-            propdict['hidemenu'] = 'hiddenmenu'
+            propdict['hiddenmenu'] = 'hiddenmenu'
+        elif self._menufile:
+            propdict['hiddenmenu'] = None
 
         consprop = self._bl_props.get(BootLoader.PROP_CONSOLE, None)
         if consprop is None or consprop == BootLoader.PROP_CONSOLE_GFX:
-            propdict['splashimage_command'] = (
-               'splashimage /boot/grub/splash.xpm.gz')
-            propdict['foreground'] = (
-               '\nforeground ' + LegacyGRUBBootLoader.DEFAULT_FORECOLOR)
-            propdict['background'] = (
-               '\nbackground ' + LegacyGRUBBootLoader.DEFAULT_BACKCOLOR)
+            # XXX - If there is no splashimage/forecolor/backcolor in
+            # XXX - the existing menu.lst, don't add it here if no
+            # XXX - splashimage / forecolor / backcolor was specified
+            # XXX - in the BootLoader properties. If there was no
+            # XXX - menu.lst previously loaded, DO add the defaults.
+            if self._menufile is None:
+                default_grub_splash = LegacyGRUBBootLoader.DEFAULT_GRUB_SPLASH
+                default_forecolor = LegacyGRUBBootLoader.DEFAULT_FORECOLOR
+                default_backcolor = LegacyGRUBBootLoader.DEFAULT_BACKCOLOR
+            else:
+                default_grub_splash = None
+                default_forecolor = None
+                default_backcolor = None
+
+            splash = self._bl_props.get(BootLoader.PROP_SPLASH,
+                                        default_grub_splash)
+            forecolor = self._bl_props.get(BootLoader.PROP_FORECOLOR,
+                              default_forecolor)
+            backcolor = self._bl_props.get(BootLoader.PROP_BACKCOLOR,
+                              default_backcolor)
+
+            # The structure of each if statement below is intentional--
+            # The else branch is for the case when we have a menufile
+            # already and we want to support REMOVING properties that
+            # were previously set (i.e. removing commands).
+
+            if splash is not None:
+                propdict['splashimage'] = 'splashimage ' + splash
+            else:
+                propdict['splashimage'] = None
+
+            if forecolor is not None:
+                propdict['foreground'] = 'foreground ' + forecolor
+            else:
+                propdict['foreground'] = None
+
+            if backcolor is not None:
+                propdict['background'] = 'background ' + backcolor
+            else:
+                propdict['background'] = None
+
+            # Delete any reference to the serial console if it exists:
+            propdict['serial'] = None
+            propdict['terminal'] = None
+
         elif consprop == BootLoader.PROP_CONSOLE_SERIAL:
             params = self._serial_parameters()
 
             sercmd = 'serial --unit=%s' % params[BootLoader.PROP_SP_PORT]
 
-            if not params[BootLoader.PROP_SP_SPEED] is None:
+            if params[BootLoader.PROP_SP_SPEED] is not None:
                 sercmd += ' --speed=%s' % params[BootLoader.PROP_SP_SPEED]
-            if not params[BootLoader.PROP_SP_DATAB] is None:
+            if params[BootLoader.PROP_SP_DATAB] is not None:
                 sercmd += ' --word=%s' % params[BootLoader.PROP_SP_DATAB]
-            if not params[BootLoader.PROP_SP_PARITY] is None:
+            if params[BootLoader.PROP_SP_PARITY] is not None:
                 sercmd += ' --parity=%s' % params[BootLoader.PROP_SP_PARITY]
-            if not params[BootLoader.PROP_SP_STOPB] is None:
+            if params[BootLoader.PROP_SP_STOPB] is not None:
                 sercmd += ' --stop=%s' % params[BootLoader.PROP_SP_STOPB]
 
-            propdict['serial_command'] = sercmd
-            propdict['terminal_command'] = 'terminal serial'
+            propdict['serial'] = sercmd
+            propdict['terminal'] = 'terminal serial'
+
+        # Figure out the default boot index first by iterating through 
+        # all BootInstances
+        for idx, inst in enumerate(self._boot_config.boot_instances):
+            if inst.default is True:
+                propdict['default'] = 'default ' + str(idx)
+
+        # Now write the global section
+        if self._menufile is None:
+            outfile.write(LegacyGRUBBootLoader.MENU_LST_PREAMBLE % propdict)
+        else:
+            # Filter out values in propdict that are just comment lines
+            propdict = dict([(k, v) for k, v in propdict.items()
+                       if v is None or (len(v.strip()) > 0 and
+                       v.strip()[0] != '#')])
+
+            # Use the values in propdict to update any global commands in
+            # the existing menu.lst entity list.
+            self._update_menulst_globals(propdict)
+            for entity in self._menufile.entities():
+                # Write the menu.lst's global section first by going through
+                # the entity list, making sure to ignore deleted boot instances:
+                if not isinstance(entity, MenuLstMenuEntry):
+                    outfile.write(str(entity) + '\n')
+
 
         # iterate through the list of boot instances in the BootConfig
-        # instance, adding an entry for each one:
-        entries = ''
+        # instance, adding an entry (or updating an existing entry) for 
+        # each one:
         for idx, inst in enumerate(self._boot_config.boot_instances):
             # XXX - Do validation of kernel against kernel under
             # self.rootpath (if specified)
             # XXX - Also: should we verify that a 64-bit kernel is being
             # used with a 64-bit boot archive and similarly for 32-bit?
             # XXX - Use the signature attribute
-            if inst.default is True:
-                propdict['default_command'] = 'default ' + str(idx)
-            entries += 'title ' + inst.title + '\n'
-            entries += self._generate_entry(inst)
-            entries += '\n'
 
-        outfile.write(LegacyGRUBBootLoader.MENU_LST_PREAMBLE % propdict)
-        outfile.write(entries)
+            entry_lines = self._generate_entry(inst)
+            # _generate_entry() returns a string only if inst._menulst_entity
+            # is None.
+            if entry_lines is not None:
+                outfile.write('title ' + inst.title + '\n')
+                outfile.write(entry_lines + '\n')
+            else:
+                # Make sure we ignore deleted boot instances
+                entity = inst._menulst_entity
+                if entity.boot_instance in self._boot_config.boot_instances:
+                    outfile.write(str(entity) + '\n')
+                if entry_lines is not None:
+                    self._debug(('self._generate_entry() returned something '
+                                 'unexpected (%s)') % entry_lines)
+
+    def _update_menulst_globals(self, propdict):
+        "Update top-level commands in the menu.lst file associated with self"
+
+        global_cmd_entities = set()
+        deleted_cmds = set()
+        for entity in self._menufile.entities():
+            # MenuLstCommand instances at the top level of the entity list
+            # are global
+            if not isinstance(entity, MenuLstCommand):
+                continue
+
+            entity_cmd = entity.get_command()
+
+            global_cmd_entities.add(entity_cmd)
+
+            if entity_cmd in propdict:
+                cmd_and_args = propdict[entity_cmd]
+                if cmd_and_args is None:
+                    # Delete this entity!
+                    self._menufile.delete_entity(entity)
+                    deleted_cmds.add(entity_cmd)
+                    continue
+
+                # Update the entity in-place with the arguments from
+                # propdict
+                split_cmd_args = cmd_and_args.split(' ', 1)
+                if len(split_cmd_args) > 1:
+                    entity.set_args(split_cmd_args[1])
+
+        if deleted_cmds:
+            self._debug('Deleted globals => %s' % list(deleted_cmds))
+
+        # Now figure out the set of globals that do not exist in the file
+        # and add them
+        cmdlist = [item for item in propdict if propdict[item] is not None]
+        missing_globals = set(cmdlist).difference(global_cmd_entities)
+        if missing_globals:
+            self._debug('Adding global commands: %s' %
+                        str(list(missing_globals)))
+        for missing_cmd in missing_globals:
+            self._menufile.add_global(propdict[missing_cmd])
 
     # Menu-entry generator infrastructure
 
@@ -651,8 +709,13 @@ r"""# default menu entry to boot
 
         instclsname = instance.__class__.__name__
         method_name = '_generate_entry_' + instclsname
-        entry_generator = self.__class__.__dict__.get(method_name, None)
-        if not entry_generator is None:
+        entry_generator = getattr(self.__class__, method_name, None)
+        if entry_generator is not None:
+            # Do the generic work of updating the title if an instance
+            # is associated with an existing menu.lst entity:
+            if instance._menulst_entity is not None:
+                instance._menulst_entity.update_command('title',
+                                                        instance.title)
             # It's a method, so self must be passed explicitly
             return entry_generator(self, instance)
         else:
@@ -662,36 +725,97 @@ r"""# default menu entry to boot
 
     def _generate_entry_generic(self, inst, kargs):
 
-        ostr = ''
         kargs = '' if kargs is None else kargs
 
+        # If the BootInstance specifies a splashimage, foreground color
+        # and/or background color, add those now
+        splash = getattr(inst, BootLoader.PROP_SPLASH, None)
+        forecolor = getattr(inst, BootLoader.PROP_FORECOLOR, None)
+        backcolor = getattr(inst, BootLoader.PROP_BACKCOLOR, None)
+
+        if inst._menulst_entity is None:
+            if splash:
+                splash_cmd = 'splashimage ' + splash
+            else:
+                splash_cmd = None
+
+            if forecolor:
+                fore_cmd = 'foreground ' + forecolor
+            else:
+                fore_cmd = None
+
+            if backcolor:
+                back_cmd = 'background ' + backcolor
+            else:
+                back_cmd = None
+        else:
+            splash_cmd = 'splashimage'
+            if splash:
+                splash_cmd += ' ' + splash
+
+            fore_cmd = 'foreground'
+            if forecolor:
+                fore_cmd = ' ' + forecolor
+
+            back_cmd = 'background'
+            if backcolor:
+                back_cmd = ' ' + backcolor
+
+        # XXX Check to ensure that splashimage/foreground/background is not
+        # XXX specified when this boot instance is using a non-graphics
+        # XXX console.
+
         try:
-            inst.kernel = inst.kernel % {'karch': "$ISADIR"}
+            inst.kernel = inst.kernel % {'karch': '$ISADIR'}
         except KeyError:
             # If somehow another Python conversion specifier snuck in,
             # raise an exception
             raise BootmgmtMalformedPropertyValueError('kernel', inst.kernel)
 
-        if not inst.kernel.find("$ISADIR") is -1:
-            ostr += 'kernel$ ' + inst.kernel
+        if inst.kernel.find('$ISADIR') is not -1:
+            kernel_cmd = 'kernel$ ' + inst.kernel
         else:
-            ostr += 'kernel ' + inst.kernel
+            kernel_cmd = 'kernel ' + inst.kernel
 
         # kargs already has a leading space from the initialization, above
-        ostr += (' ' if not kargs == '' else '') + kargs + '\n'
+        kernel_cmd += (' ' if not kargs == '' else '') + kargs
 
         try:
-            inst.boot_archive = inst.boot_archive % {'karch': "$ISADIR"}
+            inst.boot_archive = inst.boot_archive % {'karch': '$ISADIR'}
         except KeyError:
             # If somehow another Python conversion specifier snuck in,
             # raise an exception
             raise BootmgmtMalformedPropertyValueError('boot_archive',
                                                       inst.boot_archive)
 
-        if not inst.boot_archive.find("$ISADIR") is -1:
-            ostr += 'module$ ' + inst.boot_archive + '\n'
+        if inst.boot_archive.find('$ISADIR') is not -1:
+            module_cmd = 'module$ ' + inst.boot_archive
         else:
-            ostr += 'module ' + inst.boot_archive + '\n'
+            module_cmd = 'module ' + inst.boot_archive 
+
+        # If this instance is associated with an existing menu.lst entity,
+        # update that entity
+        if inst._menulst_entity is not None:
+            for nextcmd in (splash_cmd, fore_cmd, back_cmd, kernel_cmd,
+                            module_cmd):
+                nextcmd_args = nextcmd.split(' ', 1)
+                if len(nextcmd_args) == 1:  # This command must be deleted
+                    inst._menulst_entity.delete_command(nextcmd)
+                elif len(nextcmd_args) == 2:
+                    inst._menulst_entity.update_command(nextcmd_args[0],
+                                                        nextcmd_args[1].strip(),
+                                                        create=True)
+            return None
+
+        ostr = ''
+        if splash_cmd is not None:
+            ostr += splash_cmd + '\n'
+        if fore_cmd is not None:
+            ostr += fore_cmd + '\n'
+        if back_cmd is not None:
+            ostr += back_cmd + '\n'
+        ostr += kernel_cmd + '\n'
+        ostr += module_cmd
 
         return ostr
 
@@ -700,12 +824,13 @@ r"""# default menu entry to boot
 
         ostr = ''
         kargs = ''
+        bootfs_cmd = 'bootfs'
+
         if inst.fstype == 'zfs':
             if inst.bootfs is None:
                 raise BootmgmtIncompleteBootConfigError('bootfs property '
                       'is missing')
-            ostr += 'bootfs ' + inst.bootfs + '\n'
-
+            bootfs_cmd += ' ' + inst.bootfs
             if inst.kargs is None:
                 kargs = '-B $ZFS-BOOTFS'
             elif inst.kargs.find('$ZFS-BOOTFS') is -1:
@@ -713,11 +838,22 @@ r"""# default menu entry to boot
                 kargs = '-B $ZFS-BOOTFS ' + inst.kargs
             else:
                 kargs = inst.kargs
-        elif not inst.kargs is None and inst.kargs.strip() != '':
+        elif inst.kargs is not None and inst.kargs.strip() != '':
             kargs = inst.kargs
 
-        ostr += self._generate_entry_generic(inst, kargs)
+        if inst._menulst_entity is not None:
+            bootfs_cmd_args = bootfs_cmd.split(' ', 1)
+            if len(bootfs_cmd_args) == 1:  # This command must be deleted
+                inst._menulst_entity.delete_command(bootfs_cmd_args)
+            else:
+                inst._menulst_entity.update_command(bootfs_cmd_args[0],
+                                                    bootfs_cmd_args[1].strip(),
+                                                    create=True)
+            self._generate_entry_generic(inst, kargs)
+            return None      
 
+        ostr = self._generate_entry_generic(inst, kargs)
+        ostr = bootfs_cmd + '\n' + ostr
         return ostr
 
     def _generate_entry_SolarisODDBootInstance(self, inst):
@@ -732,12 +868,12 @@ r"""# default menu entry to boot
         if inst.chaininfo is None:
             raise BootmgmtIncompleteBootConfigError('chaininfo property is '
                   'missing')
-        if not type(inst.chaininfo) is tuple or len(inst.chaininfo) == 0:
+        if type(inst.chaininfo) is not tuple or len(inst.chaininfo) == 0:
             raise BootmgmtArgumentError('chaininfo must be a non-zero-length '
                                         'tuple')
-        if not type(inst.chaininfo[0]) is int:
+        if type(inst.chaininfo[0]) is not int:
             raise BootmgmtArgumentError('chaininfo[0] must be an int')
-        if len(inst.chaininfo) > 1 and not type(inst.chaininfo[1]) is int:
+        if len(inst.chaininfo) > 1 and type(inst.chaininfo[1]) is not int:
             raise BootmgmtArgumentError('chaininfo[1] must be an int')
 
         diskstr = '(hd' + str(inst.chaininfo[0])
@@ -747,13 +883,25 @@ r"""# default menu entry to boot
 
         diskstr += ')'
 
-        ostr = 'rootnoverify ' + diskstr + '\n'
-        ostr += 'chainloader '
+        rootnoverify_cmd = 'rootnoverify ' + diskstr + '\n'
+        chainloader_cmd = 'chainloader '
         if int(inst.chainstart) != 0:
-            ostr += str(int(inst.chainstart))
-        ostr += '+' + str(int(inst.chaincount)) + '\n'
+            chainloader_cmd += str(int(inst.chainstart))
+        chainloader_cmd += '+' + str(int(inst.chaincount)) + '\n'
+
+        if inst._menulst_entity is not None:
+            for nextcmd in (rootnoverify_cmd, chainloader_cmd):
+                cmd_args = nextcmd.split(' ', 1)
+                inst._menulst_entity.update_command(cmd_args[0],
+                                                    cmd_args[1].strip(),
+                                                    create=True)
+            return None      
+
+
+        ostr = rootnoverify_cmd + chainloader_cmd
         return ostr
 
+    # Property-related methods
     def _prop_validate(self, key, value=None, validate_value=False):
         if key == BootLoader.PROP_BOOT_TARGS:
             if validate_value is True and value != 'bios':
@@ -762,115 +910,43 @@ r"""# default menu entry to boot
             return
         super(self.__class__, self)._prop_validate(key, value, validate_value)
 
-    # Property-related methods
-
-    def setprop(self, key, value):
-        """Set a Boot Loader property.  Raises BootmgmtUnsupportedPropertyError
-        if the property is not supported"""
-
-        self._prop_validate(key, value, True)
-
-        # XXX - Check that the value for each property is well-formed
-        if self._bl_props.get(key, None) != value:
-            self._bl_props[key] = value
-            self.dirty = True
-
-    def getprop(self, key):
-        "Get a Boot Loader property"
-
-        self._prop_validate(key)
-
-        return self._bl_props.get(key, None)
-
-    def delprop(self, key):
-        "Delete a Boot Loader property"
-
-        self._prop_validate(key)
-
-        # Check pseudoproperties:
-        if key == BootLoader.PROP_BOOT_TARGS:
-            raise BootmgmtUnsupportedOperationError("key `%s' may not be "
-                                                    "deleted" % key)
-        try:
-            del self._bl_props[key]
-            self.dirty = True
-        except KeyError as err:
-            raise BootmgmtUnsupportedOperationError("key `%s' does not exist"
-                   % key, err)
-
     # BootLoader installation methods
 
     def install(self, location):
+        # Iterate through the list of boot instances, adding _menulst_entity
+        # attributes to those that do not have them.  This prevents us from
+        # having to pepper lower-level code with getattr() calls.
+        for inst in self._boot_config.boot_instances:
+            inst.__dict__.setdefault('_menulst_entity', None)
 
-        if isinstance(location, basestring):
-            try:
-                filemode = os.stat(location).st_mode
-            except OSError as err:
-                raise BootLoaderInstallError('Error stat()ing %s' % location,
-                                             err)
-
-            if stat.S_ISDIR(filemode):
-                # We have been given an output directory.  Produce the menu.lst
-                # there.
-                return self._write_config(location)
-
-                # XXX - Handle other types of boot_class here (copying pxegrub,
-                # stage2_eltorito)
-            elif stat.S_ISCHR(filemode):
-                self._write_loader(location)
-                # Now write the menu.lst:
-                self._write_config(None)
-            else:
-                raise BootmgmtArgumentError('Invalid location argument (%s)'
-                                            % location)
-        else:
-            for devname in location:
-                try:
-                    filemode = os.stat(devname).st_mode
-                except OSError as err:
-                    self._debug('Error stat()ing %s' % devname)
-                    raise BootLoaderInstallError('Error stat()ing %s'
-                                                  % devname, err)
-                if stat.S_ISCHR(filemode):
-                    self._write_loader(devname)
-                else:
-                    raise BootmgmtArgumentError('%s is not a \
-                                                characters-special'
-                                                ' file' % devname)
-
-            self._write_config(None)
-
-        return None
+        return self._install_generic(location)
+        # XXX - Handle other types of boot_class here (copying pxegrub,
+        # XXX - stage2_eltorito)
 
     # _write_loader performs the real guts of boot loader installation
-    def _write_loader(self, devname):
-        """Invoke installgrub to write stage1 and stage2 to disk.  If 
-        devname is a p0 node,  pass -m to installgrub"""
+    def _write_loader(self, devname, data_root):
+        """Invoke installgrub to write stage1 and stage2 to disk.  Slice
+        nodes (and only slice nodes) are required."""
 
-        # Transform the devname if s0 wasn't passed in
-        mbr = False
-        realdev = devname
+        if not ((len(devname) > 2 and devname[-2] == 's' and
+                devname[-1].isdigit())
+           or
+               (len(devname) > 3 and devname[-3] == 's' and
+                devname[-2:].isdigit())):
+            raise BootLoaderInstallError('Device node is not a slice: ' +
+                                         devname)
 
-        if len(devname) > 2 and (devname[-2] == 'p' and devname[-1].isdigit()):
-            mbr = (devname[-1] == '0' or int(devname[-1]) > 4)
-            realdev = devname[:-2] + 's0'
-        elif len(devname) > 3 and (devname[-3] == 'p' and
-             devname[-2].isdigit() and devname[-1].isdigit()):
-            realdev = devname[:-3] + 's0'
-            mbr = True  # Extended partition specified, MBR is required
+        args = ['/sbin/installgrub']
 
-        args = ['/usr/sbin/installgrub']
-
-        if mbr is True:
-            args += ['-m']
+        # installgrub will autodetect when to use the -m switch
 
         # If a version is present, try to use it during installation.
-        if not self.version is None:
+        if self.version is not None:
             args += ['-u', self.version]
 
-        args += [self.rootpath + '/boot/grub/stage1',
-                 self.rootpath + '/boot/grub/stage2',
-                 realdev]
+        args += [data_root + '/boot/grub/stage1',
+                 data_root + '/boot/grub/stage2',
+                 devname]
 
         self._debug('_write_loader: Invoking command: ' + ' '.join(args))
 
@@ -880,32 +956,17 @@ r"""# default menu entry to boot
             self._debug('_write_loader: Return code = %d' % cpe.returncode)
             if cpe.returncode != LegacyGRUBBootLoader.INSTALLGRUB_NOUPDT:
                 output = ''
-                if not cpe.popen is None and not cpe.popen.stderr is None:
+                if cpe.popen is not None and cpe.popen.stderr is not None:
                     output = '\nOutput was:\n' + cpe.popen.stderr
                 raise BootLoaderInstallError('installgrub failed for '
                       'device ' + devname + ': Return code ' +
                       str(cpe.returncode) + output)
+        except OSError as ose:
+                raise BootLoaderInstallError('Error while trying to '
+                      'invoke installgrub for '
+                      'device ' + devname + ': ' + str(ose))
 
-    def _get_loader_version(self, devname):
-        """[DEPRECATED AND CURRENTLY UNUSED] Invoke installgrub -ie and
-        return the first line (version string)."""
 
-        args = ['/usr/sbin/installgrub', '-ie', devname]
-        try:
-            proc = Popen.check_call(
-                args,
-                stdout=Popen.STORE,
-                stderr=Popen.STORE)
-            version_string = proc.stdout.split('\n')[0]
-            return version_string
-        except CalledProcessError as cpe:
-            if cpe.returncode != LegacyGRUBBootLoader.INSTALLGRUB_NOEINFO:
-                output = ''
-                if not cpe.popen is None and not cpe.popen.stderr is None:
-                    output = '\nOutput was:\n' + cpe.popen.stderr
-                self._debug('installgrub version check returned ' +
-                            str(cpe.returncode) + '.  Ignoring.' + output)
-            return None
 
 #
 # Legacy GRUB menu.lst

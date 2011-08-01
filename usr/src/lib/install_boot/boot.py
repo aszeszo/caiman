@@ -894,7 +894,7 @@ class SystemBootMenu(BootMenu):
                 if not os.path.exists(grub_dir):
                     self.logger.info("Creating Legacy GRUB config directory:" \
                                      "\n\t%s" % (grub_dir))
-                    os.makedirs(grub_dir, 755)
+                    os.makedirs(grub_dir, 0755)
 
             # Danger Will Robinson!!
             self.logger.info("Installing boot loader to devices: %s" \
