@@ -767,7 +767,7 @@ class SystemBootMenu(BootMenu):
             self.pool_tld_mount = os.path.join('/', pool.name)
 
         if not os.path.exists(self.pool_tld_mount):
-            raise RuntimeError("Expected mountpoint \'%\' of top level" \
+            raise RuntimeError("Expected mountpoint \'%s\' of top level" \
                                "fileystem \'%s\' does not exist!" \
                                % (pool.name, self.pool_tld_mount))
 
@@ -1201,11 +1201,20 @@ class TextISOImageBootMenu(ISOImageBootMenu):
         """ Constructs the default boot entries and inserts them into the
             bootConfig object's boot_instances list
         """
-        instance = SolarisODDBootInstance(self.pkg_img_path)
-        instance.title = self.boot_title
-        # Make this entry the default
-        instance.default = True
-        self.config.add_boot_instance(instance)
+        ti_titles = [self.boot_title,
+                     self.boot_title + " ttya",
+                     self.boot_title + " ttyb"]
+        ti_kargs = [None,
+                    "-B console=ttya",
+                    "-B console=ttyb"]
+        for i, title in enumerate(ti_titles):
+            instance = SolarisODDBootInstance(self.pkg_img_path)
+            instance.title = title
+            # Make the first entry the default
+            if i == 0:
+                instance.default = True
+            instance.kargs = ti_kargs[i]
+            self.config.add_boot_instance(instance)
 
         # Create a chainloader boot from HD entry
         self._add_chainloader_entry()

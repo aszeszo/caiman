@@ -712,9 +712,15 @@ class TextISOBootMenuTestCase(ISOBootMenuTestCase):
         self.boot_menu = TextISOImageBootMenu("Test Text Boot Checkpoint")
         self.boot_menu.parse_doc()
 
-        titles = [self.boot_menu.boot_title]
-        kargs = [None]
-        self._test_build_default_entries(titles, kargs)
+        self.boot_title = self.boot_menu.boot_title
+        ti_titles = [self.boot_title,
+                     self.boot_title + " ttya",
+                     self.boot_title + " ttyb"]
+        ti_kargs = [None,
+                    "-B console=ttya",
+                    "-B console=ttyb"]
+        self._test_build_default_entries(ti_titles, ti_kargs)
+
 
 if __name__ == '__main__':
     unittest.main()
