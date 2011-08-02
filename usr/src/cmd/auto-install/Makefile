@@ -36,7 +36,6 @@ PYMODULES=	\
 	__init__.py \
 	ai_get_manifest.py \
 	ai_instance.py \
-	ai_parse_manifest.py \
 	ai_sd.py \
 	auto-install.py \
 	auto_install.py \

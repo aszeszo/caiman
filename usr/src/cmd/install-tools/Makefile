@@ -20,8 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.cmd
@@ -31,38 +30,21 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-PY_PROGS=	ManifestServ \
-		ManifestRead
-
 SCRIPTS=	usbgen \
 		usbcopy \
 		proc_tracedata \
 		proc_slist
 
-PROGS=		$(PY_PROGS) $(SCRIPTS)
+PROGS=		$(SCRIPTS)
 
 ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
 
-all:		python $(PY_PROGS)
+all:
 
 clean:
-	$(RM) $(PY_PROGS) *.pyc
 
 clobber: clean
 
 install: all .WAIT $(ROOTPROGS) 
-
-ManifestRead: ManifestRead.py
-	$(CP) ManifestRead.py ManifestRead
-	$(CHMOD) 755 ManifestRead
-
-ManifestServ: ManifestServ.py
-	$(CP) ManifestServ.py ManifestServ
-	$(CHMOD) 755 ManifestServ
-
-#Compile the python files, we are not shipping the .pyc files,
-#but compiling it can help catch syntax errors.
-python:
-	$(PYTHON) -m compileall -l $(@D)
 
 include ../Makefile.targ

@@ -60,13 +60,6 @@ from solaris_install.transfer.info import Software, IPSSpec
 LOGGER = None
 
 #
-# Program used for calling the C ICT functions.
-# When all the C-based ICT functions are converted to Python (bug 6256),
-# this can be removed.
-#
-ICT_PROG = "/opt/install-test/bin/ict_test"
-
-#
 # Handle for accessing the InstallStatus class
 #
 INSTALL_STATUS = None

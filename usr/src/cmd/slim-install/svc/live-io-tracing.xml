@@ -38,7 +38,7 @@
 	<create_default_instance enabled='true' />
 
 	<!--
-	  We depend on filesystem/root-assembly so that /opt is mounted
+	  We depend on filesystem/root-assembly so that /usr is mounted
 	-->
 	<dependency name='fs'
 	    grouping='require_all'

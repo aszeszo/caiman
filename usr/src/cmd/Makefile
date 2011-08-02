@@ -44,7 +44,7 @@ PYTHONSUBDIRS=	aimanifest \
 
 TOOLSSUBDIRS= install-tools
 
-.PARALLEL:
+.PARALLEL: $(SUBDIRS) $(PYTHONSUBDIRS)
 
 all:=		TARGET=	all
 check:=		TARGET= check

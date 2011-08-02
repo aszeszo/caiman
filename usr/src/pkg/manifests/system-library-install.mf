@@ -373,8 +373,6 @@ file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/target/shadow/zpool.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/size.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/size.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/target/test_td.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/target/test_td.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/vdevs.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/vdevs.pyc
 file \

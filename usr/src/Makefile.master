@@ -26,6 +26,9 @@
 #
 # Makefile.master, global definitions for system source
 #
+
+ROOT=	/proto
+
 # Special reference pointers: these allow install to be built on
 # machines that don't necessarily have the very latest ON or SFW packages,
 # or when testing features that depend on changed ON/SFW interfaces.  (The
@@ -167,18 +170,30 @@ DIRMODE=		755
 OWNER=			bin
 GROUP=			bin
 
-# Borrowed from Makefile.master in NSE env SunOSint.
 # CH toggles operations restricted to root.  It is normally set to `#'.  When
 # running as root, it should be set to `' (null) in your environment.
 # RELEASE_BUILD should be cleared for RE builds.  This is completely
 # independent of CH.  NOT_RELEASE_BUILD is exactly what the name implies.
 #
-CH:sh=					/usr/bin/echo \\043
+# The declaration POUND_SIGN is always '#'. This is needed to get around the
+# make feature that '#' is always a comment delimiter, even when escaped or
+# quoted. We use this macro expansion method to get POUND_SIGN rather than
+# always breaking out a shell because the general case can cause a noticable
+# slowdown in build times when so many Makefiles include Makefile.master.
+#
+# While the majority of users are expected to override the setting below
+# with an env file (via nightly or bldenv), if you aren't building that way
+# (ie, you're using "ws" or some other bootstrapping method) then you need
+# this definition in order to avoid the subshell invocation mentioned above.
+
+PRE_POUND=                              pre\#
+POUND_SIGN=                             $(PRE_POUND:pre\%=%)
+
+CH=					$(POUND_SIGN)
 NOT_RELEASE_BUILD=
-RELEASE_BUILD:sh=			/usr/bin/echo \\043
-$(RELEASE_BUILD)NOT_RELEASE_BUILD:sh=	/usr/bin/echo \\043
-$(RELEASE_BUILD)ROOT=			/proto
-$(NOT_RELEASE_BUILD)ROOT:sh=		/usr/bin/echo ${ROOT}
+RELEASE_BUILD=				$(POUND_SIGN)
+$(RELEASE_BUILD)NOT_RELEASE_BUILD=	$(POUND_SIGN)
+SRU_BUILD=                              $(POUND_SIGN)
 
 CP_P.file=	$(RM) $@; $(CP) -p $< $@; $(CHMOD) $(FILEMODE) $@
 INS.file=	$(RM) $@; $(INS) -s -m $(FILEMODE) -f $(@D) $<

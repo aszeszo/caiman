@@ -99,12 +99,6 @@ file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_instance.pyc \
     mode=0444
 file \
-    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_parse_manifest.py \
-    mode=0444
-file \
-    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_parse_manifest.pyc \
-    mode=0444
-file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/auto_install.py \
     mode=0444
 file \

@@ -26,30 +26,8 @@
 include $(SRC)/Makefile.master
 
 SUBDIRS=	bootmgmt \
-		install_common \
-		install_utils \
-		libaiscf \
-		libaiscf_pymod \
-		libict  \
-		libict_pymod \
-		liblogsvc \
-		liblogsvc_pymod \
-		liborchestrator \
-		libspmicommon \
-		libtarget_pymod \
-		libtd \
-		libti \
-		libti_pymod \
-		libtransfer \
-		libtransfer_pymod \
-		libzoneinfo_pymod \
-		libaimdns \
-		netif \
-		terminalui
-
-COMSUBDIRS=	liberrsvc_pymod \
-		liberrsvc \
 		install_boot \
+		install_common \
 		install_configuration \
 		install_doc \
 		install_engine \
@@ -59,7 +37,17 @@ COMSUBDIRS=	liberrsvc_pymod \
 		install_manifest \
 		install_manifest_input \
 		install_target \
-		install_transfer
+		install_transfer \
+		install_utils \
+		libaimdns \
+		libaiscf \
+		libaiscf_pymod \
+		liberrsvc \
+		liberrsvc_pymod \
+		libspmicommon \
+		libzoneinfo_pymod \
+		netif \
+		terminalui
 
 .PARALLEL:	$(SUBDIRS)
 
@@ -73,29 +61,19 @@ lint:=		TARGET= lint
 
 .KEEP_STATE:
 
-all check clean clobber lint: $(COMSUBDIRS) $(SUBDIRS)
+all check clean clobber lint: $(SUBDIRS)
 
-install: .WAIT $(COMSUBDIRS) $(SUBDIRS)
+install: .WAIT $(SUBDIRS)
 
 headers: install_h
 
-install_h:	$(COMSUBDIRS) $(SUBDIRS)
+install_h: $(SUBDIRS)
 
 # library dependencies
 libaiscf_pymod:		libaiscf
 liblogsvc_pymod:	liblogsvc
-libtransfer_pymod:	libtransfer liblogsvc
-libti_pymod:		libti
-liborchestrator:	libtd liblogsvc libti libtransfer_pymod libict
-libict:			liblogsvc libti libtransfer_pymod
-libtd:			liblogsvc
-libti:			liblogsvc
-libtransfer:		liblogsvc
-libict_pymod:		liblogsvc
-libtarget_pymod:	libtd libti
 
-
-$(COMSUBDIRS) $(SUBDIRS): FRC
+$(SUBDIRS): FRC
 	cd $@; pwd; $(MAKE) $(TARGET)
 
 FRC:

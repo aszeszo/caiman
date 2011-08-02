@@ -20,8 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.lib
@@ -32,19 +31,9 @@ clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
 PYMODS =	__init__.py \
-		DefValProc.py \
-		ENParser.py \
-		TreeAcc.py \
-		install_utils.py \
-		ManifestServ.py \
-		ManifestRead.py \
-		SocketServProtocol.py
+		install_utils.py
 
 PYCMODS=	$(PYMODS:%.py=%.pyc)
-
-ROOTRNGSCHEMA   = $(ROOT)/usr/share/lib/xml/rng
-RNG_SCHEMA=	defval-manifest.rng
-ROOTRNGSCHEMAFILE= $(RNG_SCHEMA:%=$(ROOTRNGSCHEMA)/%)
 
 CLOBBERFILES = $(PYCMODS)
 CLEANFILES = $(CLOBBERFILES)
@@ -55,8 +44,7 @@ install: all .WAIT \
 	$(ROOTPYTHONVENDOR) \
 	$(ROOTPYTHONVENDORINSTALL) \
 	$(ROOTPYTHONVENDORINSTALLMODS) \
-	$(ROOTPYTHONVENDORINSTALLCMODS) \
-	$(ROOTRNGSCHEMAFILE)
+	$(ROOTPYTHONVENDORINSTALLCMODS)
 
 install_h:
 

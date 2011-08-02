@@ -1,4 +1,0 @@
-To test the C interface, do a make test in the libtransfer_pymod directory. This will create
-a transfertest binary.  If using this code, you will need to customize the values to suit your
-situation. i.e. parameters like "/export/home/ips1" will need to be changed to fit your
-testing situation.

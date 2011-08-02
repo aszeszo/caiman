@@ -26,9 +26,9 @@
 # Turn on I/O tracing if requested and possible
 trace=`/sbin/devprop -s trace`
 if [ "${trace}" = "on" ]; then
-	outputfile="/etc/svc/volatile/traceout"
+	outputfile="/system/volatile/traceout"
 	echo "Enabling I/O Tracing ..." > /dev/console
-	/opt/DTT/Bin/iosnoop -Deg > "${outputfile}" &
+	/usr/dtrace/DTT/Bin/iosnoop -Deg > "${outputfile}" &
 	# Wait for iosnoop to actually initialize
 	until [[ -s ${outputfile} ]]
 	do

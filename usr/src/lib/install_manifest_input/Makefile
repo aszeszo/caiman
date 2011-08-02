@@ -34,7 +34,7 @@ ROOTPYCMODS=	$(PYCMODS:%=$(ROOTPYTHONVENDORSOLINSTALLMANINPUT)/%)
 MSGFILES=	$(PYMODS)
 
 CLOBBERFILES=	$(PYCMODS)
-CLEANFILES=	$(CLOBBERFILES)
+CLEANFILES=	$(CLOBBERFILES) $(MSG_DOMAIN).po
 
 include ../Makefile.lib
 
@@ -42,9 +42,6 @@ python:
 		$(PYTHON) -m compileall -l $(@D)
 
 all:		python
-
-clean:
-	$(RM) $(PYCMODS) $(MSG_DOMAIN).po
 
 clobber: clean
 

@@ -52,15 +52,11 @@ ROOTPYMODULES=  $(PYMODULES:%=$(ROOTPYTHONTERMUI)/%)
 
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONTERMUI)/%)
 
+CLEANFILES= $(PYCMODULES)
+
 .KEEP_STATE:
 
 all:		python
-
-clean:
-	rm -f *.pyc
-
-clobber: clean
-
 
 install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDOR) \

@@ -20,20 +20,94 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
 # This file has no user serviceable parts.  It is maintained
-# automatically by gatekeeper scripts that run at build close.
+# automatically by gatekeeper scripts.
 #
-# If you need to override this value, do not edit it here.  Instead,
-# set INSTALL_BUILDNUM in your build environment.  If you do this, it must
+# If you need to override any value, do not edit it here.  Instead,
+# set the values in your build environment.  If you do this, it must
 # be an integer, and your choice will have ramifications on whether or
 # not the package repositories you build will be upgradeable.
 #
-# The INSTALL_BUILDNUM macro should, at any point in time, represent the
-# currently open build in the slim_source repository.
+
+#
+# Package Version Information
+#
+# The package version is described in detail within the pkg(5) man page.
+# It is made of four components. The values within this file set the
+# third component, the branch version, which resides after the dash.
+# 
+# This component needs to accommodate the following:
+#
+# o uniquely identifying individual builds to support zone
+#   install/update
+#
+# o for the continued movement forwards when Solaris updates,
+#   bug fixes and other requirements are delivered.
+#
+# The package branch version scheme is:
+#
+#       trunk_id.update.SRU.platform.buildid
+#
+# where
+#       trunk_id : build number for tip development gate, with leading 0
+#       update   : 0 for FCS, 1 for update 1, etc.
+#       SRU      : SRU (support repository update) number for this update
+#       platform : reserved for future use.
+#       buildid  : Build number of SRU, or identifier for development tip
+#                  nightlies
+#
+# This scheme is used below.
 #
 
-INSTALL_BUILDNUM= 172
+#
+# Generate the trunk id of the packages from the tag in the gate.
+# In ON the Nevada builds are tagged with onnv_XXX where XXX is the
+# build/trunk number.  slim_source tags are Buildxxx.
+#
+# When the next development train is started this pattern will need to be
+# changed in order to match the tag used there.
+#
+TRUNKID :sh = hg tags | nawk '$1 ~ /^Build[0-9]*$/ {print substr($1, 6) + 1; exit}'
+
+#
+# The Solaris Update number. This will be set by the gatekeepers.
+# The value must match the update number of the release.
+#
+UPDATENUM= 0
+
+#
+# Support Respository Update number. This is here to reserve space within the
+# version string. Typically it should not be set unless all the packages
+# are being delivered within an SRU.
+#
+SRUNUM= 0
+
+#
+# Platform number. This is here to reserve space within the version
+# string. It should not be set unless there is a specific need to
+# release a platform update while the Solaris Update is being built.
+#
+PLATNUM= 0
+
+# Build Identifier. Used to indicate which build (or respin for
+# the development build) of the Solaris Update is being built.
+# This is set by the gatekeepers.
+#
+BUILDID= 0
+#
+# Each (nightly) build of the code that produces packages needs to
+# be uniquely identified so that packages produced by different
+# builds can't be mixed.  Mixing packages from different builds can
+# easily result in broken global and nonglobal zones.
+#
+# Generate the identifier based upon the tip changeset id.
+#
+# Note: :sh is used for finding the values because it is evaluated
+# once during the package build.
+#
+OPENCS  :sh = (hg tip --template '{rev}\n')
+NIGHTLYID		= $(OPENCS)

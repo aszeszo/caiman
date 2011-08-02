@@ -34,9 +34,6 @@ dir path=lib
 dir path=lib/svc
 dir path=lib/svc/manifest group=sys
 dir path=lib/svc/manifest/system group=sys
-dir path=opt group=sys
-dir path=opt/install-test group=sys
-dir path=opt/install-test/bin
 dir path=usr group=sys
 dir path=usr/bin
 dir path=usr/lib
@@ -52,7 +49,6 @@ dir path=usr/share/text-install/help/C group=sys
 dir path=var group=sys
 dir path=var/svc group=sys
 file path=lib/svc/manifest/system/text-mode-menu.xml group=sys mode=0444
-file path=opt/install-test/bin/ict_test mode=0555
 file path=usr/bin/text-install group=sys mode=0555
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/__init__.py \
