@@ -32,6 +32,14 @@ from solaris_install.gui_install.gui_install_common import \
     empty_container, modal_dialog, GLADE_ERROR_MSG
 
 
+def N_(message):
+    ''' Dummy function used to mark text for delayed translation.
+        Use of this function name is standard gettext practice.
+    '''
+
+    return message
+
+
 class NotOkToProceedError(Exception):
     ''' Exception raised to prevent user leaving a screen. '''
     pass
@@ -53,16 +61,17 @@ class BaseScreen(object):
     # Dictionary for the install "stage" labels shown down
     # the left-hand-side of the screen.  The key is the Glade
     # widget id, the value is the text to be displayed.
-    # NOTE: These labels, can not be pre-translated here at
-    # init time, and so are wrapped with the gettext macro,
-    # '_()' when referenced at run time in BaseScreen.activate_stage_label()
+    # NOTE: These labels cannot be pre-translated at init time and so are
+    # marked with the 'N_()' function here, for delayed translation.  This
+    # text will later be wrapped with the gettext macro, '_()', when
+    # referenced at run time
     __STAGE_LABELS = {
-        "welcomestagelabel": "Welcome",
-        "diskstagelabel": "Disk",
-        "timezonestagelabel": "Time Zone",
-        "userstagelabel": "Users",
-        "installationstagelabel": "Installation",
-        "finishstagelabel": "Finish",
+        "welcomestagelabel": N_("Welcome"),
+        "diskstagelabel": N_("Disk"),
+        "timezonestagelabel": N_("Time Zone"),
+        "userstagelabel": N_("Users"),
+        "installationstagelabel": N_("Installation"),
+        "finishstagelabel": N_("Finish"),
     }
     # Markup for showing which stage is currently active.
     __SIDEBAR_ACTIVE_MARKUP = '<span font_desc="Bold" ' \
