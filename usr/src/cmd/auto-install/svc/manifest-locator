@@ -45,6 +45,7 @@ SVCCFG=/usr/sbin/svccfg
 
 DHCPINFO=/sbin/dhcpinfo
 BOOTSERVER=BootSrvA
+BOOTFILE=BootFile
 
 # Auto Installer service fmri
 AI_SMF_FMRI="svc:/application/auto-installer:default"
@@ -110,10 +111,10 @@ do_service_discovery()
 			config_file="$INSTALL_CONF"
 		fi
 		AI_SERVICE_NAME=$($GREP "^install_service" \
-		    $config_file |  /usr/bin/cut -d'=' -f2)
+			$config_file | $CUT -d'=' -f2)
 
 		AI_SERVICE_ADDRESS=$($GREP "^install_svc_address" \
-		    $config_file |  /usr/bin/cut -d'=' -f2)
+			$config_file | $CUT -d'=' -f2)
 	else
 		AI_SERVICE_NAME=$($DEVPROP -s install_service)
 
@@ -122,11 +123,17 @@ do_service_discovery()
 
 	#
 	# Check to see if AI_SERVICE_ADDRESS has the $serverIP keyword
+	# If found, replace it with the AI server's IP address.
 	#
 	if [[ "$AI_SERVICE_ADDRESS" == ~(E)'^\$serverIP:' ]]; then
-		# replace the $serverIP keyword with the machine's
-		# boot server IP address
-		AI_SERVICE_ADDRESS="$($DHCPINFO $BOOTSERVER)${AI_SERVICE_ADDRESS/\$serverIP/}"
+		if [ "${ARCH}" = "sparc" ]; then
+			# SPARC clients can pull the IP address from the DHCP bootfile
+			IPADDR=$($DHCPINFO $BOOTFILE | $CUT -d'/' -f3 | $CUT -d':' -f1)
+		else
+			# PXE clients must query the DHCP server for the address
+			IPADDR=$($DHCPINFO $BOOTSERVER)
+		fi
+		AI_SERVICE_ADDRESS="${IPADDR}${AI_SERVICE_ADDRESS/\$serverIP/}"
 	fi
 
 	#

@@ -1348,10 +1348,14 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
                    "default alias for all %s clients. If not already in "
                    "place, the following should be added to the DHCP "
                    "configuration:") % client_type)
-        print _("\t%-20s : %s\n\t%-20s : %s" %
-               ("Boot server IP", server_ip, "Boot file", bfile))
 
-        if len(valid_nets) > 1:
+        if arch == 'i386':
+            # Boot server IP is not needed for SPARC clients
+            print _("\t%-20s : %s" % ("Boot server IP", server_ip))
+
+        print _("\t%-20s : %s\n" % ("Boot file", bfile))
+
+        if len(valid_nets) > 1 and arch == 'i386':
             print cw(_("\nNote: determined more than one IP address " 
                        "configured for use with AI. Please ensure the above "
                        "'Boot server IP' is correct.\n"))
