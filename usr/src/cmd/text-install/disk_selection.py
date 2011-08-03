@@ -78,8 +78,8 @@ class DiskScreen(BaseScreen):
                        "is proposed.")
     PROPOSED_GPT = _("A GPT labeled disk was found. The following is "
                      "proposed.")
-    TOO_SMALL = _("Too small")
-    TOO_BIG_WARN = _("Limited to %.1f TB")
+    TOO_SMALL = "<"
+    TOO_BIG = ">"
     GPT_LABELED = _("GPT labeled disk")
     NO_DISKS = _("No disks found. Additional device drivers may "
                  "be needed.")
@@ -89,11 +89,12 @@ class DiskScreen(BaseScreen):
                   " at defect.opensolaris.org.")
     
     DISK_HEADERS = [(8, _("Type")),
-                    (10, _("Size(GB)")),
+                    (9, _("Size(GB)")),
                     (6, _("Boot")),
-                    (9, _("Device")),
-                    (15, _("Manufacturer")),
-                    (22, _("Notes"))]
+                    (45, _("Device")),
+                    (3, _(""))] #blank header for the notes column
+    VENDOR_LEN = 15
+
     SPINNER = ["\\", "|", "/", "-"]
     
     DISK_WARNING_HEADER = _("Warning")
@@ -127,13 +128,9 @@ class DiskScreen(BaseScreen):
                                            just="left")
             disk_header_text.append(header_str)
         self.disk_header_text = " ".join(disk_header_text)
-        max_note_size = DiskScreen.DISK_HEADERS[5][0]
-        self.too_small_text = DiskScreen.TOO_SMALL[:max_note_size]
-        max_disk_size = (Size(MAX_VTOC)).get(Size.tb_units)
-        too_big_warn = DiskScreen.TOO_BIG_WARN % max_disk_size
-        self.too_big_warn = too_big_warn[:max_note_size]
+        self.max_disk_size = (Size(MAX_VTOC)).get(Size.tb_units)
         self.disk_warning_too_big = \
-            DiskScreen.DISK_WARNING_TOOBIG % max_disk_size
+            DiskScreen.DISK_WARNING_TOOBIG % self.max_disk_size
         
         self.disks = []
         self.existing_pools = []
@@ -334,11 +331,15 @@ class DiskScreen(BaseScreen):
         len_size = DiskScreen.DISK_HEADERS[1][0] - 1
         len_boot = DiskScreen.DISK_HEADERS[2][0] - 1
         len_dev = DiskScreen.DISK_HEADERS[3][0] - 1
-        len_mftr = DiskScreen.DISK_HEADERS[4][0] - 1
+        len_notes = DiskScreen.DISK_HEADERS[4][0] - 1
         for disk in self.disks:
             disk_text_fields = []
-            type_field = disk.disk_prop.dev_type[:len_type]
-            type_field = ljust_columns(type_field, len_type)
+            dev_type = disk.disk_prop.dev_type
+            if dev_type is not None:
+                type_field = dev_type[:len_type]
+                type_field = ljust_columns(type_field, len_type)
+            else:
+                type_field = " " * len_type
             disk_text_fields.append(type_field)
             disk_size = disk.disk_prop.dev_size.get(Size.gb_units)
             size_field = "%*.1f" % (len_size, disk_size)
@@ -348,26 +349,59 @@ class DiskScreen(BaseScreen):
             else:
                 bootable_field = " " * (len_boot)
             disk_text_fields.append(bootable_field)
-            device_field = disk.ctd[:len_dev]
-            device_field = ljust_columns(device_field, len_dev)
-            disk_text_fields.append(device_field)
-            vendor = disk.disk_prop.dev_vendor
-            if vendor is not None:
-                mftr_field = vendor[:len_mftr]
-                mftr_field = ljust_columns(mftr_field, len_mftr)
-            else:
-                mftr_field = " " * len_mftr
-            disk_text_fields.append(mftr_field)
+
+            #
+            # Information will be displayed in the device column with
+            # the following priority:
+            #
+            # First priority is to display receptacle information, 
+            # if available.  If receptacle information is displayed,
+            # ctd name will not be displayed.
+            #
+            # If receptacle information is not available, the ctd name
+            # will be displayed.
+            #
+            # Both items above can take as much as the 44 character wide
+            # column as needed.
+            #
+            # If the receptacle/ctd name is less than 30 characters,
+            # manufacturer information will be displayed in the left
+            # over space.  There won't be a column heading for the
+            # manufacturer information.
+            #
+
+            device = disk.receptacle or disk.ctd
+            added_device_field = False
+            # is there enough room to display the manufacturer?
+            if (len_dev - len(device)) >= DiskScreen.VENDOR_LEN:
+                vendor = disk.disk_prop.dev_vendor
+                if vendor is not None:
+                    dev_display_len = len_dev - DiskScreen.VENDOR_LEN 
+                    device_field = ljust_columns(device, dev_display_len)
+                    disk_text_fields.append(device_field)
+                    vendor_field = vendor[:DiskScreen.VENDOR_LEN - 1]
+                    vendor_field = ljust_columns(vendor_field,
+                                                DiskScreen.VENDOR_LEN - 1)
+                    disk_text_fields.append(vendor_field)
+                    added_device_field = True
+
+            if not added_device_field:
+                device_field = device[:len_dev]
+                device_field = ljust_columns(device_field, len_dev)
+                disk_text_fields.append(device_field)
+
+            # display "<" or ">" if the disk is too big or too small
             selectable = True
             if disk.disk_prop.dev_size < self.minimum_size:
-                note_field = self.too_small_text
                 selectable = False
-            elif disk_size > Size(MAX_VTOC).get(Size.gb_units):
-                note_field = self.too_big_warn
-            else:
-                note_field = ""
-            disk_text_fields.append(note_field)
+                notes_field = DiskScreen.TOO_SMALL.center(len_notes)
+                disk_text_fields.append(notes_field)
+            elif disk.disk_prop.dev_size > Size(MAX_VTOC):
+                notes_field = DiskScreen.TOO_BIG.center(len_notes)
+                disk_text_fields.append(notes_field)
+
             disk_text = " ".join(disk_text_fields)
+
             disk_item_area.y_loc = disk_index
             disk_list_item = ListItem(disk_item_area, window=self.disk_win,
                                       text=disk_text, add_obj=selectable)
@@ -453,6 +487,16 @@ def on_activate(disk=None, disk_select=None):
         display_text = disk_select.proposed_text
     else:
         display_text = disk_select.found_text
+
+    #
+    # if length of display_text is shorter than max_x, pad rest
+    # of string up to max_x with white space, so, when shorter strings
+    # are displayed after longer ones, the "rest" of the longer string
+    # gets erased.
+    #
+    need_pad_len = max_x - len(display_text)
+    if need_pad_len > 0: 
+        display_text += " " * need_pad_len
 
     # Add the selected disk to the target controller so appropriate defaults
     # can be filled in, if necessary

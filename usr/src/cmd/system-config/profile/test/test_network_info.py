@@ -54,36 +54,54 @@ class TestNetworkInfo(unittest.TestCase):
         self.assertRaises(ValueError, NetworkInfo.type.fset, net, [])
         self.assertRaises(ValueError, NetworkInfo.type.fset, net, 1)
 
+SAMPLE_AUTOMATIC_NETWORK_XML = '''<root>
+  <service version="1" type="service" name="network/physical">
+    <instance enabled="true" name="default">
+      <property_group type="application" name="netcfg">
+              <propval name='active_ncp' type='astring' value='Automatic'/>
+      </property_group>
+    </instance>
+  </service>
+</root>
+'''
+
+SAMPLE_NONE_NETWORK_XML = '''<root>
+  <service version="1" type="service" name="network/physical">
+    <instance enabled="true" name="default">
+      <property_group type="application" name="netcfg"/>
+    </instance>
+  </service>
+</root>
+'''
 
 class TestNetworkInfo_to_xml(unittest.TestCase):
+
+    def _gen_to_xml(self, nic, compare_with_this):
+        '''Compare the NetworkInfo.to_xml() output with a baseline
+        Only concerned with structure, so values are ignored.  '''
+        xml = nic.to_xml()
+        xml_root = etree.fromstring("<root/>")
+        xml_root.extend(xml)
+        xml_str = etree.tostring(xml_root, pretty_print=True)
+        xml_lines = xml_str.splitlines()
+        compare_with = compare_with_this.splitlines()
+        for xml_line, compare_with_line in zip(xml_lines, compare_with):
+            if "<propval" in compare_with_line or \
+                    "value_node" in compare_with_line:
+                continue
+            self.assertEqual(xml_line, compare_with_line)
     
     def test_automatic(self):
         '''NetworkInfo.to_xml() looks correct for type = AUTOMATIC'''
         nic = NetworkInfo()
         nic.type = NetworkInfo.AUTOMATIC
-        xml = nic.to_xml()[0]
-        for instance in xml:
-            if instance.get("name") == "nwam":
-                self.assertEquals("true", instance.get("enabled"))
-            elif instance.get("name") == "default":
-                self.assertEquals("false", instance.get("enabled"))
-            else:
-                self.fail("Unexpected subelement found: %s" %
-                          etree.tostring(instance, pretty_print=True))
+        self._gen_to_xml(nic, SAMPLE_AUTOMATIC_NETWORK_XML)
     
     def test_none(self):
         '''NetworkInfo.to_xml() looks correct for type = NONE'''
         nic = NetworkInfo()
         nic.type = NetworkInfo.NONE
-        xml = nic.to_xml()[0]
-        for instance in xml:
-            if instance.get("name") == "nwam":
-                self.assertEquals("false", instance.get("enabled"))
-            elif instance.get("name") == "default":
-                self.assertEquals("true", instance.get("enabled"))
-            else:
-                self.fail("Unexpected subelement found: %s" %
-                          etree.tostring(instance, pretty_print=True))
+        self._gen_to_xml(nic, SAMPLE_NONE_NETWORK_XML)
     
     def test_manual(self):
         '''NetworkInfo.to_xml() looks correct for type = MANUAL'''
@@ -98,12 +116,11 @@ class TestNetworkInfo_to_xml(unittest.TestCase):
             else:
                 self.fail("Unexpected service found: %s" %
                            etree.tostring(svc, pretty_print=True))
+
         for instance in net_phys:
-            if instance.get("name") == "nwam":
-                self.assertEquals("false", instance.get("enabled"))
-            elif instance.get("name") == "default":
+            if instance.get("name") == "default":
                 self.assertEquals("true", instance.get("enabled"))
-        
+
         for prop_group in net_install.iterchildren().next():
             if prop_group.get("name") not in ("install_ipv4_interface",
                                               "install_ipv6_interface"):
