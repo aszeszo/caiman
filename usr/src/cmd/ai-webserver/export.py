@@ -50,7 +50,7 @@ def get_usage():
         'export\t-n|--service <svcname>\n'
         '\t\t-m|--manifest <manifest/script name> ...\n'
         '\t\t-p|--profile <profile name> ...\n'
-        '\t\t-o|--output <pathname>')
+        '\t\t[-o|--output <pathname>]')
     return(usage)
 
 
