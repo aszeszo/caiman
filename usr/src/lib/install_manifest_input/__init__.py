@@ -139,9 +139,7 @@ IOERR_DTD_DEST = _("Could not open destination file for "
 # Other MIM module errors
 ERR_ARG_INVALID = _("Argument is missing or invalid")
 ERR_NO_SCHEMA = _("No schema name provided.")
-ERR_NO_OUTFILE = _("No output file name provided.")
-ERR_ETREE_PROC = _("Etree error processing DTD data from "
-                   "file \"%(mfile)s\": %(merr)s")
+ERR_NO_EVFILE = _("No evolving manifest filename provided.")
 ERR_SCHDATA_PROC = _("SchemaData error processing "
                      "DTD data from file \"%(mfile)s\": %(merr)s")
 ERR_EMPTY_TREE = _("No XML data present.")
@@ -182,8 +180,6 @@ ERR_INVALID_STATE = _("SearchState mode is invalid: %(mmode)d")
 # Other notices
 IOERR_MFEST_ACCESS = _("Notice: Error reading XML manifest "
                        "file \"%(mfile)s\"")
-ERR_MFEST_NOENV = _("Manifest name could not be determined from "
-                    "environment (AIM_MANIFEST)")
 
 
 # Utility functions

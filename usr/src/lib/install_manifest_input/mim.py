@@ -59,6 +59,8 @@ from urllib2 import urlopen
 import solaris_install.manifest_input as milib
 import solaris_install.manifest_input.process_dtd as pdtd
 
+GET_ALL = etree.ErrorLevels.NONE
+
 STRIP_FINAL_UNBKT_VALUE = True
 
 # --------------------------------------------------------------------------
@@ -113,7 +115,7 @@ class ManifestInput(object):
     Provides the functionality to manipulate XML files.
     '''
 
-    def __init__(self, dest_file, schema_file=None):
+    def __init__(self, evolving_file, schema_file=None):
         '''
         Instantiate a new object.  Initialization includes:
 
@@ -128,7 +130,8 @@ class ManifestInput(object):
         nodes in the data tree.  These tables will be used for doing overlays.
 
         Args:
-          dest_file: Pathname to the output file.
+          evolving_file: Pathname to the file providing initial data, and
+              storing the result.
 
           schema_file: Pathname to the DTD file used.  Used only if the
               manifest does not name a DTD.  Optional, but if not specified
@@ -138,48 +141,38 @@ class ManifestInput(object):
         Raises:
           IOError - Could not access DTD file
           IOError - Could not digest DTD file
-          MimDTDError - Etree error processing DTD data from file
           MimDTDError - SchemaData error processing DTD data from file
+          MimDTDInvalid - Error parsing DTD
           MimEtreeParseError - Error parsing XML manifest file
           MimInvalidError - No output file name provided
           MimInvalidError - No schema name provided
           OSError from not being able to access the manifest
-
-        Produces a warning, retrievable via get_warnings(), if AIM_MANIFEST
-        environment variable is not defined.
         '''
 
-        self._warnings = None
+        if evolving_file is None:
+            raise milib.MimInvalidError(milib.ERR_NO_EVFILE)
 
-        if dest_file is None:
-            raise milib.MimInvalidError(milib.ERR_NO_OUTFILE)
-
-        self.dest_name = dest_file
+        self.evfile_name = evolving_file
         self.tree = None
 
         # Set up parser to remove blank text and processing instructions.
         # Have parser leave in comments, so they can be written out later.
         self.parser = etree.XMLParser(remove_blank_text=True, remove_pis=True)
 
-        # Read manifest, if pathname provided in environment.
-        # Continue on IO errors, as file may not exist yet.
-        self.manifest_name = os.environ.get("AIM_MANIFEST")
-        if not self.manifest_name:
-            self._add_warning(milib.ERR_MFEST_NOENV)
-        else:
-            try:
-                # Treat a zero length manifest as if it didn't exist.
-                mfest_size = os.path.getsize(self.manifest_name)
-            except OSError as err:
-                if err.errno == errno.ENOENT:
-                    mfest_size = 0
-                else:
-                    raise
-
+        # Attempt to read manifest.
+        # Continue on ENOENT IO errors, as file may not exist yet.
+        try:
             # Treat a zero length manifest as if it didn't exist.
-            if mfest_size:
-                self.tree = self.parse_xml_file(self.manifest_name,
-                                                self.parser)
+            mfest_size = os.path.getsize(self.evfile_name)
+        except OSError as err:
+            if err.errno == errno.ENOENT:
+                mfest_size = 0
+            else:
+                raise
+
+        # Treat a zero length manifest as if it didn't exist.
+        if mfest_size:
+            self.tree = self.parse_xml_file(self.evfile_name, self.parser)
 
         # Open schema for validator, and build table of children order.
 
@@ -199,9 +192,10 @@ class ManifestInput(object):
         except IOError as err:
             raise IOError(err.args[0], milib.IOERR_DTD_ACCESS %
                           {"mserr": err.strerror, "mfile": schema_file})
-        except StandardError as err:
-            raise milib.MimDTDError(milib.ERR_ETREE_PROC %
-                              {"mfile": schema_file, "merr": str(err)})
+        except etree.DTDParseError as err:
+            raise milib.MimDTDInvalid(
+                [msg.__repr__() for msg in
+                 err.error_log.filter_from_level(GET_ALL)])
 
         try:
             self.schema_data = pdtd.SchemaData(schema_file)  # For order table
@@ -239,40 +233,6 @@ class ManifestInput(object):
 
         return True
 
-    def _add_warning(self, message):
-        '''
-        Add a warning message to return through the initialized object.
-
-        Warnings are messages to be reported, but which are not serious enough
-        to raise exceptions and impede progress.  Warnings must be requested by
-        the calling program;  they are not printed by this module.
-
-        Args:
-          message: the message to add.
-
-        Raises: N/A
-        '''
-        if self._warnings is None:
-            self._warnings = [message]
-        else:
-            self._warnings.append(message)
-
-    def get_warnings(self):
-        '''
-        Return warning messages.
-
-        Since messages accumulate in the cache, they are returned only once.
-
-        Args: N/A
-
-        Raises: N/A
-
-        Returns: list of warning messages
-        '''
-        ret = self._warnings
-        self._warnings = None
-        return ret
-
     @staticmethod
     def parse_xml_file(manifest_name, parser):
         '''
@@ -295,7 +255,7 @@ class ManifestInput(object):
         except etree.XMLSyntaxError as err:
             raise milib.MimEtreeParseError(
                 [msg.__repr__() for msg in
-                 parser.error_log.filter_from_errors()])
+                 parser.error_log.filter_from_level(GET_ALL)])
         return tree
 
     def load(self, overlay_filename, incremental=False):
@@ -363,13 +323,11 @@ class ManifestInput(object):
             raise milib.MimEmptyTreeError(milib.ERR_EMPTY_TREE)
         try:
             self.schema.assertValid(self.tree)
-        except Exception:
-            # pylint says that filter_from_errors() doesn't exist but it does.
-            # pylint: disable-msg=E1101
+        except etree.DocumentInvalid:
             # Assume these messages are already localized.
             raise milib.MimDTDInvalid(
                 [msg.__repr__() for msg in
-                 self.schema.error_log.filter_from_errors()])
+                 self.schema.error_log.filter_from_level(GET_ALL)])
 
     def commit(self, validate=True):
         '''
@@ -392,10 +350,10 @@ class ManifestInput(object):
         if validate:
             self.validate()
         try:
-            self.tree.write(self.dest_name, pretty_print=True)
+            self.tree.write(self.evfile_name, pretty_print=True)
         except IOError as err:
             raise IOError(milib.IOERR_DTD_DEST %
-                          {"mserr": err.strerror, "mdest": self.dest_name})
+                          {"mserr": err.strerror, "mdest": self.evfile_name})
 
     def set(self, path, value):
         '''
@@ -583,7 +541,6 @@ class ManifestInput(object):
         if path is None or value is None:
             raise milib.MimInvalidError(milib.ERR_ARG_INVALID)
 
-        # pylint: disable-msg=W0612
         xpath, final_val, attr = ManifestInput._path_preprocess(path,
                                                not STRIP_FINAL_UNBKT_VALUE)
         midstart = xpath.startswith("//")

@@ -225,7 +225,7 @@ def _do_aimanifest(argv):
     # Pass AIM_MANIFEST as the output file.
     try:
         mim = ManifestInput(os.environ.get("AIM_MANIFEST"), SCHEMA_FILE)
-    except milib.MimEtreeParseError as err:
+    except (milib.MimEtreeParseError, milib.MimDTDInvalid) as err:
         for error in err.errors:
             # These messages come already localized.
             print >> sys.stderr, error
@@ -233,13 +233,6 @@ def _do_aimanifest(argv):
         return errno.EINVAL
     except (milib.MimError, IOError) as err:
         return (_handle_error(err))
-
-    # Note: warnings already localized.
-    warnings = mim.get_warnings()
-    if warnings is not None:
-        for msg in warnings:
-            print >> sys.stderr, msg
-            AIM_LOGGER.error(msg)
 
     if (command == "set") or (command == "add"):
         AIM_LOGGER.info(_("command:%(mcommand)s, path:%(mpath)s, "
@@ -296,13 +289,6 @@ def _do_aimanifest(argv):
             return errno.EINVAL
         except (milib.MimError, IOError) as err:
             return (_handle_error(err))
-
-        # Note: warnings already localized.
-        warnings = mim.get_warnings()
-        if warnings is not None:
-            for msg in warnings:
-                print >> sys.stderr, msg
-                AIM_LOGGER.error(msg)
 
         _log_final_status(mim, path)
 
