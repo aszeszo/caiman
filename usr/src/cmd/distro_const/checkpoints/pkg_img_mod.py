@@ -34,6 +34,7 @@ import os
 import platform
 import shutil
 
+from osol_install.install_utils import dir_size, file_size
 from solaris_install import CalledProcessError, DC_LABEL, Popen, run
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
@@ -41,7 +42,8 @@ from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.transfer.info import Software, Source, Destination, \
     CPIOSpec, Dir
 from solaris_install.transfer.media_transfer import TRANSFER_MEDIA, \
-    INSTALL_TARGET_VAR, MEDIA_DIR_VAR, TRANSFER_MANIFEST_NAME
+    INSTALL_TARGET_VAR, MEDIA_DIR_VAR, TRANSFER_MANIFEST_NAME, \
+    TRANSFER_MISC
 from solaris_install.manifest.writer import ManifestWriter
 
 # load a table of common unix cli calls
@@ -213,6 +215,26 @@ class PkgImgMod(Checkpoint):
         shutil.move("etc", "miscdirs")
         shutil.move("var", "miscdirs")
 
+        # add Software node to install items from /mnt/misc
+
+        src_path = Dir("/mnt/misc")
+        src = Source()
+        src.insert_children(src_path)
+
+        dst_path = Dir(INSTALL_TARGET_VAR)
+        dst = Destination()
+        dst.insert_children(dst_path)
+
+        tr_install_misc = CPIOSpec()
+        tr_install_misc.action = CPIOSpec.INSTALL
+        tr_install_misc.contents = ["."]
+        tr_install_misc.size = str(dir_size(os.path.join(self.pkg_img_path,
+                                                         "miscdirs")))
+
+        misc_software_node = Software(TRANSFER_MISC, type="CPIO")
+        misc_software_node.insert_children([src, dst, tr_install_misc])
+        self.doc.persistent.insert_children(misc_software_node)
+
         cmd = [cli.MKISOFS, "-o", "solarismisc.zlib", "-N", "-l", "-R",
                "-U", "-allow-multidot", "-no-iso-translate", "-quiet",
                "-cache-inodes", "-d", "-D", "-V", "\"compress\"",
@@ -254,6 +276,14 @@ class PkgImgMod(Checkpoint):
         media_install = CPIOSpec()
         media_install.action = CPIOSpec.INSTALL
         media_install.contents = content_list
+        total_size_byte = 0
+        for content in content_list:
+            content_path = os.path.join(self.pkg_img_path, content)
+            # only want to calculate the size of files, since directories
+            # are traversed and it's files are included in the list.
+            if not os.path.isdir(content_path):
+                total_size_byte += file_size(content_path)
+        media_install.size = str(total_size_byte)
 
         media_soft_node = Software(TRANSFER_MEDIA, type="CPIO")
         media_soft_node.insert_children([src, dst, media_install])

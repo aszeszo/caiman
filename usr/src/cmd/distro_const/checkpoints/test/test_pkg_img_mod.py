@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_pkg_img_mod
@@ -117,7 +117,7 @@ class TestCreateMiscArchive(unittest.TestCase):
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
-        engine_test_utils.get_new_engine_instance()
+        self.engine = engine_test_utils.get_new_engine_instance()
         self.filelist = ["/opt/",
                          "/opt/lib",
                          "/etc/",
@@ -129,6 +129,7 @@ class TestCreateMiscArchive(unittest.TestCase):
                          "/var/file4/file5/file6/file7/file8"]
         self.pim = PkgImgMod("Test PkgImgMod")
         self.pim.pkg_img_path = testlib.create_filesystem(*self.filelist)
+        self.pim.doc = self.engine.data_object_cache
 
     def tearDown(self):
         shutil.rmtree(self.pim.pkg_img_path, ignore_errors=True)

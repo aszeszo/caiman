@@ -41,6 +41,13 @@
 
 <!ELEMENT software_data (name*)>
 <!ATTLIST software_data action (install|uninstall|unpack|noinstall) "install">
+<!--
+	size is the total size of all the data specified
+        in this software_data section.  This value can
+        be specified for both install and uninstall actions.
+        Size specified is in bytes.  This attribute is optional.
+-->
+<!ATTLIST software_data size CDATA #IMPLIED>
 
 <!ELEMENT name (#PCDATA)>
 

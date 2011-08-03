@@ -45,10 +45,8 @@ from solaris_install.transfer.info import Destination
 from solaris_install.transfer.info import Dir
 from solaris_install.transfer.info import Software
 from solaris_install.transfer.info import Source
-from solaris_install.transfer.info import ACTION, CONTENTS, CPIO_ARGS
+from solaris_install.transfer.info import ACTION, CONTENTS, CPIO_ARGS, SIZE
 from solaris_install.transfer.prog import ProgressMon
-from solaris_install.transfer.media_transfer import TRANSFER_ROOT, \
-    TRANSFER_MISC, TRANSFER_MEDIA, get_image_size
 
 
 class AbstractCPIO(Checkpoint):
@@ -65,7 +63,7 @@ class AbstractCPIO(Checkpoint):
         super(AbstractCPIO, self).__init__(name)
 
         # A list of transfer operations
-        self._transfer_list = []
+        self._transfer_list = list()
 
         # Handle to the DOC
         self._doc = None
@@ -91,36 +89,7 @@ class AbstractCPIO(Checkpoint):
         # Progress monitor handle
         self.pmon = None
 
-        # Default value used by get_size to determine
-        # if image_info is used
-        self._use_image_info = False
-
-        self._image_size = 0
-
-    def get_media_transfer_size(self):
-        ''' Hack to skip computing size of media transfer checkpoints
-            to we can speed up the start of the install
-        '''
-
-        self.logger.debug("Special size calculation for: " + self.name)
-        if self._image_size == 0:
-            image_info_size = get_image_size(self.logger)
-            size_in_mb = Size(str(image_info_size) + Size.mb_units)
-            self._image_size = size_in_mb.get(Size.kb_units)
-            self.logger.debug("image_info size: %d kb", self._image_size)
-
-        if self.name == TRANSFER_ROOT:
-            weight = 0.75
-        elif self.name == TRANSFER_MISC:
-            weight = 0.05
-        elif self.name == TRANSFER_MEDIA:
-            weight = 0.20
-        else:
-            raise RuntimeError("Not applicable for other checkpoints")
-
-        return int(self._image_size * weight)
-
-    def get_size(self):
+    def get_size(self, need_parse_input=True):
         '''Compute the size of the transfer specified'''
 
         # Check to see if parse input failed because
@@ -131,49 +100,56 @@ class AbstractCPIO(Checkpoint):
         #
         # Size returned is in kilobytes
         #
-        try:
-            self._parse_input()
-        except ValueError, msg:
-            if self.src and not os.path.exists(self.src):
-                return self.DEFAULT_SIZE
-            raise
+        if need_parse_input:
+            try:
+                self._parse_input(generate_file_list=False)
+            except ValueError, msg:
+                if self.src and not os.path.exists(self.src):
+                    return self.DEFAULT_SIZE
+                raise
 
         self._validate_input()
         size = 0
-
-        # There may be a .image_info file at the src. If it's there,
-        # use this to determine the size of the transfer. If it's
-        # not there then compute the size.
-        image_info = os.path.join(self.src, ".image_info")
-        if self._use_image_info and os.path.exists(image_info):
-            with open(image_info, 'r') as filehandle:
-                for line in filehandle.readlines():
-                    (opt, sep, val) = line.rstrip().partition("=")
-                    if opt == "IMAGE_SIZE":
-                        # Remove the '\n' character read from
-                        # the file, and convert to integer
-                        return(int(val.rstrip()))
 
         # Compute the image size from the data in the transfer install
         # list, if it contains valid data
         for transfer in self._transfer_list:
             if transfer.get(ACTION) == "install":
-                file_list = transfer.get(CONTENTS)
-                self.logger.debug("Unable to read .image_info file")
-                self.logger.debug("Computing distribution size.")
 
-                with open(file_list, 'r') as filehandle:
-                    # Determine the file size for each file listed and sum
-                    # the sizes.
-                    try:
-                        size = size + sum(map(file_size,
-                                         [os.path.join(self.src,
-                                                       f.rstrip())
-                                         for f in filehandle.readlines()]))
-                    except OSError:
-                        # If the file doesn't exist that's OK.
-                        pass
+                pre_calc_size = transfer.get(SIZE)
 
+                if pre_calc_size is not None:
+                    self.logger.debug("Precalculated size: %s bytes",
+                                      pre_calc_size)
+                    size += int(pre_calc_size)
+                else:
+
+                    old_size = size
+                    file_list = transfer.get(CONTENTS)
+
+                    with open(file_list, 'r') as filehandle:
+                        # Determine the file size for each file listed and sum
+                        # the sizes.
+                        try:
+                            size = size + sum(map(file_size,
+                                             [os.path.join(self.src,
+                                                           f.rstrip())
+                                             for f in filehandle.readlines()]))
+                        except OSError:
+                            # If the file doesn't exist that's OK.
+                            pass
+                    self.logger.debug("Size calculated at runtime: %d bytes",
+                                      (size - old_size))
+
+        #
+        # Now that we have the needed information, reset the _transfer_list,
+        # if parsed here, so complete information about each transfer
+        # can be recalculated later.
+        #
+        if need_parse_input:
+            self._cleanup_tmp_files()
+            self._transfer_list = list()
+          
         # The file_size() function used for calculating size of each
         # file returns the value in bytes.  Convert to kilobytes.
         size = size / 1024
@@ -184,13 +160,7 @@ class AbstractCPIO(Checkpoint):
            given the DOC input
         '''
 
-        if self.distro_size == 0:
-            if self.name == TRANSFER_ROOT or \
-                self.name == TRANSFER_MISC or \
-                self.name == TRANSFER_MEDIA:
-                self.distro_size = self.get_media_transfer_size()
-            else:
-                self.distro_size = self.get_size()
+        self.distro_size = self.get_size()
 
         self.logger.debug("Distro size: %d KB", self.distro_size)
         progress_estimate = \
@@ -245,9 +215,13 @@ class AbstractCPIO(Checkpoint):
         '''Remove the tmp files we created from the system'''
         try:
             for transfer in self._transfer_list:
-                if transfer.get(ACTION) == "install" \
-                   and os.path.exists(transfer.get(CONTENTS)):
-                    os.unlink(transfer.get(CONTENTS))
+                if transfer.get(ACTION) == "install":
+                    content_file = transfer.get(CONTENTS)
+                    if content_file is not None and \
+                        os.path.exists(content_file):
+                        self.logger.debug("Removing temp content file: %s",
+                                          content_file)
+                        os.unlink(content_file)
         except OSError:
             pass
 
@@ -507,7 +481,7 @@ class AbstractCPIO(Checkpoint):
                 # lack of the source when get_progress_estimate was
                 # called. In order to do accurate progress estimate,
                 # get that size now.
-                self.distro_size = self.get_size()
+                self.distro_size = self.get_size(need_parse_input=False)
 
             # Start up the ProgressMon to report progress while the actual
             # transfer is taking place.
@@ -559,7 +533,7 @@ class TransferCPIO(AbstractCPIO):
         super(TransferCPIO, self).__init__(name)
 
         # Holds a list of transfer actions
-        self._transfer_list = []
+        self._transfer_list = list()
 
         # Hold the handle to the DOC
         self._doc = InstallEngine.get_instance().data_object_cache
@@ -573,7 +547,7 @@ class TransferCPIO(AbstractCPIO):
             raise ValueError("Only one value for Software node can be "
                              "specified with name %s", self.name)
 
-    def _parse_input(self):
+    def _parse_input(self, generate_file_list=True):
         '''Method to read the parameters from the data object cache and
            place them into the local lists.
         '''
@@ -625,8 +599,13 @@ class TransferCPIO(AbstractCPIO):
                 # Use the default cpio args.
                 trans_attr[CPIO_ARGS] = self.DEF_CPIO_ARGS
 
-            trans_attr[CONTENTS] = self.parse_transfer_node(trans)
+            trans_attr[SIZE] = trans.size
+            if trans_attr[SIZE] is None or generate_file_list is True:
+                trans_attr[CONTENTS] = self.parse_transfer_node(trans)
+            else:
+                trans_attr[CONTENTS] = None
             trans_attr[ACTION] = trans.action
+
             self._transfer_list.append(trans_attr)
 
 
@@ -642,7 +621,7 @@ class TransferCPIOAttr(AbstractCPIO):
         self.action = None
         self.type = None
         self.contents = None
-        self._transfer_list = []
+        self._transfer_list = list()
 
     def _parse_input(self):
         '''Parse the input parameters and put them into local attributes'''
@@ -654,7 +633,7 @@ class TransferCPIOAttr(AbstractCPIO):
         if not os.path.exists(self.src):
             raise ValueError("Source doesn't exist")
 
-        self._transfer_list = []
+        self._transfer_list = list()
         trans_attr = dict()
         trans_attr[CPIO_ARGS] = self.cpio_args
         trans_attr[CONTENTS] = self.parse_transfer_node(self)

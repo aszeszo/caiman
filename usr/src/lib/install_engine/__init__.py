@@ -155,6 +155,11 @@ class InstallEngine(object):
 
     NUM_CALLBACK_ARGS = 2
 
+    # progress ratio for the preparing to execute checkpoints
+    EXEC_PREP_RATIO = 0.05
+    EXEC_PREP_RATIO_DECIMAL = decimal.Decimal(str(EXEC_PREP_RATIO))
+    PREP_MSG = "Preparing for Installation"
+
     _instance = None
 
     class _PseudoThread(threading.Thread):
@@ -238,6 +243,9 @@ class InstallEngine(object):
 
         # The following will be set to True anytime a ZFS snapshot call is made
         self.zfs_snapshots_modifed = False
+
+        # in the process of preparing for execution
+        self.exec_prep = False
 
     def __del__(self):
         if self._tmp_cache_path is not None and not self.debug:
@@ -525,22 +533,7 @@ class InstallEngine(object):
             for cp in checkpoint_data_list:
                 LOGGER.debug("\t" + str(cp))
 
-        (checkpoints, failed_init_cp) = self._load_checkpoints(
-                                            checkpoint_data_list)
-
-        if len(checkpoints) == 0:
-            # one of the checkpoint must have failed to initialize, call the
-            # callback function with the failure and return the
-            # failures.
-            LOGGER.debug(failed_init_cp + "checkpoint failed to initialize")
-            if not blocking:
-                callback(InstallEngine.CP_INIT_FAILED, [failed_init_cp])
-            return (InstallEngine.CP_INIT_FAILED, [failed_init_cp])
-
-        # Make sure to always start at 0 progress
-        self.__current_completed = 0
-
-        thread_args = (checkpoints, dry_run, callback)
+        thread_args = (checkpoint_data_list, dry_run, callback)
         LOGGER.debug("Spawning InstallEngine execution thread")
         thread = thread_cls(target=self._execute_checkpoints,
                             name=InstallEngine.CP_THREAD,
@@ -718,6 +711,11 @@ class InstallEngine(object):
             None
         '''
 
+        if self.exec_prep:
+            # these are the values reported by the engine, do not
+            # need to normalize
+            return cp_prog
+
         cp_data = self.get_cp_data(self.__currently_executing.name)
         cp_data.prog_reported = decimal.Decimal(cp_prog)
         normalized_prog = (int)(cp_prog * cp_data.prog_est_ratio)
@@ -771,7 +769,7 @@ class InstallEngine(object):
             raise TypeError("The specified callback function requires more"
                             " than 2 arguments and will fail")
 
-    def _execute_checkpoints(self, checkpoints, dry_run, callback):
+    def _execute_checkpoints(self, checkpoint_data_list, dry_run, callback):
         '''Runs the checkpoints. The public execute_checkpoints method will
         run this function in a separate thread.
 
@@ -781,6 +779,22 @@ class InstallEngine(object):
         status = InstallEngine.EXEC_SUCCESS
         failed_checkpoint_list = []
         completed = False
+
+        # Make sure to always start at 0 progress
+        self.__current_completed = 0
+
+        (checkpoints, failed_init_cp) = self._load_checkpoints(\
+            checkpoint_data_list)
+
+        if not checkpoints:
+            # one of the checkpoint must have failed to initialize, call the
+            # callback function with the failure and return the
+            # failures.
+            LOGGER.debug(failed_init_cp + " checkpoint failed to initialize")
+            callback(InstallEngine.CP_INIT_FAILED, [failed_init_cp])
+            with self._checkpoint_lock:
+                self.__currently_executing = None
+            return
 
         try:
             for checkpoint in checkpoints:
@@ -910,8 +924,17 @@ class InstallEngine(object):
 
         execute_these = []
         total_estimate = decimal.Decimal('0')
+        self.exec_prep = True
+
+        num_cp_to_load = float(len(checkpoint_data_list))
+        num_cp_loaded = 0
+
         for cp_data in checkpoint_data_list:
             LOGGER.debug("Loading %s checkpoint", cp_data)
+            load_prog = int((num_cp_loaded / num_cp_to_load) * \
+                InstallEngine.EXEC_PREP_RATIO * 100)
+            LOGGER.report_progress(msg=InstallEngine.PREP_MSG,
+                                   progress=load_prog)
             try:
                 checkpoint = cp_data.load_checkpoint()
                 prog_est = checkpoint.get_progress_estimate()
@@ -930,10 +953,17 @@ class InstallEngine(object):
             cp_data.prog_est = decimal.Decimal(str(prog_est))
             total_estimate += cp_data.prog_est
             execute_these.append(checkpoint)
+            num_cp_loaded += 1
 
-        total_ratio = decimal.Decimal(0)
+        self.exec_prep = False
+        self.__current_completed += InstallEngine.EXEC_PREP_RATIO_DECIMAL * 100
+
+        total_ratio = InstallEngine.EXEC_PREP_RATIO_DECIMAL
+        adjusted_ratio = decimal.Decimal(str(1 - \
+                                         InstallEngine.EXEC_PREP_RATIO))
         for cp_data in checkpoint_data_list:
-            cp_data.prog_est_ratio = cp_data.prog_est / total_estimate
+            cp_data.prog_est_ratio = (cp_data.prog_est / total_estimate) * \
+                adjusted_ratio
             total_ratio += cp_data.prog_est_ratio
             LOGGER.debug("%s: prog est-%s, prog ratio-%s, total_ratio-%s" %
                         (cp_data.name, str(cp_data.prog_est),

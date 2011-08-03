@@ -102,18 +102,14 @@ class InstallProgressHandler(ProgressHandler):
  
     def get_one_message(self):
 
-        self.logger.debug("1-msg: %s", self.msg_buf)
         if len(self.msg_buf) > 4:
             # Something is available to be processed.  Try to process it.
             size = struct.unpack('@i', self.msg_buf[:4])[0]
-            self.logger.debug("size of message expected: %s", size)
 
             # does the buffer have enough data?
             if len(self.msg_buf[4:]) >= size:
                 msg = self.msg_buf[4:4 + size]
                 self.msg_buf = self.msg_buf[(4 + size):]
-                self.logger.debug("message: %s", msg)
-                self.logger.debug("msg_buf: %s", self.msg_buf)
                 return msg
             else:
                 return None
@@ -127,20 +123,15 @@ class InstallProgressHandler(ProgressHandler):
         msg = None
 
         message = self.get_one_message()
-        self.logger.debug("step 1: message: %s", message)
         while not message:
             try:
                 sock_data = skt.recv(recv_size)
             except:
                 pass
 
-            self.logger.debug("sock: %s", sock_data)
             self.msg_buf += sock_data
-            self.logger.debug("after sock: %s", self.msg_buf)
             message = self.get_one_message()
-            self.logger.debug("step 2: message: %s", message)
 
-        self.logger.debug("parseProgressMsg: %s", message)
         if cb:
             cb(message)
 

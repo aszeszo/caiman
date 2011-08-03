@@ -602,13 +602,8 @@ class EngineExecuteTests(EngineCheckpointsBase):
             self.assertTrue(isinstance(err_data.error_data[liberrsvc.ES_DATA_EXCEPTION], RuntimeError))
 
     def test_execute_checkpoints_basic(self):
-        '''Runs InstallEngine._execute_checkpoints with empty checkpoints'''
-        
-        # Remove the dependency on CheckpointData objects
-        self.engine.get_cp_data = lambda x: MockCheckpointData()
-        checkpoints = [EmptyCheckpoint("one")]
-        
-        self.engine._execute_checkpoints(checkpoints, True,
+        '''Uses InstallEngine._execute_checkpoints to run a list of checkpoints'''
+        self.engine._execute_checkpoints(self.engine._checkpoints, True,
                                          self._exec_cp_callback)
         
         status, failed_checkpoints = self.callback_results
@@ -720,9 +715,6 @@ class EngineExecuteTests(EngineCheckpointsBase):
         self.assertEquals(self.callback_results[0], self.engine.CP_INIT_FAILED)
         self.assertEqual(len(self.callback_results[1]), 1)
         self.assertEqual((self.callback_results[1])[0], failed_chkpt_name)
-
-        # Make sure the execute thread is not created
-        self.assertEquals(self.engine.checkpoint_thread, None)
 
     def test_blocking_execute_first_cp_failed(self):
         '''First checkpoint failed in InstallEngine.execute_checkpoints, blocking mode '''

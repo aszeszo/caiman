@@ -40,6 +40,7 @@ INSTALL = "install"
 IPS = "IPS"
 IPS_ARGS = "ips_args"
 PURGE_HISTORY = "purge_history"
+SIZE = "size"
 SOFTWARE_DATA = "software_data"
 SVR4_ARGS = "svr4_args"
 TRANSFORM = "transform"
@@ -135,6 +136,7 @@ class Software(DataObject):
                 elif val == "CPIO":
                     transfer_obj = CPIOSpec()
                     action = sub.get(CPIOSpec.CPIOSPEC_ACTION_LABEL)
+                    size = sub.get(CPIOSpec.CPIOSPEC_SIZE_LABEL)
 
                     if action is None:
                         action = CPIOSpec.INSTALL
@@ -146,6 +148,8 @@ class Software(DataObject):
 
                     transfer_obj.contents = file_list
                     transfer_obj.action = action
+                    if size is not None:
+                        transfer_obj.size = int(size)
 
                 elif val == "SVR4":
                     transfer_obj = SVR4Spec()
@@ -469,14 +473,16 @@ class CPIOSpec(DataObject):
     SOFTWARE_DATA_LABEL = "software_data"
     CPIOSPEC_ACTION_LABEL = "action"
     CPIOSPEC_NAME_LABEL = "name"
+    CPIOSPEC_SIZE_LABEL = "size"
     INSTALL = "install"
     UNINSTALL = "uninstall"
 
-    def __init__(self, action=None, contents=None):
+    def __init__(self, action=None, contents=None, size=None):
 
         super(CPIOSpec, self).__init__(CPIOSpec.TRANSFER_LABEL)
         self.action = action
         self.contents = contents
+        self.size = size
 
     def to_xml(self):
         '''Method to transfer the DOC CPIO checkpoint information
@@ -520,6 +526,8 @@ class CPIOSpec(DataObject):
                 file_name = self.contents
 
         element.set(CPIOSpec.CPIOSPEC_ACTION_LABEL, action)
+        if self.size is not None:
+            element.set(CPIOSpec.CPIOSPEC_SIZE_LABEL, str(self.size))
 
         # action is either install or uninstall.
         # If a name has been specified, place the files or

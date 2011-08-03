@@ -585,7 +585,7 @@ class AbstractIPS(Checkpoint):
         if self._mirror and self._mirror is not None:
             self._image_args["mirrors"] = self._mirror
         if self.is_zone:
-            if self._image_args.has_key("props"):
+            if "props" in self._image_args:
                 props_dict = self._image_args["props"]
                 props_dict["use-system-repo"] = True
             else:

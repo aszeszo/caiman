@@ -31,12 +31,13 @@ import os
 import shutil
 import datetime
 
+from osol_install.install_utils import dir_size
 from solaris_install import DC_LABEL, run
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.transfer.info import Software, Source, Destination, \
     CPIOSpec, Dir
 from solaris_install.transfer.media_transfer import TRANSFER_ROOT, \
-    TRANSFER_MISC, INSTALL_TARGET_VAR
+    INSTALL_TARGET_VAR
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 
@@ -237,7 +238,6 @@ class BootArchiveConfigure(Checkpoint):
 
         # keep track of all the symlinks created
         misc_symlinks = []
-
         for rootdir in ["etc", "var"]:
             for root, dirs, files in os.walk(rootdir):
                 for f in files:
@@ -277,26 +277,6 @@ class BootArchiveConfigure(Checkpoint):
 
         root_tr_software_node.insert_children(tr_uninstall)
 
-        # add Software node to install items from /mnt/misc
-
-        src_path = Dir("/mnt/misc")
-        src = Source()
-        src.insert_children(src_path)
-
-        dst_path = Dir(INSTALL_TARGET_VAR)
-        dst = Destination()
-        dst.insert_children(dst_path)
-
-        tr_install_misc = CPIOSpec()
-        tr_install_misc.action = CPIOSpec.INSTALL
-        tr_install_misc.contents = ["."]
-        # must use the following cpio option instead of the default "-pdum"
-        tr_install_misc.cpio_args = "-pdm"
-
-        misc_software_node = Software(TRANSFER_MISC, type="CPIO")
-        misc_software_node.insert_children([src, dst, tr_install_misc])
-        self.doc.persistent.insert_children(misc_software_node)
-
         self.logger.debug(str(self.doc.persistent))
 
     def parse_doc(self):
@@ -330,14 +310,17 @@ class BootArchiveConfigure(Checkpoint):
 
         dot_node = CPIOSpec()
         dot_node.action = CPIOSpec.INSTALL
+        dot_node.size = str(dir_size(os.path.join(self.ba_build, "")))
         dot_node.contents = ["."]
 
         usr_node = CPIOSpec()
         usr_node.action = CPIOSpec.INSTALL
+        usr_node.size = str(dir_size(os.path.join(self.pkg_img_path, "usr")))
         usr_node.contents = ["usr"]
 
         dev_node = CPIOSpec()
         dev_node.action = CPIOSpec.INSTALL
+        dev_node.size = str(dir_size(os.path.join(self.pkg_img_path, "dev")))
         dev_node.contents = ["dev"]
 
         software_node = Software(TRANSFER_ROOT, type="CPIO")

@@ -26,6 +26,7 @@
 
 """Transfer CPIO checkpoint Unit Tests"""
 
+from osol_install.install_utils import dir_size
 from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import InstallLogger
@@ -686,11 +687,11 @@ class TestCPIOFunctions(unittest.TestCase):
         self.soft_node.insert_children([dst])
         self.assertRaises(IndexError, self.tr_cpio.get_size)
 
-    def test_image_info_file_progress_estimate(self):
-        '''Test progress estimate value when .image_info file exists
+    def test_progress_estimate_with_size(self):
+        '''Test progress estimate value when size is pre-calculated  exists
         '''
         src = Source()
-        src_path = os.path.join(self.TEST_SRC_DIR, "etc/X11")
+        src_path = os.path.join(self.TEST_SRC_DIR, "etc")
         path = Dir(src_path)
         src.insert_children([path])
 
@@ -699,17 +700,19 @@ class TestCPIOFunctions(unittest.TestCase):
         dst.insert_children([path])
 
         self.soft_node.insert_children([src, dst])
-        size = self.tr_cpio.DEFAULT_SIZE * 2
-        with open(os.path.join(src_path, ".image_info"), 'w') as filehandle:
-            filehandle.write("IMAGE_SIZE=" + str(size))
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
         self.tr_node.contents = ["./"]
+        size_to_transfer = dir_size(src_path)
+        self.tr_node.size = str(size_to_transfer)
 
         progress_estimate = self.tr_cpio.get_progress_estimate()
-        os.unlink(os.path.join(src_path, ".image_info"))
-        self.assertTrue(progress_estimate == 2 * self.tr_cpio.DEFAULT_PROG_EST)
+        expect_estimate = \
+            int((float(size_to_transfer/1024) / self.tr_cpio.DEFAULT_SIZE) * \
+                self.tr_cpio.DEFAULT_PROG_EST)
+
+        self.assertEqual(progress_estimate, expect_estimate)
 
     def test_media_transform(self):
         '''Test media transform functionality'''
