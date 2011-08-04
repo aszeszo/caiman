@@ -37,8 +37,10 @@ import collections
 import gettext
 import unittest
 
-from . import BootmgmtNotSupportedError, BootmgmtArgumentError
-from . import BootmgmtMissingInfoError
+from . import (BootmgmtNotSupportedError, BootmgmtArgumentError,
+               BootmgmtMissingInfoError, BootmgmtError,
+               BootmgmtUnsupportedOperationError,
+               BootmgmtUnsupportedPlatformError)
 from . import bootinfo, bootloader
 from .bootutil import LoggerMixin, get_current_arch_string
 from .pysol import (libzfs_init, libzfs_fini, zpool_open, zpool_close,
@@ -308,7 +310,8 @@ class BootConfig(LoggerMixin):
         for inst in filter(filter_func, self.boot_instances):
             mod_func(inst)
 
-    def commit_boot_config(self, temp_dir=None, boot_devices=None, force=False):
+    def commit_boot_config(self, temp_dir=None, boot_devices=None,
+                           force=False):
         """Writes the boot configuration (including boot instances and boot
         loader settings) to stable storage.
 
@@ -450,7 +453,8 @@ class DiskBootConfig(BootConfig):
             self.zfstop = kwargs[DiskBootConfig.ARG_ZFS_TLDPATH]
             self.zfsrp = kwargs[DiskBootConfig.ARG_ZFS_RPNAME]
             self.set_bootfs = kwargs.get(
-                             DiskBootConfig.ARG_ZFS_SET_BOOTFS_ON_COMMIT, False)
+                             DiskBootConfig.ARG_ZFS_SET_BOOTFS_ON_COMMIT,
+                             False)
         elif DiskBootConfig.ARG_UFS_ROOT in kwargs:
             fstype = 'ufs'
             self.sysroot = kwargs[DiskBootConfig.ARG_UFS_ROOT]
@@ -554,7 +558,8 @@ class DiskBootConfig(BootConfig):
         if setprop_rv != 0:
             raise BootmgmtError(libzfs_error_description(lzfsh))
 
-    def commit_boot_config(self, temp_dir=None, boot_devices=None, force=False):
+    def commit_boot_config(self, temp_dir=None, boot_devices=None,
+                           force=False):
         tuples = super(DiskBootConfig, self).commit_boot_config(temp_dir,
                                                                 boot_devices,
                                                                 force)
@@ -776,13 +781,13 @@ class SolarisBootInstance(BootInstance):
 
     if get_current_arch_string() == 'x86':
         _attributes = {
-                      'kernel': '/platform/i86pc/kernel/%(karch)s/unix',
-                      'boot_archive': '/platform/i86pc/%(karch)s/boot_archive',
+                      'kernel': '/platform/i86pc/kernel/amd64/unix',
+                      'boot_archive': '/platform/i86pc/amd64/boot_archive',
                       'kargs': None,
                       'signature': None,
-                      'splashimage' : None,
-                      'foreground' : None,
-                      'background' : None
+                      'splashimage': None,
+                      'foreground': None,
+                      'background': None
                       }
     else:
         _attributes = {}
@@ -831,7 +836,7 @@ class SolarisBootInstance(BootInstance):
         zpool_close(zph)
         libzfs_fini(lzfsh)
 
-	# XXX: We're just using the first physpath for now
+        # XXX: We're just using the first physpath for now
         return ('zfs-bootfs=' + bootfs + ',bootpath="' + physpaths[0] + '"')
 
 

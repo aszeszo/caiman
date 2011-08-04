@@ -31,6 +31,7 @@ class BootmgmtError(Exception):
     def __init__(self, msg, xcpt=None):
         self.msg = msg
         self.xcpt = xcpt
+        super(BootmgmtError, self).__init__()
 
     def __str__(self):
         if not self.xcpt is None:
@@ -61,9 +62,9 @@ class BootmgmtMalformedPropertyNameError(BootmgmtError):
 
 class BootmgmtMalformedPropertyValueError(BootmgmtError):
     def __init__(self, propname, propval):
-        super(self, BootmgmtMalformedPropertyValueError).__init__(
+        super(BootmgmtMalformedPropertyValueError, self).__init__(
            'Invalid value specified for property "%s": %s' %
-           (str(propname), str(propval)))
+           (propname, propval))
         self.propname = propname
         self.propval = propval
 

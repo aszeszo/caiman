@@ -38,9 +38,10 @@ from ... import BootmgmtConfigWriteError, BootmgmtArgumentError
 from ...bootloader import BootLoaderInstallError
 from ...bootconfig import BootConfig
 
+
 class MenuLstError(Exception):
     def __init__(self, msg):
-        super(LegacyGRUBMenuError, self).__init__()
+        super(MenuLstError, self).__init__()
         self.msg = msg
 
     def __str__(self):
@@ -56,6 +57,7 @@ class MenuLstComment(object):
 
     def __str__(self):
         return self._comment.rstrip('\n')
+
 
 class MenuLstCommand(object):
     """A menu.lst command and its arguments from the menu.lst file"""
@@ -134,11 +136,11 @@ class MenuLstMenuEntry(object):
         return None
 
     def update_command(self, cmd, args, create=False):
-       entity = self.find_command(cmd)
-       if not entity is None:
-           entity.set_args(args)
-       elif create is True:
-           self.add_command(MenuLstCommand(cmd, args))
+        entity = self.find_command(cmd)
+        if not entity is None:
+            entity.set_args(args)
+        elif create is True:
+            self.add_command(MenuLstCommand(cmd, args))
 
     def commands(self):
         return [cmd for cmd in self._cmdlist if type(cmd) == MenuLstCommand]
@@ -457,5 +459,3 @@ class MenuLstBootLoaderMixIn(object):
             self._write_config(None)
 
         return None
-
-

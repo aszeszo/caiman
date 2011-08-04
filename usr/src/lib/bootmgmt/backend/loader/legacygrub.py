@@ -39,11 +39,15 @@ from ...bootloader import BootLoader, BootLoaderInstallError
 from ...bootconfig import BootConfig, DiskBootConfig, SolarisDiskBootInstance
 from ...bootconfig import ChainDiskBootInstance
 from ...bootutil import get_current_arch_string
+from ...pysol import (libzfs_init, libzfs_fini, zpool_open, zpool_close,
+                    zpool_get_physpath, zpool_set_prop, zpool_get_prop,
+                    ZPOOL_PROP_BOOTFS, libzfs_error_description)
 from ... import BootmgmtArgumentError
 from ... import BootmgmtUnsupportedOperationError, BootmgmtInterfaceCodingError
 from ... import BootmgmtIncompleteBootConfigError, BootmgmtConfigReadError
 from ... import BootmgmtConfigWriteError, BootmgmtMalformedPropertyValueError
 from ... import BootmgmtUnsupportedPlatformError, BootmgmtNotSupportedError
+from ... import BootmgmtUnsupportedPropertyError
 from solaris_install import Popen, CalledProcessError
 
 _ = gettext.translation('SUNW_OST_OSCMD', '/usr/lib/locale',
@@ -66,15 +70,15 @@ class LegacyGRUBBootLoader(BootLoader, MenuLstBootLoaderMixIn):
 
     # This dict is applied to the menu.lst template (below)
     DEFAULT_PROPDICT = {
-         'default'     : 'default 0',
-         'timeout'     : 'timeout ' + str(DEFAULT_TIMEOUT),
-         'serial'      : '#   serial --unit=0 --speed=9600',
-         'terminal'    : '#   terminal serial',
-         'splashimage' : '#   splashimage ' + DEFAULT_GRUB_SPLASH,
-         'foreground'  : '#   foreground ' + DEFAULT_FORECOLOR,
-         'background'  : '#   background ' + DEFAULT_BACKCOLOR,
-         'minmem64'    : '#',
-         'hiddenmenu'  : '#' }
+             'default': 'default 0',
+             'timeout': 'timeout ' + str(DEFAULT_TIMEOUT),
+              'serial': '#   serial --unit=0 --speed=9600',
+            'terminal': '#   terminal serial',
+         'splashimage': '#   splashimage ' + DEFAULT_GRUB_SPLASH,
+          'foreground': '#   foreground ' + DEFAULT_FORECOLOR,
+          'background': '#   background ' + DEFAULT_BACKCOLOR,
+            'minmem64': '#',
+          'hiddenmenu': '#'}
 
     INSTALLGRUB_NOUPDT = 4       # from src/cmd/boot/common/boot_utils.h
     INSTALLGRUB_NOEINFO = 6      # (ditto)
@@ -136,7 +140,7 @@ r"""# default menu entry to boot
 # To override Solaris boot args (see kernel(1M)), console device and
 # properties set via eeprom(1M) edit the "kernel" line to:
 #
-#   kernel /platform/i86pc/kernel/amd64/unix <boot-args> -B prop1=val1,prop2=val2,...
+#   kernel /platform/i86pc/kernel/amd64/unix <boot-args> -B prop=value,...
 #
 %(hiddenmenu)s
 %(minmem64)s
@@ -148,7 +152,8 @@ r"""# default menu entry to boot
         in"""
 
         if get_current_arch_string() != 'x86':
-            cls._debug('Legacy GRUB boot loader not supported on this platform')
+            cls._debug('Legacy GRUB boot loader not supported on this '
+                       'platform')
             return (None, None)
 
         bootconfig = kwargs.get('bootconfig', None)
@@ -301,6 +306,29 @@ r"""# default menu entry to boot
 
         return menu_lst_dir
 
+    @staticmethod
+    def _derive_bootfs(argdict):
+        # Derive the bootfs for the specified pool and
+        # add it to the argdict:
+        lzfsh = libzfs_init()
+        zph = zpool_open(lzfsh, argdict['rpool'])
+        if zph is None:
+            raise BootmgmtIncompleteBootConfigError(
+                  'Cannot open zpool %s specified in findroot '
+                  'directive!' % argdict['rpool'])
+  
+        pool_default_bootfs = zpool_get_prop(lzfsh, zph,
+                                             ZPOOL_PROP_BOOTFS)
+        zpool_close(zph)
+        libzfs_fini(lzfsh)
+
+        if pool_default_bootfs is not None:
+            argdict['bootfs'] = pool_default_bootfs
+        else:
+            raise BootmgmtIncompleteBootConfigError(
+                     'Could not determine default bootfs for zpool %s '
+                     'specified in findroot directive!' % argdict['rpool'])
+
     def _load_config_disk(self):
 
         menu_lst = (self._menu_lst_dir_disk() +
@@ -322,7 +350,8 @@ r"""# default menu entry to boot
                 # Make sure we have everything first:
                 # XXX - Recognize non-disk boot instances in the menu.lst
                 argdict = {}
-                if entity.find_command('bootfs') is not None:
+                if (entity.find_command('bootfs') is not None or
+                    entity.find_command('findroot') is not None):
                     for cmd in entity.commands():
                         # Skip non-commands
                         if not isinstance(cmd, MenuLstCommand):
@@ -350,6 +379,10 @@ r"""# default menu entry to boot
                                 argdict['signature'] = 'pool_' + pool
                                 argdict['rpool'] = pool
                                 argdict['fstype'] = 'zfs'
+                            else:
+                                raise BootmgmtUnsupportedOperationError(
+                                      'Unknown findroot() directive: %s' %
+                                      argstring)
 
                 elif entity.find_command('chainloader') is not None:
                     for cmd in entity.commands():
@@ -365,14 +398,18 @@ r"""# default menu entry to boot
                         elif cmd.get_command() == 'chainloader':
                             argdict['chainload'] = ' '.join(cmd.get_args())
 
-                elif entity.find_command('findroot') is not None:
-                    # XXX - Look up ZFS bootfs property for the pool
-                    raise BootmgmtUnsupportedOperationError('XXX - Fix Me')
-
                 if argdict.get('chainload', None) is not None:
                     inst = ChainDiskBootInstance(None, **argdict)
                 else:
+                    bootfs_derived = False
+                    if (argdict.get('rpool', None) is not None and
+                        argdict.get('fstype', None) == 'zfs' and
+                        argdict.get('bootfs', None) is None):
+                        self._derive_bootfs(argdict)
+                        bootfs_derived = True
+
                     inst = SolarisDiskBootInstance(None, **argdict)
+                    inst._bootfs_derived = bootfs_derived
 
                 entity.boot_instance = inst
                 inst._menulst_entity = entity
@@ -452,8 +489,8 @@ r"""# default menu entry to boot
 
                 if fstype == 'zfs':
                     item[BootConfig.IDX_DESTNAME] = (
-                        '%(' + DiskBootConfig.TOKEN_ZFS_RPOOL_TOP_DATASET + ')s'
-                        + LegacyGRUBBootLoader.MENU_LST_PATH)
+                        '%(' + DiskBootConfig.TOKEN_ZFS_RPOOL_TOP_DATASET +
+                        ')s' + LegacyGRUBBootLoader.MENU_LST_PATH)
                 elif fstype == 'ufs':
                 # The BootInstance included in the 6-tuple will be the first
                 # SolarisDiskBootInstance in the list held in the associated
@@ -627,10 +664,10 @@ r"""# default menu entry to boot
             self._update_menulst_globals(propdict)
             for entity in self._menufile.entities():
                 # Write the menu.lst's global section first by going through
-                # the entity list, making sure to ignore deleted boot instances:
+                # the entity list, making sure to ignore deleted boot
+                # instances:
                 if not isinstance(entity, MenuLstMenuEntry):
                     outfile.write(str(entity) + '\n')
-
 
         # iterate through the list of boot instances in the BootConfig
         # instance, adding an entry (or updating an existing entry) for 
@@ -772,7 +809,7 @@ r"""# default menu entry to boot
             # raise an exception
             raise BootmgmtMalformedPropertyValueError('kernel', inst.kernel)
 
-        if inst.kernel.find('$ISADIR') is not -1:
+        if '$' in inst.kernel or '$' in kargs:
             kernel_cmd = 'kernel$ ' + inst.kernel
         else:
             kernel_cmd = 'kernel ' + inst.kernel
@@ -788,10 +825,10 @@ r"""# default menu entry to boot
             raise BootmgmtMalformedPropertyValueError('boot_archive',
                                                       inst.boot_archive)
 
-        if inst.boot_archive.find('$ISADIR') is not -1:
+        if '$' in inst.boot_archive or '$' in kernel_cmd:
             module_cmd = 'module$ ' + inst.boot_archive
         else:
-            module_cmd = 'module ' + inst.boot_archive 
+            module_cmd = 'module ' + inst.boot_archive
 
         # If this instance is associated with an existing menu.lst entity,
         # update that entity
@@ -803,8 +840,8 @@ r"""# default menu entry to boot
                     inst._menulst_entity.delete_command(nextcmd)
                 elif len(nextcmd_args) == 2:
                     inst._menulst_entity.update_command(nextcmd_args[0],
-                                                        nextcmd_args[1].strip(),
-                                                        create=True)
+                                                       nextcmd_args[1].strip(),
+                                                       create=True)
             return None
 
         ostr = ''
@@ -842,13 +879,15 @@ r"""# default menu entry to boot
             kargs = inst.kargs
 
         if inst._menulst_entity is not None:
-            bootfs_cmd_args = bootfs_cmd.split(' ', 1)
-            if len(bootfs_cmd_args) == 1:  # This command must be deleted
-                inst._menulst_entity.delete_command(bootfs_cmd_args)
-            else:
-                inst._menulst_entity.update_command(bootfs_cmd_args[0],
+            if getattr(inst, '_bootfs_derived', False) is False:
+                bootfs_cmd_args = bootfs_cmd.split(' ', 1)
+                if len(bootfs_cmd_args) == 1:  # This command must be deleted
+                    inst._menulst_entity.delete_command(bootfs_cmd_args)
+                else:
+                    inst._menulst_entity.update_command(bootfs_cmd_args[0],
                                                     bootfs_cmd_args[1].strip(),
                                                     create=True)
+
             self._generate_entry_generic(inst, kargs)
             return None      
 
@@ -896,7 +935,6 @@ r"""# default menu entry to boot
                                                     cmd_args[1].strip(),
                                                     create=True)
             return None      
-
 
         ostr = rootnoverify_cmd + chainloader_cmd
         return ostr
@@ -967,12 +1005,9 @@ r"""# default menu entry to boot
                       'device ' + devname + ': ' + str(ose))
 
 
-
 #
 # Legacy GRUB menu.lst
 #
-
-
 class LegacyGRUBMenuFile(MenuDotLst):
     def __init__(self, filename='/boot/solaris/menu.lst'):
         super(LegacyGRUBMenuFile, self).__init__(filename)

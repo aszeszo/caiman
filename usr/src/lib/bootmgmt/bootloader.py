@@ -31,6 +31,7 @@ from .bootinfo import SystemFirmware
 from .bootutil import LoggerMixin
 from . import BootmgmtError, BootmgmtNotSupportedError
 from . import BootmgmtUnsupportedPropertyError
+from . import BootmgmtUnsupportedOperationError
 
 
 class BootLoader(LoggerMixin):
@@ -52,7 +53,6 @@ class BootLoader(LoggerMixin):
     PROP_SPLASH = "splashimage"
     PROP_FORECOLOR = "foreground"
     PROP_BACKCOLOR = "background"
-
 
     # When console=serial, this property should be set:
     PROP_SERIAL_PARAMS = 'serial_params'
@@ -108,7 +108,7 @@ class BootLoader(LoggerMixin):
         if (not self.data_source_boot_instance is None and
             not self.data_source_boot_instance.rootpath is None):
             return self.data_source_boot_instance.rootpath
-        return self.rootpath # Initted in __init__; includes the fallback to '/'
+        return self.rootpath # Initted in __init__; incl. the fallback to '/'
 
     def _write_config(self, basepath):
         pass
@@ -120,7 +120,7 @@ class BootLoader(LoggerMixin):
         # Clear out the boot loader properties dictionary, except for the
         # boot targets supported by the boot loader
         boot_targs = self._bl_props[BootLoader.PROP_BOOT_TARGS]
-        self._bl_props = { BootLoader.PROP_BOOT_TARGS: boot_targs }
+        self._bl_props = {BootLoader.PROP_BOOT_TARGS: boot_targs}
 
     def migrate_config(self):
         pass
@@ -171,7 +171,6 @@ class BootLoader(LoggerMixin):
             
         return ('0', '9600', None, None, None)
 
-
     # Property-related methods
     def _prop_validate(self, key, value=None, validate_value=False):
         """Validate the property key and optionally value"""
@@ -213,7 +212,6 @@ class BootLoader(LoggerMixin):
         except KeyError as err:
             raise BootmgmtUnsupportedOperationError("key `%s' does not exist"
                    % key, err)
-
 
     def install(self, location):
         """Install the boot loader onto a disk or set of disks.  location

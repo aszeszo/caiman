@@ -105,20 +105,20 @@ class StatVFS_Result(Structure):
 
         """
 
-        _fields_ = [	("f_bsize", c_ulong),
-                        ("f_frsize", c_ulong),
-                        ("f_blocks", c_ulonglong),
-                        ("f_bfree", c_ulonglong),
-                        ("f_bavail", c_ulonglong),
-                        ("f_files", c_ulonglong),
-                        ("f_ffree", c_ulonglong),
-                        ("f_favail", c_ulonglong),
-                        ("f_fsid", c_ulong),
-                        ("f_basetype", c_char * FSTYPSZ),
-                        ("f_flag", c_ulong),
-                        ("f_namemax", c_ulong),
-                        ("f_fstr", c_char * 32),
-                        ("f_filler", c_int * 16)	]
+        _fields_ = [("f_bsize", c_ulong),
+                    ("f_frsize", c_ulong),
+                    ("f_blocks", c_ulonglong),
+                    ("f_bfree", c_ulonglong),
+                    ("f_bavail", c_ulonglong),
+                    ("f_files", c_ulonglong),
+                    ("f_ffree", c_ulonglong),
+                    ("f_favail", c_ulonglong),
+                    ("f_fsid", c_ulong),
+                    ("f_basetype", c_char * FSTYPSZ),
+                    ("f_flag", c_ulong),
+                    ("f_namemax", c_ulong),
+                    ("f_fstr", c_char * 32),
+                    ("f_filler", c_int * 16)]
 
 
 def statvfs(path):
@@ -192,9 +192,9 @@ def getmntent():
         """
         mntent = SolarisMntTab()
         r = _libc.getmntent(_mnttab_FILE, byref(mntent))
-        if r < 0:		# EOF
+        if r < 0:                # EOF
                 return None
-        elif r > 0:		# Error
+        elif r > 0:                # Error
                 raise IOError(r, mnttab_err_decode(r))
 
         return ctype2dict(mntent)
@@ -209,7 +209,7 @@ def getmntany(**attrs):
         for x in attrs.keys():
                 mntent.__setattr__(x, attrs[x])
         r = _libc.getmntany(_mnttab_FILE, byref(mntmatch), byref(mntent))
-        if r < 0:		# EOF
+        if r < 0:                # EOF
                 return None
         elif r > 0:
                 raise IOError(r, mnttab_err_decode(r))
@@ -231,7 +231,7 @@ def getextmntent():
         """
         extmnt = SolarisExtMntTab()
         r = _libc.getextmntent(_mnttab_FILE, byref(extmnt), sizeof(extmnt))
-        if r < 0:		# EOF
+        if r < 0:                # EOF
                 return None
         elif r > 0:
                 raise IOError(r, mnttab_err_decode(r))
@@ -341,8 +341,8 @@ _libdi.devfs_bootdev_free_list.argtypes = [pp_struct_boot_dev]
 _libdi.devfs_bootdev_free_list.restype = None
 
 
-S_IFBLK = 0x6000					# from <sys/stat.h>
-DDI_NT_BLOCK = "ddi_block"				# from <sys/sunddi.h>
+S_IFBLK = 0x6000                                        # from <sys/stat.h>
+DDI_NT_BLOCK = "ddi_block"                                # from <sys/sunddi.h>
 
 # from <sys/devinfo_impl.h>:
 DIIOC = (0xdf << 8)
@@ -528,7 +528,7 @@ def fstyp_init(fd, offset=0, module_dir=None):
 def fstyp_ident(handle, name=None):
         result = c_char_p(0)
         r = _libfstyp.fstyp_ident(handle, name, byref(result))
-        if r == 1:		# No Match Found
+        if r == 1:                # No Match Found
                 return None
         elif r != 0:
                 raise IOError(r, _libfstyp.fstyp_strerror(handle, r))
@@ -550,6 +550,8 @@ _libc.sysinfo.argtypes = [c_int, c_char_p, c_long]
 _libc.sysinfo.restype = c_int
 
 _isalist_cache = None
+
+
 def isalist():
         "Returns a list of ISAs supported on the currently-running system"
 
@@ -566,7 +568,10 @@ def isalist():
         _isalist_cache = b.value.split()
         return _isalist_cache
 
+
 _platform_name_cache = None
+
+
 def platform_name():
         global _platform_name_cache
 
@@ -581,7 +586,10 @@ def platform_name():
         _platform_name_cache = b.value
         return b.value
 
+
 _machine_name_cache = None
+
+
 def machine_name():
         global _machine_name_cache
 
@@ -684,7 +692,8 @@ _libzfs.zpool_close.argtypes = [c_void_p]
 
 _libzfs.zpool_get_physpath.argtypes = [c_void_p, c_char_p, c_int]
 
-_libzfs.zpool_get_prop.argtypes = [c_void_p, c_int, c_char_p, c_int, POINTER(c_int)]
+_libzfs.zpool_get_prop.argtypes = [c_void_p, c_int, c_char_p, c_int,
+                                   POINTER(c_int)]
 
 _libzfs.zpool_set_prop.argtypes = [c_void_p, c_char_p, c_char_p]
 
@@ -726,72 +735,85 @@ ZPOOL_PROP_ALLOCATED,
 ZPOOL_PROP_READONLY) = range(19)
 
 
-
 def libzfs_init():
         hdl = _libzfs.libzfs_init()
         if hdl is None:
                 raise IOError(0, _msgs[LIBZFS_INIT_FAILURE])
         return c_void_p(hdl)
 
+
 def libzfs_error_description(lzfsh):
-	return _libzfs.libzfs_error_description(lzfsh)
+        return _libzfs.libzfs_error_description(lzfsh)
+
 
 def zfs_open(lzfsh, zfsname, type=ZFS_TYPE_FILESYSTEM):
-	hdl = _libzfs.zfs_open(lzfsh, zfsname, type)
-	if hdl is None:
-		raise IOError(0, libzfs_error_description(lzfsh))
-	return c_void_p(hdl)
+        hdl = _libzfs.zfs_open(lzfsh, zfsname, type)
+        if hdl is None:
+                raise IOError(0, libzfs_error_description(lzfsh))
+        return c_void_p(hdl)
+
 
 def zfs_close(zfsh):
-	_libzfs.zfs_close(zfsh)
+        _libzfs.zfs_close(zfsh)
+
 
 def zfs_get_type(zfsh):
-	return _libzfs.zfs_get_type(zfsh)
+        return _libzfs.zfs_get_type(zfsh)
+
 
 def zfs_get_name(zfsh):
-	return _libzfs.zfs_get_name(zfsh)
+        return _libzfs.zfs_get_name(zfsh)
+
 
 def zfs_name_valid(beName, type):
         ret = _libzfs.zfs_name_valid(beName, type)
         return False if ret is 0 else True
 
+
 def zpool_open(lzfsh, poolname):
-	hdl = _libzfs.zpool_open(lzfsh, poolname)
-	if hdl is None:
-		raise IOError(0, libzfs_error_description(lzfsh))
-	return c_void_p(hdl)
+        hdl = _libzfs.zpool_open(lzfsh, poolname)
+        if hdl is None:
+                raise IOError(0, libzfs_error_description(lzfsh))
+        return c_void_p(hdl)
+
 
 def zpool_close(zph):
-	_libzfs.zpool_close(zph)
+        _libzfs.zpool_close(zph)
+
 
 def zpool_get_physpath(lzfsh, zph):
-	buf = create_string_buffer(MAX_PATH)
-	ret = _libzfs.zpool_get_physpath(zph, buf, MAX_PATH)
-	if not ret is 0:
-		raise IOError(0, libzfs_error_description(lzfsh))
-	return buf.value.split()
+        buf = create_string_buffer(MAX_PATH)
+        ret = _libzfs.zpool_get_physpath(zph, buf, MAX_PATH)
+        if not ret is 0:
+                raise IOError(0, libzfs_error_description(lzfsh))
+        return buf.value.split()
+
 
 def zpool_get_prop(lzfsh, zph, propid, get_source=False):
-	buf = create_string_buffer(LIBZFS_PROPLEN_MAX)
-	if get_source is True:
-		src = c_int()
-		srcp = pointer(src)
-	else:
-		srcp = None
+        buf = create_string_buffer(LIBZFS_PROPLEN_MAX)
+        if get_source is True:
+                src = c_int()
+                srcp = pointer(src)
+        else:
+                srcp = None
 
-	ret = _libzfs.zpool_get_prop(zph, propid, buf, LIBZFS_PROPLEN_MAX, srcp)
-	if not ret is 0:
-		raise IOError(0, libzfs_error_description(lzfsh))
-	if get_source is True:
-		return [buf.value, src.value]
-	else:
-		return buf.value
+        ret = _libzfs.zpool_get_prop(zph, propid, buf, LIBZFS_PROPLEN_MAX,
+                                     srcp)
+        if not ret is 0:
+                raise IOError(0, libzfs_error_description(lzfsh))
+        if get_source is True:
+                return [buf.value, src.value]
+        else:
+                return buf.value
+
 
 def zpool_set_prop(zph, propname, propval):
-	return _libzfs.zpool_set_prop(zph, propname, propval)
+        return _libzfs.zpool_set_prop(zph, propname, propval)
+
 
 def libzfs_fini(handle):
         _libzfs.libzfs_fini(handle)
+
 
 __all__ = ["statvfs",
            "mnttab_open",
@@ -824,8 +846,8 @@ __all__ = ["statvfs",
            "fstyp_ident",
            "fstyp_fini",
            "isalist",
-	   "platform_name",
-	   "machine_name",
+           "platform_name",
+           "machine_name",
            "ZFS_TYPE_FILESYSTEM",
            "ZFS_TYPE_POOL",
            "ZPOOL_PROP_BOOTFS",
@@ -840,4 +862,4 @@ __all__ = ["statvfs",
            "zfs_name_valid",
            "zpool_get_physpath",
            "zpool_get_prop",
-	   "zpool_set_prop" ]
+           "zpool_set_prop"]

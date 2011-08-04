@@ -26,10 +26,11 @@
 x86 Solaris Boot variables backend support for pybootmgmt
 """
 
-import tempfile
-import sys
 import logging
+import os
+import tempfile
 import shutil
+import sys
 from .... import bootinfo
 from .... import BootmgmtMalformedPropertyNameError, BootmgmtArgumentError
 from .... import BootmgmtReadError, BootmgmtWriteError

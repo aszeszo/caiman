@@ -26,11 +26,11 @@
 x86 BIOS firmware backend for pybootmgmt
 """
 
-from ... import bootinfo
-from ... import BootmgmtUnsupportedOperationError, BootmgmtWriteError
+from ...bootinfo import SystemFirmware
+from bootmgmt import BootmgmtUnsupportedOperationError, BootmgmtWriteError
 
 
-class BIOSFirmware(bootinfo.SystemFirmware):
+class BIOSFirmware(SystemFirmware):
     def getprop(self, propname):
         return super(BIOSFirmware, self).getprop(propname)        
 

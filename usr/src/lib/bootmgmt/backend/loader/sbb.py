@@ -31,8 +31,10 @@ import os
 import pwd
 import shutil
 import tempfile
-from ... import BootmgmtError, BootmgmtUnsupportedPlatformError
-from ... import BootmgmtConfigWriteError
+from ... import (BootmgmtError, BootmgmtUnsupportedPlatformError,
+                 BootmgmtConfigWriteError, BootmgmtNotSupportedError,
+                 BootmgmtUnsupportedOperationError, BootmgmtConfigReadError,
+                 BootmgmtInterfaceCodingError)
 from ...bootloader import BootLoader, BootLoaderInstallError
 from ...bootconfig import BootConfig, DiskBootConfig, SolarisDiskBootInstance
 from ...bootutil import get_current_arch_string
@@ -40,6 +42,7 @@ from .menulst import MenuDotLst, MenuLstError, MenuLstMenuEntry, MenuLstCommand
 from .menulst import MenuLstBootLoaderMixIn
 from ...pysol import platform_name, machine_name
 from solaris_install import Popen, CalledProcessError
+
 
 class OBPBootLoader(BootLoader):
     @staticmethod
@@ -105,9 +108,9 @@ class ZFSBootLoader(OBPBootLoader, MenuLstBootLoaderMixIn):
 
     @classmethod
     def _probe_disk(cls, **kwargs):
-        """This ZFS boot block probe function searches the ZFS top-level dataset
-        for a menu.lst file.  If that's not present, we search the system root
-        for the ZFS boot block file,
+        """This ZFS boot block probe function searches the ZFS top-level
+        dataset for a menu.lst file.  If that's not present, we search the
+        system root for the ZFS boot block file,
         usr/platform/{platform-name}/lib/fs/zfs/bootblk
         """
  
@@ -130,7 +133,7 @@ class ZFSBootLoader(OBPBootLoader, MenuLstBootLoaderMixIn):
 
         bootblk = dataroot
         bootblk += (ZFSBootLoader.BOOTBLK_PATH %
-                    {'platformname' : platform_name()})
+                    {'platformname': platform_name()})
         cls._debug('Trying to find ' + bootblk)
         try:
             open(bootblk).close()
@@ -155,7 +158,8 @@ class ZFSBootLoader(OBPBootLoader, MenuLstBootLoaderMixIn):
 
     def new_config(self):
         """The configuration for the ZFS boot block consists solely of the
-        menu.lst file.  The default new configuration is an empty menu.lst file.
+        menu.lst file.  The default new configuration is an empty menu.lst
+        file.
         """
 
         super(ZFSBootLoader, self).new_config()
@@ -166,14 +170,14 @@ class ZFSBootLoader(OBPBootLoader, MenuLstBootLoaderMixIn):
             self._load_config_disk()
             self.dirty = False  # We just loaded a clean config from disk!
         else:
-            raise BootmgmtUnsupportedOperationError('Unsupported boot class: ' +
-                  self._boot_config.boot_class)
+            raise BootmgmtUnsupportedOperationError('Unsupported boot class: '
+                  + self._boot_config.boot_class)
 
     def _write_config(self, basepath):
-        """There are two files that need to be written: the menu.lst file, using
-        information from the BootConfig instance to which we have a reference,
-        and the bootlst program (which will be copied from the data source
-        boot instance's mounted filesystem.)
+        """There are two files that need to be written: the menu.lst file,
+        using information from the BootConfig instance to which we have a
+        reference, and the bootlst program (which will be copied from the
+        data source boot instance's mounted filesystem.)
         """
 
         if self._boot_config is None:
@@ -181,11 +185,11 @@ class ZFSBootLoader(OBPBootLoader, MenuLstBootLoaderMixIn):
             self._debug(msg)
             raise BootmgmtInterfaceCodingError(msg)
         elif self._boot_config.boot_class != BootConfig.BOOT_CLASS_DISK:
-            msg = 'ZFS boot block boot loader does not support non-disk configs'
+            msg = ('ZFS boot block boot loader does not support non-disk '
+                  'configs')
             raise BootmgmtUnsupportedOperationError(msg)
 
         return self._write_config_disk(basepath)
-
 
     def _zfs_boot_data_rootdir_disk(self):
         if self._boot_config.boot_fstype != 'zfs':
@@ -242,7 +246,7 @@ class ZFSBootLoader(OBPBootLoader, MenuLstBootLoaderMixIn):
         if self._boot_config.boot_fstype != 'zfs':
             raise BootmgmtUnsupportedOperationError('Filesystem type %s '
                                 'not supported by the SPARC ZFS boot block'
-                                % fstype)
+                                % self._boot_config.boot_fstype)
 
         dataroot_dir = self._zfs_boot_data_rootdir_disk()
 
@@ -282,7 +286,7 @@ class ZFSBootLoader(OBPBootLoader, MenuLstBootLoaderMixIn):
         instance to either the basepath or the boot_data_root_dir and
         return a tuple describing it."""
 
-        bootlst = ZFSBootLoader.BOOTLST_PATH % { 'mach' : machine_name() }
+        bootlst = ZFSBootLoader.BOOTLST_PATH % {'mach': machine_name()}
 
         source = os.path.join(self._get_boot_loader_data_root(), bootlst)
 
@@ -332,7 +336,6 @@ class ZFSBootLoader(OBPBootLoader, MenuLstBootLoaderMixIn):
                     ZFSBootLoader.BOOTLST_GROUP,
                     ZFSBootLoader.BOOTLST_PERMS)]
 
-
     def _write_menu_lst(self, outfile):
         """Invoked by the MenuLstBootLoaderMixIn.
         The SPARC menu.lst is very, very simple.  We don't need to
@@ -375,7 +378,7 @@ class ZFSBootLoader(OBPBootLoader, MenuLstBootLoaderMixIn):
             args += ['-u', self.version]
 
         args += [data_root + (ZFSBootLoader.BOOTBLK_PATH %
-                              {'platformname' : platform_name() }),
+                              {'platformname': platform_name()}),
                  devname]
 
         self._debug('_write_loader: Invoking command: ' + ' '.join(args))
@@ -415,7 +418,6 @@ class SPARCMenuFile(MenuDotLst):
         ZfsSpec      := see zfs(1M)
         """
         # XXX - Currently a NOP
-
 
 
 def bootloader_classes():
