@@ -34,6 +34,8 @@ import os
 import platform
 import tempfile
 
+from multiprocessing import Manager
+
 from lxml import etree
 
 from solaris_install import Popen, run
@@ -1199,7 +1201,7 @@ class Disk(DataObject):
             backup.p_size = self.geometry.ncyl * nsecs
 
         slices[2] = backup
-
+        
         if self.kernel_arch == "x86":
             # Create slice 8 (BOOT) - allocates 1st cylinder
             boot = cstruct.extpartition()
@@ -1256,18 +1258,61 @@ class Disk(DataObject):
 
             os.close(fh)
 
+    def force_vtoc(self):
+        """ force_vtoc() - method to force a VTOC label onto a disk
+        """
+        cmd = [FORMAT, "-L", "vtoc", "-d", self.ctd]
+        run(cmd)
+
+    def force_efi(self):
+        """ force_efi() - method to force an EFI/GPT label onto a disk
+        """
+        cmd = [FORMAT, "-L", "efi", "-d", self.ctd]
+        run(cmd)
+
+    def _set_vtoc_label_and_geometry(self, dry_run):
+        """ _set_vtoc_label_and_geometry() - method to force a VTOC label and
+        to set all of the disk geometery including dev_size
+        """
+        if not dry_run:
+            # Create a new Manager object as a shared memory tool for the child
+            # process to use
+            manager = Manager()
+            new_dma = manager.list()
+            pid = os.fork()
+            if pid == 0:
+                # child process
+                self.force_vtoc()
+                dmd = diskmgt.descriptor_from_key(ldm_const.DRIVE, self.devid)
+                drive = diskmgt.DMDrive(dmd.value)
+                dma = drive.media.attributes
+                new_dma.extend([dma.ncylinders, dma.nheads, dma.nsectors,
+                                dma.blocksize])
+                os._exit(0)
+            else:
+                # parent process.  Wait for the child to exit
+                _none, status = os.wait()
+
+            # pull the data from the child process out of the Manager and set
+            # attributes.
+            ncyl, nhead, nsect, blocksize = new_dma
+            new_geometry = DiskGeometry(blocksize, nhead * nsect)
+            new_geometry.ncyl = ncyl
+            new_geometry.nheads = nhead
+            new_geometry.nsectors = nsect
+            self.geometry = new_geometry
+            self.disk_prop.dev_size = Size(str(ncyl * nhead * nsect) +
+                                           Size.sector_units)
+
+            # update the label
+            self.label = "VTOC"
+
     def _label_disk(self, dry_run):
         """ _label_disk() - method to label the disk.
 
         XXX:  GPT labels are not completely handled.  Need to revisit for later
         GPT work.
         """
-        # check for a GPT label
-        if self.label == "GPT":
-            self.logger.debug("Unable to label an existing GPT labeled disk " +
-                              "(%s) with a VTOC label." % self.ctd)
-            return
-
         cmd = [FORMAT, "-d", self.ctd]
         if not dry_run:
             self.logger.debug("Executing: %s" % " ".join(cmd))

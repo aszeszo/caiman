@@ -209,6 +209,9 @@ class TestTargetController(unittest.TestCase):
 
     def test_clears_existing_partitions(self):
         '''Validate that existing partitions are removed with wipe_disk set.'''
+        if platform.processor() != "i386":
+            raise SkipTest("test not supported on sparc")
+
         discovered_disks = self._get_discovered_disks()
         tc = TargetController(self.doc)
         selected_disks = tc.select_disk(discovered_disks[3])
@@ -226,6 +229,9 @@ class TestTargetController(unittest.TestCase):
 
     def test_reset_layout(self):
         '''Validate that existing partitions are restored with reset_layout.'''
+        if platform.processor() != "i386":
+            raise SkipTest("test not supported on sparc")
+
         discovered_disks = self._get_discovered_disks()
         tc = TargetController(self.doc, debug=True)
         selected_disks = tc.select_disk(discovered_disks[3])

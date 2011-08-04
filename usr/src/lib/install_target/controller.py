@@ -192,7 +192,7 @@ class TargetController(object):
     #--------------------------------------------------------------------------
     # Public methods
 
-    def __init__(self, doc, debug=False):
+    def __init__(self, doc, debug=False, dry_run=False):
         ''' Initializer method.  Called by the constructor.
 
             Parameters:
@@ -201,6 +201,8 @@ class TargetController(object):
                 where TC will create the "desired targets" area.
             debug=False.  If True, XML is generated for the backup
                 area and will get written to logs.
+            dry_run=False.  If True, certain actions will be prevented
+                from running so the disks are not modified
 
             Returns: Nothing
 
@@ -212,6 +214,7 @@ class TargetController(object):
 
         self._doc = doc
         self._debug = debug
+        self._dry_run = dry_run
         self._discovered_root = None
         self._discovered_disks = None
         self._desired_root = None
@@ -534,6 +537,10 @@ class TargetController(object):
 
         if use_whole_disk:
             return
+
+        # force a VTOC label and update the disk's geometry and dev_size
+        if disk.label == "VTOC":
+            disk._set_vtoc_label_and_geometry(self._dry_run)
 
         if wipe_disk:
             for obj in [Partition, Slice]:

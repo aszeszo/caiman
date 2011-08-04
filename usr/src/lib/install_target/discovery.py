@@ -30,7 +30,7 @@ information.
 """
 
 import logging
-import os.path
+import os
 import platform
 import re
 
@@ -74,18 +74,14 @@ ZPOOL_SEARCH_NAME = "zpool"
 DISK_RE = "c\d+(?:t\d+)?d\d+"
 
 
-class DiskLabelMissingError(Exception):
-    """ Disk is unusable for install due to missing label
-    """
-    pass
-
-
 class TargetDiscovery(Checkpoint):
     """ Discover all logical and physical devices on the system.
     """
 
     def __init__(self, name, search_name=None, search_type=None):
         super(TargetDiscovery, self).__init__(name)
+
+        self.dry_run = False
 
         self.eng = InstallEngine.get_instance()
         self.doc = self.eng.data_object_cache
@@ -206,6 +202,13 @@ class TargetDiscovery(Checkpoint):
             # looking them up
             drive_media_attributes = drive_media.attributes
 
+            # if a drive comes back without basic information, skip discovery
+            # entirely
+            if not DMMediaAttr.NACCESSIBLE in drive_media_attributes or \
+               not DMMediaAttr.BLOCKSIZE in drive_media_attributes:
+                self.logger.debug("skipping discovery of %s" % new_disk.ctd)
+                return None
+
             # retrieve the drive's geometry
             new_disk = self.set_geometry(drive_media_attributes, new_disk)
 
@@ -275,14 +278,6 @@ class TargetDiscovery(Checkpoint):
         new_disk - Disk DOC object
         """
         new_geometry = None
-
-        # If a disk is missing some basic attributes then it most likely has
-        # no disk label.  This requires manual resolution to fix so raise
-        # an error.
-        if not DMMediaAttr.NACCESSIBLE in dma or \
-           not DMMediaAttr.BLOCKSIZE in dma:
-            raise DiskLabelMissingError("Disk %s appears to be missing a "
-                "label and needs to be labelled manually." % new_disk.ctd)
 
         # If the disk has a GPT label (or no label), ncylinders will be
         # None
@@ -637,11 +632,83 @@ class TargetDiscovery(Checkpoint):
             if add_physical:
                 self.root.insert_children(new_disk)
 
+    def sparc_label_check(self):
+        """ sparc_label_check - method to check for any unlabeled disks within
+        the system.  The AI manifest is checked to ensure discovery.py does not
+        try to apply a VTOC label to a disk specified with slices marked with
+        the 'preserve' action.
+        """
+        # extract all of the disk objects from the AI manifest
+        ai_disk_list = self.doc.volatile.get_descendants(class_type=Disk)
+
+        # create a new list of disk CTD values where the user has specified a
+        # 'preserve' action for a slice.
+        preserve_disks = list()
+        for ai_disk in ai_disk_list:
+            slice_list = ai_disk.get_descendants(class_type=Slice)
+            for slc in slice_list:
+                if slc.action == "preserve":
+                    preserve_disks.append(ai_disk.ctd)
+
+        # Since libdiskmgt has no mechanism to update it's internal view of the
+        # disk layout once its scanned /dev,  fork a process and allow
+        # libdiskmgt to instantiate the drives first.  Then in the context of
+        # the main process, when libdiskmgt gathers drive information, the
+        # drive list will be up to date.
+        pid = os.fork()
+        if pid == 0:
+            for drive in diskmgt.descriptors_by_type(const.DRIVE):
+                if drive.media is None:
+                    continue
+
+                disk = Disk("disk")
+                disk.ctd = drive.aliases[0].name
+                dma = drive.media.attributes
+
+                # If a disk is missing some basic attributes then it most
+                # likely has no disk label.  Force a VTOC label onto the disk
+                # so its geometry can be correctly determined.  This should
+                # only happen for unlabeled SPARC disks, so we're safe to apply
+                # a VTOC label without fear of trashing fdisk partitions
+                # containing other OSes.
+                if (not DMMediaAttr.NACCESSIBLE in dma or \
+                   not DMMediaAttr.BLOCKSIZE in dma) and \
+                   not dma.removable:
+
+                    # only label the disk if it does not have any preserved
+                    # slices.
+                    if disk.ctd not in preserve_disks:
+                        if not self.dry_run:
+                            self.logger.info("%s is unlabeled.  Forcing a "
+                                             "VTOC label" % disk.ctd)
+                            disk.force_vtoc()
+                        else:
+                            self.logger.info("%s is unlabeled.  Not forcing "
+                                             "a VTOC label due to dry_run "
+                                             "flag" % disk.ctd)
+                    else:
+                        self.logger.info("%s is unlabeled but manifest "
+                            "specifies 'preserved' slices.  Not forcing a "
+                            "VTOC label onto the disk." % disk.ctd)
+            os._exit(0)
+        else:
+            _none, status = os.wait()
+            if status != 0:
+                raise RuntimeError("Unable to fork a process to reset drive "
+                                   "geometry")
+
     def setup_iscsi(self):
         """ set up the iSCSI initiator appropriately (if specified)
         such that any physical/logical iSCSI devices can be discovered.
         """
         SVC = "svc:/network/iscsi/initiator:default"
+
+        # pull out all of the iscsi entries from the DOC
+        iscsi_list = self.doc.get_descendants(class_type=Iscsi)
+
+        # if there's nothing to do, simply return
+        if not iscsi_list:
+            return
 
         # verify iscsiadm is available
         if not os.path.exists(ISCSIADM):
@@ -672,7 +739,7 @@ class TargetDiscovery(Checkpoint):
             # the service is in some other kind of state, so raise an error
             raise RuntimeError("%s requires manual servicing" % SVC)
 
-        for iscsi in self.doc.get_descendants(class_type=Iscsi):
+        for iscsi in iscsi_list:
             # check iscsi.source for dhcp.  If set, query dhcpinfo for the
             # iSCSI boot parameters and set the rest of the Iscsi object
             # attributes
@@ -800,12 +867,18 @@ class TargetDiscovery(Checkpoint):
     def execute(self, dry_run=False):
         """ primary execution checkpoint for Target Discovery
         """
+        self.dry_run = dry_run
+
         # setup croinfo mappings
         self.setup_croinfo()
 
         # setup iSCSI so that all iSCSI physical and logical devices can be
         # discovered
         self.setup_iscsi()
+
+        # for sparc, check each disk to make sure there's a label
+        if self.arch == "sparc":
+            self.sparc_label_check()
 
         # check to see if the user specified a search_type
         if self.search_type == DISK_SEARCH_NAME:

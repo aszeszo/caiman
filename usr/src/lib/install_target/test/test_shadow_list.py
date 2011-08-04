@@ -1132,7 +1132,11 @@ class TestSliceInDisk(unittest.TestCase):
 
         # verify the size of the slice, rounding for cylinder size and
         # maximum size limits
-        self.assertEqual(((disksize / CYLSIZE) - 4) * CYLSIZE, s.size.sectors)
+        if platform.processor() == "i386":
+            self.assertEqual(((disksize / CYLSIZE) - 4) * CYLSIZE,
+                             s.size.sectors)
+        else:
+            self.assertEqual(((disksize / CYLSIZE)) * CYLSIZE, s.size.sectors)
 
     def test_no_validate_children(self):
         self.disk.validate_children = False

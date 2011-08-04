@@ -83,7 +83,7 @@ class TargetSelection(Checkpoint):
         self.dry_run = False
 
         # Initialize TargetController
-        self.controller = TargetController(self.doc)
+        self.controller = TargetController(self.doc, dry_run=self.dry_run)
 
         # Cache of Discovered Tree, Disks  in the DOC, will be filled in later
         self._discovered = None
@@ -1666,7 +1666,6 @@ class TargetSelection(Checkpoint):
                Not whole-disk, has kids, not identifiable - good, process kids
 
                Two disks with same name, fail
-               If root pool disk, ensure label is VTOC not GPT
 
                Disk has children, either partitions or slices must be VTOC
 
@@ -2628,9 +2627,7 @@ class TargetSelection(Checkpoint):
                 disk_copy.in_vdev = disk.in_vdev
             else:
                 disk_copy.whole_disk = False
-                # When bug : 7037884 we can then add this back and support
-                # The Changing of a GPT disk to VTOC automatically
-                # disk_copy.label = "VTOC"
+                disk_copy.label = "VTOC"
                 self.logger.debug("Disk in root pool")
 
                 # Layout disk using partitions since root pools can't use
@@ -2683,9 +2680,8 @@ class TargetSelection(Checkpoint):
             # Disk with children either x86 or sparc must at the moment
             # have a VTOC label, GPT is only supported on whole disk
             # scenario with no children. Set label to be VTOC
-            # When bug : 7037884 we can then add this back and support
-            # The Changing of a GPT disk to VTOC automatically
-            #disk_copy.label = "VTOC"
+            if disk_copy.label != "VTOC":
+                disk_copy._set_vtoc_label_and_geometry(self.dry_run)
 
             if partitions:  # On X86
                 # Process partitions, checking for use_existing_solaris2
@@ -3003,11 +2999,9 @@ class TargetSelection(Checkpoint):
                 selected_disks = self.controller.select_disk(discovered_disks,
                     use_whole_disk=True)
 
-                # When bug : 7037884 we can then add this back and support
-                # The Changing of a GPT disk to VTOC automatically
-                #for disk in selected_disks:
-                #    # Ensure we're using VTOC labelling until GPT integrated
-                #    disk.label = "VTOC"
+                for disk in selected_disks:
+                    # Ensure we're using VTOC labelling until GPT integrated
+                    disk.label = "VTOC"
 
                 # Target Controller will insert default root pool need to
                 # Set this for validation of name later on
@@ -3066,15 +3060,13 @@ class TargetSelection(Checkpoint):
             # auto-select, and add disk.
             if not disks and self._root_pool is not None and \
                 self._root_pool.action not in self.PRESERVED:
-                disk = self.controller.select_initial_disk()
+                disk_copy = copy.copy(self.controller.select_initial_disk())
 
-                if disk is not None:
+                if disk_copy is not None:
                     self.logger.info("Selected Disk(s) : %s" % \
-                        (self.__pretty_print_disk(disk)))
-                    # When bug : 7037884 we can then add this back and support
-                    # The Changing of a GPT disk to VTOC automatically
-                    ## Ensure were using a VTOC label
-                    #disk.label = "VTOC"
+                        (self.__pretty_print_disk(disk_copy)))
+                    # Ensure we're using a VTOC label
+                    disk_copy.label = "VTOC"
                     pool_vdevs = self.__get_vdevs_in_zpool(
                         self._root_pool.name)
                     root_vdev_name = None
@@ -3089,14 +3081,15 @@ class TargetSelection(Checkpoint):
                         root_vdev_name = pool_vdevs[0].name
 
                     # Ensure using whole-disk in a way suitable for root pool
-                    self.controller.apply_default_layout(disk, False, True,
-                        in_zpool=self._root_pool.name, in_vdev=root_vdev_name)
+                    self.controller.apply_default_layout(disk_copy, False,
+                        True, in_zpool=self._root_pool.name,
+                        in_vdev=root_vdev_name)
 
                     if new_desired_target is None:
                         new_desired_target = self.__get_new_desired_target()
-                    new_desired_target.insert_children(disk)
+                    new_desired_target.insert_children(disk_copy)
 
-                    self._disk_map[disk.ctd] = disk
+                    self._disk_map[disk_copy.ctd] = disk_copy
 
             for disk in disks:
                 if self._is_generated_root_pool:
@@ -3172,6 +3165,7 @@ class TargetSelection(Checkpoint):
             raise SelectionError("No installation targets found.")
 
         self.dry_run = dry_run
+        self.controller._dry_run = self.dry_run
 
         # Store list of discovered disks
         self._discovered_disks = discovered.get_children(class_type=Disk)
@@ -3203,7 +3197,8 @@ class TargetSelection(Checkpoint):
         selected_disks = None
         new_target = None
         if from_manifest is None or not targets_have_children:
-            # Default to TargetController's automatic mechanism
+            # Default to TargetController's automatic mechanism.
+            # Initial disks returned here have been added to the desired tree.
             initial_disks = self.controller.initialize(
                 unique_zpool_name=not self.dry_run)
 
@@ -3211,20 +3206,23 @@ class TargetSelection(Checkpoint):
             # it cannot find a slice large enough to install to, however
             # we are using whole disk, so just find first one large enough
             if not initial_disks:
-                initial_disks = self.controller.select_initial_disk()
+                # select_initial_disk returns a direct reference to the
+                # discovered tree, make a copy of the returned object to
+                # ensure we don't change the discovered disk object
+                initial_disks = copy.copy(
+                    self.controller.select_initial_disk())
 
             self.logger.info("Selected Disk(s) : %s" % \
                 (self.__pretty_print_disk(initial_disks)))
 
+            # Add selected disks to the desired tree, using controller.
             # Ensure whole-disk is selected for each disk.
             selected_disks = self.controller.select_disk(initial_disks,
                 use_whole_disk=True)
 
-            # When bug : 7037884 we can then add this back and support
-            # The Changing of a GPT disk to VTOC automatically
-            #for disk in desired_disks:
-            #    # Ensure we're using VTOC labelling until GPT integrated
-            #    disk.label = "VTOC"
+            for disk in selected_disks:
+                # Ensure we're using VTOC labelling until GPT integrated
+                disk.label = "VTOC"
 
             # Target Controller will insert default root pool need to
             # Set this for validation of name later on

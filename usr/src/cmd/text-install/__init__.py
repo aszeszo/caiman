@@ -386,7 +386,8 @@ def main():
             debug_tc = False
             if options.debug:
                 debug_tc = True
-            target_controller = TargetController(doc, debug=debug_tc)
+            target_controller = TargetController(doc, debug=debug_tc,
+                                                 dry_run=options.no_install)
 
             win_list = make_screen_list(main_win, target_controller,
                                         install_data)
