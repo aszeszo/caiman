@@ -285,7 +285,7 @@ create_image()
 	fi
 
 	current_dir=$(pwd)
-	print "Setting up the target image at ${target} ..."
+	print "Setting up the image ..."
 	cd ${src_dir}
 	$FIND . -depth -print | $CPIO -pdmu ${target} >/dev/null 2>&1
 	copy_ret=$?

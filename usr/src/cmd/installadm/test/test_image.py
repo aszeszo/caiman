@@ -34,11 +34,25 @@ import os
 import shutil
 import tempfile
 import osol_install.auto_install.image as image
+import osol_install.auto_install.installadm_common as com
 from osol_install.auto_install.image import InstalladmImage, ImageError
 
 
 class TestInstalladmImage(unittest.TestCase):
     '''Tests for InstalladmImage''' 
+
+    @classmethod
+    def setUpClass(cls):
+        '''Class-level set up'''
+        cls.webserver_docroot = com.WEBSERVER_DOCROOT 
+        com.WEBSERVER_DOCROOT = tempfile.mkdtemp(dir="/tmp")
+
+    @classmethod
+    def tearDownClass(cls):
+        '''Class-level teardown'''
+        if os.path.exists(com.WEBSERVER_DOCROOT):
+            shutil.rmtree(com.WEBSERVER_DOCROOT)
+        com.WEBSERVER_DOCROOT = cls.webserver_docroot
 
     def setUp(self):
         '''unit test set up'''
@@ -156,6 +170,7 @@ class TestIsIso(unittest.TestCase):
         with open(tmpfile, 'w') as myfile:
             myfile.write('this is myfile text.')
         self.assertFalse(image.is_iso(tmpfile))
+        os.remove(tmpfile)
 
 
 if __name__ == '__main__':

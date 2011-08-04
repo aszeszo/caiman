@@ -28,6 +28,7 @@
 boot archive construction begins.
 """
 import os
+import platform
 import re
 import shutil
 import tempfile
@@ -317,7 +318,9 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
     """ class to prepare the package image area for AI distributions
     """
 
-    DEFAULT_ARG = {"root_password": "solaris", "is_plaintext": "true"}
+    DEFAULT_ARG = {"root_password": "solaris", "is_plaintext": "true",
+                   "service_name": None}
+    SERVICE_NAME = "solarisdev-%{arch}-%{build}"
 
     def __init__(self, name, arg=DEFAULT_ARG):
         super(AIPrePkgImgMod, self).__init__(name)
@@ -326,6 +329,8 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         self.is_plaintext = arg.get("is_plaintext",
                                     self.DEFAULT_ARG.get("is_plaintext"))
         self.hostname = arg.get("hostname")
+        self._service_name = arg.get("service_name",
+                                     self.DEFAULT_ARG.get("service_name"))
 
     def get_pkg_version(self, pkg):
         """ class method to store the version of a package into a path
@@ -340,19 +345,10 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         p = run(cmd)
         version = version_re.search(p.stdout).group(1)
 
-        # ai_pkg_version needs to live in the persistent
-        # section of the DOC to ensure pause/resume works
-        # correctly.
-        #
-        # update the DC_PERS_LABEL DOC object with a new
-        # dictionary that contains ai_pkg_version as an
-        # additional entry.
-        if len(self.dc_pers_dict) != 0:
-            self.doc.persistent.delete_children(name=DC_PERS_LABEL)
-
+        # auto-install pkg version needs to live in the persistent
+        # section of the DOC to ensure pause/resume works correctly.
+        # Save it here for later update in DOC by the execute method.
         self.dc_pers_dict[pkg] = version
-        self.doc.persistent.insert_children(DataObjectDict(DC_PERS_LABEL,
-            self.dc_pers_dict, generate_xml=True))
 
     def add_versions(self, version_filename):
         """ class method to populate the .image_info file with the versions
@@ -368,6 +364,30 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
             while version_line:
                 img_fh.write(version_line + '\n')
                 version_line = version_fh.readline()
+
+    def add_default_svcname(self, pkg):
+        """ class method to populate the .image_info file with the default
+        service name.
+        """
+        self.logger.debug("adding the default service name")
+
+        if self._service_name is None:
+            self._service_name = self.SERVICE_NAME
+        name = self._service_name.replace("%{", "%(").replace("}", ")s")
+        # get build number from version (from '5.11-0.171' or '5.11-0.175.0.1'
+        # get '171' or '175.0.1')
+        build = self.dc_pers_dict[pkg].partition("-")[2].partition('.')[2]
+
+        name = name % {"build": build, "arch": platform.processor()}
+
+        # the service name needs to be in the persistent section of
+        # the DOC for ai-publish-package to reference later. Save
+        # it locally and the execute method will update the DOC.
+        self.dc_pers_dict["service-name"] = name
+
+        # append the .image_info file with the service name
+        with open(self.img_info_path, "a") as fh:
+            fh.write("SERVICE_NAME=%s\n" % name)
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.
@@ -405,12 +425,25 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # move in service_bundle(4) for AI server profile validation
         shutil.copy("lib/xml/dtd/service_bundle.dtd.1", pkg_ai_path)
 
+        # clear way for get_pkg_version and add_default_svcname
+        # to update the dc_pers_dict
+        if self.dc_pers_dict:
+            self.doc.persistent.delete_children(name=DC_PERS_LABEL)
+
         self.get_pkg_version("auto-install")
         self.modify_etc_system()
 
         # write out the .image_info file
         self.calculate_size()
         self.add_versions("usr/share/auto_install/version")
+        self.add_default_svcname("auto-install")
+
+        # update the DC_PERS_LABEL DOC object with a new
+        # dictionary that contains auto-install and service_name
+        # as additional entries.
+        self.logger.debug("updating persistent doc %s" % self.dc_pers_dict)
+        self.doc.persistent.insert_children(DataObjectDict(DC_PERS_LABEL,
+            self.dc_pers_dict, generate_xml=True))
 
 
 class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):

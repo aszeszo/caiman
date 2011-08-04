@@ -45,10 +45,8 @@ class AIPublishPackages(Checkpoint):
     """ class to publish the package image area into a repository
     """
 
-    SVC_NAME_ATTR = "org.opensolaris.autoinstall.svc-name"
-    DEFAULT_SVC_NAME = "solaris-%{arch}-%{build}"
-    DEFAULT_ARG = {"pkg_name": None, "pkg_repo": None, "prefix": None,
-                   "service_name": None}
+    SVC_NAME_ATTR = "com.oracle.install.service_name"
+    DEFAULT_ARG = {"pkg_name": None, "pkg_repo": None, "prefix": None}
 
     def __init__(self, name, arg=DEFAULT_ARG):
         super(AIPublishPackages, self).__init__(name)
@@ -91,6 +89,9 @@ class AIPublishPackages(Checkpoint):
                 self.dc_pers_dict = dc_pers_dict[0].data_dict
             # pkg name is always stored in the persistent tree
             self.ai_pkg_version = self.dc_pers_dict["auto-install"]
+           
+            # service-name is always stored in the persistent tree 
+            self._service_name = self.dc_pers_dict["service-name"]
 
             distro = self.doc.volatile.get_children(class_type=Distro)
             self.distro_name = distro[0].name
@@ -104,19 +105,13 @@ class AIPublishPackages(Checkpoint):
             self.prefix = "ai-image"
 
         if self.pkg_name is None:
-            name = "pkg://%s/image/autoinstall@%s" % (self.prefix,
-                                                      self.ai_pkg_version)
+            name = "pkg://%s/install-image/solaris-auto-install@%s" % \
+                (self.prefix, self.ai_pkg_version)
             self.pkg_name = name
-
-        if self._service_name is None:
-            self._service_name = self.DEFAULT_SVC_NAME
 
     @property
     def service_name(self):
-        name = self._service_name.replace("%{", "%(").replace("}", ")s")
-        build = self.ai_pkg_version.rpartition(".")[-1]
-        return name % {"build": build,
-                       "arch": platform.processor()}
+        return self._service_name
 
     def create_repository(self):
         """ class method to create the repository

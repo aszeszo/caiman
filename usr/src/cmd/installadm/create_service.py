@@ -26,24 +26,30 @@
 AI create-service
 '''
 
+import errno
 import gettext
 import logging
 import os
+import shutil
+import sys
+import tempfile
 
 import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.installadm_common as com
 import osol_install.auto_install.service_config as config
+import pkg.client.api_errors
+import pkg.client.history
 
 from optparse import OptionParser, OptionValueError
-
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
-from osol_install.auto_install.image import is_iso, InstalladmIsoImage
 from osol_install.auto_install.service import AIService, AIServiceError, \
     DEFAULT_ARCH, MountError, UnsupportedAliasError
+from osol_install.auto_install.image import ImageError, InstalladmIsoImage, \
+    InstalladmPkgImage, is_iso
 from solaris_install import Popen, CalledProcessError
 
 
-BASE_DEF_SVC_NAME = "install_service"
+BASE_DEF_SVC_NAME = "solarisx"
 
 
 def check_ip_address(option, opt_str, value, parser):
@@ -74,6 +80,11 @@ def check_imagepath(imagepath):
     Raises: ValueError if a problem exists with imagepath
 
     '''
+    # imagepath must be a full path
+    if not os.path.isabs(imagepath):   
+        raise ValueError(_("\nA full pathname is required for the "
+                           "image path.\n"))
+
     # imagepath must not exist, or must be empty
     if os.path.exists(imagepath):
         try:
@@ -83,11 +94,12 @@ def check_imagepath(imagepath):
         
         if dirlist:
             if com.AI_NETIMAGE_REQUIRED_FILE in dirlist:
-                raise ValueError(_("\nThere is a valid image at (%s). "
+                raise ValueError(_("\nThere is a valid image at (%s)."
                                    "\nPlease delete the image and try "
                                    "again.\n") % imagepath)
             else:
-                raise ValueError(_("\nTarget directory is not empty.\n"))
+                raise ValueError(_("\nTarget directory is not empty: %s\n") %
+                                 imagepath)
 
 
 def get_usage():
@@ -96,7 +108,9 @@ def get_usage():
         'create-service\n'
         '\t\t[-n|--service <svcname>] \n'
         '\t\t[-t|--aliasof <existing_service>] \n'
-        '\t\t[-s|--source <ISO>] \n'
+        '\t\t[-p|--publisher <prefix>=<origin>] \n'
+        '\t\t[-a|--arch <architecture>] \n'
+        '\t\t[-s|--source <FMRI/ISO>] \n'
         '\t\t[-b|--boot-args <boot property>=<value>,...] \n'
         '\t\t[-i|--ip-start <dhcp_ip_start>] \n'
         '\t\t[-c|--ip-count <count_of_ipaddr>] \n'
@@ -110,12 +124,14 @@ def parse_options(cmd_options=None):
     Parse and validate options
     
     Returns: An options record containing
+        arch
         aliasof
         bootargs
         dhcp_ip_count
         dhcp_ip_start
         dhcp_bootserver
         noprompt
+        publisher
         srcimage
         svcname
         imagepath 
@@ -132,6 +148,11 @@ def parse_options(cmd_options=None):
                       default=list(),
                       help=_('Comma separated list of <property>=<value>'
                              ' pairs to add to the x86 Grub menu entry'))
+    parser.add_option('-a', '--arch', dest='arch', default=None,
+                      choices=("i386", "sparc"),
+                      help=_("ARCHITECTURE (sparc or i386), desired "
+                             "architecture of resulting service when creating "
+                             "from a pkg."))
     parser.add_option('-d', '--imagepath', dest='imagepath', default=None,
                       help=_("Path at which to create the net image"))
     parser.add_option('-t', '--aliasof', dest='aliasof', default=None,
@@ -147,7 +168,11 @@ def parse_options(cmd_options=None):
                       type='string', help=_('DHCP Boot Server Address'),
                       action="callback", callback=check_ip_address)
     parser.add_option('-s', '--source', dest='srcimage',
-                      help=_('Auto Install ISO'))
+                      type='string',
+                      help=_('FMRI or Auto Install ISO'))
+    parser.add_option('-p', '--publisher', help=_("A pkg(5) publisher, in the"
+                      " form '<prefix>=<uri>', from which to install the "
+                      "client image"))
     parser.add_option('-y', "--noprompt", action="store_true",
                       dest="noprompt", default=False,
                       help=_('Suppress confirmation prompts and proceed with '
@@ -181,12 +206,14 @@ def parse_options(cmd_options=None):
             parser.error(_('\nOption -n|--service is required with the '
                             '-t|--aliasof option'))
     else:
-        if not options.srcimage:
-            parser.error(_("\n-s|--source or -t|--aliasof is required\n"))
         name = options.svcname
         if name in DEFAULT_ARCH:
             raise SystemExit(_('\nDefault services must be created as '
                                'aliases. Use -t|--aliasof.\n'))
+
+    # provide default for srcimage, now that we're done option checking
+    if options.srcimage is None:
+        options.srcimage = "pkg:/install-image/solaris-auto-install"
 
     # check dhcp related options
     if options.dhcp_ip_start or options.dhcp_ip_count:
@@ -215,6 +242,23 @@ def parse_options(cmd_options=None):
             parser.error(_('\nIf -B option is provided, -i option must '
                            'also be provided\n'))
     
+    if is_iso(options.srcimage):
+        if options.arch is not None:
+            parser.error(_("The --arch option is invalid for ISO-based "
+                           "services"))
+        if options.publisher is not None:
+            parser.error(_("The --publisher option is invalid for "
+                           "ISO-based services"))
+
+    if options.publisher:
+        # Convert options.publisher from a string of form 'prefix=uri' to a
+        # tuple (prefix, uri)
+        publisher = options.publisher.split("=")
+        if len(publisher) != 2:
+            parser.error(_('Publisher information must match the form: '
+                           '"<prefix>=<URI>"'))
+        options.publisher = publisher
+    
     # Make sure imagepath meets requirements
     if options.imagepath:
         options.imagepath = options.imagepath.strip()
@@ -229,16 +273,16 @@ def parse_options(cmd_options=None):
     return options
 
 
-def default_path_ok(svc_name, image_path=None):
+def default_path_ok(svc_name, specified_path=None):
     ''' check if default path for service image is available
 
     Returns: True if default path is ok to use (doesn't exist)
              False otherwise
 
     '''
-    # if image_path specified by the user, we won't be
+    # if path specified by the user, we won't be
     # using the default path, so no need to check
-    if image_path:
+    if specified_path:
         return True
 
     def_imagepath = os.path.join(com.IMAGE_DIR_PATH, svc_name)
@@ -247,15 +291,39 @@ def default_path_ok(svc_name, image_path=None):
     return True
 
 
-def get_default_service_name(image_path=None):
+def get_default_service_name(image_path=None, image=None, iso=False):
     ''' get default service name
     
-    Returns: default name for service, _install_service_<num>
-    
+    Input:   specified_path - imagepath, if specified by user
+             image - image object created from image
+             iso - boolean, True if service is iso based, False otherwise
+    Returns: default name for service. 
+             For iso-based services, the default name is based
+             on the SERVICE_NAME from the .image_info file if available,
+             otherwise is BASE_DEF_SVC_NAME_<num>
+             For pkg based services, the default name is obtained
+             from pkg metadata, otherwise BASE_DEF_SVC_NAME_<num>
+
     '''
-    count = 1
-    basename = BASE_DEF_SVC_NAME
-    svc_name = basename + "_" + str(count)
+    if image:
+        # Try to generate a name based on the metadata. If that 
+        # name exists, append a number until a unique name is found.
+        count = 0
+        if iso:
+            basename = image.read_image_info().get('service_name')
+        else:
+            basename = image.get_basename()
+        try:
+            com.validate_service_name(basename)
+            svc_name = basename
+        except ValueError:
+            basename = BASE_DEF_SVC_NAME
+            count = 1
+            svc_name = basename + "_" + str(count)
+    else:
+        count = 1
+        basename = BASE_DEF_SVC_NAME
+        svc_name = basename + "_" + str(count)
     
     while (config.is_service(svc_name) or 
         not default_path_ok(svc_name, image_path)):
@@ -336,54 +404,124 @@ def should_be_default_for_arch(newservice):
 def do_create_baseservice(options):
     '''
     This method sets up the install service by:
-        - creating the target image directory from an iso
-        - creating the smf property group
+        - creating the target image directory from an iso or pkg
+        - creating the /var/ai service structure
         - enabling tftp service or configuring wanboot
         - configuring dhcp if desired
     
     '''
+    tempdir = None
+    print _("\nCreating service from: %s") % options.srcimage
     if is_iso(options.srcimage):
+        have_iso = True
         # get default service name, if needed
-        if not options.svcname:
-            options.svcname = get_default_service_name(options.imagepath)
+        logging.debug("Creating ISO based service" )
+    else:
+        have_iso = False
+        logging.debug("Creating pkg(5) based service")
 
-        # If imagepath not specified, verify that default image path is
-        # ok with user
-        if not options.imagepath:
-            defaultdir = com.IMAGE_DIR_PATH
-            if options.svcname:
-                imagepath = os.path.join(defaultdir, options.svcname)
-                prompt = (_("OK to use default image path: %s? [y/N]: " %
-                          imagepath))
-            else:
-                prompt = (_("OK to use subdir of %s to store image? [y/N]: " %
-                          defaultdir))
-            try:
-                if not options.noprompt:
-                    if not com.ask_yes_or_no(prompt):
-                        raise SystemExit(_('\nPlease re-enter command with '
-                                           'desired --imagepath\n'))
-            except KeyboardInterrupt:
-                raise SystemExit(1)
+    # If imagepath specified by user, use that.
+    # If imagepath not specified  by user:
+    #    a) if svcname specified by user, set up image in
+    #       <default image path>/<svcname>
+    #    b) if svcname not specified by user, set up image in
+    #       <tmp location> and move to <default image path>/<svcname>
+    #       once svcname is determined.
 
+    # If imagepath not specified, verify that default image path is
+    # ok with user
+    if not options.imagepath:
+        defaultdir = com.IMAGE_DIR_PATH
+        if options.svcname:
+            imagepath = os.path.join(defaultdir, options.svcname)
+            prompt = (_("OK to use default image path: %s? [y/N]: " %
+                      imagepath))
+        else:
+            prompt = (_("OK to use subdir of %s to store image? [y/N]: " %
+                      defaultdir))
+        try:
+            if not options.noprompt:
+                if not com.ask_yes_or_no(prompt):
+                    raise SystemExit(_('\nPlease re-enter command with '
+                                       'desired --imagepath\n'))
+        except KeyboardInterrupt:
+            raise SystemExit(1)
+
+        # If we know the svcname, we know where to put the image.
+        # Otherwise, put the image into a temp directory and move
+        # it to correct location when we know it later
+        if options.svcname:
             options.imagepath = os.path.join(com.IMAGE_DIR_PATH,
                                              options.svcname)
             try:
                 check_imagepath(options.imagepath)
             except ValueError as error:
                 raise SystemExit(error)
-            logging.debug('Using default image path: %s', options.imagepath)
+        else:
+            try:
+                os.makedirs(com.IMAGE_DIR_PATH)
+            except OSError as err:
+                if err.errno != errno.EEXIST:
+                    raise
+            tempdir = tempfile.mkdtemp(dir=com.IMAGE_DIR_PATH)
+            options.imagepath = tempdir
+        logging.debug('Using default image path: %s', options.imagepath)
 
-        print _("\nCreating service: %s\n") % options.svcname
-        logging.debug("Creating ISO based service '%s'", options.svcname)
+    # create the image area
+    if have_iso:
         try:
             image = InstalladmIsoImage.unpack(options.srcimage,
                                               options.imagepath)
         except CalledProcessError as err:
             raise SystemExit(err.popen.stderr)
     else:
-        raise SystemExit(_("\nSource image is not a valid ISO file\n"))
+        try:
+            image = InstalladmPkgImage.image_create(options.srcimage,
+                                                    options.imagepath,
+                                                    arch=options.arch,
+                                                    publisher=options.publisher)
+        except (ImageError,
+                pkg.client.api_errors.ApiException) as err:
+            if isinstance(err, pkg.client.api_errors.VersionException):
+                print >> sys.stderr, cw(_("The IPS API version specified, "
+                    + str(err.received_version) +
+                    ", is incompatible with the expected version, "
+                    + str(err.expected_version) + "."))
+            elif isinstance(err, pkg.client.api_errors.CatalogRefreshException):
+                for pub, error in err.failed:
+                    print >> sys.stderr, "   "
+                    print >> sys.stderr, str(error)
+                if err.errmessage:
+                    print >> sys.stderr, err.errmessage
+            shutil.rmtree(options.imagepath, ignore_errors=True)
+            raise SystemExit(err)
 
+    # get default service name, if needed
+    if not options.svcname:
+        if tempdir and options.imagepath == tempdir:
+            specified_path = None
+        else:
+            specified_path = options.imagepath
+        options.svcname = get_default_service_name(specified_path,
+                                                   image=image, iso=have_iso)
+
+    print _("\nCreating service: %s\n") % options.svcname
+
+    # If image was created in temporary location, move to correct
+    # location now that we know the svcname.
+    if tempdir is not None:
+        new_imagepath = os.path.join(com.IMAGE_DIR_PATH, options.svcname)
+        try:
+            check_imagepath(new_imagepath)
+        except ValueError as error:
+            # leave image in temp location so that service can be created
+            logging.debug('unable to move image to %s: %s',
+                          new_imagepath, error)
+        else:
+            options.imagepath = image.move(new_imagepath)
+            logging.debug('image moved to %s', options.imagepath)
+
+    print _("Image path: %s\n") % options.imagepath
     if options.dhcp_ip_start:
         service = AIService.create(options.svcname, image,
                                    options.dhcp_ip_start,

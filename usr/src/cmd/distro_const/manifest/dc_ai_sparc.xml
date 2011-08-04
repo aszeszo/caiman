@@ -176,6 +176,7 @@
           checkpoint_class="AIPrePkgImgMod">
           <!--
             root user/role password in the image.
+            service_name - solarisdev-%{arch}-%{build}
           -->
           <!--
             The default hostname for images is 'solaris'.  Setting
@@ -186,6 +187,7 @@
             <arg name="is_plaintext">true</arg>
             <!-- uncomment before using
             <arg name="hostname">hostname</arg>
+            <arg name="service_name">solarisdev-%{arch}-%{build}</arg>
             -->
           </kwargs>
       </checkpoint>
@@ -253,17 +255,15 @@
             The following arguments are optional
 
             If not specified the arguments default to:
-            pkg_name - image/autoinstall@<AI pkg version>
+            pkg_name - install-image/solaris-auto-install@<AI pkg version>
             pkg_repo - file://<MEDIA_DIR>/ai_image_repo
             prefix - ai-image
                 Note:  See pkg(5) and pkg.depotd(1M) for a
                 description of these optional arguments
-            service_name - solaris-%{arch}-%{build}
           <kwargs>
             <arg name="pkg_name">name</arg>
             <arg name="pkg_repo">repo</arg>
             <arg name="prefix">prefix</arg>
-            <arg name="service_name">solaris-%{arch}-%{build}</arg>
           </kwargs>
           -->
       </checkpoint>
