@@ -115,6 +115,21 @@ SC_PROFILE_FILENAME = "sc_profile.xml"
 
 ERR_VAL_MODID = "js2ai-validation"
 
+# LOGGER is for logging all processing, conversion, unknown items, warning,
+# and validation errors so that the user can review the failures and take
+# steps to fix them
+LOGGER = logging.getLogger('js2ai')
+
+# keys used in the formating string for log file output
+LOG_KEY_FILE = "file"
+LOG_KEY_LINE_NUM = "line_num"
+
+LVL_PROCESS = logging.ERROR + 1
+LVL_UNSUPPORTED = logging.ERROR + 2
+LVL_CONVERSION = logging.ERROR + 3
+LVL_VALIDATION = logging.ERROR + 4
+LVL_WARNING = logging.WARNING
+
 _ = gettext.translation("js2ai", "/usr/share/locale", fallback=True).gettext
 
 
@@ -123,6 +138,20 @@ def err(msg):
     # Duplicate the syntax of the parser.error
     sys.stderr.write("%(prog)s: error: %(msg)s\n" %
                      {"prog": os.path.basename(sys.argv[0]), "msg": msg})
+
+
+def generate_error(log_lvl, report, message, extra_log_params):
+    """Generate log message at specified level.  Increment error count
+
+       Arguments:
+       log_lvl - the log level
+       report - the conversion report to add the error to
+       message - the message to log
+       extra_log_params - a dictionary that contains the key LOG_KEY_FILE
+                 and LOG_KEY_LINE_NUM
+    """
+    LOGGER.log(log_lvl, message, extra=extra_log_params)
+    report.generate_error(log_lvl)
 
 
 def fetch_xpath_node(start_node, path):
@@ -343,6 +372,23 @@ class ConversionReport(object):
         self._unsupported_items = unsupported_items
         self._validation_errs = validation_errs
         self._warnings = 0
+        self._log_lvl_convert_to_method = {
+            LVL_PROCESS: self.add_process_error,
+            LVL_UNSUPPORTED: self.add_unsupported_item,
+            LVL_CONVERSION: self.add_conversion_error,
+            LVL_VALIDATION: self.add_validation_error,
+            LVL_WARNING: self.add_warning
+        }
+
+    def generate_error(self, log_level):
+        """Given a log level, add an error to the report associated with
+           the specified log level
+
+        """
+        if log_level in self._log_lvl_convert_to_method:
+            self._log_lvl_convert_to_method[log_level]()
+        else:
+            raise ValueError
 
     def add_process_error(self):
         """Increments the # of processing errors by 1"""

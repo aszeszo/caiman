@@ -611,8 +611,18 @@ class Test_ReadRulesComplex3(unittest.TestCase):
 
         """
         rfd = js2ai.read_rules(self.working_dir, False)
-        self.assertEquals(rfd.conversion_report.has_errors(), False,
-                          rfd.conversion_report)
+
+        report = rfd.conversion_report
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 1,
+                          failure_report(report, js2ai.logfile_name))
+        self.assertEquals(report.conversion_errors, 0,
+                          failure_report(report, js2ai.logfile_name))
+        self.assertEquals(report.unsupported_items, 0,
+                          failure_report(report, js2ai.logfile_name))
+        self.assertEquals(report.warnings, 0,
+                          failure_report(report, js2ai.logfile_name))
+
         defined_rule = rfd.data[1]
         key_values_dict = defined_rule.key_values_dict
         key_value = key_values_dict[0]
@@ -669,8 +679,18 @@ class Test_ReadRulesComplex4(unittest.TestCase):
 
         """
         rfd = js2ai.read_rules(self.working_dir, False)
-        self.assertEquals(rfd.conversion_report.has_errors(), False,
-                          rfd.conversion_report)
+
+        report = rfd.conversion_report
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 1,
+                          failure_report(report, js2ai.logfile_name))
+        self.assertEquals(report.conversion_errors, 0,
+                          failure_report(report, js2ai.logfile_name))
+        self.assertEquals(report.unsupported_items, 0,
+                          failure_report(report, js2ai.logfile_name))
+        self.assertEquals(report.warnings, 0,
+                          failure_report(report, js2ai.logfile_name))
+
         defined_rule = rfd.data[1]
         key_values_dict = defined_rule.key_values_dict
         key_value = key_values_dict[0]

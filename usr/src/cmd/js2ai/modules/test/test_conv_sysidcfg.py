@@ -100,7 +100,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("name_service", ["None", None], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report, xml_data.conversion_report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
@@ -119,7 +119,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", payload], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -133,7 +133,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("name_service", ["NIS", payload], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           failure_report(report, self.log_file))
         self.validate_xml_output(xml_data)
@@ -151,7 +151,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("name_service", ["LDAP", payload], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           failure_report(report, self.log_file))
         self.validate_xml_output(xml_data)
@@ -166,7 +166,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("name_service", ["LDAP", payload], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           failure_report(report, self.log_file))
 
@@ -177,7 +177,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -201,7 +201,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -227,7 +227,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -241,7 +241,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -260,7 +260,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -277,7 +277,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -301,7 +301,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -318,7 +318,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -330,7 +330,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["NONE", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -354,7 +354,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["NONE", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -364,7 +364,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         data = self.default_dict_setup()
         data[3] = KeyValues("keyboard", ["French"], 3)
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -374,7 +374,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("root_password", ["encrypted_password"], 1)
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -395,7 +395,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         data = self.default_dict_setup()
         data[3] = KeyValues("security_policy", ["None"], 3)
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -405,7 +405,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         data = self.default_dict_setup()
         data[3] = KeyValues("service_profile", ["limited_net"], 3)
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -415,7 +415,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         data = self.default_dict_setup()
         data[3] = KeyValues("system_locale", ["en.UTF-8"], 1)
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -425,7 +425,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         data = self.default_dict_setup()
         data[3] = KeyValues("terminal", ["vt100"], 3)
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -435,7 +435,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         data = self.default_dict_setup()
         data[3] = KeyValues("timeserver", ["localhost"], 3)
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -445,7 +445,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         data = self.default_dict_setup()
         data[3] = KeyValues("timezone", ["US/Eastern"], 3)
         report = ConversionReport()
-        xml_data = XMLSysidcfgData(data, report, None)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -474,7 +474,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["xyz", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -500,7 +500,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", payload], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -522,7 +522,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["None", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -546,7 +546,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -572,7 +572,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 2,
@@ -600,7 +600,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["LDAP", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 2,
@@ -623,18 +623,18 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["NIS+", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
                           failure_report(report, self.log_file))
-        self.assertEquals(report.conversion_errors, 1,
+        self.assertEquals(report.conversion_errors, 0,
                           failure_report(report, self.log_file))
         self.assertEquals(report.unsupported_items, 0,
                           failure_report(report, self.log_file))
         self.assertEquals(report.validation_errors, 0,
                           failure_report(report, self.log_file))
-        self.assertEquals(report.warnings, 2,
+        self.assertEquals(report.warnings, 3,
                           failure_report(report, self.log_file))
 
     def test_sysidcfg_network_interface_PRIMARY_dhcp_ipv6_no(self):
@@ -646,7 +646,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -670,7 +670,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -695,7 +695,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -729,7 +729,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -752,7 +752,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -773,7 +773,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -793,7 +793,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", None], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -824,7 +824,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -857,7 +857,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -879,7 +879,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value2 = KeyValues("network_interface", ["eri1", None], 2)
         data[key_value2.line_num] = key_value2
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -901,7 +901,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["NONE", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -921,7 +921,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("network_interface", ["PRIMARY", None], 1)
         data[2] = KeyValues("network_interface", ["eri2", None], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -947,7 +947,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("network_interface", ["eri1", payload], 1)
         data[2] = KeyValues("network_interface", ["eri2", payload], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -967,7 +967,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", None], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -994,7 +994,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", payload], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -1014,7 +1014,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("keyboard", ["French"], 1)
         data[2] = KeyValues("keyboard", ["German"], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1033,7 +1033,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("keyboard", ["French", "extra_arg"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1052,7 +1052,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("nfs_domain", ["dynamic"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -1072,7 +1072,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("root_password", ["encrypted_password"], 1)
         data[2] = KeyValues("root_password", ["encrypted_password"], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1092,7 +1092,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("root_password",
                             ["encrypted_password", "extra_arg"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1111,7 +1111,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("security_policy", ["kerberos"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -1130,7 +1130,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("security_policy", ["my_policy"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1149,7 +1149,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("service_profile", ["open"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -1169,7 +1169,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("service_profile", ["limited_net"], 1)
         data[2] = KeyValues("service_profile", ["open"], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1188,7 +1188,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("service_profile", ["limited_net", "extra_arg"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1207,7 +1207,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("service_profile", ["my_policy"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1226,7 +1226,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("terminal", ["vt100", "extra_arg"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1245,7 +1245,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("timeserver", ["host1"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -1264,7 +1264,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("timeserver", ["localhost", "extra_arg"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1284,7 +1284,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("timezone", ["US/Eastern"], 1)
         data[2] = KeyValues("timezone", ["US/Mountain"], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1303,7 +1303,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data = dict()
         data[1] = KeyValues("timezone", ["US/Central", "extra_arg"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report, None)
+        XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,

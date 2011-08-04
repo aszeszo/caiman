@@ -34,14 +34,19 @@ import traceback
 from common import _
 from common import ConversionReport
 from common import KeyValues
+from common import generate_error
 from common import err
 from common import pretty_print
 from common import ProfileData
+from common import ARCH_X86, ARCH_SPARC
 from common import DEFAULT_AI_DTD_FILENAME, DEFAULT_AI_FILENAME
 from common import DEFAULT_SC_PROFILE_DTD_FILENAME
 from common import ERR_VAL_MODID
+from common import LOG_KEY_FILE, LOG_KEY_LINE_NUM
+from common import LOGGER
+from common import LVL_CONVERSION, LVL_PROCESS
+from common import LVL_UNSUPPORTED, LVL_VALIDATION, LVL_WARNING
 from common import RULES_FILENAME, SYSIDCFG_FILENAME, SC_PROFILE_FILENAME
-from common import ARCH_X86, ARCH_SPARC
 from common import fetch_xpath_node
 from common import write_xml_data
 from common import validate
@@ -75,9 +80,6 @@ MERGE_DEFAULT_SUFFIX = "_syscfg"
 
 LOGFILE = "js2ai.log"
 ERRFILE = "js2ai.err"
-# LOGGER is for logging all processing, conversion, unknown items errors
-# so that the user can review the failures and take steps to fix them
-LOGGER = logging.getLogger('js2ai')
 
 logfile_name = None
 logfile_handler = None
@@ -244,6 +246,15 @@ def logger_setup(log_directory):
     global logfile_handler
 
     LOGGER.setLevel(logging.INFO)
+
+    # Add new logging levels that correspond to the error types
+    # js2ai is outputing in it's error reports
+    logging.addLevelName(LVL_PROCESS, "PROCESS")
+    logging.addLevelName(LVL_UNSUPPORTED, "UNSUPPORTED")
+    logging.addLevelName(LVL_CONVERSION, "CONVERSION")
+    logging.addLevelName(LVL_VALIDATION, "VALIDATION")
+    # LVL_WARNING mapped to WARNING so it's already present, don't need to add
+
     # create console handler and set level to debug
     logfile_name = os.path.join(log_directory, LOGFILE)
     try:
@@ -252,8 +263,21 @@ def logger_setup(log_directory):
         # err is cast to str here since it is possible for it to be None
         raise IOError(_("Failed to open log file: %s\n") % str(msg))
 
+    # Define the format for the log file.  'file' and 'line_num' are
+    # not values that the logger knows about.  These will be filled
+    # in during the log process via the dictionary that is passed
+    # in during the log call through the parameter "extra"
+    # For example
+    # extra_log_params = {"file": "profile1", "line_num": 10 }
+    # logger.warning('error message', extra=extra_log_params)
+    #
+    # When used with the below formater the above would generate
+    #
+    # profile1: line 10: WARNING: error message
+
+    format = _("%(file)s:line %(line_num)d:%(levelname)s: %(message)s")
     # add formatter to ch
-    logfile_handler.setFormatter(logging.Formatter("%(message)s"))
+    logfile_handler.setFormatter(logging.Formatter(format))
     # add ch to logger
     LOGGER.addHandler(logfile_handler)
 
@@ -358,17 +382,18 @@ def read_rules(src_dir, verbose):
     defined_rule = None
     line_num = 0
     line_cnt = len(lines)
+    extra_log_params = {LOG_KEY_FILE: RULES_FILENAME, LOG_KEY_LINE_NUM: 0}
     while line_num < line_cnt:
         if defined_rule is not None:
-            LOGGER.error(_("%(file)s: line %(lineno)d: " \
-                           "Incomplete rule detected") % \
-                           {"file": RULES_FILENAME, "lineno": line_num})
-            conv_report.add_process_error()
+            generate_error(LVL_PROCESS, conv_report,
+                           _("Incomplete rule detected"),
+                           extra_log_params)
             # Throw away the old defined rule, it's incomplete
             defined_rule = None
 
         line = lines[line_num]
         line_num += 1
+        extra_log_params[LOG_KEY_LINE_NUM] = line_num
         if not line:
             continue
 
@@ -387,17 +412,14 @@ def read_rules(src_dir, verbose):
                     kv_pairs, begin_script, profile, end_script = \
                         line.rsplit(' ', 3)
                 except ValueError:
-                    LOGGER.error(_("%(file)s: line %(line_num)d: "
-                                   "invalid rule. Does not conform to "
-                                   "required format of <key> <value> "
-                                   "<begin_script> <profile> "
-                                   "<end_script>: %(line)s") %
-                                   {"file": RULES_FILENAME, \
-                                    "line_num": line_num, \
-                                    "line": line})
+                    generate_error(LVL_PROCESS, conv_report,
+                                   _("invalid rule. Does not conform to "
+                                     "required format of <key> <value> "
+                                     "<begin_script> <profile> <end_script>:"
+                                     " %(line)s") % {"line": line},
+                                   extra_log_params)
                     defined_rule = None
                     line = None
-                    conv_report.add_process_error()
                     continue
 
                 defined_rule.begin_script = begin_script
@@ -417,11 +439,10 @@ def read_rules(src_dir, verbose):
                         # It's easier to do it here then later since
                         # our structures do not record the line # the
                         # profile name was read from.
-                        LOGGER.error(_("%(file)s: line %(line_num)d: "
-                                     "profile not found: %(prof)s") % \
-                                     {"file": RULES_FILENAME, \
-                                     "line_num": line_num, \
-                                     "prof": profile})
+                        generate_error(LVL_PROCESS, conv_report,
+                                       _("profile not found: %(prof)s") % \
+                                         {"prof": profile},
+                                       extra_log_params)
                 line = None
             else:
                 if match_pattern1 is not None:
@@ -485,13 +506,11 @@ def read_rules(src_dir, verbose):
             try:
                 key, values = kv_pairs.split(' ', 1)
             except ValueError:
-                LOGGER.error(_("%(file)s: line %(line_num)d: invalid "
-                               "rule. No value defined for key: "
-                               "%(line)s") % {"file": RULES_FILENAME, \
-                                              "line_num": line_num, \
-                                              "line": kv_pairs})
+                generate_error(LVL_PROCESS, conv_report,
+                               _("invalid rule. No value defined for key: "
+                                 "%(line)s") % {"line": kv_pairs},
+                               extra_log_params)
                 defined_rule = None
-                conv_report.add_process_error()
                 line = None
                 continue
 
@@ -508,10 +527,8 @@ def read_rules(src_dir, verbose):
         raise IOError(_("Invalid rule file.  No rules found"))
 
     if defined_rule is not None:
-        LOGGER.error(_("%(file)s: line %(lineno)d: " \
-                       "Incomplete rule detected") % \
-                       {"file": RULES_FILENAME, "lineno": line_num})
-        conv_report.add_process_error()
+        generate_error(LVL_PROCESS, conv_report,
+                       _("Incomplete rule detected"), extra_log_params)
     return RulesFileData(rules_dict, conv_report)
 
 
@@ -543,7 +560,8 @@ def read_sysidcfg(src_dir, verbose):
     conv_report = ConversionReport()
     sysidcfg = ProfileData(SYSIDCFG_FILENAME)
     line_continued = None
-    line_start = None
+    line_start = 0
+    extra_log_params = {LOG_KEY_FILE: SYSIDCFG_FILENAME, LOG_KEY_LINE_NUM: 0}
     for lineno, line in enumerate(lines):
         # skip blank lines
         if not line:
@@ -554,6 +572,7 @@ def read_sysidcfg(src_dir, verbose):
             line_continued = None
         else:
             line_start = lineno + 1
+        extra_log_params[LOG_KEY_LINE_NUM] = line_start
         try:
             key_value, the_rest = line.split("{", 1)
             try:
@@ -591,12 +610,9 @@ def read_sysidcfg(src_dir, verbose):
             if len(values) > 1:
                 # This means we got a invalid syntax of:
                 # key=value value1
-                LOGGER.error(_("%(file)s: line %(lineno)d: invalid syntax, "
-                            "statement does not conform to key=value "
-                            "syntax") % \
-                            {"file": SYSIDCFG_FILENAME, \
-                             "lineno": line_start, "key": key})
-                conv_report.add_process_error()
+                generate_error(LVL_PROCESS, conv_report,
+                               _("invalid syntax, statement does not conform "
+                                 "to key=value syntax"), extra_log_params)
                 continue
             if key in ["network_interface", "name_service"]\
                 and payload_dict is None:
@@ -612,17 +628,14 @@ def read_sysidcfg(src_dir, verbose):
                         continue
         except ValueError:
             if line == "":
-                LOGGER.error(_("%(file)s: line %(lineno)d: invalid entry, "
-                               "keyword missing") % \
-                               {"file": SYSIDCFG_FILENAME, \
-                                "lineno": (line_start)})
+                generate_error(LVL_PROCESS, conv_report,
+                               _("invalid entry, keyword missing"),
+                               extra_log_params)
             else:
-                LOGGER.error(_("%(file)s: line %(lineno)d: invalid entry, "
-                               "value for keyword missing: %(line)s") % \
-                               {"file": SYSIDCFG_FILENAME, \
-                                "lineno": (line_start), \
-                                "line": line})
-            conv_report.add_process_error()
+                generate_error(LVL_PROCESS, conv_report,
+                               _("invalid entry, value for keyword missing: "
+                                  "%(line)s") % {"line": line},
+                               extra_log_params)
             continue
         if payload_dict:
             values = [value, payload_dict]
@@ -644,11 +657,9 @@ def read_sysidcfg(src_dir, verbose):
         # where the user forgot to add the missing }
         # this is a serious error.  Don't process the file
         # if this error occurs
-        LOGGER.error(_("%(file)s: line %(line_num)d: invalid "
-                       "entry, missing closing '}'"
-                       % {"file": SYSIDCFG_FILENAME,
-                          "line_num": line_start}))
-        conv_report.add_process_error()
+        generate_error(LVL_PROCESS, conv_report,
+                       _("invalid entry, missing closing '}'"),
+                       extra_log_params)
         conv_report.conversion_errors = None
         conv_report.unsupported_items = None
     sysidcfg.conversion_report = conv_report
@@ -689,24 +700,23 @@ def read_profile(src_dir, profile_name, verbose):
         raise IOError(_("Failed to read profile: %s" % filename))
 
     conv_report = ConversionReport()
+    extra_log_params = {LOG_KEY_FILE: profile_name, LOG_KEY_LINE_NUM: 0}
     for lineno, line in enumerate(lines):
         # skip blank
         if not line:
             continue
-
+        line_num = lineno + 1
+        extra_log_params[LOG_KEY_LINE_NUM] = line_num
         try:
             # split on whitespace a maximum of 1 time
             key, value = line.split(" ", 1)
         except ValueError:
-            LOGGER.error(_("%(file)s: line %(lineno)d: invalid entry, "
-                         "value for keyword '%(line)s' missing") % \
-                         {"file": profile_name, \
-                          "lineno": (lineno + 1), \
-                          "line": line})
-            conv_report.add_process_error()
+            generate_error(LVL_PROCESS, conv_report,
+                           _("invalid entry, value for keyword '%(line)s' "
+                             "missing") % {"line": line}, extra_log_params)
             continue
         values = VALUE_PATTERN.findall(value)
-        profile_dict[lineno + 1] = KeyValues(key.lower(), values, lineno + 1)
+        profile_dict[line_num] = KeyValues(key.lower(), values, line_num)
 
     profile_data.conversion_report = conv_report
     return profile_data
@@ -723,7 +733,7 @@ def convert_rule(rule_data, rule_num, profile_name, conversion_report,
 
        Arguments:
        rule_data - the dict of rule key value pairs
-       rule_num - the rule number rom the order found in the rules file
+       rule_num - the rule number from the order found in the rules file
        profile_name - the name of the profile
        conversion_report - the convertion report for tracking errors
        directory - the directory where to output the new profile to
@@ -741,7 +751,7 @@ def convert_rule(rule_data, rule_num, profile_name, conversion_report,
     if verbose:
         print _("Generating criteria data for: %s") % profile_name
 
-    xml_rule_data = XMLRuleData(rule_num, rule_data, conversion_report, LOGGER)
+    xml_rule_data = XMLRuleData(rule_data, conversion_report)
 
     root = xml_rule_data.root
 
@@ -808,7 +818,7 @@ def convert_profile(profile_data, dest_dir, default_xml,
 
     xml_profile_data = XMLProfileData(profile_name, profile_data.data,
                                       profile_data.conversion_report,
-                                      default_xml, local, LOGGER)
+                                      default_xml, local)
 
     if xml_profile_data.tree is not None:
         # Write out the xml document
@@ -912,8 +922,7 @@ def convert_sysidcfg(sysidcfg, dest_dir, skip_validation, verbose):
         print _("Performing conversion on: %s") % filename
 
     sysidcfg_data = XMLSysidcfgData(sysidcfg.data,
-                                    sysidcfg.conversion_report,
-                                    LOGGER)
+                                    sysidcfg.conversion_report)
     if sysidcfg_data.tree is not None:
         # Write out the xml document
         if verbose:
@@ -1324,7 +1333,6 @@ def process(options):
         processed_data.add_defined_profile(profile_data)
     elif options.rule:
         xml_default_data = XMLDefaultData(options.default_xml)
-        print "Source :", options.source
         processed_data = process_rule(options.source,
                                       options.destination,
                                       xml_default_data,

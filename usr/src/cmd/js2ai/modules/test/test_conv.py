@@ -121,7 +121,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report, xml_data.conversion_report)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
@@ -145,7 +145,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report, xml_data.conversion_report)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
@@ -161,7 +161,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report, xml_data.conversion_report)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
@@ -178,7 +178,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report, xml_data.conversion_report)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
@@ -195,7 +195,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report, xml_data.conversion_report)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
@@ -226,7 +226,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report, xml_data.conversion_report)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
@@ -241,7 +241,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         report = xml_data.conversion_report
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
@@ -256,7 +256,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -270,7 +270,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -293,7 +293,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -307,13 +307,13 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.conversion_errors, 1,
+        self.assertEquals(report.conversion_errors, 0,
                           self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.unsupported_items, 0,
+        self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -330,7 +330,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         report = xml_data.conversion_report
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
@@ -345,7 +345,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         report = xml_data.conversion_report
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
@@ -369,7 +369,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True, str(report))
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -394,7 +394,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True, str(report))
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -417,7 +417,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True, str(report))
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -440,7 +440,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -463,7 +463,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -485,7 +485,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -499,7 +499,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -522,7 +522,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -547,7 +547,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -570,7 +570,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -593,7 +593,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -616,7 +616,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -630,7 +630,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -653,7 +653,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -676,7 +676,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -702,7 +702,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -718,7 +718,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -742,7 +742,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -765,7 +765,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -779,7 +779,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -793,7 +793,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -816,7 +816,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -831,7 +831,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -856,7 +856,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -871,7 +871,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -886,7 +886,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -909,7 +909,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -933,7 +933,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -957,7 +957,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -983,7 +983,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1008,7 +1008,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1023,7 +1023,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1046,7 +1046,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1072,7 +1072,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1097,7 +1097,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1124,7 +1124,7 @@ class Test_Profile(unittest.TestCase):
         report = ConversionReport()
 
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1156,7 +1156,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1186,7 +1186,7 @@ class Test_Profile(unittest.TestCase):
 
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1213,7 +1213,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1233,7 +1233,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1251,7 +1251,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1278,7 +1278,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1305,7 +1305,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1332,7 +1332,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1359,7 +1359,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1384,7 +1384,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1409,7 +1409,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1438,7 +1438,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1465,7 +1465,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1492,7 +1492,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1517,7 +1517,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1542,7 +1542,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1568,7 +1568,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1596,7 +1596,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1619,7 +1619,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -1644,7 +1644,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1658,7 +1658,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1672,7 +1672,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1698,7 +1698,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -1723,7 +1723,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -1747,7 +1747,7 @@ class Test_Profile(unittest.TestCase):
         key_value = KeyValues("package", ["SUNWzoner", "add"], 4)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLProfileData("test", kv_dict, report, None, False, None)
+        xml_data = XMLProfileData("test", kv_dict, report, None, False)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1763,7 +1763,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1779,7 +1779,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1797,7 +1797,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1820,7 +1820,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -1844,7 +1844,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1868,7 +1868,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1883,7 +1883,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1898,7 +1898,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -1913,7 +1913,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1937,7 +1937,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1961,7 +1961,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -1984,7 +1984,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2008,7 +2008,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False)
         self.validate_xml_output(xml_data)
 
@@ -2028,7 +2028,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2058,7 +2058,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2088,7 +2088,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.process_errors, 0,
@@ -2119,7 +2119,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2149,7 +2149,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -2170,7 +2170,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -2191,7 +2191,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2221,7 +2221,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -2242,7 +2242,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2272,7 +2272,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2302,7 +2302,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2325,7 +2325,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -2348,7 +2348,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2369,7 +2369,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -2385,7 +2385,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2410,7 +2410,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -2427,7 +2427,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2453,7 +2453,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -2478,7 +2478,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -2494,7 +2494,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2513,7 +2513,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2535,7 +2535,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 1,
                           self.profile_failure_report(xml_data, report))
@@ -2555,7 +2555,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2579,7 +2579,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
@@ -2601,7 +2601,7 @@ class Test_Profile(unittest.TestCase):
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
-                                  self.default_xml, True, None)
+                                  self.default_xml, True)
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
@@ -2626,8 +2626,7 @@ class Test_Profile_corner_cases(unittest.TestCase):
         key_value = KeyValues("install_type", ["upgrade"], 1)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLProfileData("test", kv_dict, report,
-                                  None, None, None)
+        xml_data = XMLProfileData("test", kv_dict, report, None, None)
         self.assertEquals(report.has_errors(), True)
 
     def test_corner_case2(self):
@@ -2636,7 +2635,7 @@ class Test_Profile_corner_cases(unittest.TestCase):
         kv_dict[0] = None
         report = ConversionReport()
         self.assertRaises(KeyError, XMLProfileData,
-                         "test", kv_dict, report, None, True, None)
+                         "test", kv_dict, report, None, True)
 
     def test_non_exist_dir1(self):
         """Write xml data (None) to non existing directory
@@ -2656,7 +2655,7 @@ class Test_Profile_corner_cases(unittest.TestCase):
         key_value = KeyValues("install_type", ["invalid_value"], 1)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
-        xml_data = XMLProfileData("test", kv_dict, report, None, True, None)
+        xml_data = XMLProfileData("test", kv_dict, report, None, True)
         tdir = os.path.join(self.working_dir, "abc")
         # The directory that this file will be written to doesn't exist
         # so this test passes by not getting any exceptions during the
@@ -2687,7 +2686,7 @@ class Test_Profile_unsupported_keywords(unittest.TestCase):
             key_value = KeyValues(keyword, ["bogus_arg"], 1)
             kv_dict[key_value.line_num] = key_value
             report = ConversionReport()
-            XMLProfileData("test", kv_dict, report, None, True, None)
+            XMLProfileData("test", kv_dict, report, None, True)
             self.assertEquals(report.has_errors(), True)
             self.assertEquals(report.process_errors, 1)
             self.assertEquals(report.conversion_errors, None)
@@ -2718,7 +2717,7 @@ class Test_Rules(unittest.TestCase):
         def_rule = js2ai.DefinedRule(None, None, None)
         def_rule.add_key_values("arch", ["sparc"], 1)
         report = ConversionReport()
-        XMLRuleData("test", def_rule, report, None)
+        XMLRuleData(def_rule, report)
         self.assertEquals(report.has_errors(), False,
                           self.rule_failure_report(report))
 
@@ -2729,7 +2728,7 @@ class Test_Rules(unittest.TestCase):
         def_rule.add_key_values("arch", None, 1)
         report = ConversionReport()
         try:
-            XMLRuleData("test", def_rule, report, None)
+            XMLRuleData(def_rule, report)
         except ValueError:
             pass
         else:
@@ -2740,7 +2739,7 @@ class Test_Rules(unittest.TestCase):
         def_rule = js2ai.DefinedRule(None, None, None)
         def_rule.add_key_values("hostaddress", ["192.168.168.123"], 1)
         report = ConversionReport()
-        XMLRuleData("test", def_rule, report, None)
+        XMLRuleData(def_rule, report)
         self.assertEquals(report.has_errors(), False,
                           self.rule_failure_report(report))
 
@@ -2750,7 +2749,7 @@ class Test_Rules(unittest.TestCase):
         def_rule.add_key_values("hostaddress", None, 1)
         report = ConversionReport()
         try:
-            XMLRuleData("test", def_rule, report, None)
+            XMLRuleData(def_rule, report)
         except ValueError:
             pass
         else:
@@ -2759,7 +2758,7 @@ class Test_Rules(unittest.TestCase):
     def test_no_def_rule(self):
         """ Test the error path in the case where is no defined rule"""
         report = ConversionReport()
-        XMLRuleData("test", None, report, None)
+        XMLRuleData(None, report)
         self.assertEquals(report.has_errors(), False,
                           self.rule_failure_report(report))
 
@@ -2768,7 +2767,7 @@ class Test_Rules(unittest.TestCase):
         def_rule = js2ai.DefinedRule(None, None, None)
         def_rule.add_key_values("network", ["192.168.168.0"], 1)
         report = ConversionReport()
-        XMLRuleData("test", def_rule, report, None)
+        XMLRuleData(def_rule, report)
         self.assertEquals(report.has_errors(), False,
                           self.rule_failure_report(report))
 
@@ -2777,7 +2776,7 @@ class Test_Rules(unittest.TestCase):
         def_rule = js2ai.DefinedRule(None, None, None)
         def_rule.add_key_values("network", ["192.168.168"], 1)
         report = ConversionReport()
-        XMLRuleData("test", def_rule, report, None)
+        XMLRuleData(def_rule, report)
         self.assertEquals(report.has_errors(), True,
                           self.rule_failure_report(report))
         self.assertEquals(report.process_errors, 1,
@@ -2792,7 +2791,7 @@ class Test_Rules(unittest.TestCase):
         def_rule = js2ai.DefinedRule(None, None, None)
         def_rule.add_key_values("karch", ["sun4v"], 1)
         report = ConversionReport()
-        XMLRuleData("test", def_rule, report, None)
+        XMLRuleData(def_rule, report)
         self.assertEquals(report.has_errors(), False,
                           self.rule_failure_report(report))
 
@@ -2802,7 +2801,7 @@ class Test_Rules(unittest.TestCase):
         def_rule.add_key_values("karch", None, 1)
         report = ConversionReport()
         try:
-            XMLRuleData("test", def_rule, report, None)
+            XMLRuleData(def_rule, report)
         except ValueError:
             pass
 
@@ -2811,7 +2810,7 @@ class Test_Rules(unittest.TestCase):
         def_rule = js2ai.DefinedRule(None, None, None)
         def_rule.add_key_values("memsize", ["2048"], 1)
         report = ConversionReport()
-        XMLRuleData("test", def_rule, report, None)
+        XMLRuleData(def_rule, report)
         self.assertEquals(report.has_errors(), False,
                           self.rule_failure_report(report))
 
@@ -2821,7 +2820,7 @@ class Test_Rules(unittest.TestCase):
         def_rule.add_key_values("memsize", None, 1)
         report = ConversionReport()
         try:
-            XMLRuleData("test", def_rule, report, None)
+            XMLRuleData(def_rule, report)
         except ValueError:
             pass
         else:
@@ -2832,7 +2831,7 @@ class Test_Rules(unittest.TestCase):
         def_rule = js2ai.DefinedRule(None, None, None)
         def_rule.add_key_values("memsize", ["1024-2048"], 1)
         report = ConversionReport()
-        XMLRuleData("test", def_rule, report, None)
+        XMLRuleData(def_rule, report)
         self.assertEquals(report.has_errors(), False,
                           self.rule_failure_report(report))
 
@@ -2841,7 +2840,7 @@ class Test_Rules(unittest.TestCase):
         def_rule = js2ai.DefinedRule(None, None, None)
         def_rule.add_key_values("model", ["SUNW,Sun-Fire-880"], 1)
         report = ConversionReport()
-        XMLRuleData("test", def_rule, report, None)
+        XMLRuleData(def_rule, report)
         self.assertEquals(report.has_errors(), False,
                           self.rule_failure_report(report))
 
@@ -2851,7 +2850,7 @@ class Test_Rules(unittest.TestCase):
         def_rule.add_key_values("model", None, 1)
         report = ConversionReport()
         try:
-            XMLRuleData("test", def_rule, report, None)
+            XMLRuleData(def_rule, report)
         except ValueError:
             pass
         else:
@@ -2879,7 +2878,7 @@ class Test_Rule_unsupported_keywords(unittest.TestCase):
             def_rule = js2ai.DefinedRule(None, None, None)
             report = ConversionReport()
             def_rule.add_key_values(keyword, ["bogus_arg"], 1)
-            XMLRuleData("test", def_rule, report, None)
+            XMLRuleData(def_rule, report)
             self.assertEquals(report.has_errors(), True)
             self.assertEquals(report.process_errors, 0)
             self.assertEquals(report.conversion_errors, 0)

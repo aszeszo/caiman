@@ -26,11 +26,14 @@ new Solaris installer
 
 """
 import common
-import logging
 import re
 
 from common import _
+from common import generate_error
 from common import fetch_xpath_node as fetch_xpath_node
+from common import LOG_KEY_FILE, LOG_KEY_LINE_NUM
+from common import LVL_CONVERSION, LVL_PROCESS
+from common import LVL_UNSUPPORTED, LVL_WARNING
 from ip_address import IPAddress
 from lxml import etree
 from solaris_install.js2ai.common import SYSIDCFG_FILENAME
@@ -62,6 +65,10 @@ SVC_BUNDLE_XML_DEFAULT = \
 <service_bundle type="profile" name="system configuration"/>
 """
 
+NETWORK_KEY_LINE_NUM = 0
+NETWORK_KEY_INTERFACE = 1
+NETWORK_KEY_PAYLOAD = 2
+
 
 class XMLSysidcfgData(object):
     """Object used to represent the sysidcfg file"""
@@ -88,11 +95,15 @@ class XMLSysidcfgData(object):
     #    instance of a keyword is valid. However, if you specify the keyword
     #    more than once, only the first instance of the keyword is used.
 
-    def __init__(self, sysidcfg_dict, report, logger):
+    def __init__(self, sysidcfg_dict, report):
+        """Initialize the object
 
-        if logger is None:
-            logger = logging.getLogger("js2ai")
-        self.logger = logger
+        Arguments:
+        sysidcfg_dict - a dictionary containing the key values pairs read
+                in from the sysidcfg file
+        report - the error report
+        """
+
         self.sysidcfg_dict = sysidcfg_dict
         self._report = report
         self._defined_net_interfaces = []
@@ -111,11 +122,21 @@ class XMLSysidcfgData(object):
         self._svc_install_config = None
         self._svc_system_keymap = None
         self._svc_network_physical = None
+        self._extra_log_params = {LOG_KEY_FILE: SYSIDCFG_FILENAME,
+                                  LOG_KEY_LINE_NUM: 0}
 
         self._tree = etree.parse(StringIO(SVC_BUNDLE_XML_DEFAULT))
         self.__process_sysidcfg()
 
-    def __check_payload(self, line_num, keyword, payload):
+    def __gen_err(self, lvl, message):
+        """Log the specified error message at the specified level and
+           increment the error count associated with that log level in
+           the conversion report by 1
+
+        """
+        generate_error(lvl, self._report, message, self._extra_log_params)
+
+    def __check_payload(self, keyword, payload):
         """Check the payload (dict) to see if any elements are contained in it.
            Flag these extra elements as conversion errors
 
@@ -128,20 +149,17 @@ class XMLSysidcfgData(object):
                 pstr = key
             else:
                 pstr = key + "=" + value
-            self.logger.error(_("%(file)s: line %(lineno)d: unrecognized "
-                                "option for '%(keyword)s' specified: "
-                                "%(value)s") % \
-                                {"file": SYSIDCFG_FILENAME, \
-                                 "lineno": line_num, "keyword": keyword,
-                                 "value": pstr})
-            self._report.add_process_error()
+            self.__gen_err(LVL_PROCESS,
+                           _("unrecognized option for '%(keyword)s' "
+                             "specified: %(value)s") % \
+                             {"keyword": keyword, "value": pstr})
 
     @property
     def conversion_report(self):
         """Conversion Report associated with this object"""
         return self._report
 
-    def __convert_keyboard(self, line_num, keyword, values):
+    def __convert_keyboard(self, keyword, values):
         """Converts the keyboard keyword/values from the sysidcfg into
            the proper xml output for the Solaris configuration file for the
            auto installer.
@@ -165,10 +183,10 @@ class XMLSysidcfgData(object):
 
         if self._keyboard_layout is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(line_num, keyword, values)
+            self.__duplicate_keyword(keyword, values)
             return
         if len(values) != 1:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
             return
 
         self._keyboard_layout = \
@@ -176,29 +194,23 @@ class XMLSysidcfgData(object):
                                   "keymap", TYPE_APPLICATION,
                                   "layout", values[0])
 
-    def __convert_hostname(self, line_num, hostname):
+    def __convert_hostname(self, hostname):
         """Convert the hostname specified in the sysidcfg statement to the
            proper xml output for the Solaris configuration file for the
            auto installer.
 
         """
         if self._hostname is not None:
-            self.logger.error(_("%(file)s: line %(lineno)d: only one hostname"
-                                " can be defined, currently it's defined as "
-                                "'%(hostname)s'") % \
-                                {"file": SYSIDCFG_FILENAME,
-                                 "lineno": line_num,
-                                 "hostname": self._hostname})
-            self._report.add_conversion_error()
+            self.__gen_err(LVL_CONVERSION,
+                           _("only one hostname can be defined, currently "
+                             "it is defined as '%(hostname)s'") % \
+                             {"hostname": self._hostname})
             return
 
         if not self.__is_valid_hostname(hostname):
-            self.logger.error(_("%(file)s: line %(lineno)d: invalid hostname:"
-                                "'%(hostname)s'") % \
-                                {"file": SYSIDCFG_FILENAME,
-                                 "lineno": line_num,
-                                 "hostname": hostname})
-            self._report.add_conversion_error()
+            self.__gen_err(LVL_CONVERSION,
+                           _("invalid hostname: '%(hostname)s'") % \
+                             {"hostname": hostname})
             return
         #
         # <service name="system/identity" version="1" type="service">
@@ -216,7 +228,7 @@ class XMLSysidcfgData(object):
                                             TYPE_APPLICATION)
         self.__create_propval_node(config, "nodename", TYPE_ASTRING, hostname)
 
-    def __convert_name_service_dns(self, line_num, keyword, payload):
+    def __convert_name_service_dns(self, keyword, payload):
         """Convert the DNS name service specified in the sysidcfg statement
            to the proper xml output for Solaris configuration file for the
            auto installer.
@@ -282,17 +294,17 @@ class XMLSysidcfgData(object):
         # </service>
 
         if payload is None:
-            self.__missing_required_op(line_num, "domain_name")
+            self.__missing_required_op("domain_name")
             return
 
         domain_name = payload.pop("domain_name", None)
         if domain_name is None:
-            self.__missing_required_op(line_num, "domain_name")
+            self.__missing_required_op("domain_name")
             return
 
         name_server = payload.pop("name_server", None)
         if name_server is None:
-            self.__missing_required_op(line_num, "name_server")
+            self.__missing_required_op("name_server")
             return
 
         self.__adjust_nis(host="files dns mdns")
@@ -306,8 +318,7 @@ class XMLSysidcfgData(object):
         prop = self.__create_prop_node(prop_grp, "nameserver",
                                        TYPE_NET_ADDRESS)
         plist = etree.SubElement(prop, common.ELEMENT_NET_ADDRESS_LIST)
-        self.__create_address_list(line_num, plist, name_server,
-                                   _("name server"))
+        self.__create_address_list(plist, name_server, _("name server"))
 
         self.__create_propval_node(prop_grp, "domain",
                                    TYPE_ASTRING, domain_name)
@@ -324,7 +335,7 @@ class XMLSysidcfgData(object):
         self.__create_instance_node(self._name_service)
 
         # Are there any more keys left in the dictionary that we need to flag
-        self.__check_payload(line_num, keyword, payload)
+        self.__check_payload(keyword, payload)
 
     def __adjust_nis(self, default="files", printer="user files",
                      host="files", netgroup="files"):
@@ -379,7 +390,7 @@ class XMLSysidcfgData(object):
         self.__create_instance_node(name_service, "default", enabled)
         return name_service
 
-    def __convert_name_service_nis(self, line_num, keyword, payload):
+    def __convert_name_service_nis(self, keyword, payload):
         """Convert the NIS name service specified in the sysidcfg statement
            to the proper xml output for the Solaris configuration file for the
            auto installer. Currently NIS is not supported via the auto
@@ -443,17 +454,17 @@ class XMLSysidcfgData(object):
         # </service_bundle>
 
         if payload is None:
-            self.__missing_required_op(line_num, "domain_name")
+            self.__missing_required_op("domain_name")
             return
 
         domain_name = payload.pop("domain_name", None)
         if domain_name is None:
-            self.__missing_required_op(line_num, "domain_name")
+            self.__missing_required_op("domain_name")
             return
 
         name_server = payload.pop("name_server", None)
         if name_server is None:
-            self.__missing_required_op(line_num, "name_server")
+            self.__missing_required_op("name_server")
             return
 
         self.__adjust_nis(default="files nis",
@@ -472,7 +483,7 @@ class XMLSysidcfgData(object):
                                             "ypservers", TYPE_NET_ADDRESS)
         net_addr_list = etree.SubElement(ypservers,
                                          common.ELEMENT_NET_ADDRESS_LIST)
-        self.__create_address_list(line_num, net_addr_list, name_server,
+        self.__create_address_list(net_addr_list, name_server,
                                    _("name server"))
         self.__create_instance_node(self._name_service)
 
@@ -480,9 +491,9 @@ class XMLSysidcfgData(object):
                                                 "network/nis/client")
         self.__create_instance_node(nis_client)
 
-        self.__check_payload(line_num, keyword, payload)
+        self.__check_payload(keyword, payload)
 
-    def __convert_name_service_nisplus(self, line_num, keyword, payload):
+    def __convert_name_service_nisplus(self, keyword, payload):
         """Convert the NIS+ name service specified in the sysidcfg statement
            to the proper xml output for the Solaris configuration file for the
            auto installer.  NIS+ is no longer supported once NIS is supported
@@ -496,14 +507,11 @@ class XMLSysidcfgData(object):
 
         # NIS plus is no longer supported in Solaris.
         # Convert this to standard NIS.  Output error in log file
-        self.logger.error(_("%(file)s: line %(lineno)d: NIS+ is no longer "
-                            "supported.  Using NIS instead.") % \
-                            {"file": SYSIDCFG_FILENAME, \
-                             "lineno": line_num})
-        self._report.add_conversion_error()
-        self.__convert_name_service_nis(line_num, keyword, payload)
+        self.__gen_err(LVL_WARNING,
+                       _("NIS+ is no longer supported. Using NIS instead."))
+        self.__convert_name_service_nis(keyword, payload)
 
-    def __convert_name_service_none(self, line_num, keyword, payload):
+    def __convert_name_service_none(self, keyword, payload):
         """Convert the NONE name service specified in the sysidcfg statement
            to the proper xml output for the Solaris configuration file for the
            auto installer.
@@ -513,14 +521,14 @@ class XMLSysidcfgData(object):
         #
         # name_service=None
         if payload is not None:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
             return
 
         # Need to set the _name_service to some value so our duplicate
         # keyword check will work if first occurrance is None
         self._name_service = "None"
 
-    def __convert_name_service_ldap(self, line_num, keyword, payload):
+    def __convert_name_service_ldap(self, keyword, payload):
         """Convert the LDAP name service specified in the sysidcfg statement
            to the proper xml output for the Solaris configuration file for the
            auto installer. Currently LDAP is not supported via the auto
@@ -546,19 +554,19 @@ class XMLSysidcfgData(object):
         # proxy_password (Optional) - Specifies the client proxy password
         #
         if payload is None:
-            self.__missing_required_op(line_num, "domain_name")
+            self.__missing_required_op("domain_name")
             return
         domain_name = payload.pop("domain_name", None)
         if domain_name is None:
-            self.__missing_required_op(line_num, "domain_name")
+            self.__missing_required_op("domain_name")
             return
         profile_name = payload.pop("profile", None)
         if profile_name is None:
-            self.__missing_required_op(line_num, "profile")
+            self.__missing_required_op("profile")
             return
         profile_server = payload.pop("profile_server", None)
         if profile_server is None:
-            self.__missing_required_op(line_num, "profile_server")
+            self.__missing_required_op("profile_server")
             return
 
         # Optional parameters
@@ -656,7 +664,7 @@ class XMLSysidcfgData(object):
         self.__create_instance_node(nis)
 
         # Are there any more keys left in the dictionary that we need to flag
-        self.__check_payload(line_num, keyword, payload)
+        self.__check_payload(keyword, payload)
 
     name_service_conversion_dict = {
         "NIS": __convert_name_service_nis,
@@ -666,7 +674,7 @@ class XMLSysidcfgData(object):
         "NONE": __convert_name_service_none,
         }
 
-    def __convert_name_service(self, line_num, keyword, values):
+    def __convert_name_service(self, keyword, values):
         """Converts the name_service keyword/values specified in the sysidcfg
            statement to the proper xml output for the Solaris configuration
            file for the auto installer.
@@ -674,7 +682,7 @@ class XMLSysidcfgData(object):
         """
         if self._name_service is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(line_num, keyword, values)
+            self.__duplicate_keyword(keyword, values)
             return
 
         name_service = values[0].upper()
@@ -687,13 +695,9 @@ class XMLSysidcfgData(object):
             function_to_call = \
                 self.name_service_conversion_dict[name_service]
         except KeyError:
-            self.logger.error(_("%(file)s: line %(lineno)d: unrecognized "
-                                "unsupported name service specified: "
-                                "%(service)s") % \
-                                {"file": SYSIDCFG_FILENAME, \
-                                 "lineno": line_num,
-                                 "service": values[0]})
-            self._report.add_process_error()
+            self.__gen_err(LVL_PROCESS,
+                           _("unsupported name service specified: "
+                             "%(service)s") % {"service": values[0]})
         else:
 
             # The user specified to overide current default name service
@@ -701,9 +705,9 @@ class XMLSysidcfgData(object):
             # against
             self.__remove_selected_children(self._service_bundle,
                                             "/network/*/install")
-            function_to_call(self, line_num, keyword, payload)
+            function_to_call(self, keyword, payload)
 
-    def __config_net_interface_none(self, line_num, payload):
+    def __config_net_interface_none(self, payload):
         """Configure the network interface to None"""
         # output form:
         #
@@ -726,19 +730,17 @@ class XMLSysidcfgData(object):
         self.__create_net_interface(auto_netcfg=False)
 
         # Are there any more keys left in the dictionary that we need to flag
-        self.__check_payload(line_num, "network_interface=NONE", payload)
+        self.__check_payload("network_interface=NONE", payload)
 
         # If there are any other interfaces defined flag them as errors
         for network in self._defined_net_interfaces:
-            line_num = network[0]
-            self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                "network interface, NONE interface "
-                                "previously defined, ignoring") % \
-                                {"file": SYSIDCFG_FILENAME,
-                                 "lineno": network[0]})
-            self._report.add_process_error()
+            self._extra_log_params[LOG_KEY_LINE_NUM] = \
+                network[NETWORK_KEY_LINE_NUM]
+            self.__gen_err(LVL_PROCESS,
+                           _("invalid network interface, NONE interface "
+                             "previously defined, ignoring"))
 
-    def __config_net_interface_primary(self, line_num, payload):
+    def __config_net_interface_primary(self, payload):
         """Converts the network_interface keyword/values from the sysidcfg into
            the appropriate equivalent Solaris xml configuration
 
@@ -765,28 +767,23 @@ class XMLSysidcfgData(object):
                     # configuration setup
                     pass
                 else:
-                    self.logger.error(
-                        _("%(file)s: line %(lineno)d: when the "
-                          "PRIMARY interface is specified, by default the "
-                          "system will be configured for both IPv4 and IPv6 "
-                          "via automatic network configuration. Disabling "
-                          "IPv6 is not supported.  If you wish to ensure that"
-                          " only IPv4 is  configured it will be necessary to "
-                          "replace  the PRIMARY option with the interface you "
-                          "wish to configure.") % \
-                          {"file": SYSIDCFG_FILENAME, \
-                           "lineno": line_num})
-                    self._report.add_conversion_error()
+                    self.__gen_err(LVL_CONVERSION,
+                                   _("when the PRIMARY interface is "
+                                     "specified, by default the system will "
+                                     "be configured for both IPv4 and IPv6 "
+                                     "via automatic network configuration. "
+                                     "Disabling IPv6 is not supported.  If "
+                                     "you wish to ensure that only IPv4 is "
+                                     "configured it will be necessary to "
+                                     "replace  the PRIMARY option with the "
+                                     "interface you wish to configure."))
 
                 if len(payload) != 0:
-                    self.logger.error(
-                        _("%(file)s: line %(lineno)d: unexpected "
-                          "option(s) specified. If you are using the "
-                          "dhcp option, the only other option you "
-                          "can specify is protocol_ipv6.") % \
-                          {"file": SYSIDCFG_FILENAME, \
-                           "lineno": line_num})
-                    self._report.add_process_error()
+                    self.__gen_err(LVL_PROCESS,
+                                   _("unexpected option(s) specified. If "
+                                     "you are using the dhcp option, the "
+                                     "only other option you can specify is "
+                                     "protocol_ipv6."))
             else:  # dhcp is None
 
                 # Although we don't use the next values remove them from the
@@ -798,34 +795,28 @@ class XMLSysidcfgData(object):
                 payload.pop("netmask", None)
                 payload.pop("default_route", None)
 
-                self.logger.error(
-                    _("%(file)s: line %(lineno)d: when the "
-                      "PRIMARY interface is specified, by default the "
-                      "system will be configured for both IPv4 and IPv6 "
-                      "via automatic network configuration. The options "
-                      "specified will be ignored. If you wish to configure "
-                      "the interface with the specified options replace "
-                      "PRIMARY with the name of the "
-                      "interface that should be configured.") % \
-                    {"file": SYSIDCFG_FILENAME, \
-                     "lineno": line_num})
-                self._report.add_conversion_error()
+                self.__gen_err(LVL_CONVERSION,
+                               _("when the PRIMARY interface is specified, "
+                                 "by default the system will be configured "
+                                 "for both IPv4 and IPv6 via automatic "
+                                 "network configuration. The options "
+                                 "specified will be ignored. If you wish to "
+                                 "configure the interface with the specified "
+                                 "options replace PRIMARY with the name of "
+                                 "the interface that should be configured."))
 
                 # Are there any more keys left in the dict that we need to flag
-                self.__check_payload(line_num,
-                                     "network_interface=PRIMARY", payload)
+                self.__check_payload("network_interface=PRIMARY", payload)
 
         # If there are any other interfaces defined flag them as errors
         for network in self._defined_net_interfaces:
-            line_num = network[0]
-            self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                "network interface, PRIMARY network interface "
-                                "previously defined, ignoring") % \
-                                {"file": SYSIDCFG_FILENAME,
-                                 "lineno": line_num})
-            self._report.add_process_error()
+            self._extra_log_params[LOG_KEY_LINE_NUM] = \
+                network[NETWORK_KEY_LINE_NUM]
+            self.__gen_err(LVL_PROCESS,
+                           _("invalid network interface, PRIMARY network "
+                             "interface previously defined, ignoring"))
 
-    def __config_net_physical_ipv4(self, line_num, interface, payload):
+    def __config_net_physical_ipv4(self, interface, payload):
         """Configures the IPv4 interface for the interface specified by the
            user by generating the proper xml structure used by the Solaris
            auto installer
@@ -836,27 +827,23 @@ class XMLSysidcfgData(object):
 
         primary = payload.pop("primary", None)
         if primary is not None:
-            self.logger.error(_("%(file)s: line %(lineno)d: defining an "
-                                "interface as primary is not supported, "
-                                "ignorning setting") %
-                                {"file": SYSIDCFG_FILENAME,
-                                 "lineno": line_num})
-            self._report.add_unsupported_item()
+            self.__gen_err(LVL_UNSUPPORTED,
+                           _("defining an interface as primary is not "
+                             "supported, ignorning setting"))
 
         ip_address = payload.pop("ip_address", None)
         if ip_address is not None:
-            if not self.__is_valid_ip(line_num, ip_address, _("ip address")):
+            if not self.__is_valid_ip(ip_address, _("ip address")):
                 return
 
         netmask = payload.pop("netmask", None)
         if netmask is not None:
-            if not self.__is_valid_ip(line_num, netmask, _("netmask")):
+            if not self.__is_valid_ip(netmask, _("netmask")):
                 return
 
         default_route = payload.pop("default_route", None)
         if default_route is not None and default_route.lower() != "none":
-            if not self.__is_valid_ip(line_num, default_route,
-                                      _("default route")):
+            if not self.__is_valid_ip(default_route, _("default route")):
                 # Unlike ip_address and netmask if the default route has
                 # an error go ahead and create network entry
                 default_route = None
@@ -871,16 +858,12 @@ class XMLSysidcfgData(object):
             address = None
 
         if address is None:
-            self.logger.error(_("%(file)s: line %(lineno)d: unable to "
-                                "complete configuration of IPv4 interface for "
-                                "'%(interface)s', values must be specified for"
-                                " both ip_address and netmask.  Configuring"
-                                " system for automatic network "
-                                "configuration") %
-                                {"file": SYSIDCFG_FILENAME,
-                                 "lineno": line_num,
-                                 "interface": interface})
-            self._report.add_conversion_error()
+            self.__gen_err(LVL_CONVERSION,
+                           _("unable to complete configuration of IPv4 "
+                             "interface for '%(interface)s', values must be "
+                             "specified for  both ip_address and netmask. "
+                             "Configuring system for automatic network "
+                             "configuration") % {"interface": interface})
 
             # Since we only support a single interface at this time, we want
             # to make the system usable.  To ensure that we will use
@@ -928,7 +911,7 @@ class XMLSysidcfgData(object):
             self.__create_propval_node(ipv4_network, "default_route",
                                         TYPE_NET_ADDRESS_V4, default_route)
 
-    def __config_net_interface_dhcp(self, line_num, interface, payload):
+    def __config_net_interface_dhcp(self, interface, payload):
         """Configures the specified interface as dhcp for ipv4 and ipv6 (if
            specified)
 
@@ -983,13 +966,10 @@ class XMLSysidcfgData(object):
         if ipv6.lower() == "yes":
             self.__config_net_physical_ipv6(interface)
         if len(payload) != 0:
-            self.logger.error(_("%(file)s: line %(lineno)d: unexpected "
-                                "option(s) specified. If you are using the "
-                                "dhcp option, the only other option you "
-                                "can specify is protocol_ipv6.") % \
-                            {"file": SYSIDCFG_FILENAME, \
-                            "lineno": line_num})
-            self._report.add_process_error()
+            self.__gen_err(LVL_PROCESS,
+                           _("unexpected option(s) specified. If you are "
+                             "using the dhcp option, the only other option "
+                             "you can specify is protocol_ipv6."))
             return
 
         # Create default network
@@ -1059,58 +1039,54 @@ class XMLSysidcfgData(object):
                                         "/network/install")
 
         network = self._defined_net_interfaces.pop(0)
-        line_num = network[0]
-        interface = network[1].lower()
-        payload = network[2]
+        self._extra_log_params[LOG_KEY_LINE_NUM] = \
+            network[NETWORK_KEY_LINE_NUM]
+        interface = network[NETWORK_KEY_INTERFACE].lower()
+        payload = network[NETWORK_KEY_PAYLOAD]
         if payload is not None:
             hostname = payload.pop("hostname", None)
             if hostname is not None:
-                self.__convert_hostname(line_num, hostname)
+                self.__convert_hostname(hostname)
         if interface == "none":
-            self.__config_net_interface_none(line_num, payload)
+            self.__config_net_interface_none(payload)
             return
         elif interface == "primary":
-            self.__config_net_interface_primary(line_num, payload)
+            self.__config_net_interface_primary(payload)
             return
         if payload is None or len(payload) == 0:
-            self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
-                                "network configuration no parameters for "
-                                "interface %(interface)s specified. "
-                                "Configuring network for auto configuration") %
-                                {"file": SYSIDCFG_FILENAME,
-                                 "lineno": line_num,
-                                 "interface": interface})
-            self._report.add_unsupported_item()
+            self.__gen_err(LVL_UNSUPPORTED,
+                           _("unsupported network configuration no parameters"
+                             "for interface %(interface)s specified. "
+                             "Configuring network for auto configuration") %
+                             {"interface": interface})
+
             # Create Auto configuration network
             self.__create_net_interface(auto_netcfg=True)
             return
         else:
             dhcp = payload.pop("dhcp", None)
             if dhcp is not None:
-                self.__config_net_interface_dhcp(line_num, interface, payload)
+                self.__config_net_interface_dhcp(interface, payload)
                 return
             ipv6 = payload.pop("protocol_ipv6", "no")
             if ipv6.lower() == "yes":
                 self.__config_net_physical_ipv6(interface)
 
-            self.__config_net_physical_ipv4(line_num, interface, payload)
+            self.__config_net_physical_ipv4(interface, payload)
 
             # Are there any more keys left in the dict that we need to flag
-            self.__check_payload(line_num, "network_interface", payload)
+            self.__check_payload("network_interface", payload)
 
         # Currently the installer only supports a single NIC interface
         # so we need to flag any additional ones as unsupported
         for network in self._defined_net_interfaces:
-            line_num = network[0]
-            interface = network[1]
-            self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
-                                "network interface '%(interface)s', installer "
-                                "currently only supports configuring a single "
-                                "interface") % \
-                                {"file": SYSIDCFG_FILENAME,
-                                 "lineno": line_num,
-                                 "interface": interface})
-            self._report.add_unsupported_item()
+            self._extra_log_params[LOG_KEY_LINE_NUM] = \
+                network[NETWORK_KEY_LINE_NUM]
+            interface = network[NETWORK_KEY_INTERFACE]
+            self.__gen_err(LVL_UNSUPPORTED,
+                           _("unsupported network interface '%(interface)s', "
+                             "installer currently only supports configuring "
+                             "a single interface") % {"interface": interface})
 
         # Make sure we have at least 1 network interface configured
         if self._default_network is None:
@@ -1122,7 +1098,7 @@ class XMLSysidcfgData(object):
             # Configure for default network
             self.__create_net_interface(auto_netcfg=False)
 
-    def __convert_nfs4_domain(self, line_num, keyword, values):
+    def __convert_nfs4_domain(self, keyword, values):
         """Converts the nfs4_domain keyword/values from the sysidcfg into
            the new xml format
 
@@ -1136,9 +1112,9 @@ class XMLSysidcfgData(object):
         #   Legacy sysid tools provide configuration screens for configuring
         #   kerberos and NFSv4 domain. SCI tool will not support configuration
         # of those areas.
-        self.__unsupported_keyword(line_num, keyword, values)
+        self.__unsupported_keyword(keyword, values)
 
-    def __convert_root_password(self, line_num, keyword, values):
+    def __convert_root_password(self, keyword, values):
         """Converts the root_passord keyword/values from the sysidcfg into
            the new xml format
 
@@ -1160,11 +1136,11 @@ class XMLSysidcfgData(object):
         # </service>
         if self._root_passwd is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(line_num, keyword, values)
+            self.__duplicate_keyword(keyword, values)
             return
 
         if len(values) != 1:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
             return
 
         self._root_passwd = \
@@ -1172,7 +1148,7 @@ class XMLSysidcfgData(object):
                                   "root_account", TYPE_APPLICATION,
                                   "password", values[0])
 
-    def __convert_security_policy(self, line_num, keyword, values):
+    def __convert_security_policy(self, keyword, values):
         """Converts the security_policy keyword/values from the sysidcfg into
            the new xml format
 
@@ -1195,7 +1171,7 @@ class XMLSysidcfgData(object):
         # user that this setting is not supported or it's invalid
 
         if len(values) != 1:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
             return
 
         policy = values[0].lower()
@@ -1203,16 +1179,14 @@ class XMLSysidcfgData(object):
             # Nothing to do
             return
         elif policy == "kerberos":
-            self.logger.error(_("%(file)s: line %(line_num)d: unsupported "
-                                "security policy of kerberos specified. Only "
-                                "a value of 'NONE' is supported." %
-                                {"file": SYSIDCFG_FILENAME,
-                                 "line_num": line_num}))
-            self._report.add_unsupported_item()
+            self.__gen_err(LVL_UNSUPPORTED,
+                           _("unsupported security policy of kerberos "
+                             "specified. Only a value of 'NONE' is "
+                             "supported."))
         else:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
 
-    def __convert_service_profile(self, line_num, keyword, values):
+    def __convert_service_profile(self, keyword, values):
         """Converts the service_profile keyword/values from the sysidcfg into
            the new xml format
 
@@ -1235,11 +1209,11 @@ class XMLSysidcfgData(object):
         #
         if self._service_profile is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(line_num, keyword, values)
+            self.__duplicate_keyword(keyword, values)
             return
 
         if len(values) != 1:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
             return
 
         self._service_profile = values[0]
@@ -1249,21 +1223,17 @@ class XMLSysidcfgData(object):
             # is needed to make this occur
             pass
         elif self._service_profile == "open":
-            # TODO: Add reference to man page that tells user the steps of
-            # how to do this
-            self.logger.error(_("%(file)s: line %(line_num)d: the service "
-                                "profile option 'open' is not available. "
-                                "The system will be configured with "
-                                "'service_profile=limited_net'. Additional "
-                                "services can be enabled later in the "
-                                "System Configuration manifest.") %
-                                {"file": SYSIDCFG_FILENAME,
-                                 "line_num": line_num})
-            self._report.add_unsupported_item()
+            self.__gen_err(LVL_UNSUPPORTED,
+                           _("the service profile option 'open' is not "
+                             "available. The system will be configured with "
+                             "'service_profile=limited_net'. Additional "
+                             "services can be enabled later in the "
+                             "System Configuration manifest. See "
+                             "aimanifest(1M) for additional information"))
         else:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
 
-    def __convert_system_locale(self, line_num, keyword, values):
+    def __convert_system_locale(self, keyword, values):
         """Converts the system_locale keyword/values from the sysidcfg into
            the new xml format
 
@@ -1284,11 +1254,11 @@ class XMLSysidcfgData(object):
         #
         if self._system_locale is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(line_num, keyword, values)
+            self.__duplicate_keyword(keyword, values)
             return
 
         if len(values) != 1:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
             return
 
         self._system_locale = \
@@ -1303,7 +1273,7 @@ class XMLSysidcfgData(object):
         self.__create_propval_node(prop_group, "LANG",
                                    TYPE_ASTRING, values[0])
 
-    def __convert_terminal(self, line_num, keyword, values):
+    def __convert_terminal(self, keyword, values):
         """Converts the terminal keyword/values from the sysidcfg into
            the new xml format
 
@@ -1324,11 +1294,11 @@ class XMLSysidcfgData(object):
 
         if self._terminal is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(line_num, keyword, values)
+            self.__duplicate_keyword(values)
             return
 
         if len(values) != 1:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
             return
 
         self._terminal = \
@@ -1341,7 +1311,7 @@ class XMLSysidcfgData(object):
         self.__create_propval_node(prop_group, "terminal_type",
                                    TYPE_ASTRING, values[0])
 
-    def __convert_timeserver(self, line_num, keyword, values):
+    def __convert_timeserver(self, keyword, values):
         """Converts the timeserver keyword/values from the sysidcfg into
            the new xml format
 
@@ -1354,23 +1324,20 @@ class XMLSysidcfgData(object):
 
         if self._timeserver is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(line_num, keyword, values)
+            self.__duplicate_keyword(keyword, values)
             return
 
         if len(values) != 1:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
             return
 
         if values[0] != "localhost":
-            self.logger.error(_("%(file)s: line %(line_num)d: unsupported "
-                                "timeserver value of '%(setting)s' specified. "
-                                "Only a value of 'localhost' is supported.") %
-                                {"file": SYSIDCFG_FILENAME,
-                                 "line_num": line_num,
-                                 "setting": values[0]})
-            self._report.add_unsupported_item()
+            self.__gen_err(LVL_UNSUPPORTED,
+                           _("unsupported timeserver value of '%(setting)s' "
+                             "specified. Only a value of 'localhost' is "
+                             "supported.") % {"setting": values[0]})
 
-    def __convert_timezone(self, line_num, keyword, values):
+    def __convert_timezone(self, keyword, values):
         """Converts the timezone keyword/values from the sysidcfg into
            the new xml format
 
@@ -1391,17 +1358,17 @@ class XMLSysidcfgData(object):
 
         if self._timezone is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(line_num, keyword, values)
+            self.__duplicate_keyword(keyword, values)
             return
         if len(values) != 1:
-            self.__invalid_syntax(line_num, keyword)
+            self.__invalid_syntax(keyword)
             return
 
         self._timezone = self.__create_service("system/timezone",
                                                "timezone", TYPE_APPLICATION,
                                                "localtime", values[0])
 
-    def __create_address_list(self, line_num, parent, addresses, type_label):
+    def __create_address_list(self, parent, addresses, type_label):
         """Take the passed in comma separated address list and add
            individual value node entries for each address.   Address list
            should be in the form ip,ip  or hostname(ip),hostname(ip)
@@ -1409,7 +1376,6 @@ class XMLSysidcfgData(object):
                   <value_node value="10.0.0.10"/>
 
            Arguments
-            line_num - the line # being processed
             parent - the parent node to attach all value nodes to
             addresses - comma separated list of ip addresses
             type - localize name to identify the addresses as when
@@ -1424,7 +1390,7 @@ class XMLSysidcfgData(object):
                 ip_address = match_pattern.group(3)
             else:
                 ip_address = entry
-            if self.__is_valid_ip(line_num, ip_address, type_label):
+            if self.__is_valid_ip(ip_address, type_label):
                 self.__create_value_node(parent, ip_address)
 
     def __create_instance_node(self, parent, name="default",
@@ -1564,23 +1530,17 @@ class XMLSysidcfgData(object):
         node.set(common.ATTRIBUTE_VALUE, value)
         return node
 
-    def __duplicate_keyword(self, line_num, keyword, values):
+    def __duplicate_keyword(self, keyword, values):
         """Generate a duplicate keyword error"""
-        self.logger.error(_("%(file)s: line %(lineno)d: invalid entry, "
-                            "duplicate keyword encountered: %(key)s") % \
-                            {"file": SYSIDCFG_FILENAME,
-                             "lineno": line_num, \
-                             "key": keyword})
-        self._report.add_process_error()
+        self.__gen_err(LVL_PROCESS,
+                       _("invalid entry, duplicate keyword encountered: "
+                         "%(key)s") % {"key": keyword})
 
-    def __missing_required_op(self, line_num, operand):
+    def __missing_required_op(self, operand):
         """Generate a missing required op error"""
-        self.logger.error(_("%(file)s: line %(lineno)d: invalid entry, "
-                            "missing requirement value for: %(op)s") % \
-                            {"file": SYSIDCFG_FILENAME,
-                             "lineno": line_num, \
-                             "op": operand})
-        self._report.add_process_error()
+        self.__gen_err(LVL_PROCESS,
+                       _("invalid entry, missing requirement value for: "
+                         "%(op)s") % {"op": operand})
 
     def __fetch_service(self, name):
         """Fetch the service with the specified name
@@ -1589,13 +1549,11 @@ class XMLSysidcfgData(object):
         xpath = "./service[@name='%s'][@version='1']" % name
         return fetch_xpath_node(self._service_bundle, xpath)
 
-    def __invalid_syntax(self, line_num, keyword):
+    def __invalid_syntax(self, keyword):
         """Generate an invalid syntax error"""
-        self.logger.error(_("%(file)s: line %(lineno)d: invalid syntax "
-                            "for keyword '%(key)s' specified") % \
-                            {"file": SYSIDCFG_FILENAME, \
-                             "lineno": line_num, "key": keyword})
-        self._report.add_process_error()
+        self.__gen_err(LVL_PROCESS,
+                       _("invalid syntax for keyword '%(key)s' "
+                         "specified") % {"key": keyword})
 
     def __is_valid_hostname(self, hostname):
         """Perform a basic validation of the hostname
@@ -1618,18 +1576,14 @@ class XMLSysidcfgData(object):
              and not disallowed.search(label))  # contains only legal chars
             for label in hostname.split("."))
 
-    def __is_valid_ip(self, line_num, ip_address, label):
+    def __is_valid_ip(self, ip_address, label):
         """Check ipaddress.  If not valid flag with appropriate error msg"""
         try:
             IPAddress.incremental_check(ip_address)
         except ValueError:
-            self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                "%(label)s specified '%(ip)s'") % \
-                                {"file": SYSIDCFG_FILENAME,
-                                 "lineno": line_num,
-                                 "label": label,
-                                 "ip": ip_address})
-            self._report.add_conversion_error()
+            self.__gen_err(LVL_CONVERSION,
+                           _("invalid %(label)s specified '%(ip)s'") % \
+                             {"label": label, "ip": ip_address})
             return False
         return True
 
@@ -1703,14 +1657,10 @@ class XMLSysidcfgData(object):
         """Return the xml tree associated with this object"""
         return self._tree
 
-    def __unsupported_keyword(self, line_num, keyword, values):
+    def __unsupported_keyword(self, keyword, values):
         """Generate an unsupported keyword error"""
-        self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
-                            "keyword: %(key)s") % \
-                            {"file": SYSIDCFG_FILENAME, \
-                             "lineno": line_num, \
-                             "key": keyword})
-        self._report.add_unsupported_item()
+        self.__gen_err(LVL_UNSUPPORTED,
+                       _("unsupported keyword: %(key)s") % {"key": keyword})
 
     # The SCI design doc states:
     #   Legacy sysid tools provide configuration screens for configuring
@@ -1768,12 +1718,16 @@ class XMLSysidcfgData(object):
             line_num = key_value_obj.line_num
             if line_num is None or value is None or keyword is None:
                 raise ValueError
+            self._extra_log_params[LOG_KEY_LINE_NUM] = line_num
             try:
                 function_to_call = self.sysidcfg_conversion_dict[keyword]
             except KeyError:
-                self.__unsupported_keyword(line_num, keyword, value)
+                self.__unsupported_keyword(keyword, value)
             else:
-                function_to_call(self, line_num, keyword, value)
+                if keyword == "network_interface":
+                    function_to_call(self, line_num, keyword, value)
+                else:
+                    function_to_call(self, keyword, value)
 
         # All the elements have been processed at this point in time.
         self.__config_net_interface()
@@ -1781,17 +1735,10 @@ class XMLSysidcfgData(object):
         # Perform some simple check to unsure we warn user about potentially
         # unexpected conditions
         if self._hostname is None:
-            self.logger.warning(_("%(file)s: line %(lineno)d: WARNING: no "
-                                "hostname specified, Automated Installer will "
-                                "configure with default hostname.") % \
-                                {"file": SYSIDCFG_FILENAME, \
-                                 "lineno": line_num + 1})
-            self._report.add_warning()
+            self.__gen_err(LVL_WARNING,
+                           _("no hostname specified, Automated Installer "
+                             "will configure with default hostname."))
         if self._root_passwd is None:
-            self.logger.warning(_("%(file)s: line %(lineno)d: WARNING: no "
-                                "root password specified, Automated Installer "
-                                "will configure with default root "
-                                "password.") % \
-                                {"file": SYSIDCFG_FILENAME, \
-                                 "lineno": line_num + 1})
-            self._report.add_warning()
+            self.__gen_err(LVL_WARNING,
+                           _("no root password specified, Automated Installer "
+                             "will configure with default root password."))
