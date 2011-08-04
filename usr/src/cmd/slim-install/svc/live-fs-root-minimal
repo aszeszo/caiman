@@ -76,6 +76,10 @@ if [ $ISA_INFO = "sparc" ]; then
 		/usr/sbin/svcadm enable svc:/system/filesystem/root-assembly:net
 		/usr/sbin/svcadm disable -s \
 		    svc:/system/filesystem/root-assembly:media
+        else
+        	# enable automatic network configuration for media booted
+                # environments
+                /usr/sbin/svccfg apply /etc/svc/profile/network_nwam.xml
 	fi
 else
 	MEDIA=`/sbin/devprop -s install_media`
@@ -83,6 +87,10 @@ else
 		/usr/sbin/svcadm enable svc:/system/filesystem/root-assembly:net
 		/usr/sbin/svcadm disable -s \
 		    svc:/system/filesystem/root-assembly:media
+        else
+        	# enable automatic network configuration for media booted
+                # environments
+                /usr/sbin/svccfg apply /etc/svc/profile/network_nwam.xml
 	fi
 fi
 

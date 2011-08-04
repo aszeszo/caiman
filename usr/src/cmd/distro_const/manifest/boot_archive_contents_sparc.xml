@@ -31,6 +31,9 @@
         <name>usr/bin/sort</name>
         <name>usr/bin/svcs</name>
         <name>usr/bin/sparcv9/sort</name>
+        <name>usr/bin/mkfifo</name>
+        <name>usr/bin/egrep</name>
+        <name>usr/bin/pgrep</name>
         <name>usr/sbin/autopush</name>
         <name>usr/sbin/beadm</name>
         <name>usr/sbin/bootadm</name>
@@ -50,7 +53,6 @@
         <name>usr/sbin/ifparse</name>
         <name>usr/sbin/init</name>
         <name>usr/sbin/in.mpathd</name>
-        <name>usr/sbin/install-finish</name>
         <name>usr/sbin/ipadm</name>
         <name>usr/sbin/ipmpstat</name>
         <name>usr/sbin/jsh</name>
@@ -63,8 +65,8 @@
         <name>usr/sbin/mountall</name>
         <name>usr/sbin/mount_media</name>
         <name>usr/sbin/netstrategy</name>
-        <name>usr/sbin/nwamcfg</name>
-        <name>usr/sbin/nwamadm</name>
+        <name>usr/sbin/netcfg</name>
+        <name>usr/sbin/netadm</name>
         <name>usr/sbin/pfsh</name>
         <name>usr/sbin/rc0</name>
         <name>usr/sbin/rc1</name>

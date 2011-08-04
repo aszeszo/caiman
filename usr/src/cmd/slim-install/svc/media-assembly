@@ -101,9 +101,6 @@ apply_platform_profile
 livessh=`/sbin/devprop -s livessh`
 
 if is_autoinstall; then
-	# Apply the appropriate nwam profile
-	/usr/sbin/svccfg apply /etc/svc/profile/network_nwam.xml
-
 	# If requested, enable remote access via ssh
 	if [ "$livessh" = "enable" ]; then
 		# generate ssh keys
