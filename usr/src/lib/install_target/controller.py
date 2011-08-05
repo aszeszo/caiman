@@ -539,7 +539,7 @@ class TargetController(object):
             return
 
         # force a VTOC label and update the disk's geometry and dev_size
-        if disk.label == "VTOC":
+        if disk.label == "VTOC" and not self._dry_run:
             # look for this disk in the DISCOVERED target tree to see if the
             # label changed from EFI to VTOC
             for discovered_disk in self._discovered_disks:
