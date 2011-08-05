@@ -81,6 +81,14 @@ def _pxegrub_path(client_id):
     return client_id, os.path.join(com.BOOT_DIR, client_id)
 
 
+_PXE_CLIENT_DHCP_CONFIG = """
+No local DHCP configuration found. If not already configured, the
+following should be added to the DHCP configuration:
+    Boot server IP      : %s
+    Boot file           : %s
+"""
+
+
 def setup_x86_client(service, mac_address, bootargs=''):
     ''' Set up an x86 client
 
@@ -162,11 +170,7 @@ def setup_x86_client(service, mac_address, bootargs=''):
         if valid_nets:
             server_ip = valid_nets[0]
 
-        print cw(_("No local DHCP configuration found. If not already "
-                   "configured, the following should be added to the DHCP "
-                   "configuration:"))
-        print _("\t%-20s : %s\n\t%-20s : %s" %
-               ("Boot server IP", server_ip, "Boot file", bootfile))
+        print _(_PXE_CLIENT_DHCP_CONFIG % (server_ip, bootfile))
 
         if len(valid_nets) > 1:
             print cw(_("\nNote: determined more than one IP address "

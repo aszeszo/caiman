@@ -1235,6 +1235,11 @@ def get_client_menulst(clientid):
     return (os.path.join(NETBOOT, MENULST + '.' + clientid))
 
 
+_DHCP_MSG = """No local DHCP configuration found. This service is the default
+alias for all %s clients. If not already in place, the following should
+be added to the DHCP configuration:"""
+
+
 def setup_dhcp_server(service, ip_start, ip_count, bootserver):
     '''Set-up DHCP server for given AI service and IP address range'''
     
@@ -1344,10 +1349,7 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
         if valid_nets:
             server_ip = valid_nets[0]
 
-        print cw(_("No local DHCP configuration found. This service is the "
-                   "default alias for all %s clients. If not already in "
-                   "place, the following should be added to the DHCP "
-                   "configuration:") % client_type)
+        print _(_DHCP_MSG % client_type)
 
         if arch == 'i386':
             # Boot server IP is not needed for SPARC clients
