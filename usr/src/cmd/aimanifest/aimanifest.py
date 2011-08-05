@@ -46,7 +46,6 @@ _ = gettext.translation('aimanifest', '/usr/share/locale',
                         fallback=True).gettext
 
 AIM_LOGGER = None
-SCHEMA_FILE = "/usr/share/install/ai.dtd"
 
 VALIDATE = True
 NO_VALIDATE = False
@@ -89,7 +88,14 @@ def usage(argv):
                   "the returned element\n" +
         "    in terms of node IDs.  This path may be used in " +
                   "subsequent calls to\n" +
-        "    %s to specify the affected element more directly.\n") % (
+        "    %s to specify the affected element more directly.\n" +
+        "\n    The following environment variables are read:\n" +
+        "      AIM_MANIFEST: Pathname of the evolving manifest.            " +
+                  "(Must be set)\n" +
+        "      AIM_DTD: Overrides the DTD given in the evolving manifest.  " +
+                  "(Optional)\n" +
+        "      AIM_LOGFILE: Logfile for additional information.            " +
+                  "(Optional)\n") % (
         name, name)
     return usage_str
 
@@ -224,7 +230,8 @@ def _do_aimanifest(argv):
 
     # Pass AIM_MANIFEST as the output file.
     try:
-        mim = ManifestInput(os.environ.get("AIM_MANIFEST"), SCHEMA_FILE)
+        mim = ManifestInput(os.environ.get("AIM_MANIFEST"),
+                            os.environ.get("AIM_DTD"))
     except (milib.MimEtreeParseError, milib.MimDTDInvalid) as err:
         for error in err.errors:
             # These messages come already localized.
@@ -281,7 +288,7 @@ def _do_aimanifest(argv):
         try:
             mim.load(path, options.is_incremental)
             mim.commit(NO_VALIDATE)
-        except milib.MimEtreeParseError as err:
+        except (milib.MimEtreeParseError, milib.MimDTDInvalid) as err:
             for error in err.errors:
                 # These messages come already localized.
                 print >> sys.stderr, error
@@ -297,7 +304,7 @@ def _do_aimanifest(argv):
         try:
             mim.validate()
             AIM_LOGGER.info(_("Validation successful"))
-        except milib.MimDTDInvalid as err:
+        except (milib.MimEtreeParseError, milib.MimDTDInvalid) as err:
             errorlist = err.errors
             for error in errorlist:
                 # These messages come already localized.

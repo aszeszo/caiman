@@ -54,7 +54,6 @@ import os
 import re
 
 from lxml import etree
-from urllib2 import urlopen
 
 import solaris_install.manifest_input as milib
 import solaris_install.manifest_input.process_dtd as pdtd
@@ -133,10 +132,8 @@ class ManifestInput(object):
           evolving_file: Pathname to the file providing initial data, and
               storing the result.
 
-          schema_file: Pathname to the DTD file used.  Used only if the
-              manifest does not name a DTD.  Optional, but if not specified
-              here and manifest does not specify either, then an exception
-              is raised.
+          schema_file: Pathname to the DTD file to use.  Overrides any DTD
+              specified in the manifest, if specified.  Optional.
 
         Raises:
           IOError - Could not access DTD file
@@ -154,6 +151,11 @@ class ManifestInput(object):
 
         self.evfile_name = evolving_file
         self.tree = None
+        self.schema = None
+        self.schema_data = None
+        self.schema_file_from_mfest = None
+        self.schema_file_from_init = None
+        self.schema_file_from_overlay = None
 
         # Set up parser to remove blank text and processing instructions.
         # Have parser leave in comments, so they can be written out later.
@@ -174,15 +176,35 @@ class ManifestInput(object):
         if mfest_size:
             self.tree = self.parse_xml_file(self.evfile_name, self.parser)
 
+        # Save explicit requested schema.  Could be None.
+        self.schema_file_from_init = schema_file
+
+        if self.tree and self.tree.docinfo:
+            self.schema_file_from_mfest = self.tree.docinfo.system_url
+            if schema_file is None:
+                schema_file = self.tree.docinfo.system_url
+
+        # Load schema.  Forgo setting the schema now if there is no place to
+        # get it from.  Try to get it from the loaded manifest later.
+        if schema_file is not None:
+            self.load_schema(schema_file)
+
+    def load_schema(self, schema_file):
+        '''
         # Open schema for validator, and build table of children order.
 
-        # Use the schema refered to in the manifest itself, if it is listed in
-        # the manifest and it exists.  Else use the schema passed in as an arg.
-        if (self.tree and self.tree.docinfo and
-            self.tree.docinfo.system_url and
-            ManifestInput._is_accessible(self.tree.docinfo.system_url)):
-            schema_file = self.tree.docinfo.system_url
+        Args:
+            schema_file: DTD
 
+        Returns:
+            initializes self.schema and self.schema_data
+
+        Raises:
+          IOError - Could not access DTD file.
+          IOError - Could not digest DTD file.
+          MimDTDInvalid - Error parsing DTD
+          MimDTDError - SchemaData error processing DTD data from file.
+        '''
         if schema_file is None:
             raise milib.MimInvalidError(milib.ERR_NO_SCHEMA)
 
@@ -198,40 +220,14 @@ class ManifestInput(object):
                  err.error_log.filter_from_level(GET_ALL)])
 
         try:
-            self.schema_data = pdtd.SchemaData(schema_file)  # For order table
+            # For order table
+            self.schema_data = pdtd.SchemaData(schema_file)
         except IOError as err:
             raise IOError(err.args[0], milib.IOERR_DTD_DIGEST %
                           {"mserr": err.strerror, "mfile": schema_file})
         except milib.MimError as err:
             raise milib.MimDTDError(milib.ERR_SCHDATA_PROC %
                                 {"mfile": schema_file, "merr": str(err)})
-
-    @staticmethod
-    def _is_accessible(url):
-        '''
-        Return true if url is accessible.
-
-        Checks for local files as well as proper URLs.
-
-        Args:
-          url: A string that is either a URL or a local filename.
-
-        Returns:
-          True: The url is accessible.
-          False: The url is not accessible.
-        '''
-        if os.access(url, os.R_OK):
-            return True
-
-        try:
-            # Send no additional data to the server.
-            # Allow up to 5 seconds for connection to be made.
-            fd = urlopen(url, data=None, timeout=5)
-            fd.close()
-        except IOError:
-            return False
-
-        return True
 
     @staticmethod
     def parse_xml_file(manifest_name, parser):
@@ -252,7 +248,7 @@ class ManifestInput(object):
         '''
         try:
             tree = etree.parse(manifest_name, parser)
-        except etree.XMLSyntaxError as err:
+        except etree.XMLSyntaxError:
             raise milib.MimEtreeParseError(
                 [msg.__repr__() for msg in
                  parser.error_log.filter_from_level(GET_ALL)])
@@ -273,6 +269,7 @@ class ManifestInput(object):
           IOError - Error reading overlay_filename
           MimInvalidError - Argument is missing or invalid
           MimEtreeParseError - IO errors or parser errors while parsing.
+          MimDTDInvalid - Error reading DTD
         '''
         if overlay_filename is None:
             raise milib.MimInvalidError(milib.ERR_ARG_INVALID)
@@ -280,9 +277,27 @@ class ManifestInput(object):
         if (not incremental) or not self.tree:
             # Load a fresh tree.  Discard old data.
             self.tree = self.parse_xml_file(overlay_filename, self.parser)
+
+            # Take the schema from the manifest being loaded.
+            # Record that tree stores a schema.
+            if self.tree and self.tree.docinfo:
+                self.schema_file_from_mfest = self.tree.docinfo.system_url
+
+                # Allow for no schemas from anywhere for fresh trees since
+                # no merges are needed.
+                if (self.tree.docinfo.system_url is not None and
+                    not self.schema):
+                    self.load_schema(self.tree.docinfo.system_url)
         else:
             # Read tree of overlay data, then overlay it.
             overlay_tree = self.parse_xml_file(overlay_filename, self.parser)
+
+            # No schema loaded.  Take the schema from the overlay tree.
+            # Overlay tree schema doesn't get stored in tree.
+            if overlay_tree and overlay_tree.docinfo and not self.schema:
+                self.load_schema(overlay_tree.docinfo.system_url)
+                self.schema_file_from_overlay = overlay_tree.docinfo.system_url
+
             self._overlay_recurse(self.tree.getroot(), overlay_tree.getroot(),
                                   None)
 
@@ -319,6 +334,8 @@ class ManifestInput(object):
           MimEmptyTreeError - No XML data present
           Various lxml.etree (StandardError subclass) exceptions
         '''
+        if not self.schema:
+            raise milib.MimDTDInvalid([milib.ERR_NO_SCHEMA])
         if not self.tree:
             raise milib.MimEmptyTreeError(milib.ERR_EMPTY_TREE)
         try:
@@ -349,8 +366,31 @@ class ManifestInput(object):
             raise milib.MimEmptyTreeError(milib.ERR_EMPTY_TREE)
         if validate:
             self.validate()
+        xml_data = etree.tostring(self.tree, pretty_print=True).splitlines(
+                                                                        True)
+        # DOCTYPE string will have one of the following, in order:
+        # 1) User specified DTD (self.schema_file_from_init)
+        # 2) DTD from loaded tree (self.schema_file_from_mfest)
+        # 3) DTD from overlaid tree (self.schema_file_from_overlay)
+
+        if self.schema_file_from_init:
+            # Store as doctype the explicit schema requested by the user.
+            if self.schema_file_from_mfest:
+                # Replace the DOCTYPE string, always the first line.
+                xml_data[0] = '<!DOCTYPE %s SYSTEM "%s">\n' % (
+                    self.tree.getroot().tag, self.schema_file_from_init)
+            else:
+                # No doctype is stored in the tree.  Just add requested one.
+                xml_data.insert(0, '<!DOCTYPE %s SYSTEM "%s">\n' % (
+                    self.tree.getroot().tag, self.schema_file_from_init))
+        elif self.schema_file_from_overlay and not self.schema_file_from_mfest:
+            # No doctype is stored in the tree.  Just add requested one.
+            xml_data.insert(0, '<!DOCTYPE %s SYSTEM "%s">\n' % (
+                self.tree.getroot().tag, self.schema_file_from_overlay))
+
         try:
-            self.tree.write(self.evfile_name, pretty_print=True)
+            with open(self.evfile_name, "w") as outfile:
+                outfile.writelines(xml_data)
         except IOError as err:
             raise IOError(milib.IOERR_DTD_DEST %
                           {"mserr": err.strerror, "mdest": self.evfile_name})
@@ -508,10 +548,10 @@ class ManifestInput(object):
           does not exist), a new node is created.  Otherwise, an existing one
           is followed.
 
-        * A simple branch is simply an idenfier. /a/b are two simple branches.
-        A non-simple branch is any other kind of branch, such as /a=5 or
-        /b[c/d@e=123].  Non-simple branches always specify a value and may
-        specify a subpath.
+        * A simple branch is simply an identifier. /a/b are two simple
+        branches.  A non-simple branch is any other kind of branch, such as
+        /a=5 or /b[c/d@e=123].  Non-simple branches always specify a value and
+        may specify a subpath.
 
         The goal here is to honor subpaths which may be specified to narrow
         down where to add new items, but to still create a second node of a
@@ -617,8 +657,14 @@ class ManifestInput(object):
         for branch in right_set:
             # insert_before holds a list of names which can follow
             # an element named "branch" as children of curr_elem.
-            (insert_before, mults_ok) =  \
-                self.schema_data.find_element_info(curr_elem.tag, branch)
+            #
+            if self.schema_data:
+                (insert_before, mults_ok) =  \
+                    self.schema_data.find_element_info(curr_elem.tag, branch)
+            else:
+                # No schema to go on here.  Just allow the insert.
+                insert_before = []
+                mults_ok = True
 
             # Check for no list (as oppoosed to empty list)
             if insert_before == None:
@@ -811,6 +857,8 @@ class ManifestInput(object):
             one.
           - If the overlay_element is a leaf node, then replace the node in
             the main tree with the overlay_element.
+
+        Assumes self.schema_data is initialized.
 
         Args:
           main_parent: Parent of where new element would be added.
