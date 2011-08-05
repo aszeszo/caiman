@@ -1,0 +1,1967 @@
+'\" te
+.\" Copyright (c) 2008, 2011, Oracle and/or its
+.\" affiliates. All rights reserved.
+.TH installadm 1M "04 Aug 2011" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+installadm \- Manages automated installations on a network
+.SH SYNOPSIS
+.LP
+.nf
+/usr/bin/installadm [-h|--help]
+.fi
+
+.LP
+.nf
+installadm help [\fIsubcommand\fR]
+.fi
+
+.LP
+.nf
+installadm create-service
+    [-n|--service \fIsvcname\fR]
+    [-t|--aliasof \fIexisting_service\fR]
+    [-p|--publisher \fIprefix\fR=\fIorigin\fR]
+    [-a|--arch \fIarchitecture\fR]
+    [-s|--source \fIFMRI_or_ISO\fR]
+    [-b|--boot-args \fIboot_property\fR=\fIvalue\fR,...]
+    [-i|--ip-start \fIdhcp_ip_start\fR]
+    [-c|--ip-count \fIcount_of_ipaddr\fR]
+    [-B|--bootfile-server \fIserver_ipaddr\fR]
+    [-d|--imagepath \fIimagepath\fR]
+    [-y|--noprompt]
+.fi
+
+.LP
+.nf
+installadm set-service
+    -o|--option \fIprop\fR=\fIvalue\fR \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm rename-service \fIsvcname\fR \fInewsvcname\fR
+.fi
+
+.LP
+.nf
+installadm enable \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm disable \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm delete-service
+    [-r|--autoremove] [-y|--noprompt] \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm list
+    [-n|--service \fIsvcname\fR]
+    [-c|--client] [-m|--manifest] [-p|--profile]
+.fi
+
+.LP
+.nf
+installadm create-manifest -n|--service \fIsvcname\fR
+    -f|--file \fImanifest_or_script_filename\fR
+    [-m|--manifest \fImanifest_name\fR]
+    [-c|--criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... |
+    -C|--criteria-file \fIcriteriafile\fR]
+    [-d|--default]
+.fi
+
+.LP
+.nf
+installadm update-manifest -n|--service \fIsvcname\fR
+    -f|--file \fImanifest_or_script_filename\fR
+    [-m|--manifest \fImanifest_name\fR]
+.fi
+
+.LP
+.nf
+installadm delete-manifest
+    -m|--manifest \fImanifest_name\fR
+    -n|--service \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm create-profile -n|--service \fIsvcname\fR
+    -f|--file \fIprofile_filename\fR... 
+    [-p|--profile \fIprofile_name\fR]
+    [-c|--criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... |
+    -C|--criteria-file \fIcriteriafile\fR]
+.fi
+
+.LP
+.nf
+installadm delete-profile -p|--profile \fIprofile_name\fR...
+    -n|--service \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm export -n|--service \fIsvcname\fR
+    -m|--manifest \fImanifest_name\fR...
+    -p|--profile \fIprofile_name\fR...
+    [-o|--output \fIpathname\fR]
+.fi
+
+.LP
+.nf
+installadm validate -n|--service \fIsvcname\fR
+    -P|--profile-file \fIprofile_filename\fR... |
+    -p|--profile \fIprofile_name\fR...
+.fi
+
+.LP
+.nf
+installadm set-criteria
+    -m|--manifest \fImanifest_name\fR
+    -p|--profile \fIprofile_name\fR...
+    -n|--service \fIsvcname\fR
+    -c|--criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... |
+    -C|--criteria-file \fIcriteriafile\fR |
+    -a|--append-criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR...
+.fi
+
+.LP
+.nf
+installadm create-client
+    [-b|--boot-args \fIproperty\fR=\fIvalue\fR,...]
+    -e|--macaddr \fImacaddr\fR -n|--service \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm delete-client \fImacaddr\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The Automated Installer (AI) is used to automate the installation of the Oracle Solaris OS on one or more SPARC and x86 systems over a network.
+.sp
+.LP
+The machine topography necessary to employ AI over the network is to have an install server, a DHCP server (this can be the same system as the install server), and the installation clients. On the install server, install services are set up to contain an AI boot image, which is provided to the clients in order for them to boot over the network, input specifications (AI manifests and derived manifests scripts), one of which will be selected for the client, and Service Management Facility (SMF) configuration profiles, zero or more of which will be selected for the client.
+.sp
+.LP
+The AI boot image content is published as the package \fBinstall-image/solaris-auto-install\fR, and is installed by the \fBcreate-service\fR subcommand. The \fBcreate-service\fR subcommand is also able to accept and unpack an AI ISO file to create the AI boot image.
+.sp
+.LP
+Install services are created with a default AI manifest, but customized manifests or derived manifests scripts (hereafter called "scripts") can be added to an install service by using the \fBcreate-manifest\fR subcommand. See \fIInstalling Oracle Solaris 11 Systems\fR for information about how to create manifests and derived manifests scripts. The \fBcreate-manifest\fR subcommand also allows criteria to be specified, which are used to determine which manifest or script should be selected for an installation client. Criteria already associated with a manifest or script can be modified using the \fBset-criteria\fR subcommand.
+.sp
+.LP
+Manifests can include information such as a target device, partition information, a list of packages, and other parameters. Scripts contain commands that query a running AI client system and build a custom manifest based on the information it finds. When AI is invoked with a script, AI runs that script as its first task, to generate a manifest.
+.sp
+.LP
+When the client boots, a search is initiated for a manifest or script that matches the client's machine criteria. When a matching manifest or script is found, the client is installed with the Oracle Solaris release according to the specifications in the matching manifest file, or to the specifications in the manifest file derived from the matching script. Each client can use only one manifest or script.
+.sp
+.LP
+Each service has one default manifest or script. The default is used when the criteria of no other manifest or script matches the system being installed. Any manifest or script can be designated as the default. Any criteria associated with a default manifest or script become inactive and are not considered during manifest or script selection. If a different manifest or script is later made the default, the criteria of the former default manifest or script become active again. Manifests or scripts with no criteria associated with them can only be used as default manifests or scripts. Manifests or scripts without criteria become inactive when a different manifest or script is designated the default.
+.sp
+.LP
+System configuration profiles are complementary to manifests and scripts in that they also contain specifications for an installation. In particular, profiles are used to specify configuration information such as user name, user password, time zone, host name, and IP address. Profiles can contain variables to get configuration parameters from the install server environment or from criteria specified in the \fBcreate-profile\fR subcommand. In this way, a single profile file can set different configuration parameters on different clients. See the "Examples" section.
+.sp
+.LP
+System configuration profiles are processed by \fBsmf\fR(5) and conform to document format \fBservice_bundle\fR(4). See \fBsysconfig\fR(1M) and \fIInstalling Oracle Solaris 11 Systems\fR for more information about system configuration profiles. Each client can use any number of system configuration profiles. A particular SMF property can be specified no more than once for each client system.
+.sp
+.LP
+If you want a specific client to use a specific install service, you can associate that client with the service by using the \fBcreate-client\fR subcommand. You can also use \fBcreate-client\fR to modify an existing client.
+.sp
+.LP
+The \fBinstalladm\fR utility can be used to accomplish the following tasks:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Set up install services and aliases
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Set up installation images
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Set up or delete clients
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Add, update, or delete manifests and scripts
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Specify or modify criteria for a manifest or script
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Export manifests and scripts
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Add or delete system configuration profiles
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Validate profiles
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Specify or modify criteria for profiles
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Export profiles
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Enable or disable install services
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+List install services
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+List clients for an install service
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+List manifests and scripts for an install service
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+List profiles for an install service
+.RE
+.SH OPTIONS
+.sp
+.LP
+The \fBinstalladm\fR command has the following option:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR, \fB--help\fR\fR
+.ad
+.RS 14n
+.rt  
+Show the usage help message.
+.RE
+
+.SH SUB-COMMANDS
+.sp
+.LP
+The \fBinstalladm\fR command has the subcommands listed below. See also the "Examples" section below. 
+.sp
+.ne 2
+.mk
+.na
+\fB\fBhelp [\fIsubcommand\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+Displays the syntax for the \fBinstalladm\fR utility.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIsubcommand\fR\fR\fR
+.ad
+.RS 14n
+.rt  
+Displays the syntax for only the specified subcommand.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-service [\fB-n\fR|\fB--service\fR \fIsvcname\fR] [\fB-t\fR|\fB--aliasof\fR \fIexisting_service\fR] [\fB-p\fR|\fB--publisher\fR \fIprefix\fR=\fIorigin\fR] [\fB-a\fR|\fB--arch\fR \fIarchitecture\fR] [\fB-s\fR|\fB--source\fR \fIFMRI_or_ISO\fR] [\fB-b\fR|\fB--boot-args\fR \fIboot_property\fR=\fIvalue\fR,...] [\fB-i\fR|\fB--ip-start\fR \fIdhcp_ip_start\fR] [\fB-c\fR|\fB--ip-count\fR \fIcount_of_ipaddr\fR] [\fB-B\fR|\fB--bootfile-server\fR \fIserver_ipaddr\fR] [\fB-d\fR|\fB--imagepath\fR \fIimagepath\fR] [\fB-y\fR|\fB--noprompt\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+This subcommand sets up a network boot image (net image) in the specified \fIimagepath\fR directory, and creates an install service that specifies how a client booted from the net image is installed.
+.sp
+The AI boot image content is published as the package \fBinstall-image/solaris-auto-install\fR. If the \fB-s\fR option is not specified, that package is installed from the first publisher in the system's publisher preference list that provides an instance of that package. The \fB-s\fR option accepts the \fBpkg\fR specification as a full FMRI or location of an image ISO file. The resulting net image is eventually located in \fIimagepath\fR. The net image enables client installations.
+.sp
+.LP
+Note the following specifications:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+When the first install service of a given architecture is created on an install server, an alias of that service, \fBdefault-i386\fR or \fBdefault-sparc\fR, is automatically created. This default service is used for all installations to clients of that architecture that were not added to the install server explicitly with the \fBcreate-client\fR subcommand. To change the service aliased by the \fBdefault-\fIarch\fR\fR service, use the \fBset-service\fR subcommand.
+.sp
+If a \fBdefault-\fIarch\fR\fR alias is changed to a new install service and a local ISC DHCP configuration is found, this default alias bootfile is set as the default DHCP server-wide bootfile for that architecture.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If you want a client to use a different install service than the default for that architecture, you must use the \fBcreate-client\fR subcommand to create a client-specific configuration.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the \fB-i\fR option and the \fB-c\fR option are used, and a DHCP server is not yet configured, an ISC DHCP server is configured.
+.sp
+If an ISC DHCP server is already configured, that DHCP server is updated.
+.sp
+Even when \fB-i\fR and \fB-c\fR arguments are provided and DHCP is configured, no binding exists between the install service being created and the IP range. When \fB-i\fR and \fB-c\fR are passed, the IP range is set up, a new DHCP server is created if needed, and that DHCP server remains up and running for all install services and all clients to use. The network information provided to the DHCP server has no specific bearing on the service being created.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the IP range requested is not on a subnet that the install server has direct connectivity to and the install server is multihomed, the \fB-B\fR option is used to provide the address of the bootfile server (usually an IP address on this system). This should only be necessary when multiple IP addresses are configured on the install server and DHCP relays are employed. In all other configurations, the software can determine this automatically.
+.RE
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Uses this install service name instead of a system-generated service name.
+.sp
+If the \fB-n\fR option is not specified, a service name is generated automatically. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-t\fR|\fB--aliasof\fR \fIexisting_service\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: This new service is an alternate name for \fIexisting_service\fR. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-a\fR|\fB--arch\fR \fIarchitecture\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Selects a specific variant architecture. Legal values are \fBi386\fR or \fBsparc\fR. If not specified, the variant corresponding to the server's architecture is selected.
+.sp
+The \fB-a\fR option only applies when the \fB-s\fR argument is a \fBpkg\fR(5) package.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--publisher\fR \fIprefix\fR=\fIorigin\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: A \fBpkg\fR(5) publisher, in the form \fIprefix\fR=\fIorigin\fR, from which to install the client image.
+.sp
+If the \fB-p\fR option is not specified, then the first publisher in the system's publisher preference list that provides an instance of the package is used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-s\fR|\fB--source\fR \fIFMRI_or_ISO\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies the data source for the net image. This can be either of:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The full FMRI of a \fBpkg\fR(5) package.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The path to an AI ISO image.
+.RE
+.sp
+.LP
+If \fB-s\fR is not specified, the \fBinstall-image/solaris-auto-install\fR package used is from either of:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The publisher specified with the \fB-p\fR parameter.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The first publisher in the system's publisher preference list that provides an instance of that package.
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-b\fR|\fB--boot-args\fR \fIboot_property\fR=\fIvalue\fR,...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: For x86 clients only. Sets a property value in the service-specific \fBmenu.lst\fR file in the service image. Use this option to set boot properties that are specific to this service. This option can accept multiple comma-separated \fIboot_property\fR=\fIvalue\fR pairs.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-i\fR|\fB--ip-start\fR \fIdhcp_ip_start\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies the starting IP address in a range to be added to the local DHCP configuration. The number of IP addresses is provided by the \fB-c\fR option. If a local ISC DHCP configuration does not exist, an ISC DHCP server is started.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--ip-count\fR \fIcount_of_ipaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Sets up a total number of IP addresses in the DHCP configuration equal to the value of the \fIcount_of_ipaddr\fR. The first IP address is the value of \fIdhcp_ip_start\fR that is provided by the \fB-i\fR option.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-B\fR|\fB--bootfile-server\fR \fIserver_ipaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Used to provide the IP address of the boot server from which clients should request bootfiles. Only required if this IP address cannot be determined by other means.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-d\fR|\fB--imagepath\fR \fIimagepath\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies the path at which to create the net image. If not specified, the default location, \fB/export/auto_install/\fIsvcname\fR\fR, is used. A confirmation prompt is displayed unless \fB-y\fR is also specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-y\fR|\fB--noprompt\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Suppresses any confirmation prompts and proceeds with service creation using the supplied options and any default values (see \fB-d\fR).
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBset-service \fB-o\fR|\fB--option\fR \fIprop\fR=\fIvalue\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-o\fR|\fB--option\fR \fIprop\fR=\fIvalue\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the property and value to set.
+.sp
+.LP
+\fB\fIprop\fR=\fIvalue\fR\fR can be:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBaliasof=\fIexisting_service\fR\fR
+.sp
+Makes \fIsvcname\fR an alias of \fIexisting_service\fR.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBdefault-manifest=\fImanifest_name\fR\fR
+.sp
+Designates a particular manifest or script that is already registered with a given service to be the default manifest or script for that service. Use the following command to show a list of manifests and scripts registered with this service.
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -n \fIsvcname\fR -m\fR
+.fi
+.in -2
+.sp
+
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the name of the install service whose property is being set.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBrename-service \fIsvcname\fR \fInewsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Renames the install service \fIsvcname\fR to \fInewsvcname\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBenable \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Enables the \fIsvcname\fR install service.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdisable \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Disables the \fIsvcname\fR install service.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-service [\fB-r\fR|\fB--autoremove\fR] [\fB-y\fR|\fB--noprompt\fR] \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Deletes an install service. Accomplishes the following:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Deletes the manifests, profiles, client configuration files, and web server configuration for this install service.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Deletes the image used to instantiate the service.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the service is a default alias and a local ISC DHCP configuration exists, the bootfile associated with this service is removed from the ISC DHCP configuration.
+.RE
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-r\fR|\fB--autoremove\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+If specified, any clients assigned to this service, and any services aliased to this service, are also removed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-y\fR|\fB--noprompt\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Suppresses any confirmation prompts and proceeds with service deletion.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the install service name to delete.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlist [\fB-n\fR|\fB--service\fR \fIsvcname\fR] [\fB-c\fR|\fB--client\fR] [\fB-m\fR|\fB--manifest\fR] [\fB-p\fR|\fB--profile\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+Lists all enabled install services on a server.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Lists information about the specific install service on a local server.
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the \fB-c\fR option is specified, lists the client information associated with the install service.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the \fB-m\fR option is specified, lists the manifests and scripts associated with the install service.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the \fB-p\fR option is specified, lists the profiles associated with the install service.
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--client\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Lists the clients of the install services on a local server.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Lists the manifests and scripts associated with the install services on a local server.
+.sp
+When \fB-n\fR is not specified, displays an abbreviated listing per service. This includes the default manifest or script, and all non-default manifests and scripts that have criteria associated with them. Criteria are not listed.
+.sp
+When \fB-n\fR is specified, displays all manifests and scripts for the given service, using a more complete listing format that includes criteria for each manifest. Inactive manifests, which have no associated criteria and are not designated as the default, are so marked. Criteria associated with a default manifest are marked as inactive.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Lists the profiles associated with the install services on a local server.
+.sp
+When \fB-n\fR is not specified, displays an abbreviated listing per service that includes the profile names.
+.sp
+When \fB-n\fR is specified, displays the profiles for the requested service along with their criteria.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-manifest \fB-n\fR|\fB--service\fR \fIsvcname\fR \fB-f\fR|\fB--file\fR \fImanifest_or_script_filename\fR [\fB-m\fR|\fB--manifest\fR \fImanifest_name\fR] [\fB-c\fR|\fB--criteria\fR \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... | \fB-C\fR|\fB--criteria-file\fR \fIcriteriafile\fR] [\fB-d\fR|\fB--default\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+Creates a manifest or script for a specific install service, thus making the manifest or script available on the network, independently from creating a service. A non-default manifest or script can be used (can be active) only when criteria are associated with it. Criteria can be entered on the command line (\fB-c\fR) or via a criteria XML file (\fB-C\fR). Any criteria specified along with the \fB-d\fR option are temporarily ignored until the manifest or script is no longer designated as the default.
+.sp
+.LP
+The name of the manifest is determined in the following order:
+.RS +4
+.TP
+1.
+The \fImanifest_name\fR specified by the \fB-m\fR option, if present.
+.RE
+.RS +4
+.TP
+2.
+The value of the \fBai_instance\fR \fBname\fR attribute, if present in the manifest.
+.RE
+.RS +4
+.TP
+3.
+The base name of the manifest or script file name.
+.RE
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the name of the install service this manifest or script is to be associated with.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-f\fR|\fB--file\fR \fImanifest_or_script_filename\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the path name of the manifest or script to add.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fImanifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies the AI instance name of the manifest or script. Sets the \fBname\fR attribute of the \fBai_instance\fR element of the manifest to \fImanifest_name\fR. The manifest or script is referred to by \fImanifest_name\fR in subsequent \fBinstalladm\fR commands and \fBinstalladm list\fR output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--criteria\fR \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies criteria to be associated with the added manifest or script. See the "Criteria" section below. When publishing a default manifest, criteria are registered but kept inactive until the manifest or script is no longer designated the default. The \fB-c\fR option can be specified multiple times.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-C\fR|\fB--criteria-file\fR \fIcriteriafile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies the path name of a criteria XML file containing criteria to be associated with the added manifest or script. When publishing a default manifest or script, criteria are registered but kept inactive until the manifest or script is no longer designated the default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-d\fR|\fB--default\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies that this manifest or script is the new default manifest or script for the service. Any criteria specified are ignored until the manifest or script is no longer the default.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBupdate-manifest \fB-n\fR|\fB--service\fR \fIsvcname\fR \fB-f\fR|\fB--file\fR \fImanifest_or_script_filename\fR [\fB-m\fR|\fB--manifest\fR \fImanifest_name\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+Updates a specific manifest or script that is associated with a specific install service. Any criteria or default status remain with the manifest or script following the update.
+.sp
+.LP
+The name of the manifest is determined in the following order:
+.RS +4
+.TP
+1.
+The \fImanifest_name\fR specified by the \fB-m\fR option, if present.
+.RE
+.RS +4
+.TP
+2.
+The value of the \fBai_instance\fR \fBname\fR attribute, if present in the changed manifest and if it matches the \fBai_instance\fR \fBname\fR value of an existing manifest.
+.RE
+.RS +4
+.TP
+3.
+The base name of the manifest or script file name, if it matches the \fBai_instance\fR \fBname\fR attribute value in an existing manifest, or the name given by \fBinstalladm list\fR if it matches the name of an existing script.
+.RE
+The replacement manifest or script is given by the \fImanifest_or_script_filename\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the name of the install service this manifest or script is to be associated with.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-f\fR|\fB--file\fR \fImanifest_or_script_filename\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the path name of the replacement manifest or script.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fImanifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies the AI instance name of the replacement manifest or script.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-manifest \fB-m\fR|\fB--manifest\fR \fImanifest_name\fR \fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Deletes a manifest or script that was published with a specific install service. A default manifest or script cannot be deleted.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fImanifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the AI instance name of a manifest or script as output by \fBinstalladm list\fR with the \fB-n\fR option.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the name of the install service this manifest is associated with.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-profile \fB-n\fR|\fB--service\fR \fIsvcname\fR \fB-f\fR|\fB--file\fR \fIprofile_filename\fR... [\fB-p\fR|\fB--profile\fR \fIprofile_name\fR] [\fB-c\fR|\fB--criteria\fR \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... | \fB-C\fR|\fB--criteria-file\fR \fIcriteriafile\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+Creates profiles for a specific install service. Criteria can optionally be associated with a profile by either entering them on the command line (\fB-c\fR) or via a criteria XML file (\fB-C\fR). Profiles created without criteria are associated with all clients of the service.
+.sp
+.LP
+The name of the profile is determined in the following order:
+.RS +4
+.TP
+1.
+The \fIprofile_name\fR specified by the \fB-p\fR option, if present.
+.RE
+.RS +4
+.TP
+2.
+The base name of the profile file name.
+.RE
+Profile names must be unique for an AI service. If multiple \fB-f\fR options are used to create more than one profile with the same criteria, then the \fB-p\fR option is invalid and the names of the profiles are derived from their file names.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the name of the install service of the profile being updated.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-f\fR|\fB--file\fR \fIprofile_filename\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the path name of the file with which to add the profile. Multiple profiles can be specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fIprofile_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies the name of the profile being created. Valid only for single profile creation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--criteria\fR \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies criteria to be associated with the profiles. See the "Criteria" section below. Multiple \fB-c\fR options can be specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-C\fR|\fB--criteria-file\fR \fIcriteriafile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies the path name of a criteria XML file containing criteria to be associated with the specified profiles.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-profile \fB-p\fR|\fB--profile\fR \fIprofile_name\fR... \fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Deletes the \fIprofile_name\fR profile from the \fIsvcname\fR install service.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fIprofile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the name of the profile to delete. Multiple \fB-p\fR options can be specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the name of the install service of the profile being deleted.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBexport \fB-n\fR|\fB--service\fR \fIsvcname\fR \fB-m\fR|\fB--manifest\fR \fImanifest_name\fR... \fB-p\fR|\fB--profile\fR \fIprofile_name\fR... [\fB-o\fR|\fB--output\fR \fIpathname\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+Displays (exports) the specified manifest/scripts and/or profiles belonging to a service. At least one manifest/script or profile must be specified. Display goes to \fBstdout\fR unless the \fB-o\fR option redirects to a file or directory.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the install service associated with the manifest or profile to export.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fImanifest_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the AI instance name of a manifest or script to export. Multiple \fB-m\fR options can be specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fIprofile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the name of a profile to export. Multiple \fB-p\fR options can be specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-o\fR|\fB--output\fR \fIpathname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Redirect output. The \fIpathname\fR must be a directory if multiple manifests, scripts and/or profiles are requested. The \fIpathname\fR can be a file if only one manifest, script, or profile is requested.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvalidate \fB-n\fR|\fB--service\fR \fIsvcname\fR \fB-P\fR|\fB--profile-file\fR \fIprofile_filename\fR... | \fB-p\fR|\fB--profile\fR \fIprofile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Validates specified profiles. The \fBvalidate\fR subcommand can be used to either validate profiles in the database (\fB-p\fR) or to validate profiles while they are being developed before their entry into the database (\fB-P\fR).
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the service with which the profiles are associated.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-P\fR|\fB--profile-file\fR \fIprofile_filename\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies an external profile file to validate.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fIprofile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the name of the profile to validate.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBset-criteria \fB-m\fR|\fB--manifest\fR \fImanifest_name\fR \fB-p\fR|\fB--profile\fR \fIprofile_name\fR... \fB-n\fR|\fB--service\fR \fIsvcname\fR \fB-c\fR|\fB--criteria\fR \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... | \fB-C\fR|\fB--criteria-file\fR \fIcriteriafile\fR | \fB-a\fR|\fB--append-criteria\fR \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Updates criteria of an already published manifest/script, profile, or both. Criteria can be specified via the command line or or via a criteria XML file. Criteria must be specified with one of the mutually exclusive options, \fB-a\fR, \fB-c\fR, or \fB-C\fR.
+.sp
+Valid criteria are described under the \fBcreate-manifest\fR subcommand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fImanifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the AI instance name of a manifest or script.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fIprofile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the name of a profile. Any number of profiles can be specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the name of the install service associated with this manifest/script or profile.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--criteria\fR \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies criteria to replace all existing criteria for the manifest/script or profile. See the "Criteria" section below.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-C\fR|\fB--criteria-file\fR \fIcriteriafile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the path name of a criteria XML file containing criteria to replace all existing criteria for the manifest/script or profile.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-a\fR|\fB--append-criteria\fR \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies criteria to be appended to the existing criteria for the manifest/script or profile. See the "Criteria" section below. If the \fIcriteria\fR specified already exists, the \fIvalue\fR|\fIlist\fR|\fIrange\fR of that criteria is replaced by the specified \fIvalue\fR|\fIlist\fR|\fIrange\fR.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-client [\fB-b\fR|\fB--boot-args\fR \fIproperty\fR=\fIvalue\fR,...] \fB-e\fR|\fB--macaddr\fR \fImacaddr\fR \fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Accomplishes optional setup tasks for a specified client, in order to provide custom client settings that vary from the default settings used by the \fBcreate-service\fR subcommand. Enables the user to specify a non-default service name and boot arguments for a client. Can also be used to modify an existing client.
+.sp
+If the client is an x86 system and a local ISC DHCP configuration exists, the client is configured in the ISC DHCP configuration.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-b\fR|\fB--boot-args\fR \fIproperty\fR=\fIvalue\fR,...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: For x86 clients only. Sets a property value in the client-specific \fBmenu.lst\fR file in \fB/etc/netboot\fR. Use this option to set boot properties that are specific to this client. This option can accept multiple \fIproperty\fR=\fIvalue\fR pairs.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-e\fR|\fB--macaddr\fR \fImacaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies a MAC address for the client.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the install service for client installation.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-client \fImacaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Deletes an existing client's specific service information that was previously set up using the \fBcreate-client\fR subcommand.
+.sp
+If the client is an x86 system and a local ISC DHCP configuration exists, the client is unconfigured in the ISC DHCP configuration.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fImacaddr\fR\fR\fR
+.ad
+.RS 11n
+.rt  
+Required: Specifies the MAC address of the client to delete.
+.RE
+
+.RE
+
+.SH CRITERIA
+.sp
+.LP
+Manifests, scripts, and profiles can be used to configure AI clients differently according to certain characteristics, or criteria. Only one manifest or script can be associated with a particular client. Any number of profiles can be associated with a particular client.
+.sp
+.LP
+The criteria values are determined by the AI client during startup.
+.sp
+.LP
+The following AI client system criteria can be specified for both manifests/scripts and profiles unless otherwise noted.
+.sp
+.LP
+See the "Examples" section to see how to specify criteria on the command line. For information about creating a criteria file, see \fIInstalling Oracle Solaris 11 Systems\fR.
+.sp
+
+.sp
+.TS
+tab();
+cw(1.38i) cw(4.13i) 
+lw(1.38i) lw(4.13i) 
+.
+CriteriaDescription
+\fBarch\fRArchitecture per \fBuname -m\fR.
+\fBcpu\fRCPU class per \fBuname -p\fR.
+\fBhostname\fRT{
+Assigned hostname. Can be used only for profiles, not for manifests.
+T}
+\fBipv4\fRIP version 4 network address.
+\fBmac\fRT{
+Hexadecimal MAC address with colon (:) separators.
+T}
+\fBmem\fRMemory size in MB per \fBprtconf\fR(1M).
+\fBnetwork\fRIP version 4 network number.
+\fBplatform\fRPlatform name per \fBuname -i\fR.
+\fBzonename\fRName of a zone per \fBzones\fR(5).
+.TE
+
+.sp
+.LP
+The \fBipv4\fR, \fBmac\fR, \fBmem\fR, and \fBnetwork\fR specifications can be expressed as ranged values separated by a hyphen (\fB-\fR). To specify no limit to one end of a range, use \fBunbounded\fR.
+.sp
+.LP
+Any criteria that are not specifiable as a range can be specified as list of values separated by white space.
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRSet Up a New x86 Install Service From an ISO File
+.sp
+.LP
+Set up an install server and an x86 install service for the first time. The command includes a starting IP address and total count of IP addresses, in order to configure the DHCP server.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n sol-11-i386-svc \e\fR
+\fB-s /export/isos/sol-11-i386.iso \e\fR
+\fB-i 172.0.0.10 -c 10 -d /export/images/soli386\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The AI ISO image is at \fB/export/isos/sol-11-i386.iso\fR. The command sets up a net image and an install service at \fB/export/images/soli386\fR that is based on the AI ISO image. This net image enables client installations.
+
+.sp
+.LP
+The starting IP address of 172.0.0.10 and ten IP addresses are added to the local ISC DHCP configuration. If a local ISC DHCP configuration does not exist, an ISC DHCP server is started.
+
+.sp
+.LP
+Because this is the first \fBi386\fR service created, the \fBdefault-i386\fR service is automatically created and aliased to this service. The \fBdefault-i386\fR alias is operational, and a client booted via PXE will boot and install from the \fBdefault-i386\fR service.
+
+.LP
+\fBExample 2 \fRSet Up a New SPARC Install Service From an ISO File
+.sp
+.LP
+Set up a SPARC install service for the first time.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n sol-11-sparc-svc \e\fR
+\fB-s /export/isos/sol-11-sparc.iso \e\fR
+\fB-d /export/images/solsparc\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The AI ISO image is at \fB/export/isos/sol-11-sparc.iso\fR. The command sets up a net image and an install service at \fB/export/images/solsparc\fR that is based on the AI ISO image. This net image enables client installations.
+
+.sp
+.LP
+Because this is the first SPARC service created, the \fBdefault-sparc\fR service is automatically created and aliased to this service. The \fBdefault-sparc\fR alias is operational, and a SPARC client will boot and install from the \fBdefault-sparc\fR service.
+
+.LP
+\fBExample 3 \fRSet Up an i386 Install Service From a Package Repository
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -y -n mysvc\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+On an i386 install server, this command sets up an i386 net image and install service named \fBmysvc\fR at the default image location, \fB/export/auto_install/mysvc\fR. The \fB-y\fR option provides confirmation that the default location is acceptable. Since the architecture is not specified, the service created is of the same architecture as the install server. This command assumes that a package repository on the \fBpkg publisher\fR list for the install server contains the \fBinstall-image/solaris-auto-install\fR package.
+
+.sp
+.LP
+To specify the creation of a SPARC service on this server, use the \fB-a\fR option.
+
+.sp
+.LP
+To specify the source of the \fBsolaris-auto-install\fR package, use the \fB-p\fR option. For example, use the following command to specify the \fBai-image\fR repository located at \fBhttp://example.company.com:4281\fR as the source of the \fBsolaris-auto-install\fR package:
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -y -n mysvc \e\fR
+\fB-p ai-image=http://example.company.com:4281\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 4 \fRAssociate a Client With an Install Service
+.sp
+.LP
+Use the following sample command to associate a client with a specific install service. The install service must already exist.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-client -b "console=ttya" \e\fR
+\fB-e 0:e0:81:5d:bf:e0 -n my-i386-service\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+In this example, the command creates a client-specific setup for the system with MAC address \fB0:e0:81:5d:bf:e0\fR. This client will use the install service previously set up, named \fBmy-i386-service\fR, and that service's associated net image. The command sets the boot property \fBconsole=ttya\fR in the client-specific \fBmenu.lst\fR file in \fB/etc/netboot\fR.
+
+.LP
+\fBExample 5 \fRAdd a New Install Service Without Modifying the Default Service
+.sp
+.LP
+Use the following sample command to add a new service named \fBmy-sparc-service\fR, retaining existing services, and leaving the existing default unchanged.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n my-sparc-service \e\fR
+\fB-s /export/isos/mysparc.iso \e\fR
+\fB-d /export/ai/mysparc-image\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 6 \fRAdd a New Install Service and Update the Default Service
+.sp
+.LP
+Use the following two sample commands to add a new service named \fBmy-sparc-service\fR, retaining existing services, and making the new service the default for SPARC clients.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n my-sparc-service \e\fR
+\fB-s /export/isos/mysparc.iso \e\fR
+\fB-d /export/ai/mysparc-image\fR
+# \fBinstalladm set-service \e\fR
+\fB-o aliasof=my-sparc-service default-sparc\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 7 \fRAdd a Custom Default AI Manifest to an Install Service
+.sp
+.LP
+Use the following sample command to add a new manifest to the \fBservice_092910\fR install service, and make it the service's default manifest. The manifest data is in \fBmy_manifest.xml\fR. Future \fBinstalladm\fR commands will refer to this manifest as \fBmy_manifest\fR.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -d -f my_manifest.xml \e\fR
+\fB-m my_manifest -n service_092910\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 8 \fRAdd a Derived Manifests Script to an Install Service
+.sp
+.LP
+Use the following sample command to add a derived manifests script named \fBmy_script\fR to an existing install service named \fBservice_092910\fR. Scripts are added the same way as manifests.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f my_script.py \e\fR
+\fB-m my_script -n service_092910\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+See \fIInstalling Oracle Solaris 11 Systems\fR for information about how to create derived manifests scripts.
+
+.LP
+\fBExample 9 \fRReplace the Default AI Manifest for an Install Service
+.sp
+.LP
+Use the following sample command to replace the default manifest for an existing install service, \fBservice_092910\fR, with a custom manifest that has already been added to the service as \fBmy_manifest\fR. The manifest was added to the service by specifying \fB-m my_manifest\fR to the \fBcreate-manifest\fR subcommand.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm set-service -o default-manifest=my_manifest \e\fR
+\fB-n service_092910\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 10 \fRList Install Services
+.sp
+.LP
+Use the following sample command to list the install services on a local server.
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list\fR
+Service Name     Alias Of         Status  Arch  Image Path 
+------------     --------         ------  ----  ---------- 
+default-i386     sol-11-i386-svc  on      x86   /export/images/soli386
+default-sparc    sol-11-sparc-svc on      Sparc /export/images/solsparc
+sol-11-i386-svc  -                on      x86   /export/images/soli386
+sol-11-sparc-svc -                on      Sparc /export/images/solsparc
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 11 \fRList Clients Associated With an Install Service
+.sp
+.LP
+Use the following sample command to list the clients of a specific install service on a local server.
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -c -n my-x86-service\fR
+Service Name   Client Address    Arch  Image Path 
+------------   --------------    ----  ---------- 
+my-x86-service 01:C2:52:E6:4B:E1 i386  /export/images/myimage
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 12 \fRList Manifests Associated With an Install Service
+.sp
+.LP
+Use the following sample command to list the manifests and scripts associated with a specific install service on a local server.
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n my-x86-service\fR
+Manifest      Status    Criteria 
+--------      ------    -------- 
+manifest2               arch = i86pc
+                        mem  = 4096 MB - unbounded
+
+sparc_setup             arch = sun4v
+
+new_default   Default   (Ignored: mem = 2048 MB - 4095 MB)
+
+orig_default  Inactive  None
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+This example shows the following output:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A non-default manifest with criteria (\fBmanifest2\fR)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A non-default script with criteria (\fBsparc_setup\fR)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A default manifest with criteria that are ignored (\fBnew_default\fR)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A non-default manifest (\fBorig_default\fR) that is marked inactive because it has no criteria
+.RE
+.LP
+\fBExample 13 \fRList Profiles
+.sp
+.LP
+Use the following sample command to list the profiles on a local server.
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -p\fR
+Service Name Profile
+------------ -------
+sparc2       myprofile.xml
+             myprofile2.xml
+svc0817      profile3
+svc0819      profile4.xml
+             newprofile
+             foo.xml
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 14 \fRAdd a Custom AI Manifest With No Name to an Install Service
+.sp
+.LP
+Use the following sample command to add the manifest in \fB/export/my_manifest.xml\fR to \fBsvc1\fR with a criterion of MAC address equaling \fBaa:bb:cc:dd:ee:ff\fR.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f /export/my_manifest.xml \e\fR
+\fB-n svc1 -c MAC="aa:bb:cc:dd:ee:ff"\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+In this example, the manifest does not contain a name attribute, so the manifest name is taken from the file name.
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n svc1\fR
+Manifest       Criteria
+--------       --------
+my_manifest    mac  = AA:BB:CC:DD:EE:FF
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 15 \fRAdd a Custom AI Manifest With a Custom Name to an Install Service
+.sp
+.LP
+Use the following sample command to add the manifest in \fB/export/my_manifest.xml\fR to \fBsvc1\fR with the criterion of IPv4 range from 10.0.2.100 and 10.0.2.199.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f /export/my_manifest.xml \e\fR
+\fB-n svc1 -m chosen_name \e\fR
+\fB-c IPV4="10.0.2.100-10.0.2.199"\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+In this example, the manifest name is taken from the \fB-m\fR option.
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n svc1\fR
+Manifest       Criteria
+--------       --------
+chosen_name    ipv4 = 10.0.2.100 - 10.0.2.199
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 16 \fRAdd a Custom AI Manifest With Name Specified In the Manifest
+.sp
+.LP
+Use the following sample command to add the manifest in \fB/export/manifest3.xml\fR to \fBsvc1\fR with criteria of 2048 MB memory or greater and an architecture of \fBi86pc\fR.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f /export/manifest3.xml -n svc1 \e\fR
+\fB-c MEM="2048-unbounded" -c ARCH=i86pc\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+In this example, the manifest name is taken from the \fBname\fR attribute of the \fBai_instance\fR element in the manifest, as shown in the following partial manifest:
+
+.sp
+.in +2
+.nf
+<auto_install>
+    <ai_instance name="my_name" />
+</auto_install>
+.fi
+.in -2
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n svc1\fR
+Manifest    Criteria
+--------    --------
+my_name     arch = i86pc
+            mem  = 2048 MB - unbounded
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 17 \fRAdd a System Configuration Profile To an Install Service
+.sp
+.LP
+Use the following sample command to add the profile in \fB/export/profile4.xml\fR to \fBsvc1\fR with criteria of any of the host names \fBmyhost1\fR, \fBhost3\fR, or \fBhost6\fR.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -f /export/profile4.xml -n svc1 \e\fR
+\fB-p profile4 -c hostname="myhost1 host3 host6"\fR
+$ \fBinstalladm list -p -n svc1\fR
+Profile          Criteria
+-------          --------
+profile4         hostname = myhost1 host3 host6
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 18 \fRAdd a System Configuration Profile For All Clients
+.sp
+.LP
+If you do not specify criteria, then the profile is used by all clients that use the specified install service. In the following example, the created profile is used by all clients that use the \fBsvc1\fR service.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -f /export/locale.xml -n svc1\fR
+$ \fBinstalladm list -p -n svc1\fR
+Profile          Criteria
+-------          --------
+profile4         hostname = myhost1 host3 host6
+locale
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 19 \fRAdd a System Configuration Profile With Replacement Tags
+.sp
+.LP
+A profile can use replacement tags, which serve as placeholders for custom client configuration information that comes from either the user's environment (see \fBenviron\fR(4)) or from the criteria specified in the \fB-c\fR option in the \fBcreate-profile\fR subcommand. Using replacement tags, a profile file can be reused for any number of different systems. In the following example, each profile is stored with the \fBhostname\fR value taken from the \fB-c\fR criteria option:
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -p myhost1_hostname \e\fR
+\fB-f /export/hostname.xml -n svc1 -c hostname=myhost1\fR
+# \fBinstalladm create-profile -p myhost2_hostname \e\fR
+\fB-f /export/hostname.xml -n svc1 -c hostname=myhost2\fR
+$ \fBinstalladm list -p -n svc1\fR
+Profile               Criteria
+-------               --------
+myhost1_hostname      hostname = myhost1
+myhost2_hostname      hostname = myhost2
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBhostname.xml\fR file contains the following line: 
+
+.sp
+.in +2
+.nf
+<propval name="nodename" value="{{AI_HOSTNAME}}"/>
+.fi
+.in -2
+
+.sp
+.LP
+The \fBcreate-profile\fR command makes the substitution so that the \fBmyhost1_hostname\fR profile contains the following line:
+
+.sp
+.in +2
+.nf
+<propval name="nodename" value="myhost1"/>
+.fi
+.in -2
+
+.sp
+.LP
+Using the same \fBhostname.xml\fR input file, the \fBmyhost2_hostname\fR profile contains the following line:
+
+.sp
+.in +2
+.nf
+<propval name="nodename" value="myhost2"/>
+.fi
+.in -2
+
+.sp
+.LP
+The replacement tag, \fB{{AI_HOSTNAME}}\fR, is replaced with different values for each \fBcreate-profile\fR invocation because the \fBhostname\fR  criteria was used and substituted into the profile. For more information about using replacement tags with profiles, see \fIInstalling Oracle Solaris 11 Systems\fR.
+
+.LP
+\fBExample 20 \fRAdd Criteria To an Existing Manifest
+.sp
+.LP
+Use the following sample command to append the criterion of 4096 MB memory or greater to the criteria of \fBmanifest2\fR of \fBsvc1\fR.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm set-criteria -m manifest2 -n svc1 \e\fR
+\fB-a MEM="4096-unbounded"\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 21 \fRReplace the Criteria for an Existing Manifest
+.sp
+.LP
+Use the following sample command to replace the criteria of \fBmanifest2\fR of \fBsvc1\fR with the criteria specified in the file \fB/tmp/criteria.xml\fR.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm set-criteria -m manifest2 -n svc1 \e\fR
+\fB-C /tmp/criteria.xml\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+See \fIInstalling Oracle Solaris 11 Systems\fR for information about the contents of the criteria XML file.
+
+.LP
+\fBExample 22 \fRValidate Profile Files Under Development
+.sp
+.LP
+Use the following sample command to validate the profiles stored in the files \fBmyprofdir/myprofile.xml\fR and \fBherprofdir/herprofile.xml\fR during their development.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm validate -P myprofdir/myprofile.xml \e\fR
+\fB-P herprofdir/herprofile.xml -n svc1\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 23 \fRExport Profile Contents
+.sp
+.LP
+Use the following sample command to export the profile \fBmyprofile.xml\fR in the service \fBsvc1\fR.
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm export -p myprofile -n svc1\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 24 \fRReplace the Contents of an Existing AI Manifest
+.sp
+.LP
+Use the following sample command to update the manifest in service \fBsvc2\fR that has the manifest name, or AI instance name, \fBspec\fR with the contents of the manifest in the file \fB/home/admin/new_spec.xml\fR.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm update-manifest -n svc2 \e\fR
+\fB-f /home/admin/new_spec.xml -m spec\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 25 \fRExport and Update an Existing AI Manifest
+.sp
+.LP
+Use the following sample commands to export the data of an existing manifest named \fBspec\fR in service \fBsvc2\fR, and then update the manifest with modified content.
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm export -n svc2 -m spec -o /home/admin/spec.xml\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Make changes to \fB/home/admin/spec.xml\fR.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm update-manifest -n svc2 \e\fR
+\fB-f /home/admin/spec.xml -m spec\fR
+.fi
+.in -2
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Availability\fBinstall/installadm\fR
+_
+Interface StabilityUncommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+aimanifest(1M), \fBsysconfig\fR(1M), \fBdhcp\fR(5), \fBdhcpd\fR(8), \fBsmf\fR(5), \fBservice_bundle\fR(4), \fBai_manifest\fR(4), \fBenviron\fR(5)
+.sp
+.LP
+Part\ III, \fIInstalling Using an Install Server,\fR in \fIInstalling Oracle Solaris 11 Systems\fR
+.sp
+.LP
+\fITransitioning From Oracle Solaris 10 Custom JumpStart to Oracle Solaris 11 Automated Installer\fR

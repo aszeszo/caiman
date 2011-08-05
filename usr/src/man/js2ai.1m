@@ -1,30 +1,30 @@
 '\" te
 .\" Copyright (c) 2011, Oracle and/or its affiliates.
 .\" All rights reserved.
-.TH js2ai 1M "18 Jul 2011" "SunOS 5.11" "System Administration Commands"
+.TH js2ai 1M "22 Jul 2011" "SunOS 5.11" "System Administration Commands"
 .SH NAME
 js2ai \- Translate JumpStart rules and profiles for use with the Automated Installer (AI).
 .SH SYNOPSIS
 .LP
 .nf
-js2ai [\fB-h\fR | \fB --version \fR]
+js2ai [-h | --version]
 .fi
 
 .LP
 .nf
-js2ai \fB-r\fR | \fB -p \fR \fIprofile_name\fR [\fB-d\fR \fIjumpstart_dir\fR]
-    [\fB-D\fR \fIdestination_dir\fR] [\fB-lSv\fR]
+js2ai -r | -p \fIprofile_name\fR [-d \fIjumpstart_dir\fR]
+    [-D \fIdestination_dir\fR] [-lSv]
 .fi
 
 .LP
 .nf
-js2ai \fB-s\fR [\fB -d \fR \fIjumpstart_dir\fR]
-    [\fB-D\fR \fIdestination_dir\fR] [\fB-Sv\fR]
+js2ai -s [-d \fIjumpstart_dir\fR]
+    [-D \fIdestination_dir\fR] [-Sv]
 .fi
 
 .LP
 .nf
-js2ai \fB-V\fR \fImanifest\fR
+js2ai -V \fImanifest\fR
 .fi
 
 .SH DESCRIPTION
@@ -105,13 +105,16 @@ _
 The \fBrootdisk\fR is set to the specified device if not previously set by the \fBroot_device\fR keyword.
 T}
 \fBfdisk\fRT{
-The value of \fBdisk_name\fR must be a device, and the type must be \fBsolaris\fR. A size of 0 or \fBdelete\fR is not supported.
+The value of \fBdisk_name\fR must be a device. A device of \fBall\fR is not supported. The \fBfdisk\fR type must be \fBsolaris\fR. A size of 0 or \fBdelete\fR is not supported.If \fBpartitioning\fR is \fBdefault\fR and the \fBrootdisk\fR has not been set, the first \fBfdisk solaris\fR partition encountered is used as the \fBrootdisk\fR.
 T}
 \fBfilesys\fRT{
-The local and mirrored file systems are supported when the mount point specified is / or \fBswap\fR.
+The local and mirrored file systems are supported when the mount point specified is / or \fBswap\fR.No validation of the size is performed. The size specified in the resulting AI manifest might need to be adjusted to achieve a successful installation with this manifest.
 T}
 \fBinstall_type\fRT{
 Only the value \fBinitial_install\fR is supported.
+T}
+\fBlocale\fRT{
+No translation is performed. Make sure the locale specified is supported in Oracle Solaris 11.
 T}
 \fBpackage\fRT{
 An attempt to convert the specified package to its Oracle Solaris 11 equivalent is performed. Specifying the location of the package is not supported. Package lookups can take a considerable amount of time. If your profiles contain a long list of packages, you might want to use the \fB--local\fR flag during the conversion process.
@@ -120,13 +123,15 @@ T}
 Supported types are \fBdefault\fR and \fBexplicit\fR. Unlike JumpStart, when \fBpartitioning default\fR is specified, only the disks that \fBjs2ai\fR knows about are used. If no disks are specified in any keywords, the generated profile tells AI to choose which disk to use.
 T}
 \fBpool\fRT{
-If a pool is specified in a profile, the ZFS root pool is created using the specified devices. The \fBpool\fR keyword supersedes all other keywords when determining which devices to use for the ZFS root pool.
+If a pool is specified in a profile, the ZFS root pool is created using the specified devices. The \fBpool\fR keyword supersedes all other keywords when determining which devices to use for the ZFS root pool.No validation of the pool size, swap size, or dump size is performed. These sizes might need to be adjusted in the resulting AI manifest to achieve a successful installation with this manifest.
 T}
 \fBroot_device\fRT{
 The \fBrootdisk\fR is set to the specified device.
 T}
 \fBsystem_type\fROnly the value \fBstandalone\fR is supported.
-\fBusedisk\fRThe specified device is used.
+\fBusedisk\fRT{
+The specified device might be used to resolve the \fBany\fR or \fBrootdisk\fR device during the conversion. Any devices specified that are not used for this purpose are added to the ZFS root pool, when that pool is not mirrored..
+T}
 .TE
 
 .sp
@@ -138,19 +143,21 @@ JumpStart profile keywords not supported by \fBjs2ai\fR:
 archive_location       geo
 backup_media           layout_constraint
 bootenv                local_customization
-client_arch            locale
-client_root            metabd
-client_swap            no_master_check
-cluster                no_content_check
-dontuse                num_clients
-forced_deployment      patch
+client_arch            metabd
+client_root            no_master_check
+client_swap            no_content_check
+cluster                num_clients
+dontuse                patch
+forced_deployment
 .fi
 .in -2
 
-.SS "How the System's Root Disk is Determined During Profile Translation"
 .sp
 .LP
-Since \fBjs2ai\fR does not have access to the actual system a profile references during the profile translation process, \fBjs2ai\fR attempts to determine what the root disk is during the translation process using a process that matches JumpStart as much as possible.
+\fBHow the System's Root Disk is Determined During Profile Translation\fR
+.sp
+.LP
+Since \fBjs2ai\fR does not have access to the actual system a profile references during the profile translation process, \fBjs2ai\fR attempts to determine what the root disk is during translation using a process that matches JumpStart as much as possible.
 .sp
 .LP
 The \fBjs2ai\fR tool performs the following steps to determine what device to use for the root disk.
@@ -165,23 +172,28 @@ lw(.44i) lw(5.06i)
 StageAction
 _
 1T{
-If the \fBroot_device\fR keyword is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the root device.
+If the \fBroot_device\fR keyword is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the device on which the slice resides..
 T}
 2T{
 If \fBrootdisk\fR is not set and the \fBboot_device\fR keyword is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the boot device.
 T}
 3T{
-If \fBrootdisk\fR is not set and a \fBfilesys cwtxdysz size /\fR entry is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the \fBcwtxdysz\fR disk specified in the entry.
+If \fBrootdisk\fR is not set, \fBpartitioning default\fR is specified, and a \fBsolaris\fR \fBfdisk\fR entry is encountered, \fBjs2ai\fR sets \fBrootdisk\fR to the specified \fBdisk_name\fR.
 T}
 4T{
-If \fBrootdisk\fR is not set and a \fBusedisk cwtxdy\fR entry is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the \fBcwtxdy\fR disk specified in the entry.
+If \fBrootdisk\fR is not set and a \fBfilesys cwtxdysz size /\fR entry is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the \fBcwtxdysz\fR disk specified in the entry.
 T}
 5T{
+If \fBrootdisk\fR is not set and a \fBusedisk disk_name\fR entry is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the \fBdisk_name\fR disk specified in the entry.
+T}
+6T{
 If \fBrootdisk\fR is not set, any occurrence where the device is specified as \fBrootdisk\fR generates a conversion error.
 T}
 .TE
 
-.SS "How the \fBany\fR Device Is Translated During Profile Translation"
+.sp
+.LP
+\fBHow the any Device Is Translated During Profile Translation\fR
 .sp
 .LP
 The \fBjs2ai\fR tool performs the following steps to determine what device to use when the \fBany\fR keyword is specified.
@@ -206,10 +218,9 @@ If the \fBany\fR device has not been translated and the action where the \fBany\
 T}
 .TE
 
-.SS "How the ZFS Root Pool is Determined During Profile Translation"
 .sp
 .LP
-The primary goal of translating a JumpStart profile is to determine the best choice for the ZFS root pool.
+\fBHow the ZFS Root Pool is Determined During Profile Translation\fR
 .sp
 .LP
 The \fBjs2ai\fR tool performs the following steps to determine what device to use for the ZFS root pool. Once the ZFS root pool is determined, subsequent definitions encountered are flagged as errors if they conflict with the ZFS root pool that has already been determined.
@@ -523,7 +534,10 @@ Validation Errors:
 .fi
 .in -2
 
-.SH RECOMMENDED STRATEGY FOR RULE AND PROFILE CONVERSION
+.SH CONVERSION STRATEGY
+.sp
+.LP
+\fBRecommended Strategy for Rule and Profile Conversion\fR
 .sp
 .LP
 A one-to-one conversion between JumpStart and AI does not exist. The following steps provide a general procedure for performing the conversion.
@@ -660,7 +674,7 @@ If any validation errors occur for any of the processed \fBsysidcfg\fR files, th
 .RS +4
 .TP
 9.
-The \fBjs2ai\fR conversion process is complete. Perform a manual verification of the resulting criteria, AI manifest, and SC profile files.
+The \fBjs2ai\fR conversion process is complete. Perform a manual verification of the resulting criteria, AI manifest, and SC profile files. The disk space requirements for an Oracle Solaris 11 installation are different from the disk space required for an Oracle Solaris 10 installation. Make sure the disk space allocated in your AI manifests meets the requirements of Oracle Solaris 11.
 .RE
 .RS +4
 .TP

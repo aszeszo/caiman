@@ -1,0 +1,427 @@
+'\" te
+.\" Copyright (c) 2011, Oracle and/or its affiliates.
+.\" All rights reserved.
+.TH dc_manifest 4 "18 July 2011" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+dc_manifest \- Customizing the manifest files for the distribution constructor
+.SH SYNOPSIS
+.LP
+.nf
+The following manifest files can be used to build various Oracle Solaris images.
+These manifests are included in the distribution-constructor package.
+.fi
+
+.LP
+.nf
+To build x86 Oracle Solaris live CD images:
+\fB/usr/share/distro_const/dc_livecd.xml\fR
+.fi
+
+.LP
+.nf
+To build x86 automated installation images:
+\fB/usr/share/distro_const/dc_ai_x86.xml\fR
+.fi
+
+.LP
+.nf
+To build SPARC automated installation images:
+\fB/usr/share/distro_const/dc_ai_sparc.xml\fR
+.fi
+
+.LP
+.nf
+To build x86 text installation images:
+\fB/usr/share/distro_const/dc_text_x86.xml\fR
+.fi
+
+.LP
+.nf
+To build SPARC text installation images:
+\fB/usr/share/distro_const/dc_text_sparc.xml\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The distribution constructor (DC) can be used to build Oracle Solaris installation images.
+.sp
+.LP
+DC XML manifest files are used as input to the distribution constructor. These manifests define the image that the distribution constructor builds. Per the list above, you can use different manifests to build different kinds of images.
+.sp
+.LP
+Use the \fBdistro_const\fR command to build images, referencing a manifest file in the command.
+.sp
+.LP
+If you want to customize the image specifications, copy a manifest file, customize the copy, and use the copy as input for the \fBdistro_const\fR command when you build the image.
+.sp
+.LP
+At a minimum, you need to edit the target element in the manifest to specify the location of the build area where the image can be constructed. And, you need to edit the software name element to specify the publisher and repository location that contain the packages needed to build the image.
+.SH MANIFEST SECTIONS
+.sp
+.LP
+The manifests include the following primary elements.
+.LP
+Note - 
+.sp
+.RS 2
+The default elements and attributes provided below vary depending on which manifest is used.
+.RE
+.sp
+.LP
+\fB<distro name="Oracle_Solaris_Text_X86" add_timestamp="false">\fR
+.sp
+.LP
+This element provides the default name, Oracle_Solaris_Text_X86, for the image that you plan to build. You can use this name, or provide a unique name for your image. 
+.sp
+.LP
+If you intend to perform a series of builds of an image and retain the incremental images, you can change the timestamp variable to "true", and a timestamp will be automatically appended to the name for each image.
+.sp
+.LP
+If you need to specify an HTTP proxy, uncomment the distro name element that includes the proxy variable, and enter the proxy location. For example,
+.sp
+.in +2
+.nf
+<distro name="Oracle_Solaris_Text_SPARC" add_timestamp="false"
+http_proxy="http://example.com">
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fB<boot_mods>\fR
+.sp
+.LP
+This element specifies boot menu modifications to be applied to the image.
+.sp
+.LP
+In the following example, a specialized boot menu with the title, "myentry", will be applied to the image. The timeout attribute specifics time before the default boot entry is automatically activated.
+.sp
+.in +2
+.nf
+<boot_mods title="myentry" timeout="5">
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+You can add individual boot menu entries by adding a new boot_entry element for each new entry. Entries are added sequentially to the boot menu in the order based on the insert_at attribute value of "start" or "end" for each boot entry.
+.LP
+Note - 
+.sp
+.RS 2
+Add new entries before the existing "with magnifier" entry.
+.LP
+See the following example of an individual boot_entry element.
+.RE
+.sp
+.in +2
+.nf
+<boot_entry>
+     <title_suffix>with screen reader</title_suffix>
+     <kernel_args>-B assistive_tech=reader</kernel_args>
+   </boot_entry>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Since a title sub-element is not included in this example, the default is used. The default title is the first line of \fB/etc/release\fR.
+.sp
+.LP
+The title_suffix is a required sub-element, a text string to be appended to the entry title. An optional kernel_args sub-element passes kernel arguments to the boot loader.
+.sp
+.LP
+Optional attributes for the boot_entry element include:
+.sp
+.ne 2
+.mk
+.na
+\fBdefault_entry\fR
+.ad
+.RS 17n
+.rt  
+Set this attribute to "true" to make this boot entry the default. If more than one entry is set to "true", the last entry defined as such will override preceeding entries.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBinsert_at\fR
+.ad
+.RS 17n
+.rt  
+Set value to "start" or "end" to indicate insertion point relative to other boot entries.
+.RE
+
+.sp
+.LP
+\fB<target>\fR
+.sp
+.LP
+This element defines the ZFS build dataset to be used for the build. This dataset is the area where the image will be created. You must enter a valid dataset location.
+.sp
+.LP
+See the following example.
+.sp
+.in +2
+.nf
+<target>
+      <logical>
+        <zpool action="use_existing" name="rpool">
+          <dataset>
+            <filesystem name="dc/sample-dataset-location" 
+            action="preserve"/>
+          </dataset>
+        </zpool>
+      </logical>
+    </target>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fB<software name="transfer-ips-install">\fR
+.sp
+.LP
+This section specifies where the distribution constructor can get packages to download and use to build the image.
+.sp
+.LP
+Image Packaging System (IPS) publishers provide packages  at one or more package repositories.
+.sp
+.LP
+In the source element in this section, edit the publisher name and origin name elements to specify which publisher to use and where the package repository is located. Multiple publishers can be listed. When the distribution constructor attempts to locate packages to install, publishers are searched in the order they are listed here.
+.sp
+.LP
+If mirrors for a publisher need to be specified, uncomment and edit the mirror name element.
+.sp
+.LP
+See the following example.
+.sp
+.in +2
+.nf
+<source>
+  <publisher name="publisher1">
+    <origin name="http://example.oracle.com/primary-pub"/>
+    <mirror name="mirror.example.com"></mirror>
+  </publisher>
+  <publisher name="publisher2">
+    <origin name="http://example2.com/dev/solaris"></origin>
+  </publisher>
+  <publisher name="publisher3.org">
+    <origin name="http://example3.com/dev"></origin>
+  </publisher>
+</source>  
+.fi
+.in -2
+.sp
+
+.LP
+Note - 
+.sp
+.RS 2
+This element also includes a destination tag which specifies the data mountpoint to be used during the build of the image. Changing the destination attribute is not recommended.
+.RE
+.sp
+.LP
+\fB<software_data action="install">\fR
+.sp
+.LP
+This software_data element with the install attribute lists the  set of packages to be installed in order to build a particular  type of image, depending on which manifest you are using. For  example, the dc_livecd.xml manifest lists the packages needed  to build a live CD image.
+.sp
+.LP
+Each name tag lists one package name or the name of a  group package that contains many packages.
+.sp
+.in +2
+.nf
+<software_data action="install" type="IPS">
+  <name>pkg:/entire</name>
+  <name>pkg:/server_install</name>
+  <name>pkg:/system/install/text-install</name>
+  <name>pkg:/system/install/media/internal</name>
+</software_data>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+If you have packages that you want to add to the image,  append the package names by adding a name tag for each  package.
+.sp
+.LP
+By default, the most current package version available in the specified repository is installed. If another version is required,  append the version number to the 'entire' reference using the  following format:
+.sp
+.in +2
+.nf
+<name>pkg:/entire@0.5.11-0.build#</name>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Use the following command to check which versions are available.
+.sp
+.in +2
+.nf
+# \fBpkg list -af entire\fR
+.fi
+.in -2
+.sp
+
+.LP
+Note - 
+.sp
+.RS 2
+Do not remove the 'entire' entry. 'entire' is an  incorporation used to manage multiple packages.
+.RE
+.sp
+.LP
+\fB<software_data action="uninstall" type="IPS">\fR
+.sp
+.LP
+The software_data element with the uninstall attribute can be  used to uninstall an individual package or to uninstall a  group package definition.
+.sp
+.LP
+In the following example, 'server_install' is the name of a  group package that contains numerous individual packages.
+.sp
+.in +2
+.nf
+<software_data action="uninstall" type="IPS">
+  <name>pkg:/server_install</name>
+</software_data>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+You could uninstall a group package. Uninstalling a group  package means that only the group definition is actually uninstalled. The individual packages that were previously installed as part of that group are not uninstalled. However,  you can uninstall those individual packages without  uninstalling the group package. Retaining the group package can be useful for ongoing reference.
+.sp
+.LP
+You can also use the name tag to uninstall an individual  package. Append additional packages to be uninstalled at the end of the uninstall section.
+.sp
+.LP
+\fB<software name="set-ips-attributes">\fR
+.sp
+.LP
+This element affects a system after that system has been installed with the image created using the distribution constructor.
+.sp
+.LP
+In the source element, use the publisher name and optional  mirror name tags to specify where the installed system can access additional packages to download and install. See the following example.
+.sp
+.in +2
+.nf
+<source>
+  <publisher name="solaris">
+    <origin name="http://pkg.oracle.com/solaris/release/"/>
+  </publisher>
+</source>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fB<software name="ba-init">\fR
+.sp
+.LP
+This element lists the files and directories to be installed or uninstalled in the boot archive for the image that is built.  See the comments in the manifest file for information.
+.LP
+Caution - 
+.sp
+.RS 2
+Modifying the boot archive contents could render  the system unbootable.
+.RE
+.sp
+.LP
+\fB<execution stop_on_error="true">\fR
+.sp
+.LP
+The execution element in the manifest lists a series of checkpoints that are executed during the image construction process. Checkpoints are executed in the order they are listed in this section. The default checkpoints needed to build the  default installation image are included in each manifest.
+.sp
+.LP
+Each checkpoint name tag includes the mod-path attribute which specifies where the checkpoint script is located.
+.sp
+.LP
+Use the \fBdistro_const\fR(1M) command options to control pausing and restarting the build process at particular checkpoints.
+.sp
+.LP
+Some of the checkpoint tags include arguments with default values provided. See the manifest comments for details.
+.sp
+.LP
+If you create a custom script to be used during the building of an image, you must add a checkpoint name tag pointing to the script location.
+.sp
+.LP
+See the following example about how to add a new checkpoint name tag to point to a custom script.
+.sp
+.LP
+A user creates a custom script, \fB/tmp/myscript.sh\fR, to run in the  build process after the default transfer-ips-checkpoint.
+.sp
+.LP
+In order to point to the new script, add the following tag to the manifest after the transfer-ips-checkpoint name, in order to point to the new script.
+.sp
+.in +2
+.nf
+<checkpoint name="custom-script"
+ desc="my new script"
+ mod_path="solaris_install/distro_const/checkpoints/custom_script"
+ checkpoint_class="CustomScript">
+   <args>/tmp/myscript.sh arg1 arg2/{PKG_IMAGE_PATH}</args>
+</checkpoint>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Where 'arg1' and 'arg2' are optional arguments the script takes.
+.sp
+.LP
+The values of '{PKG_IMAGE_PATH}' or '{BOOT_ARCHIVE}' are replaced by the \fBdistro_const\fR utility during execution with \fB<ZFS Dataset>/build_data/pkg_image\fR and \fB<ZFS Dataset>/build_data/boot_archive\fR, respectively.
+.LP
+Note - 
+.sp
+.RS 2
+Multiple custom-script checkpoints may be specified  in a DC manifest. Each checkpoint must have a unique name.
+.RE
+.sp
+.LP
+\fB<configuration name="pre-pkg-img-mod" type="sysconf" source="/etc/svc/profile/generic_limited_net.xml">\fR
+.sp
+.LP
+The configuration name element in the manifest lists SMF service  profiles that are applied to the media during the image  construction process. These SMF services specify which services will be running, or not running, on the booted media.  The profiles are applied in the order specified in this element.
+.sp
+.LP
+This element would rarely be modified.
+.SH ATTRIBUTES
+.sp
+.LP
+See attributes(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Availabilityinstall/distribution-constructor package
+_
+Interface StabilityUnder Development
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBdistro_const\fR(1M), \fBpkg\fR(1)
+.sp
+.LP
+\fICreating a Custom Oracle Solaris 11 Installation Image\fR in the OTN documentation library for the current release.

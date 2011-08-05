@@ -22,9 +22,9 @@
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-include ../Makefile.master
+include $(SRC)/Makefile.master
 
-MANPAGES1M = distro_const.1m installadm.1m js2ai.1m
+MANPAGES1M = aimanifest.1m distro_const.1m installadm.1m js2ai.1m
 MANPAGES4 = dc_manifest.4
 
 FILEMODE = 0444
@@ -32,27 +32,30 @@ FILEMODE = 0444
 ROOTMANPAGES1M = $(MANPAGES1M:%=$(ROOTMAN1M)/%)
 ROOTMANPAGES4 = $(MANPAGES4:%=$(ROOTMAN4)/%)
 
-MANPAGES = $(MANPAGES1M) $(MANPAGES4)
-
 all :=		TARGET = all
 clean :=	TARGET = clean
 clobber :=	TARGET = clobber
 install :=	TARGET = install
-headers :=	TARGET = headers
 
-all:
+all:	$(MANPAGES1M) $(MANPAGES4)
 
 headers:
 
 clean:
-	rm -f $(MANPAGES)
+	$(RM) $(ROOTMANPAGES1M) $(ROOTMANPAGES4)
 
 clobber: clean
 
 install: all $(ROOTMANPAGES1M) $(ROOTMANPAGES4)
 
-$(ROOTMAN1M)/%: %.txt
-	$(INS.rename)
+$(ROOTMAN1M)/%: %
+	$(INS.file)
 
-$(ROOTMAN4)/%: %.txt
-	$(INS.rename)
+$(ROOTMAN4)/%: %
+	$(INS.file)
+
+$(ROOTMAN1M):
+	$(INS.dir)
+
+$(ROOTMAN4):
+	$(INS.dir)

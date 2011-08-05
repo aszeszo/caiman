@@ -1,0 +1,916 @@
+'\" te
+.\" Copyright (c) 2011, Oracle and/or its affiliates.
+.\" All rights reserved.
+.TH aimanifest 1M "22 Jul 2011" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+aimanifest \- Modify an XML file used by Automated Installer (AI)
+.SH SYNOPSIS
+.LP
+.nf
+/usr/bin/aimanifest [-h]
+.fi
+
+.LP
+.nf
+aimanifest add [-r] \fIpath\fR \fIvalue\fR
+.fi
+
+.LP
+.nf
+aimanifest get [-r] \fIpath\fR
+.fi
+
+.LP
+.nf
+aimanifest set [-r] \fIpath\fR \fIvalue\fR
+.fi
+
+.LP
+.nf
+aimanifest load [-i] \fIfilename\fR
+.fi
+
+.LP
+.nf
+aimanifest validate
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBaimanifest\fR command creates a new XML manifest or modifies an existing one. While \fBaimanifest\fR can be used with any XML file that contains a valid \fB!DOCTYPE\fR reference to a DTD definition, it is intended for creating derived manifests used by the Automated Installer (AI). See \fIInstalling Oracle Solaris 11 Systems\fR for information about AI derived manifests.
+.sp
+.LP
+The \fBaimanifest\fR command can be invoked multiple times to develop a manifest. The \fBAIM_MANIFEST\fR environment variable specifies the location of the manifest for \fBaimanifest\fR to modify. \fBAIM_MANIFEST\fR must be set. Each invocation of the \fBaimanifest\fR command with the \fBload\fR, \fBadd\fR, or \fBset\fR subcommand opens, modifies, and saves the \fBAIM_MANIFEST\fR file.
+.sp
+.LP
+The minimum \fBAIM_MANIFEST\fR file that the \fBaimanifest\fR command can modify must contain both of the following pieces:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A \fB!DOCTYPE\fR reference to a DTD that is valid for the XML manifest being developed.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The root element for this manifest.
+.RE
+.sp
+.LP
+If you start with an empty \fBAIM_MANIFEST\fR file, as when AI is executing a derived manifests script, then the first \fBaimanifest\fR command must specify the \fBload\fR subcommand to load at least the minimum required \fBAIM_MANIFEST\fR file. Subsequent \fBaimanifest\fR commands that modify the manifest use the DTD to determine where to add elements in the developing manifest.
+.sp
+.LP
+To save error and informational messages to a file in addition to displaying messages to \fBstdout\fR and \fBstderr\fR, set the \fBAIM_LOGFILE\fR environment variable to a log file location. Information is appended to the log file. The log file is not cleared.
+.SH OPTIONS
+.sp
+.LP
+The \fBaimanifest\fR command has the following option:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR, \fB--help\fR\fR
+.ad
+.RS 14n
+.rt  
+Show the usage help message.
+.RE
+
+.sp
+.LP
+The \fBadd\fR, \fBget\fR, and \fBset\fR subcommands of the \fBaimanifest\fR command have the following option:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR, \fB--return-path\fR\fR
+.ad
+.RS 21n
+.rt  
+Return the path of the XML element that this \fBaimanifest\fR command creates or operates on. This returned path is a chain of node IDs. You can save this returned path value to use in subsequent calls to \fBaimanifest\fR. Using the path returned by the \fB-r\fR option is more reliable than specifying the path using XML element and attribute values, since the values can change as the AI manifest is being built. See the "Return Paths" section for more information about the path returned by the \fB-r\fR option.
+.RE
+
+.sp
+.LP
+The \fBload\fR subcommand of the \fBaimanifest\fR command has the following option:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR, \fB--incremental\fR\fR
+.ad
+.RS 21n
+.rt  
+Do not clear the \fBAIM_MANIFEST\fR data before adding new data.
+.RE
+
+.SH SUB-COMMANDS
+.sp
+.LP
+The following subcommands are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBadd [\fB-r\fR | \fB--return-path\fR] \fIpath\fR \fIvalue\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Add a new element to an XML manifest. Add the new element at \fIpath\fR and with value \fIvalue\fR. See the "Operands" section for more information about \fIpath\fR. If \fIpath\fR ends in an attribute (\fB@\fIattr\fR\fR), then the new element has the \fIattr\fR attribute, and \fIvalue\fR is the value of the attribute.
+.sp
+No validation is performed except to examine parent/child relationships in \fIpath\fR.
+.sp
+The \fB-r\fR option returns a path to the newly-added node. See the "Return Paths" section for more information.
+.sp
+If the parent path matches an element in the \fBAIM_MANIFEST\fR file, it must match only one element. The new element is created as a child of the matching parent element. The path can specify element and attribute values to match a unique parent element, as shown in "Example 2: Path With a Value" in this section.
+.sp
+.LP
+If the parent path does not match an element in the \fBAIM_MANIFEST\fR file, new elements are created as necessary, and the new child element is added to the new parent. The path to an added element is split off from the preexisting elements according to the following rules:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The split occurs after all parts of the path that specify a value.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The split occurs at the first place where multiple relevant same-tagged elements are allowed by the DTD, after all parts of the path that specify a value.
+.RE
+.sp
+.LP
+Use this XML manifest schema to analyze the following examples:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The manifest begins with a single A node.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The A node can have only one B node child.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The B node can have multiple C node children.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A C node can have multiple D node children.
+.RE
+\fBExample 1: Simple Path\fR. The AI manifest has one A node, one B node, and one C node: \fB/A/B/C\fR. An \fBadd\fR subcommand is issued with a \fIpath\fR of \fB/A/B/C/D\fR. In this case, a new C node is created because C nodes are the first nodes along the path that can have same-tagged siblings. A new D node is added as a child to the new C node. The resulting manifest has the structure \fB/A/B/{C,C/D}\fR. Issuing the same command for a different value of D results in three C nodes: \fB/A/B/{C,C/D,C/D}\fR.
+.sp
+\fBExample 2: Path With a Value\fR. The AI manifest has one A node, one B node, and two C nodes. Only one of the C nodes has a value of 1 so that the manifest has the structure \fB/A/B/{C,C=1}\fR. An \fBadd\fR subcommand is issued with a \fIpath\fR of \fB/A/B/C=1/D\fR and a \fIvalue\fR of 10. In this case, no new C node is added because specifying the value of 1 for C identifies a unique node, and the path cannot be split at or before a branch where a value is specified. The first place where this path can be split is at D. A new D node with a value of 10 is added as a child of the C node that has a value of 1. The resulting manifest has the structure \fB/A/B/{C,C=1/D=10}\fR. Issuing the same command with a value of 20 for D results in \fB/A/B/{C,C=1/{D=10,D=20}}\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBget [\fB-r\fR | \fB--return-path\fR] \fIpath\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retrieve an element or attribute value. An empty string (\fB""\fR) is displayed for empty element or attribute values. The \fIpath\fR must match a unique existing element or attribute. See the "Operands" section for more information about \fIpath\fR.
+.sp
+The \fB-r\fR option returns a path to the accessed node as a second returned string. See the "Return Paths" section for more information.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBset [\fB-r\fR | \fB--return-path\fR] \fIpath\fR \fIvalue\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Change the value of an existing element or attribute, or create a new attribute of an existing element. No validation is performed.
+.sp
+When changing the value of an existing element, \fIpath\fR must match a unique existing element. If the element has same-tagged siblings, use an element value or attribute, or a child element of the target element to make the path unique. See "The Path Operand" section.
+.sp
+When setting the value of an attribute, the attribute does not need to exist, but the element to which the attribute belongs must exist.
+.sp
+The \fB-r\fR option returns a path to the changed element. See the "Return Paths" section for more information.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBload [\fB-i\fR | \fB--incremental\fR] \fIfilename\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Load an XML manifest or partial XML manifest from the file \fIfilename\fR. No validation is performed except to examine parent/child relationships of elements.
+.sp
+When the \fB-i\fR option is not specified, overwrite any existing XML data. All data in the \fBAIM_MANIFEST\fR file is replaced with the contents of the \fIfilename\fR file. The \fIfilename\fR file must include a \fB!DOCTYPE\fR reference to a DTD so that subsequent \fBaimanifest\fR commands can modify the file.
+.sp
+When the \fB-i\fR option is specified, do not clear the \fBAIM_MANIFEST\fR data before adding new data. Instead, incrementally insert or merge the new data with the existing XML data. The DTD given by the \fB!DOCTYPE\fR reference in \fBAIM_MANIFEST\fR is used to determine how and where to merge the \fIfilename\fR data. If the \fB!DOCTYPE\fR reference is missing, the AI manifest DTD at \fB/usr/share/install/ai.dtd\fR is used. If the data in \fIfilename\fR cannot be reconciled with the DTD, a non-zero error status is returned.
+.sp
+.LP
+The following considerations affect where new data is inserted into the \fBAIM_MANIFEST\fR manifest:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+To what extent the tags of elements near the beginning of the \fBAIM_MANIFEST\fR data paths and \fIfilename\fR data paths match
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+What child elements are allowed under those \fBAIM_MANIFEST\fR data elements
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Where same-tagged sibling elements are allowed
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Where childless \fBAIM_MANIFEST\fR data nodes are located
+.RE
+.sp
+.LP
+As each element of \fIfilename\fR data is processed, if all of the following conditions are true, then in general a new node is not created for this element in the \fBAIM_MANIFEST\fR data. Instead, an existing node is replaced with the new data.
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Both sets of data contain a node with the same tag and same location.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The DTD given by the \fB!DOCTYPE\fR reference in \fBAIM_MANIFEST\fR does not allow both of these nodes to exist together as same-tagged sibling elements.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The \fIfilename\fR data element has children.
+.RE
+When an element from \fIfilename\fR is inserted, the split where new nodes start to be created is done as close as possible to the \fBAIM_MANIFEST\fR data root. The first new node of the split is created at the earliest point where same-tagged sibling elements are allowed, or at the earliest appropriate point when no same-tagged element exists in \fBAIM_MANIFEST\fR.
+.sp
+.LP
+Use this XML manifest schema to analyze the following examples:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The manifest begins with a single A node.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The A node can have only one B node child.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The B node can have multiple C node children.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The B node can have only one E node child.
+.RE
+.sp
+.LP
+\fBExample 1: Inserting Same-Tagged Elements\fR. If the content of \fBAIM_MANIFEST\fR is \fB/A/B/C1/D1\fR and the content of \fIfilename\fR is \fB/A/B/C2/D2\fR, then after the \fBload -i\fR command, the content of the \fBAIM_MANIFEST\fR file is \fB/A/B/{C1/D1,C2/D2}\fR. The C node is the first place where new nodes can be added. The C node from the \fIfilename\fR data is added after the existing C node in the \fBAIM_MANIFEST\fR data. If the two A elements have different values or if the two B elements have different values, the value of the \fIfilename\fR element replaces the value of the \fBAIM_MANIFEST\fR element. If the two A elements have different attributes, or if the two B elements have different attributes, the attribute values are merged.
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Attributes of A and B that exist in both the \fBAIM_MANIFEST\fR file and the \fIfilename\fR file have the values from the \fIfilename\fR file in the merged file.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Attributes of A and B that exist in either the \fBAIM_MANIFEST\fR file or the \fIfilename\fR file but not in both files are all retained in the merged file.
+.RE
+\fBExample 2: Inserting Differently Tagged Elements\fR. If the content of \fBAIM_MANIFEST\fR is \fB/A/B/C/D\fR and the content of \fIfilename\fR is \fB/A/B/E/F\fR, then after the \fBload -i\fR command, the content of the \fBAIM_MANIFEST\fR file is \fB/A/B/{E/F,C/D}\fR. The E node is added at the first location where it is allowed by the DTD. The values of elements A and B are the values from \fIfilename\fR, and the attributes of A and B are merged from \fIfilename\fR to \fBAIM_MANIFEST\fR as described in Example 1 above.
+.sp
+Sometimes the correct merge location cannot be determined. This can happen if a sibling that is required to follow a node to be merged has not yet been added. To avoid this issue, add multiple nodes or subtrees to a common parent node in the order mandated by the DTD. A node is placed at the end of its list of new siblings if its proper place among them cannot be determined.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvalidate\fR\fR
+.ad
+.sp .6
+.RS 4n
+Validates the \fBAIM_MANIFEST\fR manifest against the DTD referenced in the \fB!DOCTYPE\fR statement. Errors are printed to \fBstderr\fR. A non-zero status is returned if validation fails.
+.RE
+
+.SH OPERANDS
+.sp
+.LP
+The following operands are required.
+.SS "The Filename Operand"
+.sp
+.LP
+The \fBload\fR subcommand requires the \fIfilename\fR operand, which is the name of a full or partial manifest to load to the \fBAIM_MANIFEST\fR manifest.
+.SS "The Value Operand"
+.sp
+.LP
+The \fBadd\fR and \fBset\fR subcommands require the \fIvalue\fR operand. The \fIvalue\fR operand is a valid value of the element or attribute specified by the \fIpath\fR operand.
+.SS "The Path Operand"
+.sp
+.LP
+The \fBadd\fR, \fBget\fR, and \fBset\fR subcommands of the \fBaimanifest\fR command require the \fIpath\fR operand. The path defines a node in an XML hierarchy of elements and attributes.
+.sp
+.LP
+The XML element hierarchy structure is also called an XML tree. In the following partial AI manifest, the \fBauto_install\fR element is the root of the tree, and the \fBai_instance\fR and \fBsoftware\fR elements are branches or the roots of subtrees.
+.sp
+.in +2
+.nf
+<auto_install>
+  <ai_instance>
+    <software type="IPS"/>
+  </ai_instance>
+</auto_install>
+.fi
+.in -2
+
+.sp
+.LP
+In \fBaimanifest\fR path syntax, use forward slash characters (/) to indicate branches in the tree structure. In the current example, the path to the \fBsoftware\fR element is \fB/auto_install/ai_instance/software\fR.
+.sp
+.LP
+Attributes are bound to an element. In \fBaimanifest\fR path syntax, use an at symbol (@) to identify an attribute name. The path to the \fBtype\fR attribute of the \fBsoftware\fR element is \fB/auto_install/ai_instance/software@type\fR.
+.sp
+.LP
+An \fBaimanifest\fR \fIpath\fR operand must correspond to a single element. Include element and attribute values as necessary to make the path unique. For example, to specify a size for the second slice defined in the following partial AI manifest, you could use the path \fB/auto_install/ai_instance/target/disk/slice[@name="4"]/size@val\fR to identify which slice you are specifying the size for.
+.sp
+.in +2
+.nf
+<auto_install>
+  <ai_instance>
+    <target>
+        <disk>
+          <slice name="0"/>
+          <slice name="4"/>
+        </disk>
+    </target>
+  </ai_instance>
+</auto_install>
+.fi
+.in -2
+
+.sp
+.LP
+Relative paths are permitted. The \fBslice\fR path shown in the previous paragraph could be specified starting at \fBai_instance\fR, \fBtarget\fR, \fBdisk\fR, or \fBslice\fR , since there is only one \fBslice\fR with a \fBname\fR attribute value of 4. For example, you could use the path \fBslice[@name="4"]/size@val\fR.
+.sp
+.LP
+If a \fIvalue\fR within a \fIpath\fR contains forward slash characters, then that value must be enclosed in single or double quotation marks, as in \fB/name="pkg:/entire"\fR.
+.sp
+.LP
+When the \fBaimanifest\fR call is in a shell script, values that contain quotation marks might require additional special treatment. Within a shell script, quotation marks in \fBaimanifest\fR path values might need to be escaped with a preceding backslash character (\e) so that the shell does not remove or interpret the quotation marks. Check the rules of the shell you are using. The following example shows a value with a forward slash character in a \fBksh93\fR script:
+.sp
+.in +2
+.nf
+/usr/bin/aimanifest get software_data[name=\e"pkg:/entire\e"]@action
+.fi
+.in -2
+
+.sp
+.LP
+Most examples in this man page omit backslash escape characters because this man page does not assume that \fBaimanifest\fR is being called in a script or in a particular shell. See \fIInstalling Oracle Solaris 11 Systems\fR for information about AI derived manifests scripts.
+.sp
+.LP
+The following forms of branches show how to construct a path to an element or element attribute.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBA\fR is the tag name of an element, as in \fB/auto_install\fR. This branch specification is also called a simple branch. Paths with only simple branches are called simple paths.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A=\fIvalue\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBA\fR is the tag name of an element, and \fIvalue\fR is the value of that element, as in \fB/name="pkg:/entire"\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[B/C=\fIvalue\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBA\fR is an element, \fBB\fR is an element that is a child of \fBA\fR, \fBC\fR is an element that is a child of \fBB\fR, and \fIvalue\fR is the value of the \fBC\fR element. This path form specifies the \fBA\fR element that has a grandchild element \fBC\fR that has value \fIvalue\fR. For example, if your AI manifest has more than one software section, you could use this form to operate on the software section that installs package \fBpkg:/entire\fR, as in the following path:
+.sp
+.in +2
+.nf
+software[software_data/name="pkg:/entire"]
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[@Aattr=\fIvalue\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBA\fR is an element, \fBAattr\fR is an attribute of \fBA\fR, and \fIvalue\fR is the value of the \fBAattr\fR attribute. This path form specifies the \fBA\fR element that has attribute \fBAattr\fR with value \fIvalue\fR. For example, if your AI manifest defines more than one slice, you could use this form to operate on the slice that has a \fBname\fR value of 4, as in \fBslice[@name="4"]\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[B/C@Cattr=\fIvalue\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBA\fR is an element, \fBB\fR is a child of \fBA\fR, \fBC\fR is a child of \fBB\fR, \fBCattr\fR is an attribute of \fBC\fR, and \fIvalue\fR is the value of the \fBCattr\fR attribute. This path form specifies the \fBA\fR element that has a grandchild element \fBC\fR that has attribute \fBCattr\fR with value \fIvalue\fR. For example, if your AI manifest has more than one software section, you could use this form to operate on the software section that has a publisher section with a name value of \fBsolaris\fR, as in the path \fBsoftware[source/publisher@name="solaris"]\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[1]\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fB/A[1]\fR specifies the first instance of an \fBA\fR element in the manifest. For example, if your AI manifest has more than one software section, you could use this form to operate on the second software section, as in \fB/auto_install[1]/ai_instance[1]/software[2]\fR.
+.sp
+This is the form of path that is returned by the \fB-r\fR option. See the "Return Paths" section.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A@Aattr\fR\fR
+.ad
+.sp .6
+.RS 4n
+This path specifies the \fBAattr\fR attribute of the \fBA\fR element. This path does not specify the \fBA\fR element but rather the \fBAattr\fR attribute. Use this form to set or get the \fBAattr\fR attribute.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[B/C=\fIvalue\fR]@Aattr\fR\fR
+.ad
+.sp .6
+.RS 4n
+This path specifies the \fBAattr\fR attribute of the \fBA\fR element that has a grandchild element \fBC\fR that has value \fIvalue\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[B/C@Cattr=\fIvalue\fR]@Aattr\fR\fR
+.ad
+.sp .6
+.RS 4n
+This path specifies the \fBAattr\fR attribute of the \fBA\fR element that has a grandchild element \fBC\fR that has attribute \fBCattr\fR with value \fIvalue\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A/B=\fIvalue\fR@Battr\fR\fR
+.ad
+.sp .6
+.RS 4n
+This path specifies the \fBBattr\fR attribute of the \fBB\fR element with value \fIvalue\fR. The \fBB\fR element is a child of the \fBA\fR element.
+.RE
+
+.SH RETURN PATHS
+.sp
+.LP
+With the \fB-r\fR option, the \fBadd\fR, \fBget\fR, and \fBset\fR subcommands return the address of the element that was created or accessed by the subcommand. This returned address is in the form of a chain of node IDs. This returned address can be used to access the same element again, even if values associated with that element have changed.
+.sp
+.LP
+The following examples show that the address returned by the \fB-r\fR option can be much easier to use than a path that specifies element and attribute values. Start with the following node tree:
+.sp
+.in +2
+.nf
+        auto_install
+             |
+        ai_instance
+             |
+           target
+             |
+           disk
+         attribute: whole_disk=true
+             |
+         disk_name
+         attribute: name=data1
+         attribute: name_type=volid
+.fi
+.in -2
+
+.sp
+.LP
+Add a new \fBdisk\fR node with \fBname\fR attribute value \fBdata2\fR and \fBname_type\fR attribute value \fBvolid\fR:
+.sp
+.in +2
+.nf
+        auto_install
+             |
+        ai_instance
+             |
+           target
+             |
+  |----------|----------|
+disk                  disk
+whole_disk=true       whole_disk=true
+    |                     |
+disk_name             disk_name
+name=data1            name=data2
+name_type=volid       name_type=volid
+.fi
+.in -2
+
+.sp
+.LP
+A new \fBdisk_name\fR element with one attribute can be added easily with a single command. To add the second and third attributes, you must specify which \fBdisk_name\fR element to change. Compare the following two methods for accessing the same node multiple times.
+.SS "Specifying Paths By Using Values"
+.sp
+.LP
+The commands in this example specify paths using values. Note that you must assign a unique value in the first command so that you can use that value to specify a unique path in the subsequent commands. This method could yield an incorrect result if the values are changed.
+.sp
+.in +2
+.nf
+$ \fBaimanifest add target/disk/disk_name@name data2\fR
+$ \fBaimanifest set \e\fR
+> \fBtarget/disk/disk_name[@name=data2]@name_type volid\fR
+$ \fBaimanifest set \e\fR
+> \fBtarget/disk[disk_name@name=data2]@whole_disk true\fR
+.fi
+.in -2
+.sp
+
+.SS "Specifying Paths By Using Returned Paths"
+.sp
+.LP
+The most reliable way to access the same node multiple times is to save the path to the new \fBdisk_name\fR element, and then use that saved path for subsequent accesses.
+.sp
+.in +2
+.nf
+$ \fBNewDisk=$(aimanifest add -r target/disk@whole_disk true)\fR
+$ \fBaimanifest add ${NewDisk}/disk_name@name data2\fR
+$ \fBaimanifest add ${NewDisk}/disk_name@name_type volid\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The path that is returned to \fB$NewDisk\fR through the \fB-r\fR option expresses the node in terms of IDs and is free of values:
+.sp
+.in +2
+.nf
+$ \fBaimanifest add -r target/disk/@whole_disk true\fR
+/auto_install[1]/ai_instance[1]/target[1]/disk[2]
+.fi
+.in -2
+.sp
+
+.SH EXAMPLES
+.sp
+.LP
+To try these examples, you need to set \fBAIM_MANIFEST\fR.
+.sp
+.in +2
+.nf
+$ \fBexport AIM_MANIFEST=/tmp/aimtest.xml\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The minimum \fBAIM_MANIFEST\fR file that the \fBaimanifest\fR command can modify must contain both of the following pieces:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A \fB!DOCTYPE\fR reference to a DTD that is valid for the XML manifest being developed.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The root element for this manifest.
+.RE
+.sp
+.LP
+The following example shows the minimum \fBAIM_MANIFEST\fR manifest file for an AI manifest:
+.sp
+.in +2
+.nf
+<!DOCTYPE auto_install SYSTEM "file:///usr/share/install/ai.dtd">
+<auto_install/>
+.fi
+.in -2
+
+.sp
+.LP
+Usually, you will use the \fBaimanifest\fR command in a derived manifests script that operates on an existing valid AI manifest. To try these examples, you can copy \fB/usr/share/auto_install/manifest/default.xml\fR and then define \fBAIM_MANIFEST\fR to refer to this copy. Make sure the copy is writable.
+.LP
+\fBExample 1 \fRSet the \fBauto_reboot\fR Attribute
+.sp
+.in +2
+.nf
+$ \fBaimanifest set /auto_install/ai_instance@auto_reboot false\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRGet the \fBauto_reboot\fR Value
+.sp
+.in +2
+.nf
+$ \fBaimanifest get /auto_install/ai_instance@auto_reboot\fR
+false
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRAdd a Publisher by Using Values Paths
+.sp
+.LP
+The package repository in this example is a file repository at \fBfile:///net/host2/export/extras_repo\fR. The publisher is \fBextras\fR.
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest add \e\fR
+> \fBsoftware/source/publisher@name extras\fR
+$ \fBaimanifest add \e\fR
+> \fBsoftware/source/publisher[@name=extras]/origin@name \e\fR
+> \fBfile:///net/host2/export/extras_repo\fR
+$ \fBaimanifest set \e\fR
+> \fBsoftware[source/publisher@name=extras]@name extras\fR
+$ \fBaimanifest set \e\fR
+> \fBsoftware[source/publisher@name=extras]@type IPS\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+These \fBaimanifest\fR commands result in the following AI manifest entries. The \fBsoftware\fR element is the first element in the \fIpath\fR where same-tagged siblings are allowed, so this section of XML code follows the last \fBsoftware\fR section that is already in the output file.
+
+.sp
+.in +2
+.nf
+<software name="extras" type="IPS">
+  <source>
+    <publisher name="extras">
+      <origin name="file:///net/host2/export/extras_repo"/>
+    </publisher>
+  </source>
+</software>
+.fi
+.in -2
+
+.LP
+\fBExample 4 \fRAdd a Publisher by Using Returned Paths
+.sp
+.LP
+This example is the same as the previous example but uses a different method to achieve the same result.
+
+.sp
+.in +2
+.nf
+$ \fBSW_PATH=$(aimanifest add -r \e\fR
+> \fB/auto_install/ai_instance/software@name extras)\fR
+$ \fBaimanifest set ${SW_PATH}@type IPS\fR
+$ \fBPUB_PATH=$(aimanifest add ${SW_PATH}/source/publisher@name extras)\fR
+$ \fBaimanifest add \e\fR
+\fB${PUB_PATH}/origin@name file:///net/host2/export/extras_repo)\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 5 \fRAdd a Publisher By Adding a Manifest Fragment
+.sp
+.LP
+This example is the same as the previous example but uses a third method to achieve the same result.
+
+.sp
+.LP
+Create a file named \fBextras.xml\fR with the following content:
+
+.sp
+.in +2
+.nf
+<auto_install>
+  <ai_instance>
+    <software name="extras" type="IPS">
+      <source>
+        <publisher name="extras">
+          <origin name="file:///net/host2/export/extras_repo"/>
+        </publisher>
+      </source>
+    </software>
+  </ai_instance>
+</auto_install>
+.fi
+.in -2
+
+.sp
+.LP
+Even though you only want the software section, you must include the \fBauto_install\fR and \fBai_instance\fR elements as well. You must include everything that would be required in the \fIpath\fR operand. If the loaded file specifies attributes for the \fBauto_install\fR or \fBai_instance\fR elements, then those attribute values replace existing values or are added.
+
+.sp
+.LP
+Use the following command to add this \fBsoftware\fR section to the \fBAIM_MANIFEST\fR manifest:
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest load -i extras.xml\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 6 \fRAdd a Package by Using a Values Path
+.sp
+.LP
+This example adds a package to the \fBsoftware\fR element that has a \fBpublisher\fR element with name \fBextras\fR from the previous example by specifying the publisher name as a value in the path. The example also shows using a relative path specification.
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest add \e\fR
+> \fBsoftware[source/publisher@name=extras]/software_data/name \e\fR
+> \fBpkg:/system/utils\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+This \fBaimanifest\fR command adds the following \fBsoftware_data\fR section.
+
+.sp
+.in +2
+.nf
+<software name="extras" type="IPS">
+  <source>
+    <publisher name="extras">
+      <origin name="file:///net/host2/export/extras_repo"/>
+    </publisher>
+  </source>
+  <software_data>
+    <name>pkg:/system/utils</name>
+  </software_data>
+</software>
+.fi
+.in -2
+
+.LP
+\fBExample 7 \fRAdd a Package by Using a Returned Path
+.sp
+.LP
+This example is the same as the previous example but uses a different method to achieve the same result. Instead of specifying the name of the publisher as a value in the path, this example uses the path to the \fBsoftware\fR element that was saved in \fBSW_PATH\fR in the example "Add a Publisher by Using Returned Paths."
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest add ${SW_PATH}/software_data/name pkg:/system/utils\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 8 \fRValidate a Manifest
+.sp
+.LP
+Validate the \fBAIM_MANIFEST\fR manifest.
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest validate\fR
+.fi
+.in -2
+.sp
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 13n
+.rt  
+The command was processed successfully.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB>0\fR\fR
+.ad
+.RS 13n
+.rt  
+An error occurred.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBAIM_MANIFEST\fR\fR
+.ad
+.RS 16n
+.rt  
+The value of this environment variable is the location of the AI manifest that is being built.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBAIM_LOGFILE\fR\fR
+.ad
+.RS 16n
+.rt  
+The value of this environment variable is the location of the log file of \fBaimanifest\fR operations.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(1.65i) |cw(3.85i) 
+lw(1.65i) |lw(3.85i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilityT{
+\fBsystem/install/auto-install/auto-install-common\fR
+T}
+_
+Interface StabilityUncommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+installadm(1M), \fBpkg\fR(1)
+.sp
+.LP
+Part\ III, \fIInstalling Using an Install Server,\fR in \fIInstalling Oracle Solaris 11 Systems\fR

@@ -1,0 +1,243 @@
+'\" te
+.\" Copyright (c) 2011, Oracle and/or its affiliates.
+.\" All rights reserved.
+.TH distro_const 1M "14 July 2011" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+distro_const \- Utility for creating Oracle Solaris images and media
+.SH SYNOPSIS
+.LP
+.nf
+/usr/bin/distro_const
+.fi
+
+.LP
+.nf
+distro_const --help
+.fi
+
+.LP
+.nf
+distro_const build [\fB-v\fR] [\fB -r \fR \fIcheckpoint name\fR] [\fB-p\fR \fIcheckpoint name\fR] [\fB-l\fR] \fImanifest\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBdistro_const\fR command enables users to create an image by using a specified manifest file as the blueprint for the image.
+.sp
+.LP
+You can create a text installer image that can be used to install the Oracle Solaris operating system on either x86 systems or SPARC systems.
+.sp
+.LP
+Or, you can create an ISO image that is comparable to a live CD image containing the Oracle Solaris operating system.
+.sp
+.LP
+Alternately, you can create a SPARC AI ISO image that can be used for network installations of the Oracle Solaris OS on SPARC clients, or an x86 AI ISO image that can be used for network installations of the Oracle Solaris OS on x86 clients.
+.sp
+.LP
+Or, you can create a custom ISO image.
+.sp
+.LP
+The basic \fBdistro_const\fR command with no options creates a full image in one step.
+.sp
+.LP
+The command options enable users to pause and resume the image-creation process at various "checkpoints," thus enabling users to review status of the image and to check for bugs at each stage. Checkpointing saves time during builds by allowing you to bypass lengthy steps which have already been done at least once.
+.LP
+Note - 
+.sp
+.RS 2
+You must assume the root role or have root privileges to run the \fBdistro_const\fR command.
+.LP
+When using the distribution constructor, you can create  only SPARC images on a SPARC system. And, you can create only x86 images on an x86 system. And, the operating system release version on your system must be the same release version as the image that you are building.
+.RE
+.SH SUB-COMMANDS
+.sp
+.LP
+The \fBdistro_const\fR command has the subcommand and options listed below. Also see the Examples section.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--help\fR\fR
+.ad
+.sp .6
+.RS 4n
+Displays usage.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBbuild\fR
+.ad
+.sp .6
+.RS 4n
+\fBdistro_const build\fR \fImanifest\fR
+.sp
+The subcommand, "build", is required.
+.sp
+Creates a full image, using the specified manifest file as the blueprint for that image. The manifest name is required.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR \fBdistro_const build\fR \fB-v\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the verbose mode.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fBdistro_const build\fR [\fB-l\fR] \fImanifest\fR\fR
+.ad
+.sp .6
+.RS 4n
+Lists all valid checkpoints at which you can choose to pause or resume building an image. This command option queries the manifest file for valid checkpoints. Use the names provided by this command as valid values for the other checkpointing command options. The build subcommand is required.
+.sp
+The checkpoint values depend on entries in the manifest file.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR   \fBdistro_const build\fR [\fB-p\fR \fIcheckpoint\fR] \fImanifest\fR\fR
+.ad
+.sp .6
+.RS 4n
+Builds an image, but pauses building the image at the  specified checkpoint name. Use the -l option to find valid names. You can combine the -r option and the -p option. The checkpoint name and manifest name are required. The build subcommand is required.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR   \fBdistro_const build\fR [\fB-r\fR \fIcheckpoint\fR] \fImanifest\fR\fR
+.ad
+.sp .6
+.RS 4n
+Resumes building the image from the specified checkpoint name. The specified name must be either the checkpoint at which the previous build stopped executing, or an earlier checkpoint. A later checkpoint is not valid. Use the -l option to determine which checkpoints are resumable. The -p option can be combined with the -r option. The checkpoint name and manifest name are required. The build subcommand is required.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR   \fBdistro_const\fR [\fB-h\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Displays command usage.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRCreate an Image Using Checkpoint Options
+.RS +4
+.TP
+1.
+Check which checkpoints are available. The manifest name in this example is \fBdc_livecd.xml\fR.
+.sp
+.in +2
+.nf
+# \fBdistro_const build -l /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+The valid checkpoint names are displayed, as in this sample output.
+.sp
+.in +2
+.nf
+ 
+
+  Checkpoint           Resumable  Description
+  --------------------------------------------
+  transfer-ips-install X Transfer pkg contents from IPS
+  set-ips-attributes   X Set post-install IPS attributes
+  pre-pkg-img-mod      X Pre-package image modification
+  ba-init              X Boot archive initialization
+  ba-config            X Boot archive configuration
+  ba-arch              X Boot archive archival
+  grub-setup           X Set up GRUB menu
+  pkg-img-mod          X Pkg image area modification
+  create-iso             ISO media creation
+  create-usb             USB media creation     
+.fi
+.in -2
+.sp
+
+.RE
+.RS +4
+.TP
+2.
+Start building the image and pause at the ba-init checkpoint.
+.sp
+.in +2
+.nf
+# \fBdistro_const build -p ba-init /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+.RE
+.RS +4
+.TP
+3.
+Restart the build from the ba-init checkpoint. Finish creating the image.
+.sp
+.in +2
+.nf
+# \fBdistro_const build -r ba-init /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+.RE
+.LP
+\fBExample 2 \fRCreate an Image in One Step
+.sp
+.LP
+To run a complete build of an image without pausing, use the basic \fBdistro_const\fR command without checkpointing options. The manifest file name is dc_livecd.xml.
+
+.sp
+.in +2
+.nf
+# \fBdistro_const build /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Availabilityinstall/distribution-constructor
+_
+Interface StabilityUnder Development
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBdc_manifest\fR(4)
+.sp
+.LP
+\fICreating a Custom Oracle Solaris 11 Installation Image\fR in the OTN documentation library for the current release.
