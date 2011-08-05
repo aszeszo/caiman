@@ -370,8 +370,13 @@ def do_alias_service(options):
     # (Also enables system/install/server, as needed)
     try:
         service.enable()
-    except (aismf.ServicesError, config.ServiceCfgError, MountError) as err:
+    except (config.ServiceCfgError, MountError) as err:
         raise SystemExit(err)
+    except aismf.ServicesError as err:
+        # don't error out if the service is successfully created
+        # but the services fail to start - just print out the error
+        # and proceed
+        print err
 
 
 def should_be_default_for_arch(newservice):
@@ -522,23 +527,32 @@ def do_create_baseservice(options):
             logging.debug('image moved to %s', options.imagepath)
 
     print _("Image path: %s\n") % options.imagepath
-    if options.dhcp_ip_start:
-        service = AIService.create(options.svcname, image,
-                                   options.dhcp_ip_start,
-                                   options.dhcp_ip_count,
-                                   options.dhcp_bootserver,
-                                   bootargs=options.bootargs)
-    else:
-        service = AIService.create(options.svcname, image,
-                                   bootargs=options.bootargs)
+    try:
+        if options.dhcp_ip_start:
+            service = AIService.create(options.svcname, image,
+                                       options.dhcp_ip_start,
+                                       options.dhcp_ip_count,
+                                       options.dhcp_bootserver,
+                                       bootargs=options.bootargs)
+        else:
+            service = AIService.create(options.svcname, image,
+                                       bootargs=options.bootargs)
+    except AIServiceError as err:
+        raise SystemExit(err)
     
     # Register & enable service
     # (Also enables system/install/server, as needed)
+    got_services_error = False
     try:
         service.enable()
-    except (aismf.ServicesError, config.ServiceCfgError, MountError) as err:
+    except (config.ServiceCfgError, MountError) as err:
         raise SystemExit(err)
-    
+    except aismf.ServicesError as svc_err:
+        # Don't print the error now.  It will either get printed out
+        # upon exit or when services are enabled after creating the 
+        # alias
+        got_services_error = True
+
     # create default-<arch> alias if this is the first aliasable
     # service of this architecture
     if should_be_default_for_arch(service):
@@ -548,7 +562,14 @@ def do_create_baseservice(options):
             defaultarchsvc = AIService.create(defaultarch, image,
                                               bootargs=options.bootargs,
                                               alias=options.svcname)
+        except AIServiceError as err:
+            raise SystemExit(err)
         except UnsupportedAliasError as err:
+            if got_services_error:
+                # Print the services error string before printing the 
+                # unsupported alias error
+                print svc_err, '\n'
+
             # Print the error, but have installadm exit successfully.
             # Since the user did not explicitly request this alias,
             # it's not a problem if an alias can't be made for this service
@@ -563,9 +584,13 @@ def do_create_baseservice(options):
         # Register & enable default-<arch> service
         try:
             defaultarchsvc.enable()
-        except (aismf.ServicesError, config.ServiceCfgError,
-                MountError) as err:
+        except (config.ServiceCfgError, MountError) as err:
             raise SystemExit(err)
+        except aismf.ServicesError as err:
+            print err
+    elif got_services_error:
+        # Print the services start error generated when creating the service
+        print svc_err
 
 
 def do_create_service(cmd_options=None):
