@@ -1500,9 +1500,8 @@ class XMLSysidcfgData(object):
             instance = self.__create_instance_node(service, "default")
             prp_group = None
         else:
-            xpath = _("./property_group[@name='%{name}s']"
-                      "[type='%{type}s']") % \
-                      {"name": propgrp_name, "type": propgrp_type}
+            xpath = _("./property_group[@name='%s']"
+                      "[type='%s']") % (propgrp_name, propgrp_type)
             prp_group = fetch_xpath_node(instance, xpath)
         if prp_group is None:
             prp_group = self.__create_propgrp_node(instance, propgrp_name,

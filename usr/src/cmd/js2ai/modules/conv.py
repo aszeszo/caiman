@@ -2201,6 +2201,7 @@ class XMLProfileData(object):
 
         keys = self.__fetch_keys()
         if keys is None:
+            self._tree = None
             return
 
         check_for_install_type = True

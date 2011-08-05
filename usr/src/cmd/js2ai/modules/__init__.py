@@ -48,6 +48,7 @@ from common import LVL_CONVERSION, LVL_PROCESS
 from common import LVL_UNSUPPORTED, LVL_VALIDATION, LVL_WARNING
 from common import RULES_FILENAME, SYSIDCFG_FILENAME, SC_PROFILE_FILENAME
 from common import fetch_xpath_node
+from common import remove
 from common import write_xml_data
 from common import validate
 from conv import XMLProfileData
@@ -893,6 +894,9 @@ def convert_rules_and_profiles(rules_profile, dest_dir, xml_default_data,
             # another rule. If we have already processed it move to the
             # next rule.
             if profile not in profile_names:
+                # Delete the previous run's AI_${profile} directory
+                ai_path = fetch_ai_profile_dir(dest_dir, profile)
+                remove(ai_path)
                 convert_rule(defined_rule, rule_num, profile, rule_conv_report,
                              dest_dir, verbose)
                 convert_profile(profiles[profile], dest_dir, xml_default_data,
@@ -957,6 +961,10 @@ def process_profile(filename, source_dir, dest_dir, default_xml_tree, local,
     if filename == '-':
         # Interactive profile.  Return a empty profile dataset
         return ProfileData(filename)
+
+    # Delete the previous run's AI_${profile_name} directory
+    ai_path = fetch_ai_profile_dir(dest_dir, filename)
+    remove(ai_path)
 
     profile_data = read_profile(source_dir, filename, verbose)
 
@@ -1375,6 +1383,10 @@ def main():
         # set up logging
         logger_setup(options.destination)
 
+        # Remove previous js2ai.err file if it exists from previous run
+        err_filename = os.path.join(options.destination, ERRFILE)
+        remove(err_filename)
+
         errsvc.clear_error_list()
         processed_data = process(options)
     except IOError, msg:
@@ -1387,7 +1399,6 @@ def main():
         # Unexpected error condition
         # Write out exception stack trace to error log file
         exc_type, exc_value, exc_tb = sys.exc_info()
-        err_filename = os.path.join(options.destination, ERRFILE)
         with open(err_filename, "w") as handle:
             traceback.print_exception(exc_type, exc_value, exc_tb, file=handle)
         err(_("%(err_msg)s. An unexpected error "

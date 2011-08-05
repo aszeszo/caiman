@@ -1052,6 +1052,27 @@ class TestCommandArgs2(unittest.TestCase):
         except Exception, err:
             self.fail(exception_report(err, js2ai.logfile_name))
 
+        dir = os.path.join(self.working_dir, "AI_" + self.profile_name)
+        filename = os.path.join(dir, "Test")
+        with open(filename, 'w') as fhandle:
+            fhandle.write("garbage")
+
+        # Run it again.  This will excercise the delete of the AI_profile
+        # directory on the start of a new run
+        try:
+            js2ai.main()
+        except SystemExit, err:
+            self.assertEquals(type(err), type(SystemExit()))
+            self.assertEquals(err.code, js2ai.EXIT_SUCCESS,
+                              exit_code_report(err.code,
+                                               js2ai.EXIT_SUCCESS,
+                                               js2ai.logfile_name))
+        except Exception, err:
+            self.fail(exception_report(err, js2ai.logfile_name))
+
+        # Since we deleted the directory test_file should not be present
+        self.assertFalse(os.path.exists(filename))
+
 
 class TestCommandArgs3(unittest.TestCase):
     """Test main method via command line args"""
