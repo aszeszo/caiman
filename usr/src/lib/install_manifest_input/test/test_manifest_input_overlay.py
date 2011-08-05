@@ -191,7 +191,7 @@ class TestOverlayA(TestMIMOverlayCommon):
         '''
         Put original manifest together from pieces, and verify it.
         '''
-        mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
+        mim = ManifestInput(self.AIM_MANIFEST_FILE)
         mim.load(self.TARGET_XML, not self.OVERLAY)
         mim.load(self.ADD_DRIVER_XML, self.OVERLAY)
         mim.load(self.SOFTWARE_XML, self.OVERLAY)
