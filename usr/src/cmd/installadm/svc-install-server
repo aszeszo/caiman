@@ -41,7 +41,6 @@ CAT=/usr/bin/cat
 CUT=/usr/bin/cut
 CP=/usr/bin/cp
 DIFF=/usr/bin/diff
-ETC_NETBOOT=/etc/netboot
 GREP=/bin/grep
 KILL=/usr/bin/kill
 HTTPD=/usr/apache2/2.2/bin/httpd
@@ -59,9 +58,9 @@ TFTP_SERVICE='svc:/network/tftp/udp6'
 UPGRADE_SCRIPT=/usr/sbin/installadm-convert
 NETBOOT_ERR=$(cat <<EOF
 The ${TFTP_SERVICE} service has been configured to use the ${TFTPBOOT}
-\ndirectory; AutoInstall is incompatible with this setting.
-Please use svccfg to\nchange the ${INETD_START_PROP} property of the
-${TFTP_SERVICE} service\nto migrate to the ${ETC_NETBOOT} directory.\n
+\ndirectory; The Automated Installer is incompatible with this setting.
+\nPlease use svccfg to change the ${INETD_START_PROP} property of the
+\n${TFTP_SERVICE} service to migrate to the ${NETBOOTDIR} directory.\n
 EOF
 )
 
@@ -135,7 +134,7 @@ case "$1" in
 	# Ensure that tftp/udp6 is setup to use /etc/netboot
 	start_exec_prop=$(${SVCPROP} -p ${INETD_START_PROP} ${TFTP_SERVICE})
 	inetd_start=$(echo ${start_exec_prop} |awk '{ print $NF }')
-	if [ $inetd_start != ${ETC_NETBOOT} ]; then
+	if [ $inetd_start != ${NETBOOTDIR} ]; then
 		if [[ -d ${TFTPBOOT} && -n $(ls ${TFTPBOOT}) ]]; then
 		    echo ${NETBOOT_ERR}
 		    exit $SMF_EXIT_ERR_FATAL
