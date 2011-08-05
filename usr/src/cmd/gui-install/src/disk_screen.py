@@ -305,17 +305,15 @@ class DiskScreen(BaseScreen):
             desired_zpool.delete_children(name="swap", class_type=Zvol)
 
             swap_zvol = desired_zpool.add_zvol("swap",
-                int(swap_size.get(units=Size.mb_units)), Size.mb_units)
-            swap_zvol.action = "create"
-            swap_zvol.use = "swap"
+                int(swap_size.get(units=Size.mb_units)), Size.mb_units,
+                use="swap")
 
         if dump_type == TargetController.SWAP_DUMP_ZVOL:
             desired_zpool.delete_children(name="dump", class_type=Zvol)
 
             dump_zvol = desired_zpool.add_zvol("dump",
-                int(dump_size.get(units=Size.mb_units)), Size.mb_units)
-            dump_zvol.action = "create"
-            dump_zvol.use = "dump"
+                int(dump_size.get(units=Size.mb_units)), Size.mb_units,
+                use="dump", create_failure_ok=True)
 
         # Add export and export/home, if they do not already exist
         export_fs = desired_zpool.get_first_child(name=EXPORT_FS_NAME,

@@ -1190,8 +1190,10 @@ class TargetSelection(Checkpoint):
                             dump_size > Size("0b"):
                             zvol_name = self.__get_unique_dataset_name(zpool,
                                                                        "dump")
+                            # Since the dump zvol is specified implicitly, do
+                            # not fail installation because of creation error.
                             self.__create_swap_dump_zvol(zpool, zvol_name,
-                                "dump", dump_size)
+                                "dump", dump_size, create_failure_ok=True)
                             dump_added = True
 
                 if not swap_added and \
@@ -1225,7 +1227,8 @@ class TargetSelection(Checkpoint):
 
         return unique_name
 
-    def __create_swap_dump_zvol(self, zpool, zvol_name, zvol_use, zvol_size):
+    def __create_swap_dump_zvol(self, zpool, zvol_name, zvol_use, zvol_size,
+                                create_failure_ok=False):
         '''Create a swap or dump Zvol on a zpool.
 
            Input:
@@ -1233,6 +1236,8 @@ class TargetSelection(Checkpoint):
                zvol_name : Str zvol name
                zvol_use : Str zvol usage, "swap" or "dump"
                zvol_size : Size Object
+               create_failure_ok: indicate whether zvol creation failure 
+                                  can be ignored.  Only used for "dump" zvol.
         '''
         zvol = zpool.add_zvol(zvol_name, int(zvol_size.get(Size.mb_units)),
             Size.mb_units, use=zvol_use)
@@ -1241,6 +1246,7 @@ class TargetSelection(Checkpoint):
             swap_key = zpool.name + ":swap"
             self._swap_zvol_map[swap_key] = zvol
         else:
+            zvol.create_failure_ok = create_failure_ok
             self._dump_zvol = zvol
 
     def __validate_logical(self, desired):

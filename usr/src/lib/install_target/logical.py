@@ -328,7 +328,8 @@ class Zpool(DataObject):
         """
         self.delete_children(name=filesystem.name, class_type=Filesystem)
 
-    def add_zvol(self, zvol_name, size, size_units=Size.gb_units, use=None):
+    def add_zvol(self, zvol_name, size, size_units=Size.gb_units, use=None,
+                 create_failure_ok=False):
         """ add_zvol - method to create a Zvol object and add it as a child of
         the Zpool object
         """
@@ -342,6 +343,7 @@ class Zpool(DataObject):
         new_zvol.size = str(size) + size_units
         if use is not None:
             new_zvol.use = use
+        new_zvol.create_failure_ok = create_failure_ok
 
         # add the new Zvol object as a child
         self.insert_children(new_zvol)
@@ -730,9 +732,18 @@ class Zvol(DataObject):
                 elif self.use == "dump":
                     cmd = [DUMPADM, "-d",
                            os.path.join("/dev/zvol/dsk", self.full_name)]
-                    Popen.check_call(cmd, stdout=Popen.STORE,
-                                     stderr=Popen.STORE, logger=ILN,
-                                     stderr_loglevel=logging.DEBUG)
+                    if self.create_failure_ok:
+                        results = (0, 1)
+                    else:
+                        results = (0,)
+                    p = Popen.check_call(cmd, stdout=Popen.STORE,
+                                         stderr=Popen.STORE, logger=ILN,
+                                         stderr_loglevel=logging.DEBUG,
+                                         check_result=results)
+                    if p.returncode == 1:
+                        logger = logging.getLogger(ILN)
+                        logger.warning("Unable to create dump Zvol "
+                                       "with size %s." % zvol_size)
 
     def destroy(self, dry_run):
         """ method to destroy a zvol.

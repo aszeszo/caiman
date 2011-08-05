@@ -211,7 +211,8 @@ def do_ti_install(install_data, screen, update_status_func):
 
     if (dump_type == TargetController.SWAP_DUMP_ZVOL):
         dump_zvol = desired_zpool.add_zvol("dump", \
-            dump_size.get(Size.mb_units), Size.mb_units, use="dump")
+            dump_size.get(Size.mb_units), Size.mb_units, use="dump",
+            create_failure_ok=True)
 
     LOGGER.info("Swap type: %s", swap_type)
     LOGGER.info("Swap size: %s", swap_size)

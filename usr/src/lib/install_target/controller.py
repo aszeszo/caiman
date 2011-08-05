@@ -48,10 +48,10 @@ LOGGER = None
 FALLBACK_IMAGE_SIZE = Size("4" + Size.gb_units)
 
 # Values for Swap and Dump calculations.  All values are in MB
-MIN_SWAP_SIZE = 512
-MAX_SWAP_SIZE = (Size("32gb")).get(Size.mb_units)
+MIN_SWAP_SIZE = 1024
+MAX_SWAP_SIZE = (Size("4gb")).get(Size.mb_units)
 MIN_DUMP_SIZE = 256
-MAX_DUMP_SIZE = (Size("16gb")).get(Size.mb_units)
+MAX_DUMP_SIZE = (Size("64gb")).get(Size.mb_units)
 OVERHEAD = 1024
 FUTURE_UPGRADE_SPACE = (Size("2gb")).get(Size.mb_units)
 # Swap ZVOL is required if memory is below this
@@ -659,10 +659,11 @@ class TargetController(object):
 
             memory        type           required    size
             --------------------------------------------------
-            <900mb        zvol           yes          0.5G (MIN_SWAP_SIZE)
-            900mb-1G      zvol            no          0.5G (MIN_SWAP_SIZE)
-            1G-64G        zvol            no          (0.5G-32G) 1/2 of memory
-            >64G          zvol            no          32G (MAX_SWAP_SIZE)
+            <900mb        zvol           yes          1G (MIN_SWAP_SIZE)
+            900mb-4G	  zvol		  no          1G
+            4G-16G        zvol            no          2G
+            16G-128G      zvol            no          4G 
+            >128G         zvol            no          4G (MAX_SWAP_SIZE)
 
             The following rules are used for calculating the amount
             of required space for dump.
@@ -670,13 +671,16 @@ class TargetController(object):
             memory        type            size
             --------------------------------------------------
             <0.5G         zvol            256MB (MIN_DUMP_SIZE)
-            0.5G-32G      zvol            256M-16G (1/2 of memory)
-            >32G          zvol            16G (MAX_DUMP_SIZE)
+            0.5G-128G     zvol            256M-64G (1/2 of memory)
+            >128G         zvol            64G (MAX_DUMP_SIZE)
 
             If slice/zvol is required, and there's not enough space in the,
             target, an error will be raised.  If swap zvol is
-            not required, and there's not enough space in the target, as much
-            space as available will be utilized for swap/dump
+            not required, spaces in the root pool will first be allocated
+            for installation data, any left over space up to 80% of
+            the total root pool size, will be allocated for swap/dump.
+            This is to make sure that the root pool is less than
+            80% full.
 
             Size of all calculation is done in MB
 
@@ -735,19 +739,23 @@ class TargetController(object):
                     LOGGER.error("Total available space: %s", available_size)
                     raise SwapDumpSpaceError
 
-            dump_size_mb = self._calc_swap_or_dump_size(
-                available_size_mb - required_size_mb,
-                MIN_DUMP_SIZE, MAX_DUMP_SIZE)
+            # Since ZFS pools perform best when it is less than 80% full,
+            # specify 80% of available size for dump calculation
+            dump_size_mb = self._calc_dump_size(
+                int(available_size_mb * 0.8) - required_size_mb)
         else:
-            free_space_mb = available_size_mb - installation_size_mb
-            swap_size_mb = self._calc_swap_or_dump_size(
-                ((free_space_mb * MIN_SWAP_SIZE) /
-                (MIN_SWAP_SIZE + MIN_DUMP_SIZE)),
-                MIN_SWAP_SIZE, MAX_SWAP_SIZE)
-            dump_size_mb = self._calc_swap_or_dump_size(
-                ((free_space_mb * MIN_DUMP_SIZE) /
-                (MIN_SWAP_SIZE + MIN_DUMP_SIZE)),
-                MIN_DUMP_SIZE, MAX_DUMP_SIZE)
+            # Since ZFS pools perform best when it is less than 80% full,
+            # use 80% of available_size for swap/dump calculation
+
+            free_space_mb = int(available_size_mb * 0.8) - installation_size_mb
+
+            if free_space_mb > 0:
+                swap_size_mb = self._calc_swap_size(
+                    ((free_space_mb * MIN_SWAP_SIZE) /
+                    (MIN_SWAP_SIZE + MIN_DUMP_SIZE)))
+            
+                dump_size_mb = self._calc_dump_size( \
+                    free_space_mb - swap_size_mb)
 
         self._swap_size = Size(str(swap_size_mb) + Size.mb_units)
         if swap_size_mb > 0:
@@ -1115,19 +1123,20 @@ class TargetController(object):
 
         return False
 
-    def _calc_swap_or_dump_size(self, available_space, min_size, max_size):
-        ''' Calculates size of swap or dump based on amount of
-            physical memory available.
+    def _calc_swap_size(self, available_space):
+        ''' Calculates size of swap based on amount of
+            physical memory.
+ 
+            The following rule is applied:
 
-            If less than calculated space is available, swap/dump size will be
-            trimmed down to the avaiable space.  If calculated space
-            is more than the max size to be used, the swap/dump size will
-            be trimmed down to the maximum size to be used for swap/dump
+            memory        	swap size
+            --------------------------------------------------
+            <4G                 1G
+            4G-16G              2G
+            >16G                4G
 
             Parameters:
             - available_space: Space that can be dedicated to swap (MB)
-            - min_size: Minimum size to use (MB)
-            - max_size: Maximum size to use (MB)
 
             Returns:
                size of swap in MB
@@ -1136,12 +1145,48 @@ class TargetController(object):
         if available_space == 0:
             return 0
 
-        if self._mem_size < min_size:
-            size = min_size
+        if self._mem_size <= (Size("4gb")).get(Size.mb_units):
+            size = (Size("1gb")).get(Size.mb_units)
+        elif self._mem_size > (Size("16gb")).get(Size.mb_units):
+            size = (Size("4gb")).get(Size.mb_units)
+        else:
+            size = (Size("2gb")).get(Size.mb_units)
+
+        if available_space < size:
+            size = available_space
+
+        return size
+        
+    def _calc_dump_size(self, available_space):
+        ''' Calculates size of dump based on amount of physical memory.
+
+            The following rule is applied:
+
+            memory        	dump size
+            --------------------------------------------------
+            <0.5G               256mb (MIN_DUMP_SIZE)
+            0.5-128G            1/2 of memory
+            >128G               64G (MAX_DUMP_SIZE)
+
+            If calculated space is more than the available space,
+            the dump size will be trimmed down to the available space.
+
+            Parameters:
+            - available_space: Space that can be dedicated to dump (MB)
+
+            Returns:
+               size of dump in MB
+        '''
+
+        if available_space == 0:
+            return 0
+
+        if self._mem_size < (Size("0.5gb")).get(Size.mb_units):
+            size = MIN_DUMP_SIZE
+        elif self._mem_size > (Size("128gb")).get(Size.mb_units):
+            size = MAX_DUMP_SIZE
         else:
             size = self._mem_size / 2
-            if size > max_size:
-                size = max_size
 
         if available_space < size:
             size = available_space
@@ -1154,7 +1199,7 @@ class TargetController(object):
             0 will be returned.  Value returned is in MB.
 
             If system memory is less than 900mb, swap is required.
-            Minimum required space for swap is 0.5G (MIN_SWAP_SIZE).
+            Minimum required space for swap is MIN_SWAP_SIZE.
         '''
 
         if self._mem_size < ZVOL_REQ_MEM:
