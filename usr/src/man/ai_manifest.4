@@ -1,0 +1,1469 @@
+System Administration Commands                     ai_manifest(4)
+
+NAME
+
+     ai_manifest - automated installation manifest file format
+
+
+DESCRIPTION
+
+     The automated installer (AI) provides a customizable,
+     hands-free installation mechanism for Oracle Solaris and
+     uses an XML-based file format as the description of the
+     installation parameters.  This file is called an AI
+     manifest.  The installation can be customized in various
+     ways such as disk layout and the software to be installed
+     on the system.  The sections in the AI manifest are the
+     following:
+
+        - Automated Install settings - settings used during the
+          installation.
+
+        - Disk Layouts - specifies the disk layout for the
+          installation.
+
+        - Software Sections - specifies the software packages to
+          be installed and possibly uninstalled.
+
+        - Boot Configuration - specifies how the GRUB boot menu
+          will be set up.  (x86 only)
+
+        - Other Configuration - specifies other configuration
+          components to be installed onto the system.
+
+     These sections are described in more detail below.
+
+     When customizing an AI manifest, it is recommended that a
+     copy of a template or default manifest from an install
+     service's image be used with that install service.  For
+     example, if an install service's image is located at
+     <imagepath>, the following files are available:
+
+        <imagepath>/auto_install/manifest/default.xml
+
+           - A copy of the default AI manifest used for this
+             install service when it was created.
+
+        <imagepath>/auto_install/manifest/ai_manifest.xml
+
+           - A commented, sample AI manifest with example
+             usages of customizing the AI manifest.
+
+     For more information about install services and their
+     images, and how AI manifests are managed with install
+     services, see installadm(1M).
+     
+     The automated installer is also used for installing native
+     zones via the 'zoneadm install' command.  It is possible to
+     pass an AI manifest file to this command to customize how
+     a zone gets installed, but not all specifications in the
+     manifest are applicable in this use-case.  These
+     specifications are noted in the sections below.
+
+     Complimentary to the AI manifest is the System Configuration
+     (SC) profile.  An SC profile is an smf(5) profile, and is
+     used to specify the system configuration desired for the
+     installed system such as hostname, networking, root and
+     initial user account settings.  See installadm(1M) for how
+     SC profiles are managed with install services.  For more
+     information on the SC profile file format, see profiles in
+     smf(5).
+
+
+AUTOMATED INSTALL SETTINGS
+
+     The following describe the set of attributes of the
+     <ai_instance> element.
+
+        - name
+
+          The name of this manifest instance.
+
+        - http_proxy
+
+          This defines a HTTP Proxy to be used for accessing
+          remote files (e.g. the IPS repository) during the
+          installation.  Its value is a HTTP URI, for example:
+
+             http://myproxy.mycompany.com:8080/
+
+          This attribute is not applicable when installing a
+          zone and is ignored if provided.
+
+        - auto_reboot
+
+          This defaults to a value of "false", which will cause
+          the install to wait for manual intervention to reboot.
+
+          A value of "true" means that on a successful
+          installation the machine will reboot into the installed
+          boot environment.
+
+          This attribute is not applicable when installing a
+          zone and is ignored if provided.
+
+     For example:
+
+         <auto_install>
+             <ai_instance name='default' auto_reboot='true'
+                 http_proxy='http://myproxy.mycompany.com:8080/'>
+                 ...
+             </ai_instance>
+         </auto_install>
+
+
+DISK LAYOUTS
+
+     The Automated Installer allows for a diverse specification
+     of the targets varying from total automatic selection of the
+     install target to very fine-grained/specific control of the
+     final layout.
+
+     For Oracle Solaris, the preferred default layout is defined
+     to be the following:
+
+        - Using the whole of one disk (usually the boot disk or
+          first disk)
+        - For X86, allocating a FDISK partition that consumes the
+          full disk contents
+        - For X86 and SPARC, defining a single slice 0, that will
+          be the full size of the disk (or FDISK partition in the
+          case of X86)
+        - A single root pool that uses the complete slice 0.
+        - Creation of a swap zvol, and a dump zvol, in the
+          root pool, space permitting.
+    
+     If the <target> element is totally omitted (and thus any
+     sub-elements) from the AI XML manifest, then the above is
+     what will be generated.
+
+     It is possible to be specific about any element of the
+     <target> element by specifying the disks and/or the logical
+     (zpools) layout using the relevant XML elements.  For zone
+     installations, disk specifications are not applicable and
+     will be ignored.
+
+     The general structure is:
+
+         <target>
+             <!-- zero or more disk elements -->
+             <disk ...>
+                ...
+             </disk>
+             <logical...>
+                 <!-- zero or more zpools -->
+                 <zpool ...>
+                 </zpool>
+             </logical>
+         </target>
+
+     When specifying the layout, in some cases it may be possible
+     to specify a size element and take the format:.
+
+         <size val="SIZE" start_sector="START_SECTOR"/>
+
+     The start_sector attribute may be omitted to allow the
+     installer to search for the first location that is big
+     enough to contain the specified SIZE. The START_SECTOR value
+     is a numeric value that specifies the desired start sector
+     for the new partition or slice.
+
+     The values for SIZE are numeric with a suffix. Possible
+     suffixes are:
+
+        - s or sec: Sectors
+        - b: Bytes
+        - k or kb: Kilobytes (2^10)
+        - m or mb: Megabytes (2^20)
+        - g or gb: Gigabytes (2^30)
+        - t or tb: Terabytes (2^40)
+        - p or pb: Petabytes (2^50)
+        - e or eb: Exabytes (2^60)
+        - z or zb: Zettabytes (2^70)
+
+     More detail of what is possible with <disk> and <logical>
+     elements are as follows:
+
+        - <disk> specification
+
+           - Disk Selection
+
+             Disks may be selected using various names and/or
+             property values.
+        
+             Specifying a disk name for the device takes
+             precedence since it is very specific, and this can
+             be specified as one of:
+
+                - ctd: Controller Target Disk Name
+
+                  This is commonly what is seen when running
+                  the format(1M) command, e.g.:
+
+                      <disk_name name="c0t0d0" name_type="ctd"/>
+        
+                - volid: Volume Identifier
+
+                  This is the volume identifier as can be set by
+                  the format(1M) command.
+.sp
+.in + 9
+.nf
+                      <disk_name name="MY_BOOT_DISK" name_type="volid"/>
+.fi
+.in -9
+.sp
+                - devpath: Device Path
+
+                  This is the device path relative to the
+                  /devices directory, e.g.:
+.sp
+.in + 9
+.nf
+                      <disk_name
+                          name="/devices/pci@0,0/pci10de,375@f/pci108e,286@0/disk@0,0"
+                          name_type="devpath"/>
+.fi
+.in -9
+.sp
+               - devid: Device Identifier
+
+                 This is a device identifier as can be found in
+                 the devid in the prtconf command output, e.g.:
+.sp
+.in + 9
+.nf
+                     <disk_name 
+                         name="id1,sd@TSun_____STK_RAID_INT____F0F0F0"
+                         name_type="devid"/>
+.fi
+.in -9
+.sp
+               - receptacle: Receptacle identifier 
+        
+                 This is the receptacle value from a CRO
+                 (Chassis, Receptacle, Occupant) configuration
+                 (see the croinfo(1M) manpage), e.g.:
+.sp
+.in + 9
+.nf
+                     <disk_name name="SYS/1" name_type="receptacle"/>
+.fi
+.in -9
+.sp
+             While the <disk_name> is very specific, the
+             <disk_prop> specification will attempt to do a
+             best-match based on the criteria provided.  The
+             types of criteria that are possible are:
+
+                - dev_type: Device type
+
+                - dev_vendor: Device Vendor
+
+                  This is the vendor as would be seen using the
+                  'inquiry' command in format(1M), e.g.:
+.sp
+.in + 9
+.nf
+                      <disk_prop dev_vendor="Sun"/>
+.fi
+.in -9
+.sp
+                - dev_chassis: Device Chassis
+
+                  This is the device chassis as seen in the
+                  output of the croinfo(1M) command, e.g.:
+.sp
+.in + 9
+.nf
+                      <disk_prop dev_chassis="SYS"/>
+.fi
+.in -9
+.sp
+                - dev_size: Device Size
+
+                  This specifies a minimum size for the disk to
+                  be selected, and is specified using a number
+                  with a size unit, e.g.:
+.sp
+.in + 9
+.nf
+                      <disk_prop dev_size="100gb"/>
+.fi
+.in -9
+.sp
+             The <disk_prop> element allows the specification of
+             one or more of the attributes at the same time to
+             allow further restriction of the match, e.g:
+.sp
+.in + 9
+.nf
+                 <disk_prop dev_vendor="HITACHI" dev_size="100gb"/>
+.fi
+.in -9
+.sp
+             which would limit the selection of a disk to a 100Gb
+             Hitachi drive.
+        
+             It is also possible to select the system's boot-disk
+             by specifying a <disk_keyword> element, for example:
+.sp
+.in + 9
+.nf
+                 <disk_keyword key="boot_disk"/>
+.fi
+.in -9
+.sp
+             It is possible to select an iSCSI disk by specifying
+             the <iscsi> element, which has the following
+             attributes:
+
+                - target_name
+
+                  The name refers to the iSCSI Qualified Name
+                  (IQN) or the Extended Unique Identifier (EUI)
+                  of the iSCSI target, e.g.:
+.sp
+.in + 9
+.nf
+                      iqn.1986-03.com.sun:02:a4a694bc-6de2-ee50-8979-e25ba29acb86
+.fi
+.in -9
+.sp
+                - source
+
+                  This refers to the source of the iSCSI
+                  configuration data. The only supported values
+                  for source at present are:
+          
+                     manifest
+            
+                     Referring to the AI manifest itself - this
+                     is the default if no value is specified for
+                     this attribute.
+          
+                     dhcp
+          
+                     Referring to the use of DHCP where the iSCSI
+                     information is then sourced by it being
+                     specified in the DHCP Rootpath parameter.
+                     In this case, no other attributes should be
+                     specified.
+
+                - target_lun
+
+                  Where it is possible that a iSCSI target has
+                  several LUNs, it is possible to isolate which
+                  of these correspond to the disk to use by
+                  specifying a number for 'target_lun'. 
+
+                  If there is more than one LUN provided by the
+                  iSCSI target, then it is necessary to specify a
+                  value for 'target_lun'. The values are indexed
+                  from 0, so the first LUN would be LUN 0.
+
+                  If there is only one LUN provided, then it is
+                  safe to omit this value.
+
+                - target_port
+
+                  If not specified, the default target_port of
+                  3260 (the iSCSI standard port) is used. This
+                  allows for an alternative port number to be
+                  used.
+
+             iSCSI does not have an action attribute. AI uses
+             iSCSI devices but we do not operate directly on
+             them.
+
+             If the "target_name" attribute is not provided, we
+             will use iscsiadm in sendtargets mode, otherwise we
+             will set up static discovery.
+
+             The IP address of the server is specified using the
+             <ip> sub-element with the IP address in the text
+             part of the element:
+
+                 <ip>ADDRESS</ip>
+
+             Given this information the device will be made
+             available for installation.
+
+           - Disk Layout
+
+             The <disk> element has a couple of possible
+             attributes:
+
+              - whole_disk
+
+                This defaults to "false" and in this scenario it 
+                is necessary to always provide some definition of
+                the partitions and/or slices.
+
+                If the whole_disk flag is set to "false" for the
+                <disk> element, then any existing partitions or
+                slices will be retained unless deletion is
+                specified. 
+          
+                Otherwise, if it is set to "true" then existing
+                partitions or slices will be wiped unless
+                specifically preserved in the layout.
+
+              - in_zpool and in_vdev
+
+                If specified, this partition will be used as part
+                of the zpool and in the vdev specified.
+
+             The simplest way to layout a disk is to use the
+             whole disk for installation by setting the
+             whole_disk attribute to "true".
+.sp
+.in + 9
+.nf
+                 <disk whole_disk="true">
+                     <disk_name name="c0t0d0" name_type="ctd"/>
+                 </disk>
+.fi
+.in -9
+.sp
+             For more complex layouts it is possible to specify
+             partitions (on X86 only) and/or slices. 
+
+             Sizes can be specified as sub-elements of
+             <partition> or <slice> elements. If omitted then the
+             installer will search for a suitable gap on the disk
+             that is big enough to hold the installation, and
+             will use that full gap.
+
+             Partitions
+
+                Partitions can only be specified when installing
+                to an X86 based client - specifying them for a
+                SPARC client will fail. Partitions consist of
+                several attributes:
+
+                - name:
+
+                  This is the FDISK partition number, with number
+                  1 to 4, being primary partitions. If one of the
+                  primary partitions is an extended partition,
+                  then it is possible to use the numbers 5 to 32
+                  to refer to logical partitions. 
+              
+                  In most cases this is a required attribute. The
+                  only case where it is not is if the action
+                  specified is "use_existing_solaris2".
+
+               - action
+
+                 The action for a partition can be one of the
+                 following values:
+
+                    create
+
+                    This is the default action for a partition,
+                    and specifies that a partition is to be
+                    created. If there is an existing partition
+                    with the same name then that partition will
+                    be deleted first.
+
+                    delete
+
+                    This specifies that the named partition is to
+                    be deleted.  Should this partition not exist
+                    it will be skipped over and a warning output.
+
+                    preserve
+
+                    This specifies that the named partition is to
+                    be untouched, and is commonly used where
+                    there is another operating system installed
+                    elsewhere on the same disk.
+
+                    use_existing_solaris2
+
+                    This specifies to use an existing Solaris2
+                    partition.  In this case it possible, and
+                    preferred, that the name be omitted so that
+                    the installer may search for the Solaris2
+                    partition itself.
+
+                - part_type
+
+                  This is used to specify a FDISK partition type,
+                  and defaults to 191 which is the partition type
+                  for a Solaris2 partition. See the fdisk(1M)
+                  command for more information on possible
+                  partition types.
+
+                - in_zpool and in_vdev
+
+                  If specified, then this states that this
+                  partition will be used as part of the zpool and
+                  in the vdev specified.
+
+                Partitions may also have <size> sub-element to
+                specify the size of the partition.  See above for
+                details of how the <size> element is specified.
+
+                To create a 10gb Solaris2 partition, using
+                default values, you could write it as simply as:
+.sp
+.in + 9
+.nf
+                    <partition name="1">
+                        <size val="10gb"/>
+                    </partition>
+.fi
+.in -9
+.sp
+                It is not necessary to specify the size with an
+                action of "preserve", "delete" or
+                "use_existing_solaris2".
+
+             Slices
+
+                For X86, when specifying slices, they must be
+                contained within a partition definition. 
+
+                Slice elements have several attributes that may
+                be specified:
+
+                - name:
+
+                  This is the slice number with the numbers
+                  ranging from 0 to 7
+
+                - action
+
+                  The action for a slice can be one of the
+                  following values:
+
+                     create
+
+                     This is the default action for a slice, and
+                     specifies that a slice is to be created. If
+                     there is an existing slice with the same
+                     name then that slice will be deleted first.
+
+                     delete
+
+                     This specifies that the named slice is to be
+                     deleted. If this slice does not exist, it
+                     will be skipped over and a warning will be
+                     given.
+
+                     preserve
+
+                     This specifies that the named slice is to be
+                     untouched, and is commonly used where there
+                     is existing data from a previous
+                     installation already present.
+
+                - is_swap
+
+                  This attribute defaults to "false" and is used
+                  to specify that the slice being created is to
+                  be used as a swap device. By default a swap
+                  zvol will be created in the root pool, but in
+                  some instances it may be preferable to use a
+                  swap slice.  If this attribute is set to
+                  "true", the in_zpool and in_vdev should not be
+                  used.
+
+                - force
+
+                  This flag defaults to "false". Setting it to
+                  "true" tells the installer to ignore the fact
+                  that an existing slice may be already be in use
+                  for something else (e.g. is used in an existing
+                  zpool) and to continue to perform the specified
+                  action on it.
+
+                - in_zpool and in_vdev
+
+                  If specified, then this states that this slice
+                  will be used as part of the zpool and in the
+                  vdev specified.
+
+                  If a slice has these values then <disk> (and
+                  possibly <partition>) elements should not have
+                  them specified.
+
+                Slices may also have <size> sub-element to
+                specify the size of the slice.  See above for
+                details of how the <size> element is specified.
+
+                An example of creating a 20gb slice, using
+                default values, and a 4gb swap slice is:
+.sp
+.in + 9
+.nf
+                    <slice name="0">
+                        <size val="20gb"/>
+                    </slice>
+                    <slice name="1" is_swap="true">
+                        <size val="4gb"/>
+                    </slice>
+.fi
+.in -9
+.sp
+                On X86, with a containing partition, this would
+                be written as:
+.sp
+.in + 9
+.nf
+                    <partition name="1">
+                        <slice name="0">
+                            <size val="20gb"/>
+                        </slice>
+                        <slice name="1" is_swap="true">
+                            <size val="4gb"/>
+                        </slice>
+                    </partition>
+.fi
+.in -9
+.sp
+        - <logical> specification
+        
+           The logical section of the target specification
+           defines the layout of the logical devices like the
+           automatic addition of a swap or dump device and any
+           number of zpools.
+
+           The <logical> element has two attributes:
+
+              - noswap
+
+                This defaults to "false", meaning that if space
+                allows, a swap zvol will automatically be created
+                in the root zpool. If set to "true" then no swap
+                zvol will automatically be created.
+
+              - nodump
+
+                This defaults to "false", meaning that if space
+                allows, a dump zvol will automatically be created
+                in the root zpool. If set to "true" then no dump
+                zvol will automatically be created.
+
+           It is possible to add several zpool definitions using
+           the <zpool> sub-element. Only one of these may be
+           defined as being the root pool, multiple root pools
+           will fail.
+
+           - <zpool> specification
+
+             The <zpool> element has several attributes that
+             can be specified:
+
+                - name
+
+                  The zpool created will use this name and is
+                  limited to a name that can be passed to the
+                  zpool create command. 
+
+                  The name here can be used in other elements
+                  "in_zpool" attribute.
+
+                - action
+
+                  The action attribute can have several possible
+                  values:
+
+                  create
+
+                     This specifies that the zpool is to be
+                     created.
+
+                  delete
+
+                     This specifies that the zpool is to be
+                     deleted.
+
+                  preserve
+
+                     This specifies that the zpool is to be
+                     preserved, unmodified.  This only is
+                     possible to use for a non-root pool.
+
+                  use_existing
+
+                     This specifies that the root zpool is to be
+                     re-used to install to. Using this will mean
+                     that the installer will retain any existing
+                     zvols or filesystems (datasets) already
+                     existing.
+
+                - is_root
+
+                  This boolean flag defaults to "false". If set
+                  to "true" then that zpool will be the one that
+                  the new Boot Environment (BE) will be created
+                  in.  A value of "false" is used to define a
+                  data pool.
+
+                - mountpoint
+
+                  The mountpoint can only be specified for
+                  non-root pools, and it sets the mountpoint of
+                  the filesystem being created.  If a mountpoint
+                  is not specified, the filesystem's mountpoint
+                  is inherited from its parent.
+
+             It is possible to set ZFS properties on the newly
+             created zpool and the automatically created zfs
+             dataset using the <pool_options> and
+             <dataset_options> sub-tags.  The format of these
+             is a simple name/value tag, and the properties that
+             can be set are subject to the same restrictions that
+             the zpool(1M) command enforces.  An example of how
+             this works is:
+.sp
+.in + 9
+.nf
+                 <zpool name="rpool" is_root="true">
+                     <pool_options>
+                         <option name="listsnaps" value="on"/>
+                         <option name="delegation" value="off"/>
+                     </pool_options>
+                     <dataset_options>
+                         <option name="atime" value="on"/>
+                         <option name="compression" value="on"/>
+                     </dataset_options>
+                     ...
+                 </zpool>
+.fi
+.in -9
+.sp
+             It is possible to influence how the Boot Environment
+             is created during the install by specifying the <be>
+             element.
+
+             The <be> element has one attribute:
+
+                - name
+
+                  This will be the name of the new BE that is
+                  created by the installer. It defaults to the
+                  name "solaris" if the <be> element is not
+                  specified.
+
+                  The automated installer makes use of the
+                  auto-naming feature provided by the boot
+                  environment sub-system.  When installing into
+                  an existing target area (for example, when
+                  installing a zone), a boot environment with
+                  this name may already exist, in which case this
+                  name is used as a base to generate a new name.
+                  For example, given a value of "solaris", the
+                  resultant boot environment name may be
+                  "solaris-N" where N is an integer.
+
+             A Boot Environment is created as a ZFS dataset, and
+             as such is capable of having ZFS properties set on
+             it.  These can be provided by specifying the
+             <options> sub-element as follows:
+.sp
+.in + 9
+.nf
+                 <be name="installed_be">
+                     <options>
+                         <option name="compression" value="on"/>
+                         <option name="dedup" value="on"/>
+                     <options>
+                 </be>
+.fi
+.in -9
+.sp
+             A zpool can also have any number of vdev redundancy
+             groups, datasets or zvols define within it.  These
+             are defined using the <vdev>, <filesystem> and
+             <zvol> elements respectively.
+
+             Virtual Device (vdev) Redundancy Groups
+
+             A zpools size or structure is defined by using the
+             <vdev> element.  You may have several <vdev>
+             elements specified, each with different redundancy
+             types.  The <vdev> element has several attributes:
+
+                - name
+
+                  This is the name for the vdev. This name can be
+                  used in other elements' "in_vdev" attributes.
+
+                - redundancy
+
+                  none
+
+                  This means that there is no redundancy, and if
+                  multiple devices are included in this group
+                  they will be striped.
+
+                  mirror (Default)
+
+                  This means that all devices contained are
+                  considered mirrors of each other.
+
+                  raidz raidz1 raidz2 raidz3
+
+                  Any devices contained in a group with one of
+                  these values will be used to define a RAIDZ
+                  grouping.
+         
+                  spare
+
+                  Any devices in this group will be seen as hot
+                  spares should there be failures.
+
+                  cache
+
+                  Any devices used in this group will provide
+                  caching for the zpool.
+
+                  log logmirror
+
+                  Any devices in this group will be used for
+                  logging.  If "logmirror" is specified then the
+                  devices will be mirrors.
+
+               A root pool can only be defined as having one of
+               the following configurations:
+            
+                  - a redundancy type of "none" with one device,
+                    multiple devices are not supported here.
+                  - a redundancy type of "mirror" with multiple
+                    devices.
+
+               To add a device to a <vdev> use the in_zpool
+               and/or in_vdev attributes of a <disk>, <partition>
+               or <slice> element (see above), for example:
+.sp
+.in + 9
+.nf
+                   <logical>
+                       <zpool name="rpool" is_root="true">
+                           <vdev name="mirrored" redundancy="mirror"/>
+                       </zpool>
+                   </logical>
+                   <disk whole_disk="true" in_zpool="rpool" in_vdev="mirrored">
+                       <disk_name name="c0t0d0" name_type="ctd"/>
+                   </disk>
+                   <disk whole_disk="true" in_zpool="rpool" in_vdev="mirrored">
+                       <disk_name name="c1t0d0" name_type="ctd"/>
+                   </disk>
+.fi
+.in -9
+.sp
+               would generate a root zpool called "rpool" which
+               is mirrored over two disks.
+
+               It is possible to omit one of the in_zpool or
+               in_vdev attributes as long as there is no
+               ambiguity in what they refer to.
+
+             Filesystems (or Datasets)
+
+                The <filesystem> element has several attributes
+                that can be specified to define it:
+
+                   - name
+
+                     This defines the name for the filesystem,
+                     relative to the zpool.  For example if the
+                     filesystem is named "export", within a zpool
+                     named "rpool" then the zfs dataset name will
+                     be "rpool/export"
+
+                     For filesystems with the "in_be" attribute
+                     set to "true", this name is relative to the
+                     boot environment's root dataset.
+
+                   - action
+
+                     The action attribute has several possible
+                     values:
+
+                        create
+
+                        This value says that the filesystem is to
+                        be created
+
+                        delete
+
+                        This value says that the filesystem is to
+                        be delete
+
+                        preserve
+
+                        This value says that the filesystem is to
+                        be preserved. This only makes sense if
+                        the zpool itself is also preserved.
+
+                   - mountpoint
+
+                     This sets the mountpoint of the filesystem
+                     being created. If a mountpoint is not
+                     specified, the filesystem's mountpoint is
+                     inherited from its parent.
+            
+                   - in_be
+
+                     This defaults to "false" meaning that the
+                     filesystem to be created is shared between
+                     all Boot Environments. If this is set to
+                     "true" then each boot environment will have
+                     its own separate copy of this filesystem.
+
+                Similar to the <dataset_options> it is possible
+                to set the zfs dataset properties on a
+                <filesystem>.  This is done using an <options>
+                sub-tag.  For example:
+.sp
+.in + 9
+.nf
+                    <filesystem name="exported">
+                        <options>
+                            <option name="compression" value="off"/>
+                            <option name="dedup" value="on"/>
+                        <options>
+                    </filesystem>
+.fi
+.in -9
+.sp
+                Note, as is the default behavior with ZFS
+                filesystems, any property set on a filesystem is
+                inherited by its children filesystems unless
+                explicitly set otherwise.
+
+             Zvol
+
+                The <zvol> element is used to define a zvol
+                within the zpool.  A zvol is typically used for
+                swap or dump devices, but may have other uses.
+
+                The attributes that are used with <zvols> are:
+
+                   - name
+
+                     This defines the name to be used for the
+                     zvol.
+
+                   - action
+
+                     This attribute has several possible values:
+
+                        create
+
+                        This value says that the zvol is to be
+                        created.
+
+                        delete
+
+                        This value says that the zvol is to be
+                        deleted.
+
+                        preserve
+
+                        This value says that the zvol is to be
+                        preserved.  This only makes sense if the
+                        zpool itself is also preserved.
+
+                        use_existing
+
+                        If this value is specified for a swap or
+                        dump device then the existing zvol will
+                        be re-used.  This value only makes sense
+                        if the zpool itself is also being
+                        preserved.
+
+                   - use
+
+                     This attribute has several possible values:
+
+                        none
+
+                        This states that the zvol is to be
+                        created, but not used for anything during
+                        the install.
+
+                        swap
+
+                        This states that the zvol is to be
+                        created and used as a swap device. It
+                        will also be used as a swap device during
+                        the install.
+
+                        dump
+
+                        This states that the zvol is to be
+                        created and used as a dump device. It
+                        will also be used as a dump device during
+                        the install.
+
+                Zvols may also have <size> sub-element to specify
+                the size of the zvol.  See above for details of
+                how the <size> element is specified.  An example
+                of using the <size> sub-tag with <zvol> is:
+
+
+                Similar to the <dataset_options>, it is possible
+                to set the zfs zvol options on a <zvol>. This is
+                done using an <options> sub-tag.  For example:
+.sp
+.in + 9
+.nf
+                    <zvol name="swap">
+                        <options>
+                            <option name="compression" value="off"/>
+                        <options>
+                    </zvol>
+.fi
+.in -9
+.sp
+
+
+SOFTWARE SECTIONS
+
+     It is possible to install software from a number of sources:
+
+        - IPS Repository
+        - P5I Specification
+        - SVR4 Packages
+        - CPIO Transfer
+
+     The <software> element takes one of these values as the as
+     the 'type' parameter, for example:
+
+         <software type="IPS">
+             ...
+         </software>
+
+     Depending on the mechanism for installing the software, it
+     may be necessary to specify a <destination> and <source>
+     element and several <software_data> elements. Each mechanism
+     is discussed now in more detail.
+
+     Installing using IPS:
+
+        For IPS installs, it is only possible to specify a single
+        <source> element. 
+        
+        The <source> element is usually used to specify which
+        publishers to use for installing the packages.  You may
+        specify multiple publishers, which may or may not have
+        mirrors and/or more than one origin.
+
+        The order that publishers appear in the manifest will be
+        the rank order in which they will be set in the installed
+        system.
+
+        If installing into a zone, the system repository is
+        always set to be used by the zone. Any publishers
+        specified in the manifest will be added in the order they
+        appear in the manifest, after the publishers provided by
+        the system repository.  See pkg(1) and pkg.sysrepo(1M)
+        for more information on the system repository.
+
+        An example for specifying several publishers with a local
+        mirror is the following:
+.sp
+.in + 9
+.nf
+            <source>
+                <publisher name="solaris">
+                    <origin name="http://pkg.oracle.com/solaris/release"/>
+                    <mirror name="http://localpkg.mycompany.com/solaris"/>
+                </publisher>
+                <publisher name="internal-software">
+                    <origin name="http://internalsoft.mycompany.com/"/>
+                </publisher>
+            </source>
+.fi
+.in -9
+.sp
+        The next item(s) to specify would be the actions to
+        perform as <software_data> elements with an action
+        attribute with one of two values:
+
+           - "install" (the default value if not explicitly set)
+           - "uninstall"
+
+        (other values are not supported for IPS). For each of
+        these actions, one or more packages may be specified
+        using the <name> element, e.g.:
+.sp
+.in + 9
+.nf
+            <software_data> <!-- defaults to install action -->
+                <name>pkg:/entire</name>
+                <name>pkg:/group/system/solaris-large-server</name>
+            </software_data>
+
+            <software_data action="uninstall">
+                <name>pkg:/unwanted/pkg</name>
+            </software_data>
+.fi
+.in -9
+.sp
+        It is possible to set properties, facets and SSL
+        information on the destination repository, which is used
+        in an IPS install, using the <destination> element and
+        its sub-element <image>. 
+        
+        <image> has a few attributes which are:
+
+           - ssl_key and ssl_certificate
+
+             These map to the pkg(1) command -k and -c arguments
+             respectively and are used to specify SSH related
+             information to access the IPS repository.
+
+        <image> has several sub-elements which are:
+
+           - <facet set="true|false">FACET NAME</facet> 
+
+             This allows the specification of facets which are
+             used to limit some of the elements of a package that
+             are installed.  A common use-case is to limit the
+             locales, or be specific about the locales that are
+             installed.  This can be achieved by using something
+             like:
+.sp
+.in + 9
+.nf
+                 <destination>
+                     <image>
+                         <!-- de-select all locales -->
+                         <facet set="false">facet.locale.*</facet>
+                         <!-- specify specific locales to install -->
+                         <!-- install German and English only -->
+                         <facet set="true">facet.locale.de</facet>
+                         <facet set="true">facet.locale.de_DE</facet>
+                         <facet set="true">facet.locale.en</facet>
+                         <facet set="true">facet.locale.en_US</facet>
+                     </image>
+                 </destination>
+.fi
+.in -9
+.sp
+           - <property val="true|false">PROPERTY NAME</property>
+          
+             This allows the specification of IPS properties to
+             be set in the destination image. For further
+             information on what properties can be set, please
+             see the pkg(1) manpage.
+            
+
+     Installing using P5I:
+
+        A P5I is a file that describes an IPS installation,
+        including possible publishers, mirrors and packages.
+
+        To specify one or more P5I files to be processed, provide
+        them as origins in the <source>/<publisher> element.  For
+        example:
+.sp
+.in + 9
+.nf
+            <source>
+                <image>
+                    <origin>/somewhere/image1.p5i</origin>
+                    <origin>/somewhere/image2.p5i</origin>
+                </image>
+            </source>
+.fi
+.in -9
+.sp
+        With respect to the <destination> element, this behaves
+        the same as for an IPS installation.
+
+        Specification of packages to install via the
+        <software_data> elements is not supported in this mode.
+
+     Installing using SVR4:
+
+        For a SVR4 transfer, it is necessary to specify a source
+        directory for the packages to be installed in the new
+        Boot Environment.
+.sp
+.in + 9
+.nf
+            <source>
+                <dir path="/somedir"/>
+            </source>
+.fi
+.in -9
+.sp
+        The <software_data> element is used to specify the action
+        to be performed.  The action attribute can be one of two
+        values:
+
+           - "install" (the default value if not explicitly set)
+
+              Copies the files from the source to the new boot
+              environment.
+
+           - "uninstall"
+
+              Removes the files from the new boot environment.
+
+        (other values are not supported for SVR4). For each of
+        these actions, one or more packages may be specified
+        using the <name> element, e.g.:
+.sp
+.in + 9
+.nf
+            <software_data> <!-- defaults to install action -->
+                <name>ORGpackage1</name>
+                <name>ORGpackage2</name>
+            </software_data>
+
+            <software_data action="uninstall">
+                <name>ORGpackage8</name>
+            </software_data>
+.fi
+.in -9
+.sp
+     Installing using CPIO:
+    
+        For a CPIO transfer, it is necessary to specify a source.
+        The destination directory will always be set to the
+        mountpoint for the new boot environment during the
+        install.
+.sp
+.in + 9
+.nf
+            <source>
+                <dir path="/somedir"/>
+            </source>
+.fi
+.in -9
+.sp
+        The <software_data> element is used to specify the action
+        to be performed.  The action attribute can be one of
+        three values:
+
+           - "install" (the default value if not explicitly set)
+
+             Copies the files from the source to the new boot
+             environment.
+
+             The files or directories to be copied may be
+             specified using the <name> element - in all cases
+             these are relative to the destination, e.g.:
+.sp
+.in + 9
+.nf
+                 <software_data> <!-- defaults to install action -->
+                     <name>path/relative/to/source</name>
+                     <name>another/path/relative/to/source</name>
+                 </software_data>
+.fi
+.in -9
+.sp
+           - "uninstall"
+
+             Removes the files from the new boot environment.
+
+             The files or directories to be removed may be
+             specified using the <name> element - in all cases
+             these are relative to the destination, e.g.:
+.sp
+.in + 9
+.nf
+                 <software_data action="uninstall">
+                     <name>path/relative/to/destination</name>
+                 </software_data>
+.fi
+.in -9
+.sp
+           - "transform"
+
+             Executes a script with the source and destination
+             directories as parameters, e.g.
+.sp
+.in + 9
+.nf
+                 <software_data action="transform">
+                     <name>/script/to/run.sh</name>
+                 </software_data>
+.fi
+.in -9
+.sp
+             would result in a call like:
+
+                 /script/to/run.sh SRC DEST
+
+
+BOOT CONFIGURATION
+
+     As part of the AI manifest, it is possible to influence how
+     the GRUB boot menu is configured on the installed system.
+     This section is not applicable to zone installations and is
+     ignored when installing a zone.
+
+     Boot modifications are achieved using the <boot_mods>
+     element which has a couple of attributes:
+
+        - title
+ 
+          This sets the title for the main boot entry in the GRUB
+          menu.  This overrides the name that would be
+          automatically generated from the /etc/release or
+          install media.
+
+        - timeout
+
+          This sets the time to wait (in seconds) before the
+          specialized menu item is selected.
+
+     On SPARC, it is only possible to set the "title" attribute,
+     all other settings in this section will be ignored.
+
+     It is then possible to add multiple boot menu items using
+     the sub-element <boot_entry>. These menu items are in
+     addition to any automatically generated by the installer. 
+    
+     The <boot_entry> element has several attributes:
+
+        - default_entry
+      
+          This boolean value defaults to "false".  If set to
+          "true" then this menu item will be the default selected
+          on boot. 
+
+          If multiple entries set to "true" then the last entry
+          will take precedence.
+
+        - insert_at
+
+          This defaults to "end", meaning that the entry will be
+          placed at the end of the generated boot menu. It may
+          also be set to "start" to place the entry at the start
+          of the menu.
+
+     The boot entry is then defined by providing the
+     sub-elements:
+
+        - title_suffix
+
+          This is a required element, and defines text to be
+          added to the end of the title specified in the
+          <boot_mods> element.
+
+        - kernel_args
+
+          This is an optional string of values that will be
+          passed to the kernel by the boot loader.
+    
+
+     An example of what this all looks like is:
+.sp
+.in + 9
+.nf
+         <boot_mods title="Boot Testing" timeout="20">
+             <boot_entry default_entry="true">
+                 <title_suffix>Default Boot Entry</title_suffix>
+             </boot_entry>
+         </boot_mods>
+.fi
+.in -9
+.sp
+
+
+OTHER CONFIGURATION
+
+     The automated installer supports certain types of other
+     configurations through the use of the <configuration>
+     element.  At this time, the only configuration type
+     supported are zone configurations.  When installing a global
+     zone system, the zone configurations specified in the AI
+     manifest will be used to install zones onto the system after
+     the global zone has been installed.
+
+     The <configuration> element has the following attributes:
+
+        - type
+
+          The type of configuration to install.  The only type
+          supported by the automated installer is 'zone'.
+
+        - name
+
+          A name given to the configuration.  This name must be
+          unique across all configuration elements in an AI
+          manifest.  For configurations of type 'zone', this name
+          is also used as the zonename for the zone.
+
+        - source
+
+          The location from which the automated installer will
+          download the configuration file for this configuration
+          element.  The value can be a HTTP or FTP URI
+          specification.  For configurations of type 'zone', this
+          value should point to a zone configuration file as
+          produced from 'zonecfg export'.
+
+     For example,
+.sp
+.in + 9
+.nf
+         <configuration type='zone' name='zone1'
+             source='http://myserver.com/configs/zone1/config'/>
+.fi
+.in -9
+.sp
+
+
+FILES 
+
+     /usr/share/auto_install/manifest/default.xml
+
+        A default system installation with no customizations,
+        this file is provided on the system for reference only.
+        To create a new AI manifest, the copy of this file
+        relative to each install service image should be used.
+        See the DESCRIPTION section for more information.
+
+     /usr/share/auto_install/manifest/zone_default.xml
+
+        A default zone installation with no customization, this
+        file is used as the default manifest by 'zoneadm install'
+        to install native zones.
+        
+     /usr/share/auto_install/manifest/ai_manifest.xml
+    
+        A template AI manifest with details commented out, this
+        file provides examples of some customizations that may be
+        performed.  This file is provided on the system for
+        reference only.  To create a new AI manifest, the copy
+        of this file relative to each install service image
+        should be used.  See the DESCRIPTION section for more
+        information.
+
+
+ATTRIBUTES
+     See attributes(5) for descriptions of the following
+     attributes:
+.sp
+.in + 9
+.nf
+     _____________________________________________________________________
+    | ATTRIBUTE TYPE|                 ATTRIBUTE VALUE                     |
+    |_______________|_____________________________________________________|
+    | Availability  | pkg:/system/install/auto-install/auto-install-common|
+    |_______________|_____________________________________________________|
+    | Stability     |                      Uncommitted                    |
+    |_______________|_____________________________________________________|
+.fi
+.in -9
+.sp
+
+SEE ALSO
+
+     installadm(1M), beadm(1M), pkg(1), grub(5), prtconf(1M),
+     format(1M), zfs(1M), zpool(1M), pkg.sysrepo(1M), smf(5),
+     zoneadm(1M), zonecfg(1M)
+

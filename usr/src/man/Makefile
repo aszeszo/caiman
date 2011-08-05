@@ -25,7 +25,7 @@
 include $(SRC)/Makefile.master
 
 MANPAGES1M = aimanifest.1m distro_const.1m installadm.1m js2ai.1m
-MANPAGES4 = dc_manifest.4
+MANPAGES4 = ai_manifest.4 dc_manifest.4
 
 FILEMODE = 0444
 
