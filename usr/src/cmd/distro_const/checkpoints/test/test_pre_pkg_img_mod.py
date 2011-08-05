@@ -372,9 +372,8 @@ class TestGetPkgVersion(unittest.TestCase):
     def test_get_pkg_version(self):
         self.ppim.get_pkg_version("SUNWcs")
 
-        # verify a version string is present in the DC_PERS_LABEL DOC object
-        d = self.ppim.doc.persistent.get_children(
-            name=DC_PERS_LABEL)[0].data_dict
+        # verify a version string is present in the local pers dict
+        d = self.ppim.dc_pers_dict
         self.assert_("SUNWcs" in d)
 
 
