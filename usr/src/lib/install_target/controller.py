@@ -718,6 +718,9 @@ class TargetController(object):
         available_size_mb = available_size.get(units=Size.mb_units)
         swap_size_mb = self._get_required_swap_size()
 
+        # initialize default value for dump zvol size
+        dump_size_mb = 0
+
         swap_required = False
         if swap_size_mb != 0:
             swap_required = True
