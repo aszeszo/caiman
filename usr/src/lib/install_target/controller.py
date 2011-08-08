@@ -542,7 +542,7 @@ class TargetController(object):
         if disk.label == "VTOC" and not self._dry_run:
             # look for this disk in the DISCOVERED target tree to see if the
             # label changed from EFI to VTOC
-            for discovered_disk in self._discovered_disks:
+            for discovered_disk in self.discovered_disks:
                 if disk.ctd == discovered_disk.ctd:
                     if discovered_disk.label == "GPT":
                         # we need to reset the label
