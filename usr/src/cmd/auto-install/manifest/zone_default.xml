@@ -31,12 +31,21 @@
                 <zpool name="rpool">
                     <filesystem name="export" mountpoint="/export"/>
                     <filesystem name="export/home"/>
-                    <be name="solaris"/>
+                    <be name="solaris">
+                        <options>
+                            <option name="compression" value="on"/>
+                        </options>
+                    </be>
                 </zpool>
             </logical>
         </target>
 
         <software type="IPS">
+            <destination>
+                <image>
+                    <property val="true">flush-content-cache-on-success</property>
+                </image>
+            </destination>
             <software_data action="install">
                 <name>pkg:/group/system/solaris-small-server</name>
             </software_data>
