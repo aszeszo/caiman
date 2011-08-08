@@ -102,11 +102,15 @@ class AutoInstall(object):
     CHECKPOINTS_BEFORE_IPS = list(CHECKPOINTS_BEFORE_TI)
     INSTALLED_ROOT_DIR = "/a"
 
+    AI_INFO_PREFIX = 'ai_info_prefix'
+    AI_INFO_MSG = 'ai_info_msg'
+
     def __init__(self, args=None):
         """
         Class constructor
         """
         self.installed_root_dir = self.INSTALLED_ROOT_DIR
+        self.install_log = None
         self.auto_reboot = False
         self.doc = None
         self.exitval = self.AI_EXIT_SUCCESS
@@ -174,7 +178,7 @@ class AutoInstall(object):
         self.setup_logs()
 
         if not self.options.list_checkpoints:
-            self.logger.info("Starting Automated Installation Service")
+            self.logger.debug("Starting Automated Installation")
 
         if self.options.stop_checkpoint:
             self.logger.debug("Pausing AI install before checkpoint: %s" %
@@ -182,26 +186,36 @@ class AutoInstall(object):
 
         if not self.options.list_checkpoints:
             if self.manifest:
-                self.logger.info("Using XML Manifest: %s" % (self.manifest))
+                self.logger.info("Using XML Manifest: %s" % (self.manifest),
+                    extra={self.AI_INFO_PREFIX: 'AI Manifest',
+                    self.AI_INFO_MSG: self.manifest})
 
             if self.derived_script:
                 self.logger.info("Using Derived Script: %s" %
-                    (self.derived_script))
+                    (self.derived_script),
+                    extra={self.AI_INFO_PREFIX: 'Script',
+                    self.AI_INFO_MSG: self.derived_script})
 
             if self.options.profile:
                 self.logger.info("Using profile specification: %s" %
-                    (self.options.profile))
+                    (self.options.profile),
+                    extra={self.AI_INFO_PREFIX: 'SC Profile',
+                    self.AI_INFO_MSG: self.options.profile})
 
             if self.options.service_list_file:
                 self.logger.info("Using service list file: %s" %
-                    (self.options.service_list_file))
+                    (self.options.service_list_file),
+                    extra={self.AI_INFO_PREFIX: 'Service List',
+                    self.AI_INFO_MSG: self.options.service_list_file})
 
             if self.options.zonename:
                 self.logger.info("Installing zone image for: %s" %
-                    (self.options.zonename))
+                    (self.options.zonename),
+                    extra={self.AI_INFO_PREFIX: 'Zonename',
+                    self.AI_INFO_MSG: self.options.zonename})
 
             if self.options.alt_zpool_dataset:
-                self.logger.info("Installing zone under dataset: %s" %
+                self.logger.debug("Installing zone under dataset: %s" %
                     (self.options.alt_zpool_dataset))
 
             if self.options.dry_run:
@@ -357,7 +371,7 @@ class AutoInstall(object):
 
     def setup_logs(self):
         """
-        Create the logger instanace for AI and create simple and
+        Create the logger instance for AI and create simple and
         detailed log files to use.
         """
 
@@ -367,7 +381,7 @@ class AutoInstall(object):
         # Log progress and info messages to the console.
         self.progress_ph = AIProgressHandler(self.logger,
             skip_console_msg=(self.options.list_checkpoints or \
-                              self.options.alt_zpool_dataset))
+                              self.options.alt_zpool_dataset is not None))
         self.progress_ph.start_progress_server()
         self.logger.addHandler(self.progress_ph)
 
@@ -376,18 +390,24 @@ class AutoInstall(object):
         self.progress_ph.setLevel(logging.INFO)
         datefmt = "%H:%M:%S"
         formatter = AIScreenFormatter(datefmt=datefmt,
-                hide_progress=self.options.list_checkpoints)
+                hide_progress=(self.options.list_checkpoints or \
+                               self.options.zonename is not None),
+                align_prefix=(self.options.zonename is not None),
+                prefix_key=self.AI_INFO_PREFIX, msg_key=self.AI_INFO_MSG)
         self.progress_ph.setFormatter(formatter)
 
         # create a install_log file handler and add it to the ai_logger
 
         # set the logfile names
-        install_log = os.path.join(self._app_data.work_dir, self.INSTALL_LOG)
-        self.install_log_fh = FileHandler(install_log)
+        self.install_log = os.path.join(self._app_data.work_dir,
+            self.INSTALL_LOG)
+        self.install_log_fh = FileHandler(self.install_log)
 
         self.install_log_fh.setLevel(logging.DEBUG)
         if not self.options.list_checkpoints:
-            self.logger.info("Install Log: %s" % (install_log))
+            self.logger.info("Install Log: %s" % (self.install_log),
+                extra={self.AI_INFO_PREFIX: "Install Log",
+                self.AI_INFO_MSG: self.install_log})
         self.logger.addHandler(self.install_log_fh)
 
     @property
@@ -419,7 +439,9 @@ class AutoInstall(object):
         if not self.options.list_checkpoints:
             if error_val in [self.AI_EXIT_SUCCESS, self.AI_EXIT_AUTO_REBOOT]:
                 if not success_printed:
-                    self.logger.info("Automated Installation succeeded.")
+                    self.logger.info("Automated Installation succeeded.",
+                        extra={self.AI_INFO_PREFIX: 'Installation',
+                        self.AI_INFO_MSG: "Succeeded"})
                 if self.options.alt_zpool_dataset is None:
                     if error_val == self.AI_EXIT_AUTO_REBOOT:
                         self.logger.info("System will be rebooted now")
@@ -429,8 +451,11 @@ class AutoInstall(object):
                 unmount_be = True
             else:
                 # error_val == self.AI_EXIT_FAILURE:
-                self.logger.info("Automated Installation Failed")
-                self.logger.info("Please see logs for more information")
+                self.logger.info("Automated Installation Failed.  "
+                    "See install log at %s" % (self.install_log),
+                    extra={self.AI_INFO_PREFIX: 'Installation',
+                    self.AI_INFO_MSG: 'Failed.  See install log at %s' %
+                    self.install_log})
 
         # Close logger now since it holds a handle to the log on the BE, which
         # makes it impossible to unmount the BE
@@ -505,6 +530,10 @@ class AutoInstall(object):
         """
         Main control method for performing an Automated Installation
         """
+
+        self.logger.info("Starting installation.",
+            extra={self.AI_INFO_PREFIX: 'Installation',
+            self.AI_INFO_MSG: 'Starting ...\n'})
 
         # Check if we need to register/run derived manifest/parser checkpoints
         # If manifest argument set or derived script argument set then
@@ -610,8 +639,9 @@ class AutoInstall(object):
                 else:
                     # Write success now, to ensure it's in the log before
                     # transfer.
-                    self.logger.info("Automated Installation succeeded.")
-
+                    self.logger.info("Automated Installation succeeded.",
+                        extra={self.AI_INFO_PREFIX: 'Installation',
+                        self.AI_INFO_MSG: 'Succeeded'})
                     # Now do actual transfer of logs
                     self.logger.debug("Transferring log to %s" %
                         (new_be.mountpoint + self.BE_LOG_DIR))
@@ -751,7 +781,7 @@ class AutoInstall(object):
             self.logger.info("DM set manifest to: %s" % (pm.manifest))
             self.manifest = pm.manifest
 
-        self.logger.info("Manifest %s successfully parsed" % (self.manifest))
+        self.logger.debug("Manifest %s successfully parsed" % self.manifest)
         self.logger.debug("DOC (tree format):\n%s\n\n\n" %
             (str(self.engine.data_object_cache)))
         self.logger.debug("DOC (xml_format):\n%s\n\n\n" %
@@ -858,7 +888,7 @@ class AutoInstall(object):
 
         try:
             if not self.options.list_checkpoints:
-                self.logger.info("Configuring Checkpoints")
+                self.logger.debug("Configuring Checkpoints")
 
             # Register TargetDiscovery
             if self.options.alt_zpool_dataset is None:
@@ -1017,12 +1047,15 @@ class AutoInstall(object):
                 if ckpt_info is not None:
                     self.logger.debug("Adding Transfer Checkpoint: "
                         "%s, %s, %s" % ckpt_info)
-                    if self.options.zonename:
-                        # If we're installing a zone, append a kwarg
-                        # specifying the zone's zonename to the transfer
-                        # checkpoint
+                    if self.options.zonename and sw.tran_type.upper() == "IPS":
+                        # If we're installing a zone and transfer type is
+                        # IPS, append a kwarg specifying the zone's zonename
+                        # to the transfer checkpoint.  Also append a kwarg
+                        # specifying that we're allowing the checkpoint to
+                        # show progress to stdout.
                         self.engine.register_checkpoint(*ckpt_info,
-                            kwargs={"zonename": self.options.zonename})
+                            kwargs={"zonename": self.options.zonename,
+                                    "show_stdout": True})
                     else:
                         self.engine.register_checkpoint(*ckpt_info)
                 else:
@@ -1222,14 +1255,22 @@ class AIScreenFormatter(logging.Formatter):
 
     Checks if log message is MAX_INT (Progress Log) or Normal log and
     formats message appropriately.
+
+    If requested, shows messages with prefix in prettier form --
+    (middle aligned)
     """
 
-    def __init__(self, fmt=None, datefmt=None, hide_progress=True):
+    def __init__(self, fmt=None, datefmt=None, hide_progress=True,
+        align_prefix=False, prefix_key=None, msg_key=None):
         """Initialize formatter class.
 
            Consume hide_progress boolean for local processing.
         """
         self.hide_progress = hide_progress
+        self.align_prefix = align_prefix
+        self.prefix_key = prefix_key
+        self.msg_key = msg_key
+        self.prefix_len = 12
 
         logging.Formatter.__init__(self, fmt, datefmt)
 
@@ -1242,15 +1283,29 @@ class AIScreenFormatter(logging.Formatter):
         formatted_str = ""
         fmt = None
 
-        if self.hide_progress:
-            # Don't output progress information for -l option
-            if record.levelno != MAX_INT:
-                fmt = "%(message)s"
-        else:
-            if record.levelno == MAX_INT:
-                fmt = "%(asctime)-11s %(progress)s%% %(message)s"
+        # If align_prefix is requested, check if the record has a
+        # prefix, and if so, format the output string prefix-aligned
+        # using the prefix and msg.  If the record does not have a
+        # prefix, format the output string using message, aligned
+        # with an empty prefix.
+        if self.align_prefix:
+            if self.prefix_key not in record.__dict__:
+                if record.levelno == MAX_INT:
+                    return formatted_str
+                else:
+                    fmt = self.prefix_len * " " + "  %(message)s"
             else:
-                fmt = "%(asctime)-11s %(message)s"
+                fmt = "%(" + self.prefix_key + ")" + str(self.prefix_len) + \
+                    "s: %(" + self.msg_key + ")s"
+        else:
+            if self.hide_progress:
+                if record.levelno != MAX_INT:
+                    fmt = "%(message)s"
+            else:
+                if record.levelno == MAX_INT:
+                    fmt = "%(asctime)-11s %(progress)s%% %(message)s"
+                else:
+                    fmt = "%(asctime)-11s %(message)s"
 
         if fmt is not None:
             formatted_str = fmt % record.__dict__

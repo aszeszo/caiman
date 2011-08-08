@@ -68,37 +68,169 @@ misc.setlocale(locale.LC_ALL, "")
 gettext.install("pkg", "/usr/share/locale")
 
 
-class RedirectIPSTrans(object):
-    '''Helper class containing a file-like object that allows
-       the command line output from IPS pkg ProgressTracker
-       to be redirected to the logger defined for transfer.
+class InstallCLIProgressTracker(progress.NullProgressTracker):
+    ''' Subclass of the IPS api's NullProgressTracker to handle a simple
+        form of progress reporting.  If requested with 'show_stdout', we
+        output progress to stdout by posting a logging INFO message.
+        Otherwise we just output progress to log files by posting a
+        logging DEBUG message.
     '''
-    def __init__(self, trans_logger):
-        '''Initialize the logger and a variable
-           to hold the transmitted data
-        '''
+
+    def __init__(self, trans_logger, show_stdout=False):
+        super(InstallCLIProgressTracker, self).__init__()
         self.trans_logger = trans_logger
-        self.data = ''
+        self.show_stdout = show_stdout
+        self._dl_cur_pkg = None
+        self._dl_started = False
+        self._act_started = False
+        self._ind_started = False
+        self._item_started = False
 
-    def write(self, data):
-        '''Write the data into the log file'''
-        self.data += data
+    def _logger_output(self, message):
+        if self.show_stdout:
+            self.trans_logger.info(message)
+        else:
+            self.trans_logger.debug(message)
 
-        # Once the output contains a line feed or
-        # carriage return it can be logged
-        if self.data.endswith("\r") or self.data.endswith("\n"):
-            self.flush()
+    def eval_output_start(self):
+        self._logger_output("Creating Plan ... Started.")
 
-    def flush(self):
-        '''Print the data'''
-        if self.data.endswith("\r") or self.data.endswith("\n"):
-            # If the data ends with a return/line feed, strip it
-            # and add a space to compensate for any output that might
-            # get run together
-            self.data = self.data.rstrip('\r\n').ljust(1)
-        if self.data is not '':
-            self.trans_logger.debug(self.data)
-            self.data = ''
+    def eval_output_done(self):
+        self._logger_output("Creating Plan ... Done.")
+
+    def refresh_output_start(self):
+        self._logger_output("Refreshing Catalog ... Started.")
+
+    def refresh_output_done(self):
+        self._logger_output("Refreshing Catalog ... Done.")
+
+    def dl_output(self):
+        if not self._dl_started:
+            self._logger_output("Download Phase ... Started.")
+            self._dl_started = True
+
+        if self._dl_cur_pkg != self.cur_pkg:
+            self._logger_output("Download: %s ..." % self.cur_pkg)
+            self._dl_cur_pkg = self.cur_pkg
+
+    def dl_output_done(self):
+        self._logger_output("Download Phase ... Done.")
+        self._dl_started = False
+        self._dl_cur_pkg = None
+
+    def act_output(self, force=False):
+        if not self._act_started:
+            self._logger_output("%s ... Started." % self.act_phase)
+            self._act_started = True
+
+    def act_output_done(self):
+        self._logger_output("%s ... Done." % self.act_phase)
+        self._act_started = False
+
+    def ind_output(self, force=False):
+        if not self._ind_started:
+            self._logger_output("%s ... Started." % self.ind_phase)
+            self._ind_started = True
+
+    def ind_output_done(self):
+        self._logger_output("%s ... Done." % self.ind_phase)
+        self._ind_started = False
+
+    def item_output(self, force=False):
+        if not self._item_started:
+            self._logger_output("%s ... Started." % self.item_phase)
+            self._item_started = True
+
+    def item_output_done(self):
+        self._logger_output("%s ... Done." % self.item_phase)
+        self._item_started = False
+
+
+class InstallFancyProgressTracker(progress.FancyUNIXProgressTracker):
+    ''' Subclass of the IPS api's FancyUNIXProgressTracker; we leverage
+        that class's progress reporting, allowing it to output straight to
+        stdout.  The overridden methods we define allow us to capture the
+        parts of the progress that we want recorded to the install log.
+
+        This progress tracking class should only be used when the
+        application is being run on a terminal with UNIX-like semantics
+        and will fail to initialize otherwise.
+    '''
+    def __init__(self, trans_logger, quiet=False, verbose=0):
+        super(InstallFancyProgressTracker, self).__init__(quiet=quiet,
+            verbose=verbose)
+
+        self.trans_logger = trans_logger
+        self._dl_cur_pkg = None
+        self._dl_started = False
+        self._act_started = False
+        self._ind_started = False
+        self._item_started = False
+
+    def eval_output_start(self):
+        super(InstallFancyProgressTracker, self).eval_output_start()
+        self.trans_logger.debug("Creating Plan ... Started.")
+
+    def eval_output_done(self):
+        super(InstallFancyProgressTracker, self).eval_output_done()
+        self.trans_logger.debug("Creating Plan ... Done.")
+
+    def refresh_output_start(self):
+        super(InstallFancyProgressTracker, self).refresh_output_start()
+        self.trans_logger.debug("Refreshing Catalog ... Started.")
+
+    def refresh_output_done(self):
+        super(InstallFancyProgressTracker, self).refresh_output_done()
+        self.trans_logger.debug("Refreshing Catalog ... Done.")
+
+    def dl_output(self, force=False):
+        super(InstallFancyProgressTracker, self).dl_output(force=force)
+        if not self._dl_started:
+            self.trans_logger.debug("Download Phase ... Started.")
+            self._dl_started = True
+
+        if self._dl_cur_pkg != self.cur_pkg:
+            self.trans_logger.debug("Download: %s ..." % self.cur_pkg)
+            self._dl_cur_pkg = self.cur_pkg
+
+    def dl_output_done(self):
+        super(InstallFancyProgressTracker, self).dl_output_done()
+        self.trans_logger.debug("Download Phase ... Done.")
+        self._dl_started = False
+        self._dl_cur_pkg = None
+
+    def act_output(self, force=False):
+        super(InstallFancyProgressTracker, self).act_output(force=force)
+        if not self._act_started:
+            self.trans_logger.debug("%s ... Started." % self.act_phase)
+            self._act_started = True
+
+    def act_output_done(self):
+        super(InstallFancyProgressTracker, self).act_output_done()
+        self.trans_logger.debug("%s ... Done." % self.act_phase)
+        self._act_started = False
+
+    def ind_output(self, force=False):
+        super(InstallFancyProgressTracker, self).ind_output(force=force)
+        if not self._ind_started:
+            self.trans_logger.debug("%s ... Started." % self.ind_phase)
+            self._ind_started = True
+
+    def ind_output_done(self):
+        super(InstallFancyProgressTracker, self).ind_output_done()
+        self.trans_logger.debug("%s ... Done." % self.ind_phase)
+        self._ind_started = False
+
+    def item_output(self, force=False):
+        super(InstallFancyProgressTracker, self).item_output(force=force)
+        if not self._item_started:
+            self.trans_logger.debug("%s ... Started." % self.item_phase)
+            self._item_started = True
+
+    def item_output_done(self):
+        super(InstallFancyProgressTracker, self).item_output_done()
+        self.trans_logger.debug("%s ... Done." % self.item_phase)
+        self._item_started = False
 
 
 class AbstractIPS(Checkpoint):
@@ -126,7 +258,7 @@ class AbstractIPS(Checkpoint):
     EXISTING = "use_existing"
     UPDATE = "update"
 
-    def __init__(self, name, zonename=None):
+    def __init__(self, name, zonename=None, show_stdout=False):
         super(AbstractIPS, self).__init__(name)
 
         # attributes per image
@@ -138,6 +270,7 @@ class AbstractIPS(Checkpoint):
         self.completeness = IMG_TYPE_ENTIRE
         self.is_zone = False
         self.zonename = zonename
+        self.show_stdout = show_stdout
         self.facets = {}
         self.properties = {}
 
@@ -156,7 +289,22 @@ class AbstractIPS(Checkpoint):
 
         # Flag to cancel whatever action is going on.
         self._cancel_event = False
-        self.prog_tracker = self.DEF_PROG_TRACKER
+
+        # Set the progress tracker for IPS operations.
+        if self.show_stdout:
+            # If we've been requested to show progress to stdout, try to
+            # intantiate the Fancy progress tracker.  If we're not running
+            # on a capable terminal, fall back to the CLI progress tracker.
+            try:
+                self.prog_tracker = InstallFancyProgressTracker(self.logger)
+            except progress.ProgressTrackerException:
+                self.prog_tracker = InstallCLIProgressTracker(self.logger,
+                    show_stdout=self.show_stdout)
+        else:
+            # Else if we've not been requested to show progress at all,
+            # instantiate the the CLI progress tracker.
+            self.prog_tracker = InstallCLIProgressTracker(self.logger,
+                show_stdout=self.show_stdout)
 
         # local attributes used to create the publisher.
         self._publ = None
@@ -206,7 +354,7 @@ class AbstractIPS(Checkpoint):
         '''Execute method for the IPS checkpoint module. Will read the
            input parameters and perform the specified transfer.
         '''
-        self.logger.info("=== Executing %s Checkpoint ===" % self.name)
+        self.logger.debug("=== Executing %s Checkpoint ===" % self.name)
         try:
             if self.give_progress:
                 self.logger.report_progress("Beginning IPS transfer", 0)
@@ -224,16 +372,18 @@ class AbstractIPS(Checkpoint):
             if not self.dry_run:
                 self.get_ips_api_inst()
 
+            # Perform the transferring of the bit/updating of the image.
+            self._transfer()
+
+            if not self.dry_run:
                 # Check to see that the entire package on the host system
-                # matches the package in the IPS repo, if the entire package
-                # is included in the package list. Log a message if the
-                # versions don't match.
+                # matches the package in the target image, if the entire
+                # package is included in the package list.  Log a warning
+                # message if the versions don't match.
                 # If it isn't found in the package list or on the system,
                 # this isn't an error. Continue with the installation.
                 for trans_val in self._transfer_list:
                     if trans_val.get(ACTION) == "install":
-                        branchlist = []
-                        version_dict = {}
                         for pkg in trans_val.get(CONTENTS):
                             if "entire" in pkg:
                                 sysinst = api.ImageInterface(self.SYSTEM_IMAGE,
@@ -242,33 +392,40 @@ class AbstractIPS(Checkpoint):
                                                        False,
                                                        self.SYSTEM_CLIENT_NAME)
 
-                                version_dict["Installer"] =  \
+                                installer_entire_info = \
                                      sysinst.info(fmri_strings=self.ENT_PKG,
                                                   local=True,
                                                   info_needed=self.INFO_NEEDED)
-                                version_dict["Target"] = self.api_inst.info(
+
+                                target_entire_info = self.api_inst.info(
                                                   fmri_strings=self.ENT_PKG,
-                                                  local=False,
+                                                  local=True,
                                                   info_needed=self.INFO_NEEDED)
 
-                                for key, val in version_dict.items():
-                                    pkg_info =  \
-                                        val[api.ImageInterface.INFO_FOUND]
-                                    for i, pi in enumerate(pkg_info):
-                                        if pi.branch not in branchlist:
-                                            branchlist.append(pi.branch)
-                                            version_dict[key] = pi.fmri
+                                if not installer_entire_info[
+                                    api.ImageInterface.INFO_FOUND] or \
+                                    not target_entire_info[
+                                    api.ImageInterface.INFO_FOUND]:
+                                    continue
 
-                                if len(branchlist) > 1:
+                                installer_entire_pi = \
+                                    installer_entire_info[ \
+                                        api.ImageInterface.INFO_FOUND][0]
+                                target_entire_pi = \
+                                    target_entire_info[ \
+                                        api.ImageInterface.INFO_FOUND][0]
+
+                                if installer_entire_pi.branch != \
+                                    target_entire_pi.branch:
                                     self.logger.warning("Version mismatch: ")
-                                    for key, val in version_dict.items():
-                                        msg = "%s build version:%s" % (key,
-                                               val)
-                                        self.logger.warning(msg)
+                                    self.logger.warning(
+                                        "Installer build version: %s" %
+                                        (installer_entire_pi.fmri))
+                                    self.logger.warning(
+                                        "Target build version: %s" %
+                                        (target_entire_pi.fmri))
             self.check_cancel_event()
 
-            # Perform the transferring of the bit/updating of the image.
-            self._transfer()
         finally:
             self._cleanup()
 
@@ -299,7 +456,7 @@ class AbstractIPS(Checkpoint):
             self.logger.debug("Image Type: partial")
 
         if self.is_zone:
-            self.logger.debug("Image Type: zone")
+            self.logger.debug("Image Variant: zone")
             # For images of type zone, we need the zonename so that
             # we can construct the linked image name when attaching
             # it to the parent image.
@@ -315,8 +472,7 @@ class AbstractIPS(Checkpoint):
                              "with the source component of the manifest but "
                              "are invalid as args: " + str(overlap))
 
-        self.prog_tracker = self.image_args.get("progtrack",
-                                                self.DEF_PROG_TRACKER)
+        self.prog_tracker = self.image_args.get("progtrack", self.prog_tracker)
 
         # Set the image args we always want set.
         if self.img_action == self.CREATE:
@@ -491,13 +647,6 @@ class AbstractIPS(Checkpoint):
                             self.api_inst.set_plan_license_status(pfmri,
                                 dest.license, displayed=True, accepted=True)
 
-                        # Redirect stdout and stderr from the pkg image in
-                        # order to capture the command line output from the
-                        # pkg progress tracker into the transfer logs.
-                        tmp_stdout = sys.stdout
-                        tmp_stderr = sys.stderr
-                        sys.stdout = sys.stderr = RedirectIPSTrans(self.logger)
-
                         # Execute the transfer action
                         self.api_inst.prepare()
                         self.api_inst.execute_plan()
@@ -508,10 +657,6 @@ class AbstractIPS(Checkpoint):
                         # in trying to unmount the image.  So we manually
                         # change dir back to "/".
                         os.chdir("/")
-
-                        # Release stdout and stderr
-                        sys.stdout = tmp_stdout
-                        sys.stderr = tmp_stderr
 
                     else:
                         self.logger.debug("Dry Run: Installing packages")
@@ -526,21 +671,10 @@ class AbstractIPS(Checkpoint):
                     else:
                         self.api_inst.plan_uninstall(trans_val.get(CONTENTS))
 
-                    # Redirect stdout and stderr from the pkg image in order
-                    # to capture the command line output from the pkg
-                    # progress tracker into the transfer logs.
-                    tmp_stdout = sys.stdout
-                    tmp_stderr = sys.stderr
-                    sys.stdout = sys.stderr = RedirectIPSTrans(self.logger)
-
                     # Execute the transfer action
                     self.api_inst.prepare()
                     self.api_inst.execute_plan()
                     self.api_inst.reset()
-
-                    # Release stdout and stderr
-                    sys.stdout = tmp_stdout
-                    sys.stderr = tmp_stderr
 
                 else:
                     self.logger.debug("Dry Run: Uninstalling packages")
@@ -704,8 +838,9 @@ class TransferIPS(AbstractIPS):
     '''
     VALUE_SEPARATOR = ","
 
-    def __init__(self, name, zonename=None):
-        super(TransferIPS, self).__init__(name, zonename=zonename)
+    def __init__(self, name, zonename=None, show_stdout=False):
+        super(TransferIPS, self).__init__(name, zonename=zonename,
+                                          show_stdout=show_stdout)
 
         # Holds the list of transfer dictionaries
         self._transfer_list = []
