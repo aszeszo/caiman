@@ -35,7 +35,6 @@ import unittest
 from common_create_simple_doc import CreateSimpleDataObjectCache
 from solaris_install.ict.create_snapshot import CreateSnapshot
 from solaris_install.engine.test.engine_test_utils import reset_engine
-from solaris_install.target.logical import Options
 
 
 class TestCreateSnapshot(unittest.TestCase):
@@ -67,20 +66,6 @@ class TestCreateSnapshot(unittest.TestCase):
             self.fail(str(e))
 
         self.assertEquals(self.create_snap.snapshot_name, 'install')
-
-    def test_assigned_snapshot_name(self):
-        '''Test that an assigned snapshot name is correct'''
-
-        snap_obj = Options('initial-snapshot-name')
-        snap_obj.options_str = 'first_snapshot'
-        self.simple.be_obj.insert_children(snap_obj)
-
-        try:
-            self.create_snap.execute(dry_run=True)
-        except Exception as e:
-            self.fail(str(e))
-
-        self.assertEquals(self.create_snap.snapshot_name, 'first_snapshot')
 
     def test_get_progress_estimate(self):
         '''Test get progress estimate return value'''

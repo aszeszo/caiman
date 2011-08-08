@@ -70,12 +70,6 @@ class CreateSnapshot(ICT.ICTBaseClass):
         # Get the name of the initial boot environment
         be_name = self.boot_env.name
 
-        # Get the snapshot name. This is optional, so it may not exist
-        # get_descendants returns an empty list if not found.
-        snapshot = self.boot_env.get_descendants(class_type=Options)
-        if snapshot:
-            self.snapshot_name = snapshot[0].options_str
-
         self.logger.debug("Creating initial snapshot. be: %s, snapshot: %s",
                           be_name, self.snapshot_name)
 
