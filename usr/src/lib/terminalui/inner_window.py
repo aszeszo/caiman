@@ -41,12 +41,10 @@ from terminalui.i18n import fit_text_truncate, \
                             get_encoding, \
                             textwidth
 
-KEY_ESC = 27
 KEY_BS = 127  # Backspace code that curses doesn't translate right
 KEY_CTRL_H = ord(ctrl('h'))
 KEY_TAB = ord(ctrl('i'))
 KEY_ENTER = ord(ctrl('j'))
-ZERO_CHAR = ord('0')
 
 
 def no_action(input_key):
@@ -78,8 +76,7 @@ class InnerWindow(object):
     The following class variables are used to indicate the status of ESC key
     navigations.
 
-    BEGIN_ESC indicates that the next keystroke, if 0-9, should be
-    translated to F#
+    ESCAPE_SEQ accumulates escape sequences
 
     USE_ESC indicates that, at some point during program execution,
     ESC has been pressed, and the footer should, for the remainder of program
@@ -91,7 +88,7 @@ class InnerWindow(object):
     text.
 
     '''
-    BEGIN_ESC = False
+    ESCAPE_SEQ = terminalui.EscapeSeq()
     USE_ESC = False
     UPDATE_FOOTER = False
     KEY_TRANSLATE = {KEY_TAB: curses.KEY_DOWN,
@@ -538,29 +535,21 @@ class InnerWindow(object):
         '''Translate keyboard input codes
 
         This function will translate keyboard input.
-        Its primary job is understanding Esc-# sequences and turning them
-        into F# key codes. It also converts keys as indicated by
-        InnerWindow.KEY_TRANSLATE.
+        Tasks:
+        * understanding Esc-# sequences and converting them to F# key codes
+        * converting ANSI escape sequences to curses codes when terminal
+            emulator does not support the given sequence
+        * converting keys per InnerWindow.KEY_TRANSLATE
 
         '''
-        terminalui.LOGGER.log(LOG_LEVEL_INPUT, "Got char code %s", input_key)
-        if InnerWindow.BEGIN_ESC:
-            terminalui.LOGGER.log(LOG_LEVEL_INPUT, "Ending esc-sequence")
-            InnerWindow.BEGIN_ESC = False
-            if curses.ascii.isdigit(input_key):
-                terminalui.LOGGER.log(LOG_LEVEL_INPUT,
-                            "Valid esc-sequence, converting to KEY_FN")
-                return input_key - ZERO_CHAR + curses.KEY_F0
-            else:
-                terminalui.LOGGER.log(LOG_LEVEL_INPUT,
-                            "Invalid esc-sequence, returning raw input")
-        elif input_key == KEY_ESC:
-            terminalui.LOGGER.log(LOG_LEVEL_INPUT, "Beginning esc-sequence")
-            if not InnerWindow.USE_ESC:
-                InnerWindow.USE_ESC = True
-                InnerWindow.UPDATE_FOOTER = True
-            InnerWindow.BEGIN_ESC = True
-            return None
+        terminalui.LOGGER.log(LOG_LEVEL_INPUT, "Got char, dec. code %s",
+                              input_key)
+        # escape sequence processing
+        input_key = InnerWindow.ESCAPE_SEQ.input(input_key)
+        if InnerWindow.ESCAPE_SEQ.is_key_fn():
+            terminalui.LOGGER.log(LOG_LEVEL_INPUT, "Update footer")
+            InnerWindow.UPDATE_FOOTER = True
+            InnerWindow.USE_ESC = True
         input_key = InnerWindow.KEY_TRANSLATE.get(input_key, input_key)
         return input_key
 

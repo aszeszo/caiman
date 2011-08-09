@@ -30,9 +30,11 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 '''
 
 
+import curses
 import unittest
 
 import terminalui
+from terminalui import EscapeSeq
 from terminalui.color_theme import ColorTheme
 from terminalui.inner_window import InnerWindow
 from terminalui.window_area import WindowArea
@@ -59,6 +61,14 @@ class MockWin(object):
     
     def noutrefresh(self):
         pass
+
+
+def esc_seq(seq):
+    escseq = EscapeSeq()
+    escseq.input(27)
+    for c in seq:
+        o = escseq.input(ord(c))
+    return o
 
 
 class TestInnerWindow(unittest.TestCase):
@@ -127,3 +137,14 @@ class TestInnerWindow(unittest.TestCase):
         ret = self.win.on_page(1, 12345)
         self.assertEquals(ret, 12345)
         self.assertEquals(self.win.active_object, None)
+
+    def test_escape_sequences(self):
+        '''Test correct terminal input escape sequence processing'''
+        self.assertEquals(esc_seq('[17~'), curses.KEY_F6)
+        self.assertEquals(esc_seq('2'), curses.KEY_F2)
+        self.assertEquals(esc_seq('OH'), curses.KEY_HOME)
+        self.assertEquals(esc_seq('X'), ord('X'))  # invalid
+
+
+if __name__ == '__main__':
+        unittest.main()
