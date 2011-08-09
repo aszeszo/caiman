@@ -49,9 +49,8 @@ from default_xml import DEFAULT_XML_EMPTY
 from lxml import etree
 from StringIO import StringIO
 
-# This is defined here since we can't collect this information from the
-# pkg api. This is needed to make the calls into the pkg api.
-CLIENT_API_VERSION = 62
+from solaris_install import PKG5_API_VERSION
+
 
 # These validation patterns were taken directly from the jumpstart
 # check script
@@ -950,7 +949,7 @@ class XMLProfileData(object):
         """
         orig_pwd = os.getcwd()
         prog_tracker = progress.CommandLineProgressTracker()
-        api_inst = api.ImageInterface("/", CLIENT_API_VERSION,
+        api_inst = api.ImageInterface("/", PKG5_API_VERSION,
                                       prog_tracker, False, "js2ai")
         pkg_query = ":legacy:legacy_pkg:" + package
         query = [api.Query(pkg_query, False, True)]

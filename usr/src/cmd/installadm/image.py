@@ -58,7 +58,7 @@ import pkg.client.imagetypes
 import osol_install.auto_install.installadm_common as com
 
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
-from solaris_install import Popen 
+from solaris_install import Popen, PKG5_API_VERSION
 
 
 _FILE = '/usr/bin/file'
@@ -192,7 +192,6 @@ class InstalladmPkgImage(InstalladmImage):
     '''Handles creation of a pkg(5)-based InstalladmImage'''
 
     _PKG_CLIENT_NAME = "installadm"
-    PKG_API_VERSION = 62
     DEFAULT_PKG_NAME = 'install-image/solaris-auto-install'
     ARCH_VARIANT = u'variant.arch'
     SVC_NAME_ATTR = 'com.oracle.install.service_name'
@@ -207,7 +206,7 @@ class InstalladmPkgImage(InstalladmImage):
         logging.debug("image_create, install from=%s", fmri_or_p5i)
         tracker = pkg.client.progress.CommandLineProgressTracker()
         root_img = pkg.client.api.ImageInterface(
-            "/", cls.PKG_API_VERSION, tracker, None, cls._PKG_CLIENT_NAME)
+            "/", PKG5_API_VERSION, tracker, None, cls._PKG_CLIENT_NAME)
         
         # In the future, handle:
         #    * SSL repos (keys/certs may need explicit flags from user)
@@ -237,7 +236,7 @@ class InstalladmPkgImage(InstalladmImage):
         
         pkgimg = pkg.client.api.image_create(
                         cls._PKG_CLIENT_NAME,
-                        cls.PKG_API_VERSION,
+                        PKG5_API_VERSION,
                         targetdir,
                         pkg.client.imagetypes.IMG_USER,
                         is_zone=False,
@@ -271,7 +270,7 @@ class InstalladmPkgImage(InstalladmImage):
             cancel_state_callable = None
             self._pkgimg = pkg.client.api.ImageInterface( 
                                 self.path,
-                                self.PKG_API_VERSION,
+                                PKG5_API_VERSION,
                                 tracker,
                                 cancel_state_callable,
                                 self._PKG_CLIENT_NAME)
@@ -317,12 +316,11 @@ class InstalladmPkgImage(InstalladmImage):
         try:
             pkg_list = self.pkg_image.get_pkg_list(
                 pkg.client.api.ImageInterface.LIST_INSTALLED,
-                raise_unmatched=True, return_fmris=True,
-                variants=True)
+                raise_unmatched=True, return_fmris=True)
 
-            for pfmri, summ, cats, states in pkg_list:
-                manifest = self.pkg_image.get_manifest(pfmri, all_variants=True)
-                for action in manifest.gen_actions(self.pkg_image.excludes):
+            for pfmri, summ, cats, states, attrs in pkg_list:
+                manifest = self.pkg_image.get_manifest(pfmri)
+                for action in manifest.gen_actions_by_type("set"):
                     for attrval in action.attrlist("name"):
                         if attrval == self.SVC_NAME_ATTR:
                             basename = action.attrs["value"].strip()

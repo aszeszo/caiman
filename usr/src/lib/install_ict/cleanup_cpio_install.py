@@ -35,6 +35,7 @@ import solaris_install.ict as ICT
 
 from stat import S_IREAD, S_IRGRP, S_IROTH
 
+from solaris_install import PKG5_API_VERSION
 from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.transfer.info import Args
 from solaris_install.transfer.info import CPIOSpec
@@ -205,7 +206,7 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
         if not dry_run:
             try:
                 api_inst = api.ImageInterface(self.target_dir,
-                               ICT.CLIENT_API_VERSION,
+                               PKG5_API_VERSION,
                                progress.CommandLineProgressTracker(),
                                None,
                                ICT.PKG_CLIENT_NAME)

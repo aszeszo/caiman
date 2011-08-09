@@ -63,6 +63,10 @@ POST_INSTALL_LOGS_DIR = '/var/sadm/system/logs'
 DC_LABEL = "DC specific"
 DC_PERS_LABEL = "DC specific persistent"
 
+# global version number for all of the consumers of the pkg5 API in the source
+# tree
+PKG5_API_VERSION = 66
+
 
 class CalledProcessError(subprocess.CalledProcessError):
     '''Expansion of subprocess.CalledProcessError that may optionally

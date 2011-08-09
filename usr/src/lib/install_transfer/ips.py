@@ -42,8 +42,9 @@ import pkg.misc as misc
 
 from pkg.client import global_settings
 from pkg.client.api import IMG_TYPE_ENTIRE, IMG_TYPE_PARTIAL
-from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
+from solaris_install import PKG5_API_VERSION
 from solaris_install.data_object import ObjectNotFoundError
+from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.engine import InstallEngine
 from solaris_install.transfer.info import Args
 from solaris_install.transfer.info import Destination
@@ -238,7 +239,6 @@ class AbstractIPS(Checkpoint):
     __metaclass__ = abc.ABCMeta
 
     # Variables associated with the package image
-    CLIENT_API_VERSION = 62
     DEF_REPO_URI = "http://pkg.opensolaris.org/release"
     DEF_PROG_TRACKER = progress.CommandLineProgressTracker()
 
@@ -387,7 +387,7 @@ class AbstractIPS(Checkpoint):
                         for pkg in trans_val.get(CONTENTS):
                             if "entire" in pkg:
                                 sysinst = api.ImageInterface(self.SYSTEM_IMAGE,
-                                                       self.CLIENT_API_VERSION,
+                                                       PKG5_API_VERSION,
                                                        self.prog_tracker,
                                                        False,
                                                        self.SYSTEM_CLIENT_NAME)
@@ -740,8 +740,7 @@ class AbstractIPS(Checkpoint):
 
             try:
                 self.api_inst = api.ImageInterface(self.dst,
-                    self.CLIENT_API_VERSION, self.prog_tracker, None,
-                    PKG_CLIENT_NAME)
+                    PKG5_API_VERSION, self.prog_tracker, None, PKG_CLIENT_NAME)
             except api_errors.VersionException, ips_err:
                 raise ValueError("The IPS API version specified, "
                                        + str(ips_err.received_version) +
@@ -773,7 +772,7 @@ class AbstractIPS(Checkpoint):
             try:
                 self.api_inst = api.image_create(
                     pkg_client_name=PKG_CLIENT_NAME,
-                    version_id=self.CLIENT_API_VERSION, root=self.dst,
+                    version_id=PKG5_API_VERSION, root=self.dst,
                     imgtype=self.completeness, is_zone=self.is_zone,
                     force=True, **self._image_args)
 
@@ -785,11 +784,11 @@ class AbstractIPS(Checkpoint):
 
                 if self.is_zone:
                     # If installing a zone image, attach its image as a
-                    # linked image to the global zone.  
+                    # linked image to the global zone.
 
                     # Get an api object for the current global system image.
                     gz_api_inst = api.ImageInterface(self.SYSTEM_IMAGE,
-                        self.CLIENT_API_VERSION, self.prog_tracker, False,
+                        PKG5_API_VERSION, self.prog_tracker, False,
                         self.SYSTEM_CLIENT_NAME)
 
                     # For a zone's linked image name, we construct it as:
@@ -799,8 +798,8 @@ class AbstractIPS(Checkpoint):
                     self.logger.debug("Linked image name: %s" % lin)
 
                     # Attach the zone image as a linked image.
-                    (ret, err) = gz_api_inst.attach_linked_child(lin, self.dst,
-                        force=True, li_md_only=True)
+                    (ret, err, _none) = gz_api_inst.attach_linked_child(lin,
+                        self.dst, force=True, li_md_only=True)
                     if err != None:
                         raise ValueError("Linked image error while attaching "
                                          "zone image '%s':\n%s" %
@@ -936,7 +935,7 @@ class TransferIPS(AbstractIPS):
                 raise ValueError("The following components are specified "
                                  "twice in the manifest: %s" % str(overlap))
 
-            # Update the image args with the current image args being 
+            # Update the image args with the current image args being
             # processed.
             self.image_args.update(args.arg_dict)
 

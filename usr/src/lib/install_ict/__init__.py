@@ -66,7 +66,6 @@ SYS = 'sys'
 VFSTAB = 'etc/vfstab'
 
 # Variables associated with the package image
-CLIENT_API_VERSION = 62
 DEF_REPO_URI = "http://pkg.oracle.com/solaris/release"
 PKG_CLIENT_NAME = "ICT"
 
