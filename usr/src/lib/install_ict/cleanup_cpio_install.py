@@ -30,7 +30,6 @@ import sys
 
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
-import pkg.client.progress as progress
 import solaris_install.ict as ICT
 
 from stat import S_IREAD, S_IRGRP, S_IROTH
@@ -40,7 +39,7 @@ from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.transfer.info import Args
 from solaris_install.transfer.info import CPIOSpec
 from solaris_install.transfer.info import IPSSpec
-from solaris_install.transfer.ips import RedirectIPSTrans
+from solaris_install.transfer.ips import InstallCLIProgressTracker
 from solaris_install.transfer.info import Software
 
 
@@ -207,7 +206,7 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
             try:
                 api_inst = api.ImageInterface(self.target_dir,
                                PKG5_API_VERSION,
-                               progress.CommandLineProgressTracker(),
+                               InstallCLIProgressTracker(self.logger),
                                None,
                                ICT.PKG_CLIENT_NAME)
 
@@ -278,21 +277,10 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
                         pkg_rval = api_inst.plan_uninstall(
                             pkg_rm_node.contents)
 
-                # Redirect stdout and stderr from the pkg image in order
-                # to capture the command line output from the pkg
-                # progress tracker into the transfer logs.
                 if pkg_rval:
-                    tmp_stdout = sys.stdout
-                    tmp_stderr = sys.stderr
-                    sys.stdout = sys.stderr = RedirectIPSTrans(self.logger)
-
                     api_inst.prepare()
                     api_inst.execute_plan()
                     api_inst.reset()
-
-                    # Release stdout and stderr
-                    sys.stdout = tmp_stdout
-                    sys.stderr = tmp_stderr
                 else:
                     self.logger.debug('Unable to uninstall install specific '
                                       'packages')
