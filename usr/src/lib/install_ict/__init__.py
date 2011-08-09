@@ -27,9 +27,8 @@
 '''Python package for icts'''
 
 __all__ = ["apply_sysconfig", "boot_archive", "cleanup_cpio_install",
-           "common", "create_snapshot", "device_config",
-           "generate_sc_profile", "initialize_smf",
-           "ips", "setup_swap", "transfer_files", "update_dumpadm"]
+           "common", "create_snapshot", "device_config", "initialize_smf",
+	   "ips", "setup_swap", "transfer_files", "update_dumpadm"]
 
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint
@@ -58,7 +57,6 @@ PROFILE_DEST = 'etc/svc/profile/site'
 PROFILE_SITE = 'etc/svc/profile/site.xml'
 REPO_DB = 'etc/svc/repository.db'
 SC_PROFILE = 'etc/svc/profile/sc_profile.xml'
-SC_TEMPLATE = 'usr/share/install/sc_template.xml'
 SVCCFG = '/usr/sbin/svccfg'
 SVCCFG_DTD = 'SVCCFG_DTD'
 SVCCFG_REPOSITORY = 'SVCCFG_REPOSITORY'

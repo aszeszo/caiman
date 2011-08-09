@@ -137,3 +137,11 @@ cc64-version:
 java-version:
 	@$(ECHO) Java compiler;				\
 	$(ECHO) Java not used in this build
+	
+# 
+# Target for reporting compiler path; nightly uses this to find dmake
+# 
+
+spro-vroot:
+	@$(ECHO) $(SPRO_VROOT)
+

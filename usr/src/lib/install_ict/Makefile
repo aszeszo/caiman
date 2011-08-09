@@ -29,22 +29,17 @@ PYMODS		= __init__.py \
 		  cleanup_cpio_install.py \
 		  create_snapshot.py \
 		  device_config.py \
-		  generate_sc_profile.py \
 		  initialize_smf.py \
 		  ips.py \
 		  setup_swap.py \
                   transfer_files.py \
 		  update_dumpadm.py
 
-PROFILESRC=	sc_template.xml
-
 PYCMODS		= $(PYMODS:%.py=%.pyc)
 
 ROOTPYMODS=     $(PYMODS:%=$(ROOTPYTHONVENDORSOLINSTALLICT)/%)
 
 ROOTPYCMODS=    $(PYCMODS:%=$(ROOTPYTHONVENDORSOLINSTALLICT)/%)
-
-PROFILES= $(PROFILESRC:%=$(ROOTUSRSHAREINSTALL)/%)
 
 CLOBBERFILES	= $(PYCMODS)
 CLEANFILES	= $(CLOBBERFILES)
@@ -73,8 +68,7 @@ install:	all .WAIT \
                 $(ROOTPYTHONVENDORSOLINSTALL) \
 		$(ROOTPYTHONVENDORSOLINSTALLICT) \
 		$(ROOTPYMODS) \
-		$(ROOTPYCMODS) \
-		$(ROOTUSRSHAREINSTALL) $(PROFILES)
+		$(ROOTPYCMODS)
 
 lint:		lint_SRCS
 

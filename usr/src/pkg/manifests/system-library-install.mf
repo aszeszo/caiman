@@ -199,10 +199,6 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/ict/device_config.pyc
 file \
-    path=usr/lib/python2.6/vendor-packages/solaris_install/ict/generate_sc_profile.py
-file \
-    path=usr/lib/python2.6/vendor-packages/solaris_install/ict/generate_sc_profile.pyc
-file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/ict/initialize_smf.py
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/ict/initialize_smf.pyc

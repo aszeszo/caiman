@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2010 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Configuration variables for the runtime environment of the nightly
@@ -150,9 +150,7 @@ export UT_NO_USAGE_TRACKING="1";
 #
 #BUILD_TOOLS=/opt;					export BUILD_TOOLS
 #ONBLD_TOOLS=/opt/onbld;				export ONBLD_TOOLS
-SPRO_ROOT=/opt/sunstudio12.1;				export SPRO_ROOT
-
-
+#SPRO_ROOT=/opt/SUNWspro;				export SPRO_ROOT
 
 # This goes along with lint - it is a series of the form "A [y|n]" which
 # means "go to directory A and run 'make lint'" Then mail me (y) the
