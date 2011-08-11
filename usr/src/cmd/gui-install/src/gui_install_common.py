@@ -55,7 +55,7 @@ GLADE_ERROR_MSG = _("Unable to retrieve a widget from Glade XML files.")
 IMAGE_DIR = SHARE_DIR + "/gui-install"
 
 # default install log file
-DEFAULT_LOG_LOCATION = "/tmp/install_log"
+DEFAULT_LOG_LOCATION = "/system/volatile/install_log"
 
 # final log location after installation
 LOG_LOCATION_FINAL = "var/sadm/system/logs/install_log"

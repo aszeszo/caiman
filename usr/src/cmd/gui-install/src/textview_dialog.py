@@ -23,7 +23,7 @@
 #
 
 '''
-TextView dialog for GUI Install app to show the install_log
+TextView dialog for GUI Install app to show the install log
 '''
 
 import pygtk
@@ -73,7 +73,7 @@ class TextViewDialog(object):
             path = DEFAULT_LOG_LOCATION
         msg = None
         if os.path.exists(path):
-            # read the entire DEFAULT_LOG_LOCATION (/tmp/install_log)
+            # read the entire DEFAULT_LOG_LOCATION
             with open(path) as fp:
                 msg = fp.read()
         else:
