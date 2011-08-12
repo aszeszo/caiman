@@ -83,7 +83,7 @@ class TestAutoInstallScript(unittest.TestCase):
         # To run tests bldenv script will have been run, thus we can assume
         # that $SRC environment variable will be set.
         testscript = os.environ['SRC'] +  \
-            "/cmd/auto-install/checkpoints/test/test_python_script.py"
+            "/cmd/auto-install/checkpoints/test/test_python_script"
         args = ["-n", "-s", "target-discovery", "-m", testscript]
 
         try:
