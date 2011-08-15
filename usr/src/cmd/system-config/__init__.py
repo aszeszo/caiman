@@ -181,7 +181,7 @@ CONFIG_PROFILE_DEST = os.path.join(PROFILE_PATH, CONFIG_PROFILE)
 UNCONFIG_PROFILE_DEST = os.path.join(PROFILE_PATH, UNCONFIG_PROFILE)
 
 # default locations
-DEFAULT_SC_PROFILE = "profile_sc_manifest.xml"
+DEFAULT_SC_PROFILE = "sc_profile.xml"
 DEFAULT_SC_LOCATION = os.path.join(VOLATILE_PATH, "profile",
                                    DEFAULT_SC_PROFILE)
 
