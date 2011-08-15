@@ -35,8 +35,8 @@ import socket
 import struct
 import sys
 import thread
-from threading import Timer
 
+import glib
 import g11nsvc
 import gtk
 
@@ -66,22 +66,29 @@ from solaris_install.transfer.info import Software, IPSSpec
 IMAGE_DIR = GLADE_DIR + '/installmessages/'
 
 # Image callback timeout
-IMAGES_TIMEOUT_SECONDS = 4.0
+IMAGES_TIMEOUT = 4000
 
 # Installation callback timeout
-INSTALLATION_TIMEOUT_SECONDS = 0.2
+INSTALLATION_TIMEOUT = 200
+
+# showurl callback timeout
+SHOWURL_TIMEOUT = 250
+
+# finish callback timeout
+FINISH_TIMEOUT = 250
 
 
 class ProgressScreen(BaseScreen):
     '''Progress Screen Class'''
     URLMAPPING = 'imageurl.txt'
-    SHOWURL_TIMEOUT_SECONDS = 0.25
 
     def __init__(self, builder, finishapp):
         super(ProgressScreen, self).__init__(builder)
         self.name = "Progress Screen"
         self.finishapp = finishapp
         self.timer = None
+        self.finish_timer = None
+        self.success = False
         self.fraction = 0.0
         self.message = None
         self.update_screen = False
@@ -149,9 +156,8 @@ class ProgressScreen(BaseScreen):
             self.image_index = 0
             self.installationimage.set_from_file(image_keys[self.image_index])
 
-            # setup the timer callback for INSTALLATION_TIMEOUT_SECONDS
-            self.timer = Timer(IMAGES_TIMEOUT_SECONDS, self.update_image)
-            self.timer.start()
+            # setup the timer callback for INSTALLATION_TIMEOUT
+            self.timer = glib.timeout_add(IMAGES_TIMEOUT, self.update_image)
 
         self.set_progress_fraction(0.0)
 
@@ -159,8 +165,11 @@ class ProgressScreen(BaseScreen):
 
         # start the installation after a few seconds to allow
         # the screen to refresh
-        timer = Timer(INSTALLATION_TIMEOUT_SECONDS, self.perform_installation)
-        timer.start()
+        timer = glib.timeout_add(INSTALLATION_TIMEOUT,
+                                 self.perform_installation)
+
+        self.finish_timer = glib.timeout_add(FINISH_TIMEOUT,
+                                             self.check_finished)
 
     def get_urlimage_dictionary(self, path):
         '''method to retrieve the image/url mappings from the
@@ -182,9 +191,7 @@ class ProgressScreen(BaseScreen):
         if not self.image_pause:
             self._show_next_image()
 
-        # setup the next timer
-        self.timer = Timer(IMAGES_TIMEOUT_SECONDS, self.update_image)
-        self.timer.start()
+        return True
 
     def set_progress_fraction(self, fraction):
         '''updates the progressbar with the current percent complete'''
@@ -268,9 +275,8 @@ class ProgressScreen(BaseScreen):
     def perform_installation(self):
         '''method which actually does the installation.'''
         # establish the timer that will update the screen messaging
-        timer = Timer(INSTALLATION_TIMEOUT_SECONDS,
-                      self._update_screen_message)
-        timer.start()
+        timer = glib.timeout_add(INSTALLATION_TIMEOUT,
+                                 self._update_screen_message)
 
         eng = InstallEngine.get_instance()
         errsvc.clear_error_list()
@@ -328,12 +334,13 @@ class ProgressScreen(BaseScreen):
         eng.execute_checkpoints(callback=self.install_callback)
         self.logger.info("Install Started")
 
+        return False
+
     def install_callback(self, status, failed_cps):
         '''This is the callback registered with the InstallEngine to
            be called when the checkpoints complete execution.'''
 
         self.logger.debug("Callback for installation called")
-        success = True
         # Ensure that execution succeeded
         if status != InstallEngine.EXEC_SUCCESS:
             self.logger.error("ERROR: Execution FAILED")
@@ -348,7 +355,7 @@ class ProgressScreen(BaseScreen):
 
                 self.logger.error("Checkpoint [%s] logged error: [%s]" % \
                     (failed_cp, err))
-            success = False
+            self.success = False
         else:
             eng = InstallEngine.get_instance()
             doc = eng.data_object_cache
@@ -375,21 +382,30 @@ class ProgressScreen(BaseScreen):
 
             self.logger.info("INSTALL FINISHED SUCCESSFULLY!")
             self.set_progress_fraction(1.0)
+            self.success = True
             self.install_complete = True
 
-        self.finishapp(success=success)
+    def check_finished(self):
+        '''method to check if the installation has completed'''
+        if self.install_complete:
+            self.finishapp(success=self.success)
+            return False
+
+        return True
 
     def go_back(self):
         '''method from the super that deals with
            the back button being pressed'''
         # changing screens stop the timer
-        self.timer.cancel()  # should really never happen
+        glib.source_remove(self.timer)  # should really never happen
+        glib.source_remove(self.finish_timer)
 
     def validate(self):
         '''method from the super that deals with the update
            button being pressed'''
         # changing screens stop the timer
-        self.timer.cancel()
+        glib.source_remove(self.timer)
+        glib.source_remove(self.finish_timer)
 
     #--------------------------------------------------------------------------
     # Signal handler methods
@@ -427,8 +443,7 @@ class ProgressScreen(BaseScreen):
         url = self.urlimage_dictionary[image_keys[index]]
         if url:
             self.show_url = url
-            timer = Timer(self.SHOWURL_TIMEOUT_SECONDS, self._show_url_cb)
-            timer.start()
+            timer = glib.timeout_add(SHOWURL_TIMEOUT, self._show_url_cb)
 
     #--------------------------------------------------------------------------
     # Private methods
@@ -441,6 +456,8 @@ class ProgressScreen(BaseScreen):
             Popen([FIREFOX, self.show_url])
             self.show_url = None
 
+        return False
+
     def _update_screen_message(self):
         ''' Updates the information on the screen.
             if update_screen is True then it will update the percent and
@@ -451,9 +468,8 @@ class ProgressScreen(BaseScreen):
             self.installationinfolabel.set_label(self.message)
             self.set_progress_fraction(self.fraction)
             self.update_screen = False
-        timer = Timer(INSTALLATION_TIMEOUT_SECONDS,
-                      self._update_screen_message)
-        timer.start()
+
+        return True
 
     def _show_prev_image(self):
         ''' Show the next image from image_names_list.
