@@ -52,8 +52,9 @@ import logging
 import os
 
 import pkg.client.api
-import pkg.client.progress
+import pkg.client.imageconfig
 import pkg.client.imagetypes
+import pkg.client.progress
 
 import osol_install.auto_install.installadm_common as com
 
@@ -234,6 +235,7 @@ class InstalladmPkgImage(InstalladmImage):
             arch = root_img.img.get_variants()[cls.ARCH_VARIANT]
         variants = {cls.ARCH_VARIANT: arch}
         
+        props = {pkg.client.imageconfig.FLUSH_CONTENT_CACHE: True}
         pkgimg = pkg.client.api.image_create(
                         cls._PKG_CLIENT_NAME,
                         PKG5_API_VERSION,
@@ -241,6 +243,7 @@ class InstalladmPkgImage(InstalladmImage):
                         pkg.client.imagetypes.IMG_USER,
                         is_zone=False,
                         progtrack=tracker,
+                        props=props,
                         variants=variants
                         )
 
