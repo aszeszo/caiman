@@ -31,9 +31,9 @@ import logging
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig import _, SCI_HELP
 import solaris_install.sysconfig.profile
-from solaris_install.sysconfig.profile.user_info import UserInfo, \
-     UserInfoContainer, UsernameInvalid, LoginInvalid, validate_username, \
-     validate_login
+from solaris_install.sysconfig.profile.user_info import LoginInvalid, \
+     PasswordInvalid, UserInfo, UserInfoContainer, UsernameInvalid, \
+     validate_login, validate_username, validate_password
 from terminalui.base_screen import BaseScreen, UIMessage
 from terminalui.edit_field import EditField, PasswordField
 from terminalui.error_window import ErrorWindow
@@ -64,17 +64,6 @@ class UserScreen(BaseScreen):
     NAME_LABEL = _("Your real name:")
     USERNAME_LABEL = _("Username:")
     USER_PASS_LABEL = _("User password:")
-    
-    NO_ROOT_HEADER = _("No Root Password")
-    NO_ROOT_TEXT = _("A root password has not been defined. The system is "
-                     "completely unsecured.\n\nChoose Cancel to set a "
-                     "root password.")
-    NO_USER_HEADER = _("No User Password")
-    NO_USER_TEXT = _("A user password has not been defined. The user account "
-                     "has administrative privileges so the system is "
-                     "unsecured.\n\nChoose Cancel to set a user password.")
-    CONTINUE_BTN = _("Continue")
-    CANCEL_BTN = _("Cancel")
     
     HELP_DATA = (SCI_HELP + "/%s/users.txt", _("Users"))
     
@@ -293,12 +282,6 @@ class UserScreen(BaseScreen):
     
     def validate(self):
         '''Check for mismatched passwords, bad login names, etc.'''
-        if not self.root_pass_edit.compare(self.root_confirm_edit):
-            raise UIMessage(_("Root passwords don't match"))
-        
-        if not self.user_pass_edit.compare(self.user_confirm_edit):
-            raise UIMessage(_("User passwords don't match"))
-        
         if self.user_pass_edit.modified:
             user_pass_set = bool(self.user_pass_edit.get_text())
         else:
@@ -311,34 +294,40 @@ class UserScreen(BaseScreen):
         
         login_name = self.username_edit.get_text()
         LOGGER.debug("login_name=%s", login_name)
-        login_valid(self.username_edit)
         real_name = self.real_name_edit.get_text()
-        
         LOGGER.debug("real_name=%s", real_name)
-        # If password or real_name has been entered, require a login name
         
-        if not login_name:
+        # Note: the Root and User password fields may be filled with
+        # asterisks if the user previously invoked this screen.  Therefore,
+        # if not empty we check their modified flags before validating the
+        # contents.
+
+        # Root password is mandatory and, if modified, must be valid
+        if not root_pass_set or self.root_pass_edit.modified:
+            pass_valid(self.root_pass_edit,
+                msg_prefix=UserScreen.ROOT_LABEL + " ")
+        # Root password confirmation must match original Root password
+        if not self.root_pass_edit.compare(self.root_confirm_edit):
+            raise UIMessage(_("Root passwords don't match"))
+
+        # Username (if specified) must be valid
+        login_valid(self.username_edit)
+
+        if login_name:
+            # If Username was entered then:
+            # - User password is mandatory and, if modified, must be valid
+            # - User password confirmation must match original User password
+            if not user_pass_set or self.user_pass_edit.modified:
+                pass_valid(self.user_pass_edit,
+                    msg_prefix=UserScreen.USER_PASS_LABEL + " ")
+            if not self.user_pass_edit.compare(self.user_confirm_edit):
+                raise UIMessage(_("User passwords don't match"))
+        else:
+            # If either Real name or User password are specified then
+            # Username must also be specified
             if real_name or user_pass_set:
                 raise UIMessage(_("Enter username or clear all user "
                                   "account fields"))
-        color = self.main_win.theme.header
-        if not root_pass_set:
-            continue_anyway = self.main_win.pop_up(UserScreen.NO_ROOT_HEADER,
-                                                   UserScreen.NO_ROOT_TEXT,
-                                                   BaseScreen.CANCEL_BUTTON,
-                                                   UserScreen.CONTINUE_BTN,
-                                                   color=color)
-            if not continue_anyway:
-                raise UIMessage()
-
-        if login_name and not user_pass_set:
-            continue_anyway = self.main_win.pop_up(UserScreen.NO_USER_HEADER,
-                                                   UserScreen.NO_USER_TEXT,
-                                                   BaseScreen.CANCEL_BUTTON,
-                                                   UserScreen.CONTINUE_BTN,
-                                                   color=color)
-            if not continue_anyway:
-                raise UIMessage()
 
 
 def username_valid(edit_field):
@@ -356,6 +345,15 @@ def login_valid(edit_field):
         validate_login(edit_field.get_text())
     except LoginInvalid, reason:
         raise UIMessage(reason[0])
+    return True
+
+
+def pass_valid(edit_field, msg_prefix=""):
+    '''Validate password'''
+    try:
+        validate_password(edit_field.get_text())
+    except PasswordInvalid, reason:
+        raise UIMessage(msg_prefix + reason[0])
     return True
 
 

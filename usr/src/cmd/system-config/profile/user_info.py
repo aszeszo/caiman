@@ -281,7 +281,7 @@ def validate_password(password):
     '''validates the password entered'''
     # check the length
     if not password or len(password) <= 0:
-        raise PasswordInvalid(_('User password must be entered.'))
+        raise PasswordInvalid(_('Password must be entered.'))
     elif len(password) < 6:
         raise PasswordInvalid(_('Password must contain at least 6 '
                                 'characters.'))
