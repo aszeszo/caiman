@@ -1749,3 +1749,18 @@ class TestInUse(unittest.TestCase):
         errsvc.clear_error_list()
         s.delete()
         self.assertFalse(errsvc._ERRORS)
+
+
+class TestSize(unittest.TestCase):
+
+    def test_add_size(self):
+        size1 = Size("1024mb")
+        size2 = Size("1024mb")
+        self.assertEqual(size1 + size2, Size("2gb"))
+        size1 += Size("3gb")
+        self.assertEqual(size1, Size("4gb"))
+
+    def test_sub_size(self):
+        size1 = Size("4096mb")
+        size2 = Size("2048mb")
+        self.assertEqual(size1 - size2, Size("2gb"))

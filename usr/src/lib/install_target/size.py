@@ -181,3 +181,19 @@ class Size(object):
             return 0
 
         raise TypeError("Size value is being compared to non-Size value")
+
+    def __add__(self, other):
+        """ eumulated method for adding two Size objects
+        """
+        return Size(str(self.byte_value + other.byte_value) + Size.byte_units)
+
+    def __sub__(self, other):
+        """ eumulated method for subtracting two Size objects
+        """
+        return Size(str(self.byte_value - other.byte_value) + Size.byte_units)
+
+    def __iadd__(self, other):
+        """ eumulated method for the augmented assignment for +=
+        """
+        self.byte_value += other.byte_value
+        return self
