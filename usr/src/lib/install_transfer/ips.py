@@ -426,6 +426,11 @@ class AbstractIPS(Checkpoint):
                                         (target_entire_pi.fmri))
             self.check_cancel_event()
 
+        except api_errors.CatalogRefreshException, cre:
+            '''Handle CatalogRefreshException especially since it doesn't
+               pretty-print it's contents in a __str__() impl.
+            '''
+            raise RuntimeError(self.catalog_failures_to_str(cre))
         finally:
             self._cleanup()
 
@@ -1073,6 +1078,29 @@ class TransferIPS(AbstractIPS):
                     self._origin = [self.DEF_REPO_URI]
                     self.logger.debug("    Origin Info: %s", self.DEF_REPO_URI)
                     self._mirror = None
+
+    def catalog_failures_to_str(self, cre):
+        '''Convert a CatalogRefreshException into a formatted string.
+
+           This is based on the IPS pkg/client.py display_catalog_failures()
+           implementation.
+        '''
+        total = cre.total
+        succeeded = cre.succeeded
+
+        lines = list()
+        lines.append("Error refreshing publishers, %s/%s "
+                     "catalogs successfully updated:" %
+                     (succeeded, total))
+
+        for pub, err in cre.failed:
+                lines.append("")
+                lines.append(str(err))
+
+        if cre.errmessage:
+                lines.append(cre.errmessage)
+
+        return "\n".join(lines)
 
 
 class TransferIPSAttr(AbstractIPS):
