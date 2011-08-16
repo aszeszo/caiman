@@ -140,6 +140,7 @@ class AIPublishPackages(Checkpoint):
         generate = run(cmd)
         manifest = [generate.stdout]
 
+        manifest.append("depend fmri=pkg:/system/core-os type=exclude\n")
         arch = platform.processor()
         manifest.append("set name=variant.arch value=%s\n" % arch)
         manifest.append("set name=%s value=%s variant.arch=%s\n" %
