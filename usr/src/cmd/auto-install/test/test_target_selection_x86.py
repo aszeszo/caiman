@@ -2767,7 +2767,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                   <partition name="1" action="create" part_type="191">
                     <slice name="0" action="create" is_swap="false"
                      in_zpool="ai_test_rpool" in_vdev="vdev">
-                    <size val="6GB"/>
+                    <size val="10GB"/>
                     </slice>
                   </partition>
               </disk>
@@ -2787,10 +2787,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
-        ........<size val="682m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<zvol name="dump" action="create" use="dump">
-        ........<size val="341m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<be name="ai_test_solaris"/>
         ....</zpool>
@@ -2809,7 +2809,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="390714368secs" start_sector="512"/>
         ......<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="12582400secs" start_sector="512"/>
+        ........<size val="20971008secs" start_sector="512"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -3319,6 +3319,59 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
         ........<size val="390713344secs" start_sector="512"/>
+        ......</slice>
+        ....</partition>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_default_small_slice_size(self):
+        '''Test Success if creating a default small sized slice'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="true">
+                <disk_name name="c97d0" name_type="ctd"/>
+                <partition action="create" name="1" part_type="191">
+                  <slice name="0" action="create"
+                    is_swap="false" in_zpool="ai_test_rpool">
+                    <size val="185gb"/>
+                  </slice>
+                  <slice name="1" action="create"
+                    is_swap="false"/>
+                </partition>
+              </disk>
+              <logical noswap="true" nodump="true">
+                <zpool name="ai_test_rpool" is_root="true"/>
+              </logical>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c97d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_keyword key="boot_disk"/>
+        ....<partition action="create" name="1" part_type="191">
+        ......<size val="390714880secs" start_sector="512"/>
+        ......<slice name="0" action="create" force="false" is_swap="false" \
+        in_zpool="ai_test_rpool" in_vdev="vdev">
+        ........<size val="387972608secs" start_sector="512"/>
+        ......</slice>
+        ......<slice name="1" action="create" force="false" is_swap="false">
+        ........<size val="2741248secs" start_sector="387973632"/>
         ......</slice>
         ....</partition>
         ..</disk>

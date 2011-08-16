@@ -285,7 +285,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
-        ......<size val="143348800secs" start_sector="512"/>
+        ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
         </target>
@@ -1163,7 +1163,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 <disk_name name_type="ctd" name="c99t0d0"/>
                 <slice name="0" action="create" is_swap="false"
                  in_zpool="ai_test_rpool" in_vdev="vdev">
-                  <size val="6GB"/>
+                  <size val="10GB"/>
                 </slice>
               </disk>
               <logical>
@@ -1182,10 +1182,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
-        ........<size val="682m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<zvol name="dump" action="create" use="dump">
-        ........<size val="341m"/>
+        ........<size val="\d+m"/>
         ......</zvol>
         ......<be name="ai_test_solaris"/>
         ....</zpool>
@@ -1200,7 +1200,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
-        ......<size val="12582912secs" start_sector="512"/>
+        ......<size val="20971520secs" start_sector="512"/>
         ....</slice>
         ..</disk>
         </target>
@@ -1390,6 +1390,54 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<slice name="1" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
+        ....</slice>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_default_small_slice_size(self):
+        '''Test Success if creating a default small sized slice'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="true">
+                <disk_name name="c99t1d0" name_type="ctd"/>
+                <slice name="0" action="create"
+                  is_swap="false" in_zpool="ai_test_rpool">
+                  <size val="68gb"/>
+                </slice>
+                <slice name="1" action="create"
+                  is_swap="false"/>
+              </disk>
+              <logical noswap="true" nodump="true">
+                <zpool name="ai_test_rpool" is_root="true"/>
+              </logical>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
+        ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
+        dev_size="143349312secs"/>
+        ....<slice name="0" action="create" force="false" is_swap="false" \
+        in_zpool="ai_test_rpool" in_vdev="vdev">
+        ......<size val="142605824secs" start_sector="512"/>
+        ....</slice>
+        ....<slice name="1" action="create" force="false" is_swap="false">
+        ......<size val="742400secs" start_sector="142606848"/>
         ....</slice>
         ..</disk>
         </target>

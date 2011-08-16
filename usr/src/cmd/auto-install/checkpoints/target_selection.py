@@ -1199,12 +1199,12 @@ class TargetSelection(Checkpoint):
                 if not swap_added and \
                     not logical.noswap and len(self._swap_zvol_map) == 0:
                     self.logger.warning("Failed to add default swap zvol to "
-                        "root pool")
+                        "root pool, possibly because of insufficient space.")
 
                 if not dump_added and \
                     not logical.nodump and self._dump_zvol is None:
                     self.logger.warning("Failed to add default dump zvol to "
-                        "root pool")
+                        "root pool, possibly because of insufficient space.")
 
     def __get_unique_dataset_name(self, zpool, dataset_name):
         '''
@@ -1236,7 +1236,7 @@ class TargetSelection(Checkpoint):
                zvol_name : Str zvol name
                zvol_use : Str zvol usage, "swap" or "dump"
                zvol_size : Size Object
-               create_failure_ok: indicate whether zvol creation failure 
+               create_failure_ok: indicate whether zvol creation failure
                                   can be ignored.  Only used for "dump" zvol.
         '''
         zvol = zpool.add_zvol(zvol_name, int(zvol_size.get(Size.mb_units)),
@@ -1381,10 +1381,10 @@ class TargetSelection(Checkpoint):
                             be.mountpoint = self.be_mountpoint
 
             if not logical.noswap and not found_swap:
-                raise SelectionError("At least one swap Zvol must exist.")
+                self.logger.warning("Swap zvol not being created.")
 
             if not logical.nodump and not found_dump:
-                raise SelectionError("At least one dump Zvol must exist.")
+                self.logger.warning("Dump zvol not being created.")
 
             if not found_root_pool:
                 raise SelectionError("No root pool specified.")
@@ -2265,8 +2265,6 @@ class TargetSelection(Checkpoint):
                         # Will be skipped if searching for a gap to insert a
                         # partition of a given size succeeds.
                         if largest_gap is None or \
-                           largest_gap.size < \
-                           self.controller.minimum_target_size or \
                            largest_gap.size < new_partition.size:
                             raise SelectionError("Failed to find gap on disk"
                                 " of sufficient size to put partition"
@@ -2475,8 +2473,7 @@ class TargetSelection(Checkpoint):
                         # Will be skipped if searching for a gap to insert a
                         # slice of a given size succeeds.
                         if largest_gap is None or \
-                           largest_gap.size < \
-                           self.controller.minimum_target_size:
+                           largest_gap.size < new_slice.size:
                             raise SelectionError("Failed to find gap on disk"
                                 " of sufficient size to put slice"
                                 " %s in to" % (new_slice.name))
