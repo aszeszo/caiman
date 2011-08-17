@@ -46,11 +46,14 @@ def get_current_arch_string():
 class LoggerMixin(object):
 
     logger = logging.getLogger('bootmgmt')
+    debug_enabled = os.environ.get('BOOTMGMT_DEBUG', None) is not None
 
-    if not os.environ.get('BOOTMGMT_DEBUG', None) is None:
+    if debug_enabled:
         logging.basicConfig(level=logging.DEBUG)
 
     @classmethod
     def _debug(cls, log_msg):
+        if not cls.debug_enabled:
+            return
         func = inspect.stack()[1][3]
         LoggerMixin.logger.debug(cls.__name__ + '.' + func + ': ' + log_msg)
