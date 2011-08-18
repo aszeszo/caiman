@@ -591,7 +591,7 @@ class Filesystem(DataObject):
 
             if not dry_run:
                 Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+                                 logger=ILN, env={"LC_ALL": "C"})
 
     def destroy(self, dry_run, snapshot=None, recursive=False):
         """ destroy the filesystem
@@ -720,7 +720,7 @@ class Zvol(DataObject):
 
             if not dry_run:
                 Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+                                 logger=ILN, env={"LC_ALL": "C"})
 
                 # check the "use" attribute
                 if self.use == "swap":

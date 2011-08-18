@@ -448,10 +448,11 @@ class TargetDiscovery(Checkpoint):
             # this zpool
             self.set_vdev_map(zpool)
 
-            # for each zpool, get all of its datasets
+            # for each zpool, get all of its datasets.  Switch to the C locale
+            # so we don't have issues with LC_NUMERIC settings
             cmd = [ZFS, "list", "-r", "-H", "-o",
                    "name,type,used,mountpoint", zpool_name]
-            p = run(cmd)
+            p = run(cmd, env={"LC_ALL": "C"})
 
             # walk each dataset and create the appropriate DOC objects for
             # each.  Skip the first line of list output, as the top level
@@ -475,9 +476,7 @@ class TargetDiscovery(Checkpoint):
                     obj.mountpoint = mountpoint
                 elif ds_type == "volume":
                     obj = Zvol(name)
-                    # the output from zfs list returns values like "37G" and
-                    # "3.2M".  The Size() class expects "37GB" and "3.2MB".
-                    obj.size = Size(ds_size + "B")
+                    obj.size = Size(ds_size)
 
                     # check for swap/dump.  If there's a match, set the zvol
                     # 'use' attribute and the noswap/nodump attribute of

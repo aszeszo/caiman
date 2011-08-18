@@ -26,6 +26,7 @@
 Screen for selecting to use whole disk, or a partition/slice on the disk
 '''
 
+import locale
 import logging
 import platform
 
@@ -33,7 +34,7 @@ from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target.physical import Disk, Partition, Slice
 from solaris_install.target.size import Size
-from solaris_install.text_install import _, RELEASE, TUI_HELP
+from solaris_install.text_install import _, RELEASE, TUI_HELP, LOCALIZED_GB
 from solaris_install.text_install.disk_window import DiskWindow
 from solaris_install.text_install.ti_target_utils import \
     get_desired_target_disk, get_solaris_partition, dump_doc, ROOT_POOL
@@ -53,9 +54,10 @@ class FDiskPart(BaseScreen):
     '''
     
     BOOT_TEXT = _("Boot")
-    HEADER_FDISK = _("Fdisk Partitions: %(size).1fGB %(type)s %(bootable)s")
+    HEADER_FDISK = _("Fdisk Partitions: ")
     HEADER_PART_SLICE = _("Solaris Partition Slices")
-    HEADER_SLICE = _("Solaris Slices: %(size).1fGB %(type)s %(bootable)s")
+    HEADER_SLICE = _("Solaris Slices: ")
+    HEADER_TYPE_BOOTABLE = _(" %(type)s %(bootable)s")
     PARAGRAPH_FDISK = _("%(release)s can be installed on the whole "
                         "disk or a partition on the disk.") % RELEASE
     PARAGRAPH_PART_SLICE = _("%(release)s can be installed in the "
@@ -188,11 +190,15 @@ class FDiskPart(BaseScreen):
                 bootable = FDiskPart.BOOT_TEXT
             else:
                 bootable = u""
-            disk_size_gb = self.disk.disk_prop.dev_size.get(Size.gb_units)
-            header_text = self.header_text % \
-                            {"size": disk_size_gb,
-                             "type": self.disk.disk_prop.dev_type,
-                             "bootable": bootable}
+            disk_size_gb_str = locale.format("%.1f",
+                self.disk.disk_prop.dev_size.get(Size.gb_units)) + LOCALIZED_GB
+
+            type_bootable_str = FDiskPart.HEADER_TYPE_BOOTABLE % \
+                {"type": self.disk.disk_prop.dev_type,
+                 "bootable": bootable}
+
+            header_text = self.header_text + disk_size_gb_str + \
+                type_bootable_str
             self.main_win.set_header_text(header_text)
 
         y_loc = 1

@@ -27,6 +27,7 @@ Display a summary of the user's selections
 '''
 
 import curses
+import locale
 import logging
 
 import solaris_install.sysconfig.profile
@@ -39,7 +40,7 @@ from solaris_install.sysconfig.profile.network_info import NetworkInfo
 from solaris_install.sysconfig.profile.user_info import UserInfo
 from solaris_install.target.libdiskmgt import const as libdiskmgt_const
 from solaris_install.target.size import Size
-from solaris_install.text_install import _, RELEASE, TUI_HELP
+from solaris_install.text_install import _, RELEASE, TUI_HELP, LOCALIZED_GB
 from solaris_install.text_install.ti_target_utils import \
     get_desired_target_disk, get_solaris_partition, get_solaris_slice
 from terminalui.action import Action
@@ -224,32 +225,39 @@ class SummaryScreen(BaseScreen):
         doc = InstallEngine.get_instance().doc
         disk = get_desired_target_disk(doc)
         
-        format_dict = dict()
-        disk_string = [_("Disk: %(disk-size).1fGB %(disk-type)s")]
-        format_dict['disk-size'] = disk.disk_prop.dev_size.get(Size.gb_units)
-        format_dict['disk-type'] = disk.disk_prop.dev_type
+        disk_string = list()
+
+        disk_size_str = locale.format("%.1f",
+            disk.disk_prop.dev_size.get(Size.gb_units)) + LOCALIZED_GB
+
+        locale_disk_str = _("Disk: ") + disk_size_str + " " + \
+            str(disk.disk_prop.dev_type)
+        disk_string.append(locale_disk_str)
 
         if not disk.whole_disk:
 
             part_data = get_solaris_partition(doc)
-
             if part_data is not None:
-                disk_string.append(\
-                    _("Partition: %(part-size).1fGB %(part-type)s"))
-                format_dict['part-size'] = part_data.size.get(Size.gb_units)
-                part_type = libdiskmgt_const.PARTITION_ID_MAP[\
-                    part_data.part_type]
-                format_dict['part-type'] = part_type
+                part_size_str = locale.format("%.1f",
+                    part_data.size.get(Size.gb_units)) + LOCALIZED_GB
+
+                locale_part_str = _("Partition: ") + part_size_str + " " +\
+                    str(libdiskmgt_const.PARTITION_ID_MAP[part_data.part_type])
+                disk_string.append(locale_part_str)
         
             if part_data is None or not part_data.in_zpool:
                 slice_data = get_solaris_slice(doc)
-                disk_string.append(_("Slice %(slice-num)s: %(slice-size).1fGB"
-                                     " %(pool)s"))
-                format_dict['slice-num'] = slice_data.name
-                format_dict['slice-size'] = slice_data.size.get(Size.gb_units)
-                format_dict['pool'] = slice_data.in_zpool
-        
-        return "\n".join(disk_string) % format_dict
+
+                slice_num_str = _("Slice %s: ") % slice_data.name
+
+                slice_size_str = locale.format("%.1f",
+                    slice_data.size.get(Size.gb_units)) + LOCALIZED_GB
+
+                locale_slice_str = slice_num_str + slice_size_str + " " +\
+                    str(slice_data.in_zpool)
+                disk_string.append(locale_slice_str)
+
+        return "\n".join(disk_string)
     
     def get_tz_summary(self):
         '''Return a string summary of the timezone selection'''

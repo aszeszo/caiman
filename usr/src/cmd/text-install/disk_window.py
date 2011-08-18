@@ -29,6 +29,7 @@ UI component for displaying (and editing) partition & slice data
 
 
 import curses
+import locale
 import logging
 import platform
 
@@ -354,10 +355,9 @@ class DiskWindow(InnerWindow):
                              self.headers[field][0] - 1)
                 x_loc += self.headers[field][0]
                 field += 1
-            win.add_text("%*.1f" % (self.headers[field][0] - 1,
-                                    next_data.size.get(Size.gb_units)),
-                                    y_loc, x_loc,
-                                    self.headers[field][0] - 1)
+            win.add_text(locale.format("%*.1f", (self.headers[field][0] - 1,
+                next_data.size.get(Size.gb_units))), y_loc, x_loc,
+                self.headers[field][0] - 1)
             x_loc += self.headers[field][0]
             y_loc += 1
             field += 1
@@ -454,7 +454,8 @@ class DiskWindow(InnerWindow):
                                        part_info.name)
         part_field.set_text(desc_text)
         edit_field = part_field.all_objects[0]
-        edit_field.set_text("%.1f" % part_info.size.get(Size.gb_units))
+        edit_field.set_text(locale.format("%.1f", 
+                                          part_info.size.get(Size.gb_units)))
         self.mark_if_destroyed(part_field)
         self._update_edit_field(part_info, part_field, edit_field)
 
@@ -558,8 +559,8 @@ class DiskWindow(InnerWindow):
         y_loc = item.area.y_loc
         part = item.data_obj
         max_space = part.get_max_size()
-        max_space = "%*.1f" % (self.headers[field][0],
-                               max_space.get(Size.gb_units))
+        max_space = locale.format("%*.1f", (self.headers[field][0],
+                                             max_space.get(Size.gb_units)))
         win.add_text(max_space, y_loc, x_loc)
     
     def find_part_field(self, part_info):
@@ -771,26 +772,27 @@ def decimal_valid(edit_field, disk_win=None):
 
     '''
     text = edit_field.get_text().lstrip()
+    radixchar = locale.localeconv()['decimal_point']
     if text.endswith(" "):
-        raise UIMessage(_('Only the digits 0-9 and "." are valid.'))
-    vals = text.split(".")
+        raise UIMessage(_('Only the digits 0-9 and %s are valid.') % radixchar)
+    vals = text.split(radixchar)
     if len(vals) > 2:
-        raise UIMessage(_('A number can only have one "."'))
+        raise UIMessage(_('A number can only have one %s') % radixchar)
     try:
         if len(vals[0]) > 0:
             int(vals[0])
         if len(vals) > 1 and len(vals[1]) > 0:
             int(vals[1])
     except ValueError:
-        raise UIMessage(_('Only the digits 0-9 and "." are valid.'))
+        raise UIMessage(_('Only the digits 0-9 and %s are valid.') % radixchar)
     if len(vals) > 1 and len(vals[1]) > 1:
         raise UIMessage(_("Size can be specified to only one decimal place."))
     if disk_win is not None:
-        text = text.rstrip(".")
+        text = text.rstrip(radixchar)
         if not text:
             text = "0"
 
-        new_size = Size(text + Size.gb_units)
+        new_size = Size(str(locale.atof(text)) + Size.gb_units)
         max_size = edit_field.data_obj.get_max_size()
         
         # When comparing sizes, check only to the first decimal place,
@@ -800,10 +802,11 @@ def decimal_valid(edit_field, disk_win=None):
         new_size_rounded = round(new_size.get(Size.gb_units), 1)
         max_size_rounded = round(max_size.get(Size.gb_units), 1)
         if new_size_rounded > max_size_rounded:
-            raise UIMessage(_("The new size (%(size).1f) is greater than "
-                              "the available space (%(avail).1f)") %
-                              {"size": new_size_rounded,
-                               "avail": max_size_rounded})
+            locale_new_size = locale.format("%.1f", new_size_rounded)
+            locale_max_size = locale.format("%.1f", max_size_rounded)
+            msg = _("The new size ") + locale_new_size + \
+                _(" is greater than the available space ") + locale_max_size
+            raise UIMessage(msg)
     return True
 
 
@@ -813,7 +816,7 @@ def on_exit_edit(edit_field, disk_win=None):
     text = edit_field.get_text()
     if not text.strip():
         text = "0"
-    edit_field.set_text("%.1f" % float(text))
+    edit_field.set_text("%.1f" % locale.atof(text))
 
     part_order = disk_win.ui_obj.get_parts_in_use().index(edit_field.data_obj)
     LOGGER.debug("Part being resized is at index: %s", part_order)
@@ -821,7 +824,7 @@ def on_exit_edit(edit_field, disk_win=None):
     new_size_text = text.strip()
 
     LOGGER.debug("Resizing text=%s", new_size_text)
-    new_size = Size(new_size_text + Size.gb_units)
+    new_size = Size(str(locale.atof(new_size_text)) + Size.gb_units)
     old_size = edit_field.data_obj.size
 
     new_size_byte = new_size.get(Size.byte_units)
@@ -830,8 +833,8 @@ def on_exit_edit(edit_field, disk_win=None):
     precision = Size(UI_PRECISION).get(Size.byte_units)
 
     if abs(new_size_byte - old_size_byte) > precision:
-        resized_obj = edit_field.data_obj.doc_obj.resize(float(new_size_text),
-                                           size_units=Size.gb_units)
+        resized_obj = edit_field.data_obj.doc_obj.resize(
+            new_size.get(Size.gb_units), size_units=Size.gb_units)
 
         if isinstance(resized_obj, Partition):
             resized_obj.in_zpool = ROOT_POOL 

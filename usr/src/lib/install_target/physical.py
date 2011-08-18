@@ -266,7 +266,7 @@ class Partition(DataObject):
 
             # if the size is 0 (for a starting sector of 0) or 1 (for adjacent
             # children), there's no gap, so skip it
-            if size not in [0, 1]:
+            if size not in [0, 1] and size > self.parent.geometry.cylsize:
                 # do not correct for holes that start at 0
                 if usage[i] == 0:
                     holes.append(HoleyObject(

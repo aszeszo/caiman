@@ -27,13 +27,14 @@ Screens and functions to display a list of disks to the user.
 '''
 
 import curses
+import locale
 import logging
 import platform
 
 import osol_install.errsvc as errsvc
 import osol_install.liberrsvc as liberrsvc
 from solaris_install.text_install import _, RELEASE, TUI_HELP, \
-    TARGET_DISCOVERY, TRANSFER_PREP
+    TARGET_DISCOVERY, TRANSFER_PREP, LOCALIZED_GB
 from solaris_install.text_install.disk_window import DiskWindow, \
     get_minimum_size, get_recommended_size
 from solaris_install.engine import InstallEngine
@@ -67,8 +68,8 @@ class DiskScreen(BaseScreen):
     
     HEADER_TEXT = _("Disks")
     PARAGRAPH = _("Where should %(release)s be installed?") % RELEASE
-    SIZE_TEXT = _("Recommended size:  %(recommend).1fGB      "
-                  "Minimum size: %(min).1fGB")
+    REC_SIZE_TEXT = _("Recommended size: ")
+    MIN_SIZE_TEXT = _("    Minimum size: ")
     DISK_SEEK_TEXT = _("Seeking disks on system")
     FOUND_x86 = _("The following partitions were found on the disk.")
     FOUND_SPARC = _("The following slices were found on the disk.")
@@ -176,10 +177,13 @@ class DiskScreen(BaseScreen):
     def get_size_line(self):
         '''Returns the line of text displaying the min/recommended sizes'''
         if self._size_line is None:
-            rec_size = self.recommended_size.get(Size.gb_units)
-            min_size = self.minimum_size.get(Size.gb_units)
-            size_dict = {"recommend": rec_size, "min": min_size}
-            self._size_line = DiskScreen.SIZE_TEXT % size_dict
+            rec_size_str = locale.format("%.1f",
+                self.recommended_size.get(Size.gb_units)) + LOCALIZED_GB
+            min_size_str = locale.format("%.1f",
+                self.minimum_size.get(Size.gb_units)) + LOCALIZED_GB
+            self._size_line = DiskScreen.REC_SIZE_TEXT + rec_size_str + \
+                DiskScreen.MIN_SIZE_TEXT + min_size_str
+
         return self._size_line
     
     size_line = property(get_size_line)
@@ -342,7 +346,7 @@ class DiskScreen(BaseScreen):
                 type_field = " " * len_type
             disk_text_fields.append(type_field)
             disk_size = disk.disk_prop.dev_size.get(Size.gb_units)
-            size_field = "%*.1f" % (len_size, disk_size)
+            size_field = locale.format("%*.1f", (len_size, disk_size))
             disk_text_fields.append(size_field)
             if disk.is_boot_disk():
                 bootable_field = "+".center(len_boot)

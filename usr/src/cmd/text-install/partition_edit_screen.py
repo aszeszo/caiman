@@ -28,6 +28,7 @@ partition and slice information
 '''
 
 import curses
+import locale
 import logging
 import platform
 
@@ -37,7 +38,7 @@ from solaris_install.target.controller import DEFAULT_VDEV_NAME
 from solaris_install.target.libadm.const import V_ROOT
 from solaris_install.target.physical import Partition, Slice
 from solaris_install.target.size import Size
-from solaris_install.text_install import _, RELEASE, TUI_HELP
+from solaris_install.text_install import _, RELEASE, TUI_HELP, LOCALIZED_GB
 from solaris_install.text_install.disk_window import DiskWindow
 from solaris_install.text_install.ti_target_utils import \
     get_desired_target_disk, get_solaris_partition, perform_final_validation, \
@@ -77,11 +78,10 @@ class PartEditScreen(BaseScreen):
                         " it to \"Unused.\"\n\n"
                         "Slices are listed in disk layout order.")
     
-    HEADER_x86_PART = _("Select Partition: %(size).1fGB %(type)s "
-                        "%(bootable)s")
+    HEADER_x86_PART = _("Select Partition: ")
     HEADER_x86_SLICE = _("Select Slice in Fdisk Partition")
-    HEADER_SPARC_SLICE = _("Select Slice: %(size).1fGB %(type)s"
-                           "%(bootable)s")
+    HEADER_SPARC_SLICE = _("Select Slice: ")
+    HEADER_TYPE_BOOTABLE = _(" %(type)s %(bootable)s")
     SLICE_DESTROY_TEXT = _("indicates the slice's current content will be "
                            "destroyed")
     PART_DESTROY_TEXT = _("indicates the partition's current content will "
@@ -237,10 +237,12 @@ class PartEditScreen(BaseScreen):
             bootable = ""
             if self.is_x86 and disk.is_boot_disk():
                 bootable = PartEditScreen.BOOTABLE
-            disk_size = disk.disk_prop.dev_size.get(Size.gb_units)
-            header = self.header_text % {"size": disk_size,
-                                         "type": disk.disk_prop.dev_type,
-                                         "bootable": bootable}
+            disk_size_str = locale.format("%.1f",
+                disk.disk_prop.dev_size.get(Size.gb_units)) + LOCALIZED_GB
+            type_boot_str = PartEditScreen.HEADER_TYPE_BOOTABLE % \
+                {"type": disk.disk_prop.dev_type,
+                 "bootable": bootable}
+            header = self.header_text + disk_size_str + type_boot_str
         self.main_win.set_header_text(header)
         
         y_loc = 1

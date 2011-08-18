@@ -53,6 +53,9 @@ _ = gettext.translation("textinstall", "/usr/share/locale",
 RELEASE = {"release": _("Oracle Solaris")}
 TUI_HELP = "/usr/share/text-install/help"
 
+# Localized values used by other files
+LOCALIZED_GB = _("GB")
+
 # Names of registered checkpoints.
 TARGET_DISCOVERY = "TargetDiscovery"
 TARGET_INIT = "TargetInitialization"
@@ -110,7 +113,7 @@ from terminalui.screen_list import ScreenList
 
 
 LOG_LOCATION_FINAL = "/var/sadm/system/logs/install_log"
-DEFAULT_LOG_LOCATION = "/tmp/install_log"
+DEFAULT_LOG_LOCATION = "/system/volatile/install_log"
 DEFAULT_LOG_LEVEL = "info"
 DEBUG_LOG_LEVEL = "debug"
 REBOOT = "/usr/sbin/reboot"

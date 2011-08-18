@@ -27,13 +27,9 @@
 Size library for install applications and libraries
 """
 
-import locale
 import re
 
-# set the locale
-locale.setlocale(locale.LC_ALL, "")
-
-size_re = re.compile("([\d+\.\,]+)(\w+)?")
+size_re = re.compile("([\d+\.]+)(\w+)?")
 
 
 class Size(object):
@@ -93,14 +89,13 @@ class Size(object):
         # attempt to split the humanreadable string into a value and suffix
         size_test = size_re.match(self.humanreadable)
         if size_test is not None:
-            # use locale to convert the numerical part of the string.  First
-            # try to cast the string to an int.  If the int cast fails, switch
-            # to casting to a float.  If the cast to a float fails, bubble the
-            # error up to the engine.
+            # First try to cast the string to an int.  If the int cast fails,
+            # switch to casting to a float.  If the cast to a float fails,
+            # bubble the error up to the engine.
             try:
-                value = locale.atoi(size_test.group(1))
+                value = int(size_test.group(1))
             except ValueError:
-                value = locale.atof(size_test.group(1))
+                value = float(size_test.group(1))
 
             # set the suffix, if it matched.  If it didn't match, raise an
             # exception
