@@ -1,5 +1,7 @@
 #!/usr/bin/python
 #
+# CDDL HEADER START
+#
 # The contents of this file are subject to the terms of the
 # Common Development and Distribution License (the "License").
 # You may not use this file except in compliance with the License.
@@ -33,7 +35,7 @@ from solaris_install.target.logical import Zvol
 
 
 class SetupSwap(ICT.ICTBaseClass):
-    '''ICT checkpoint that sets up the swap in /etc/vfstab on the to the target
+    '''ICT checkpoint that sets up the swap in /etc/vfstab on the target
        during an AI installation
     '''
 

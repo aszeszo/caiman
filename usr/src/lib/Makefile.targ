@@ -187,93 +187,86 @@ $(ROOTPYTHONVENDORBOOTMGMTBKNDLOADER):
 $(ROOTPYTHONTERMUI):
 	$(INS.dir)
 
-#
-# Python .py and .pyc files need to be installed with the original
-# timestamp of the file preserved. Otherwise, .pyc files will
-# have the same timestamp as the .py files, and python
-# will rebuild the .pyc files during execution.  Therefore, $(INS.file)
-# can not be used.  
-# 
 $(ROOTPYTHONVENDORINSTALL)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALL)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLBOOT)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLCONFIGURATION)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLDATACACHE)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLENGINE)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLENGINETEST)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLICT)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLMANIFEST)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLMANINPUT)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLTARGET)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLTARGETLIBADM)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLTARGETLIBBE)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLTARGETLIBDEVINFO)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLTARGETLIBDISKMGT)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLTARGETLIBNVPAIR)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLTARGETSHADOW)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORINSTALLTRANSFER)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORBOOTMGMT)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORBOOTMGMTBKND)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 			      			  
 $(ROOTPYTHONVENDORBOOTMGMTBKNDAUTOGEN)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORBOOTMGMTBKNDBOOTVARS)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORBOOTMGMTBKNDBOOTVARSSPARC)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORBOOTMGMTBKNDBOOTVARSX86)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORBOOTMGMTBKNDFW)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORBOOTMGMTBKNDLOADER)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONTERMUI)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTRNGSCHEMA)/%: %
 	$(INS.file)

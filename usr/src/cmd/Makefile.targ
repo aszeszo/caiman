@@ -116,48 +116,41 @@ $(ROOTPYTHONVENDORSCIPROF):
 $(ROOTSBIN)/%: %
 	$(INS.file)
 
-#
-# Python .py and .pyc files need to be installed with the original
-# timestamp of the file preserved. Otherwise, .pyc files will
-# have the same timestamp as the .py files, and python
-# will rebuild the .pyc files during execution.  Therefore, $(INS.file)
-# can not be used.  
-# 
 $(ROOTPYTHONVENDORINSTALL)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORINSTALLDC)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORINSTALLDCCHKPT)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORINSTALLAI)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLTI)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLAI)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLAICHKPT)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSCI)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSCIPROF)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORINSTALLPROF)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLJS2AI)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTPYTHONVENDORSOLINSTALLGUI)/%: %
-	$(CP_P.file)
+	$(INS.pyfile)
 
 $(ROOTDC):
 	$(INS.dir)

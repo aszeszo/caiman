@@ -48,10 +48,36 @@ SPRO_VROOT=            	$(SPRO_ROOT)/sunstudio12.1
 LINT=			$(SPRO_VROOT)/bin/lint
 CC=			$(SPRO_VROOT)/bin/cc
 
+#
+# The following information regarding license terms and stripping CDDL
+# is applicable only to employees of Oracle Corporation.  Anyone else
+# building a release distribution from this source code must abide by
+# all applicable license terms.  If in doubt, please seek legal advice.
+#
+# Solaris source is licensed under the CDDL, but binary distributions
+# may not be. Because of this discrepancy, it is desirable to strip
+# the CDDL from human readable files to avoid end user confusion.  
+#
+# To strip CDDL from installed files, set and export INS_STRIP_CDDL in
+# your build environment:
+#
+#	INS_STRIP_CDDL= ; export INS_STRIP_CDDL
+#
+# For files which should NOT have CDDL stripped, because they contain
+# CDDL start and end tags but are licensed by someone other than
+# Oracle, set INS_STRIP_CDDL_OVR to $(POUND_SIGN) in your Makefile
+# prior to including Makefile.master:
+#
+#	INS_STRIP_CDDL_OVR= $(POUND_SIGN)
+#	include $(SRC)/Makefile.master
+#
+INS_STRIP_CDDL= $(POUND_SIGN)
+$(INS_STRIP_CDDL)$(INS_STRIP_CDDL_OVR)INS_CDDL_ARG= -C
+INS=		install $(INS_CDDL_ARG)
+
 # Other commands
 LD=			$(CC)
 RM=			/usr/bin/rm -f
-INS=			/usr/sbin/install
 SYMLINK=		/usr/bin/ln -s
 LN=			/usr/bin/ln
 CP=			/usr/bin/cp
@@ -194,7 +220,6 @@ RELEASE_BUILD=				$(POUND_SIGN)
 $(RELEASE_BUILD)NOT_RELEASE_BUILD=	$(POUND_SIGN)
 SRU_BUILD=                              $(POUND_SIGN)
 
-CP_P.file=	$(RM) $@; $(CP) -p $< $@; $(CHMOD) $(FILEMODE) $@
 INS.file=	$(RM) $@; $(INS) -s -m $(FILEMODE) -f $(@D) $<
 $(CH)INS.file=	$(INS) -m $(FILEMODE) -u $(OWNER) -g $(GROUP) -f $(@D) $<
 INS.exec=	$(RM) $@; $(INS) -s -m $(EXECMODE) -f $(@D) $<
@@ -203,6 +228,15 @@ INS.dir=	$(INS) -d -m $(DIRMODE) $@
 $(CH)INS.dir=	$(INS) -d -m $(DIRMODE) -u $(OWNER) -g $(GROUP) $@
 INS.rename=	$(INS.file); $(MV) $(@D)/$(<F) $@
 INSTALL=	$(INS.file)
+
+#
+# Python bakes the mtime of the .py file into the compiled .pyc and
+# rebuilds if the baked-in mtime != the mtime of the source file
+# (rather than only if it's less than), thus when installing python
+# files we must make certain to not adjust the mtime of the source
+# (.py) file.
+#
+INS.pyfile=     $(INS.file); $(TOUCH) -r $< $@
 
 MACH=	$(TARGET_MACH:-%=%)
 ARCH=	$(TARGET_ARCH:-%=%)

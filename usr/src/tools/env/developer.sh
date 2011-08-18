@@ -85,6 +85,18 @@ export ATLOG="${CODEMGR_WS}/log";
 export LOGFILE="${ATLOG}/nightly.log";
 export MACH="$(uname -p)";
 
+# For employees of Oracle Corp. only:
+#
+#     When releasing a binary distribution under a non-CDDL license,
+#     such as the OTN, the CDDL may be stripped to avoid end user
+#     confusion.  To accomplish this, we uncomment this assignment.
+#
+# All others:
+#
+#     You must comment out this assignment to preserve CDDL text unmodified.
+#
+INS_STRIP_CDDL= ; export INS_STRIP_CDDL
+
 # REF_PROTO_LIST - for comparing the list of stuff in your proto area
 # with. Generally this should be left alone, since you want to see differences
 # from your parent (the gate).
