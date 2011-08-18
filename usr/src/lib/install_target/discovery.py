@@ -680,7 +680,13 @@ class TargetDiscovery(Checkpoint):
                         if not self.dry_run:
                             self.logger.info("%s is unlabeled.  Forcing a "
                                              "VTOC label" % disk.ctd)
-                            disk.force_vtoc()
+                            try:
+                                disk.force_vtoc()
+                            except CalledProcessError as err:
+                                self.logger.info("Warning:  unable to label "
+                                    "%s:  %s\nThis warning can be ignored, "
+                                    "unless the disk is your install volume."
+                                    % (disk.ctd, err.popen.stderr))
                         else:
                             self.logger.info("%s is unlabeled.  Not forcing "
                                              "a VTOC label due to dry_run "
