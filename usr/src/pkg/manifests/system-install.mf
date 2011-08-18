@@ -44,7 +44,6 @@ dir path=var/log group=sys
 dir path=var/log/install group=sys
 dir path=var/sadm group=sys
 dir path=var/sadm/system group=sys
-dir path=var/sadm/system/logs group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/__init__.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/__init__.pyc \
     mode=0444
@@ -99,5 +98,6 @@ file path=usr/lib/python2.6/vendor-packages/terminalui/window_area.py \
 file path=usr/lib/python2.6/vendor-packages/terminalui/window_area.pyc \
     mode=0444
 license cr_Sun license=cr_Sun
+link path=var/sadm/system/logs target=../../log/install
 depend fmri=library/python-2/python-extra-26 type=require
 
