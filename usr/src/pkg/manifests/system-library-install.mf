@@ -202,8 +202,6 @@ file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/ict/initialize_smf.py
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/ict/initialize_smf.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/ict/ips.py
-file path=usr/lib/python2.6/vendor-packages/solaris_install/ict/ips.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/ict/setup_swap.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/ict/setup_swap.pyc
 file \

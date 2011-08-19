@@ -105,11 +105,6 @@ TI_CHKPS[DUMP_ADMIN] = (DUMP_ADMIN,
                         "solaris_install/ict/update_dumpadm",
                         "UpdateDumpAdm")
 
-FLUSH_IPS = "flush-ips-content"
-TI_CHKPS[FLUSH_IPS] = (FLUSH_IPS,
-                      "solaris_install/ict/ips",
-                      "SetFlushContentCache")
-
 DEVICE_CONFIG = "device-config"
 TI_CHKPS[DEVICE_CONFIG] = (DEVICE_CONFIG,
                            "solaris_install/ict/device_config",
@@ -160,8 +155,6 @@ def setup_checkpoints():
     engine.register_checkpoint(*(TI_CHKPS[BOOT_CONFIG]))
     logger.debug("Establishing the " + DUMP_ADMIN + " checkpoint")
     engine.register_checkpoint(*(TI_CHKPS[DUMP_ADMIN]))
-    logger.debug("Establishing the " + FLUSH_IPS + " checkpoint")
-    engine.register_checkpoint(*(TI_CHKPS[FLUSH_IPS]))
     logger.debug("Establishing the " + DEVICE_CONFIG + " checkpoint")
     engine.register_checkpoint(*(TI_CHKPS[DEVICE_CONFIG]))
     logger.debug("Establishing the " + APPLY_SYSCONFIG + " checkpoint")

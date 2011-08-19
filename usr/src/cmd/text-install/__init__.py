@@ -64,7 +64,6 @@ CLEANUP_CPIO_INSTALL = "cleanup-cpio-install"
 INIT_SMF = "initialize-smf"
 BOOT_CONFIG = "boot-configuration"
 DUMP_ADMIN = "update-dump-admin"
-FLUSH_IPS = "flush-ips-content"
 DEVICE_CONFIG = "device-config"
 APPLY_SYSCONFIG = "apply-sysconfig"
 BOOT_ARCHIVE = "boot-archive"
@@ -274,10 +273,6 @@ def prepare_engine(options):
     eng.register_checkpoint(DUMP_ADMIN,
                             "solaris_install/ict/update_dumpadm",
                             "UpdateDumpAdm")
-
-    eng.register_checkpoint(FLUSH_IPS,
-                            "solaris_install/ict/ips",
-                            "SetFlushContentCache")
 
     eng.register_checkpoint(DEVICE_CONFIG,
                             "solaris_install/ict/device_config",

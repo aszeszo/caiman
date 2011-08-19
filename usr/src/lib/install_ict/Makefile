@@ -30,7 +30,6 @@ PYMODS		= __init__.py \
 		  create_snapshot.py \
 		  device_config.py \
 		  initialize_smf.py \
-		  ips.py \
 		  setup_swap.py \
                   transfer_files.py \
 		  update_dumpadm.py

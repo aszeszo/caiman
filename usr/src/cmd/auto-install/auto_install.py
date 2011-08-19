@@ -1093,24 +1093,19 @@ class AutoInstall(object):
                 "solaris_install.ict.setup_swap",
                 "SetupSwap", args=None, kwargs=None)
 
-            # 5. Set Flush IPS Content Flag
-            self.engine.register_checkpoint("set-flush-ips-content-cache",
-                "solaris_install.ict.ips",
-                "SetFlushContentCache", args=None, kwargs=None)
-
-            # 6. Device Configuration / Create Device Namespace
+            # 5. Device Configuration / Create Device Namespace
             if self.options.zonename is None:
                 self.engine.register_checkpoint("device-config",
                     "solaris_install.ict.device_config",
                     "DeviceConfig", args=None, kwargs=None)
 
-            # 7. Transfer System Configuration To BE / ApplySysConfig
+            # 6. Transfer System Configuration To BE / ApplySysConfig
             if self.options.profile is not None:
                 self.engine.register_checkpoint("apply-sysconfig",
                     "solaris_install.ict.apply_sysconfig",
                     "ApplySysConfig", args=None, kwargs=None)
 
-            # 8. Transfer Zpool Cache and hostid (x86)
+            # 7. Transfer Zpool Cache and hostid (x86)
             if self.options.zonename is None:
                 self.add_transfer_zpool_cache()
                 self.engine.register_checkpoint(
@@ -1118,19 +1113,19 @@ class AutoInstall(object):
                     "solaris_install.ict.transfer_files",
                     "TransferFiles", args=None, kwargs=None)
 
-            # 9. Boot Archive
+            # 8. Boot Archive
             if self.options.zonename is None:
                 self.engine.register_checkpoint("boot-archive",
                     "solaris_install.ict.boot_archive",
                     "BootArchive", args=None, kwargs=None)
 
-            # 10. Transfer Files to New BE
+            # 9. Transfer Files to New BE
             self.add_transfer_files()
             self.engine.register_checkpoint(TRANSFER_FILES_CHECKPOINT,
                 "solaris_install.ict.transfer_files",
                 "TransferFiles", args=None, kwargs=None)
 
-            # 11. CreateSnapshot before reboot
+            # 10. CreateSnapshot before reboot
             self.engine.register_checkpoint("create-snapshot",
                 "solaris_install.ict.create_snapshot",
                 "CreateSnapshot", args=None, kwargs=None)
