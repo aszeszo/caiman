@@ -32,6 +32,7 @@ If the DTD changes, the XML files created need to change accordingly.
 
 import unittest
 import os
+from solaris_install import SYS_AI_MANIFEST_DTD
 import solaris_install.manifest_input.mim as mim
 import solaris_install.manifest_input as milib
 
@@ -51,7 +52,7 @@ class TestMIMSetAddGetCommon(unittest.TestCase):
 
     MIM_TEST_XML_FILENAME = "/tmp/mim_test.xml"
     AIMANIFEST = ROOT + "/usr/bin/aimanifest"
-    SCHEMA = ROOT + "/usr/share/install/ai.dtd"
+    SCHEMA = ROOT + SYS_AI_MANIFEST_DTD
 
     UNIQUE = True
     INCREMENTAL = True

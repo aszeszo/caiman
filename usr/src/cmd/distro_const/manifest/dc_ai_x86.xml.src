@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE dc SYSTEM "/usr/share/install/dc.dtd">
+<!DOCTYPE dc SYSTEM "/usr/share/install/dc.dtd.@DTD_VERSION_DC@">
 <!--
   CDDL HEADER START
  

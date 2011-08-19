@@ -23,19 +23,30 @@
 #
 include $(SRC)/cmd/Makefile.cmd
 
-MANIFEST_FILES =	ai_manifest.xml \
+MANIFEST_FILES_SRC =	ai_manifest.xml.src \
+			default.xml.src \
+			zone_default.xml.src
+
+MANIFEST_FILES_GEN =	ai_manifest.xml \
 			default.xml \
 			zone_default.xml
 
+MANIFEST_FILES =	$(MANIFEST_FILES_GEN)
+
 ROOTMANIFESTS= $(MANIFEST_FILES:%=$(ROOTAUTOINSTMANIFEST)/%)
 
-all:
+CLEANFILES = $(MANIFEST_FILES_GEN)
+CLOBERFILES = $(CLEANFILES)
+
+all: $(MANIFEST_FILES_GEN)
 
 install: all .WAIT \
 	$(ROOTMANIFESTS)
 
-clean:
+$(MANIFEST_FILES_GEN):
 
-clobber: clean
+clean:
+	$(RM) $(CLEANFILES)
+
 
 include $(SRC)/cmd/Makefile.targ

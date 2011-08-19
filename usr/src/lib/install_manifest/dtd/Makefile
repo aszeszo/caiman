@@ -31,18 +31,37 @@ clean:=        TARGET= clean
 clobber:=      TARGET= clobber
 install:=      TARGET= install
 
-DTD_FILES=	ai.dtd \
+
+DTD_FILES_SRC =	ai.dtd.src \
+	dc.dtd.src 	\
+	media-transfer.dtd.src
+
+DTD_FILES_GEN =	ai.dtd \
+	dc.dtd 	\
+	media-transfer.dtd
+
+DTD_FILES =	$(DTD_FILES_GEN) \
 	boot_mods.dtd \
-	dc.dtd \
 	configuration.dtd \
 	execution.dtd \
 	software.dtd \
-	target.dtd \
-        media-transfer.dtd
+	target.dtd
 
-ROOT_DTD_FILES=	$(DTD_FILES:%=$(ROOTUSRSHAREINSTALL)/%)
+DTD_FILES_VER =	ai.dtd.$(DTD_VERSION_AI) \
+	boot_mods.dtd.$(DTD_VERSION_BOOT_MODS) \
+	dc.dtd.$(DTD_VERSION_DC) \
+	configuration.dtd.$(DTD_VERSION_CONFIGURATION) \
+	execution.dtd.$(DTD_VERSION_EXECUTION) \
+	software.dtd.$(DTD_VERSION_SOFTWARE) \
+	target.dtd.$(DTD_VERSION_TARGET) \
+	media-transfer.dtd.$(DTD_VERSION_MEDIA_TRANSFER)
 
-all:
+CLOBBERFILES = $(DTD_FILES_GEN) $(DTD_FILES_VER)
+CLEANFILES = $(CLOBBERFILES)
+
+ROOT_DTD_FILES=	$(DTD_FILES_VER:%=$(ROOTUSRSHAREINSTALL)/%)
+
+all: $(DTD_FILES_VER)
 
 install_h:
 
@@ -50,8 +69,28 @@ install: .WAIT \
     $(ROOTUSRSHAREINSTALL) \
 	$(ROOT_DTD_FILES)
 
-clean:
+ai.dtd.$(DTD_VERSION_AI): ai.dtd
+	$(RM) -f $@; $(CP) -p $? $@
 
-clobber:
+boot_mods.dtd.$(DTD_VERSION_BOOT_MODS):  boot_mods.dtd
+	$(RM) -f $@; $(CP) -p $? $@
+
+dc.dtd.$(DTD_VERSION_DC):  dc.dtd
+	$(RM) -f $@; $(CP) -p $? $@
+
+configuration.dtd.$(DTD_VERSION_CONFIGURATION): configuration.dtd
+	$(RM) -f $@; $(CP) -p $? $@
+
+execution.dtd.$(DTD_VERSION_EXECUTION):  execution.dtd
+	$(RM) -f $@; $(CP) -p $? $@
+
+software.dtd.$(DTD_VERSION_SOFTWARE):  software.dtd
+	$(RM) -f $@; $(CP) -p $? $@
+
+target.dtd.$(DTD_VERSION_TARGET):  target.dtd
+	$(RM) -f $@; $(CP) -p $? $@
+
+media-transfer.dtd.$(DTD_VERSION_MEDIA_TRANSFER): media-transfer.dtd
+	$(RM) -f $@; $(CP) -p $? $@
 
 include ../../Makefile.targ

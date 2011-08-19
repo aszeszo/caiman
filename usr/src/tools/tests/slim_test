@@ -30,6 +30,7 @@ if [ -z "$SRC" -o -z "$ROOT" ]; then
 fi
 
 export PYTHONPATH=${ROOT}/usr/snadm/lib:${ROOT}/usr/lib/python2.6/vendor-packages/:\
-${ROOT}/usr/lib/installadm:${ROOT}/var/ai/image-server/cgi-bin
+${ROOT}/usr/lib/installadm:${ROOT}/var/ai/image-server/cgi-bin:\
+/usr/lib/python2.6/vendor-packages
 
 nosetests -c ${SRC}/tools/tests/config.nose -w $SRC "$@"

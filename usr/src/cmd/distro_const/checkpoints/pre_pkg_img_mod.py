@@ -38,7 +38,7 @@ from distutils.text_file import TextFile
 from osol_install.install_utils import dir_size, encrypt_password
 from pkg.cfgfiles import PasswordFile
 from solaris_install import CalledProcessError, DC_LABEL, DC_PERS_LABEL, run, \
-    Popen
+    Popen, path_matches_dtd
 from solaris_install.configuration.configuration import Configuration
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
@@ -418,8 +418,12 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # Copy files from /usr/share/install too
         old_wd = os.getcwd()
         os.chdir(os.path.join(self.pkg_img_path, "usr/share/install"))
-        for dtd_file in [f for f in os.listdir(".") if f.endswith(".dtd")]:
+        ai_dtd_found = False
+        for dtd_file in [f for f in os.listdir(".") if path_matches_dtd(f)]:
             shutil.copy(dtd_file, pkg_ai_path)
+            if not ai_dtd_found and dtd_file.startswith("ai.dtd"):
+                ai_dtd_found = True
+                os.symlink(dtd_file, os.path.join(pkg_ai_path, "ai.dtd"))
         os.chdir(old_wd)  # Restore Working Directory
 
         # move in service_bundle(4) for AI server profile validation

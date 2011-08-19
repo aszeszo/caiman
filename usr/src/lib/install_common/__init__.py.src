@@ -35,6 +35,7 @@ import functools
 import gettext
 import logging
 import os
+import re
 import shutil
 import sys
 import subprocess
@@ -63,9 +64,19 @@ POST_INSTALL_LOGS_DIR = '/var/sadm/system/logs'
 DC_LABEL = "DC specific"
 DC_PERS_LABEL = "DC specific persistent"
 
+# Path to AI_DTD
+IMG_AI_MANIFEST_PATH = "auto_install"
+IMG_AI_MANIFEST_DTD = os.path.join(IMG_AI_MANIFEST_PATH ,
+                                   "ai.dtd.@DTD_VERSION_AI@")
+SYS_AI_MANIFEST_DTD = "/usr/share/install/ai.dtd.@DTD_VERSION_AI@"
+
 # global version number for all of the consumers of the pkg5 API in the source
 # tree
 PKG5_API_VERSION = 66
+
+# Reg-exp to match that a given string would be a valid DTD path for Install
+DTD_PATH_RE = ".*\.dtd\.\d+$"
+__dtd_path_regexp = re.compile(DTD_PATH_RE)
 
 
 class CalledProcessError(subprocess.CalledProcessError):
@@ -441,7 +452,9 @@ def post_install_logs_path(file=None):
         return POST_INSTALL_LOGS_DIR
 
 
+# Other utility methods
 def force_delete(path):
+    '''Delete either a file, a link, or directory and it's sub-tree'''
     try:
         if os.path.isdir(path) and not os.path.islink(path):
             shutil.rmtree(path)
@@ -450,3 +463,10 @@ def force_delete(path):
     except (IOError, OSError) as err:
         if getattr(err, "errno", None) != errno.ENOENT:
             raise
+
+
+def path_matches_dtd(path):
+    '''Check if a given path matches the RE for a DTD'''
+    global __dtd_path_regexp
+
+    return __dtd_path_regexp.match(path) is not None

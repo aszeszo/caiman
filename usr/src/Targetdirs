@@ -70,6 +70,7 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles \
+	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/xslt \
 	/usr/lib/python2.6/vendor-packages/solaris_install \
 	/usr/lib/python2.6/vendor-packages/solaris_install/boot \
 	/usr/lib/python2.6/vendor-packages/solaris_install/configuration \

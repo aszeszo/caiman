@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE dc SYSTEM "/usr/share/install/dc.dtd">
+<!DOCTYPE dc SYSTEM "/usr/share/install/dc.dtd.@DTD_VERSION_DC@">
 <!--
   CDDL HEADER START
  
@@ -26,14 +26,13 @@
 -->
 <dc>
   <!--
-    add_timestamp controls if the iso/usb should
-    have a timestamp appended to it. Useful if the intent
-    is to do serial builds and to keep all the incremental
-    images around
+    add_timestamp controls if the iso/usb should have a timestamp
+    appended to it. Useful if the intent is to do serial builds and to keep all
+    the incremental images around
   -->
-  <distro name="Oracle_Solaris_AI_SPARC" add_timestamp="false">
+  <distro name="Oracle_Solaris_Text_SPARC" add_timestamp="false">
   <!-- Uncomment if http_proxy needs to be set
-  <distro name="Oracle_Solaris_AI_SPARC" add_timestamp="false"
+  <distro name="Oracle_Solaris_Text_SPARC" add_timestamp="false"
       http_proxy="http://example.com">
   -->
 
@@ -44,7 +43,7 @@
     <target name="desired">
       <logical>
         <zpool name="rpool" action="use_existing">
-          <filesystem name="dc/ai" action="preserve"/>
+          <filesystem name="dc/text" action="preserve"/>
         </zpool>
       </logical>
     </target>
@@ -69,7 +68,7 @@
         <publisher name="solaris">
           <origin name="http://pkg.oracle.com/solaris/release"/>
           <!--
-          If mirrors for this publisher need to be set, specify them here.
+            If mirrors for this publisher need to be set, specify them here.
           -->
           <!-- Uncomment before using
           <mirror name="mirror.example.com"></mirror>
@@ -98,9 +97,9 @@
       -->
       <software_data action="install">
         <name>pkg:/entire</name>
-        <name>pkg:/system/install/media/internal</name>
+        <name>pkg:/group/system/solaris-large-server</name>
         <name>pkg:/system/install/text-install</name>
-        <name>pkg:/group/system/solaris-auto-install</name>
+        <name>pkg:/system/install/media/internal</name>
       </software_data>
     </software>
     <!--
@@ -122,12 +121,11 @@
         </publisher>
       </source>
     </software>
-
     <!--
       Items below this line are rarely configured
     -->
     <!--
-      This section defines the contents of the boot_archive
+     This section defines the contents of the boot_archive
     -->
     <software name="ba-init" type="CPIO">
       <destination>
@@ -156,10 +154,10 @@
         <name>var/sadm</name>
       </software_data>
     </software>
-
     <!--
-      Execution section: This section lists the checkpoints that are run to
-      create an image. The checkpoints listed below are run in order.
+      Execution section: This section lists the checkpoints
+      that are run to create an image. The checkpoints
+      listed below are run in order.
     -->
     <execution stop_on_error="true">
       <checkpoint name="transfer-ips-install"
@@ -173,22 +171,20 @@
       <checkpoint name="pre-pkg-img-mod"
           desc="Pre package image modification"
           mod_path="solaris_install/distro_const/checkpoints/pre_pkg_img_mod"
-          checkpoint_class="AIPrePkgImgMod">
+          checkpoint_class="TextPrePkgImgMod">
           <!--
             root user/role password in the image.
-            service_name - solarisdev-%{arch}-%{build}
           -->
+          <kwargs>
           <!--
             The default hostname for images is 'solaris'.  Setting
             the hostname here will override the default.
           -->
-          <kwargs>
             <arg name="root_password">solaris</arg>
             <arg name="is_plaintext">true</arg>
-            <!-- uncomment before using
-            <arg name="hostname">hostname</arg>
-            <arg name="service_name">solarisdev-%{arch}-%{build}</arg>
-            -->
+             <!-- uncomment before using
+             <arg name="hostname">hostname</arg>
+             -->
           </kwargs>
       </checkpoint>
       <checkpoint name="ba-init"
@@ -198,7 +194,7 @@
       <checkpoint name="ba-config"
           desc="Boot Archive Configuration"
           mod_path="solaris_install/distro_const/checkpoints/boot_archive_configure"
-          checkpoint_class="AIBootArchiveConfigure">
+          checkpoint_class="TextBootArchiveConfigure">
       </checkpoint>
       <checkpoint name="ba-arch"
           desc="Boot Archive Archival"
@@ -223,16 +219,13 @@
               <argitem>etc/path_to_inst</argitem>
               <argitem>etc/default/init</argitem>
               <argitem>etc/nsswitch.conf</argitem>
-              <argitem>etc/passwd</argitem>
-              <argitem>etc/shadow</argitem>
-              <argitem>etc/inet/hosts</argitem>
             </arglist>
           </kwargs>
       </checkpoint>
       <checkpoint name="pkg-img-mod"
           desc="Pkg image area modification"
           mod_path="solaris_install/distro_const/checkpoints/pkg_img_mod"
-          checkpoint_class="AIPkgImgMod">
+          checkpoint_class="TextPkgImgMod">
           <!--
             compression_type controls the compression algorithm to be used in
             compressing solaris.zlib and solarismisc.zlib. Valid values are
@@ -245,34 +238,13 @@
       <checkpoint name="create-iso"
           desc="ISO media creation"
           mod_path="solaris_install/distro_const/checkpoints/create_iso"
-          checkpoint_class="CreateISO">
-      </checkpoint>
-      <checkpoint name="ai-publish-package"
-          desc="Publish pkg(5) repository"
-          mod_path="solaris_install/distro_const/checkpoints/ai_publish_pkg"
-          checkpoint_class="AIPublishPackages">
-          <!--
-            The following arguments are optional
-
-            If not specified the arguments default to:
-            pkg_name - install-image/solaris-auto-install@<AI pkg version>
-            pkg_repo - file://<MEDIA_DIR>/ai_image_repo
-            prefix - ai-image
-                Note:  See pkg(5) and pkg.depotd(1M) for a
-                description of these optional arguments
-          <kwargs>
-            <arg name="pkg_name">name</arg>
-            <arg name="pkg_repo">repo</arg>
-            <arg name="prefix">prefix</arg>
-          </kwargs>
-          -->
-      </checkpoint>
+          checkpoint_class="CreateISO"/>
     </execution>
 
     <!--
       SMF service profiles to be applied to the boot_archive.
-    
-      These profiles are applied in the order they are specified.
+
+      These profiles are applied in the order specified here.
     -->
     <configuration name="pre-pkg-img-mod" type="sysconf"
         source="/etc/svc/profile/generic_limited_net.xml">
@@ -283,7 +255,7 @@
       <validation path="/usr/sbin/svccfg" args="apply -n"/>
     </configuration>
     <configuration name="pre-pkg-img-mod" type="sysconf"
-        source="/usr/share/distro_const/profile/ai.xml">
+        source="/usr/share/distro_const/profile/text.xml">
       <validation path="/usr/sbin/svccfg" args="apply -n"/>
     </configuration>
     <configuration name="pre-pkg-img-mod" type="sysconf"

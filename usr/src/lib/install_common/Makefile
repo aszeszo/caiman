@@ -30,14 +30,18 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-PYMODS =	__init__.py getconsole.py
+SRCPYFILES = __init__.py.src
+
+GENERATEDPYFILES = __init__.py
+
+PYMODS =	$(GENERATEDPYFILES) getconsole.py
 
 PYCMODS=	$(PYMODS:%.py=%.pyc)
 
-CLOBBERFILES = $(PYCMODS)
+CLOBBERFILES = $(GENERATEDPYFILES) $(PYCMODS)
 CLEANFILES = $(CLOBBERFILES)
 
-all:		python
+all:		$(GENERATEDPYFILES) python
 
 install: all .WAIT \
 	$(ROOTPYTHONVENDOR) \
@@ -46,6 +50,9 @@ install: all .WAIT \
 	$(ROOTPYTHONVENDORSOLINSTALLCMODS)
 
 install_h:
+
+$(GENERATEDPYFILES):
+
 
 python:
 	$(PYTHON) -m compileall -l $(@D)

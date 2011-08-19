@@ -44,8 +44,7 @@ import osol_install.auto_install.common_profile as sc
 import osol_install.auto_install.verifyXML as verifyXML
 from osol_install.auto_install.installadm_common import _
 
-IMG_AI_MANIFEST_DTD = "auto_install/ai.dtd"
-SYS_AI_MANIFEST_DTD = "/usr/share/install/ai.dtd"
+from solaris_install import IMG_AI_MANIFEST_PATH, IMG_AI_MANIFEST_DTD
 
 IMG_AI_MANIFEST_SCHEMA = "auto_install/ai_manifest.rng"
 
@@ -557,12 +556,16 @@ class DataFiles(object):
         if service_dir:
             self.service = service_dir
 
+        self._manifest_name = manifest_name
+        self.manifest_is_script = self.manifest_is_a_script(manifest_file)
+
         # Holds path to AI image
         self._imagepath = None
         if image_path:
             self.image_path = image_path
             # set the AI schema once image_path is set
-            self.set_AI_schema()
+            self.set_AI_schema(
+                manifest_file if not self.manifest_is_script else None)
 
         # Holds database object for criteria database
         self._db = None
@@ -587,9 +590,6 @@ class DataFiles(object):
             except lxml.etree.RelaxNGParseError:
                 raise ValueError(_("Error: Unable to determine AI manifest "
                                    "validation type.\n"))
-
-        self._manifest_name = manifest_name
-        self.manifest_is_script = self.manifest_is_a_script(manifest_file)
 
         # Bypass XML verification if script passed in instead of a manifest.
         if self.manifest_is_script:
@@ -859,28 +859,62 @@ class DataFiles(object):
         else:
             raise AssertionError('AIschema not set')
 
-    def set_AI_schema(self):
+    def set_AI_schema(self, manifest_file=None):
         """
         Sets self._AIschema and errors if imagepath not yet set.
         Args: None
         Raises: SystemExit if unable to find a valid AI schema
         Returns: None
         """
-        if os.path.exists(os.path.join(self.image_path,
-                                       IMG_AI_MANIFEST_DTD)):
-            self._AIschema = os.path.join(self.image_path,
-                                          IMG_AI_MANIFEST_DTD)
+
+        # If manifest is provided, it must have a DOCTYPE string that
+        # references a DTD.
+        if not os.path.exists(manifest_file):
+            raise SystemExit(_("Error: Cannot access Manifest \"%s\"." %
+                manifest_file))
+
+        # Try first to get schema basename from DOCINFO in XML
+        schema_basename = None
+        try:
+            manifest_doc = lxml.etree.parse(manifest_file)
+            system_url = manifest_doc.docinfo.system_url
+            if system_url is not None:
+                schema_basename = os.path.basename(system_url)
+            else:
+                raise SystemExit(_("Error: manifest must have a DOCTYPE string"
+                                   " with DTD reference."))
+        except lxml.etree.XMLSyntaxError, syntax_error:
+            raise SystemExit(_("Error: There was a syntax error parsing the "
+                               "manifest %(mf)s:\n  %(error)s") %
+                               {'mf': manifest_file,
+                                'error': str(syntax_error)})
+
+        # if ai.dtd is specified, give a warning about not using the versioned
+        # ai.dtd.<version> but proceed.
+        dtd_to_use = os.path.join(self.image_path, IMG_AI_MANIFEST_PATH,
+                                  schema_basename)
+        if os.path.exists(dtd_to_use):
+            versioned_DTD = os.path.join(self.image_path, IMG_AI_MANIFEST_DTD)
+            if (schema_basename == "ai.dtd" and os.path.exists(versioned_DTD)):
+                print (_("Warning: manifest \"%s\" DOCTYPE specifies "
+                    "\"ai.dtd\"\n"
+                    "while versioned DTD \"%s\" exists in the image.  "
+                    "Attempting to proceed...") % (manifest_file,
+                    os.path.basename(IMG_AI_MANIFEST_DTD)))
+            self._AIschema = dtd_to_use
+
+        # RNG schema
         elif os.path.exists(os.path.join(self.image_path,
                                          IMG_AI_MANIFEST_SCHEMA)):
             self._AIschema = os.path.join(self.image_path,
                                          IMG_AI_MANIFEST_SCHEMA)
         else:
-            if os.path.exists(SYS_AI_MANIFEST_DTD):
-                self._AIschema = SYS_AI_MANIFEST_DTD
-                print (_("Warning: Using AI manifest dtd <%s>\n") %
-                        self._AIschema)
-            else:
-                raise SystemExit(_("Error:\tUnable to find an AI dtd!"))
+            raise SystemExit(_("Error: The DTD \"%(dtd)s\" version specifed "
+                               "in the manifest \n\"%(mf)s\" could not be "
+                               "found in the image path of the install "
+                               "service.") %
+                               {'dtd': schema_basename,
+                                'mf': manifest_file})
 
     def get_image_path(self):
         """

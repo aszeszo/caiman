@@ -29,7 +29,7 @@
 <!-- used during the image construction process -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
-    <xsl:output method="xml" indent="yes" encoding="UTF-8" doctype-system="file:///usr/share/install/media-transfer.dtd"/>
+    <xsl:output method="xml" indent="yes" encoding="UTF-8" doctype-system="file:///usr/share/install/media-transfer.dtd.@DTD_VERSION_MEDIA_TRANSFER@"/>
 
     <xsl:template match="/">
         <media_transfer>

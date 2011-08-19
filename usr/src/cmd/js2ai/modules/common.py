@@ -35,6 +35,7 @@ import shutil
 import sys
 
 from lxml import etree
+from solaris_install import SYS_AI_MANIFEST_DTD
 from solaris_install.manifest import ManifestError
 from solaris_install.manifest.parser import ManifestParser
 from xml.dom import minidom
@@ -108,7 +109,7 @@ ARCH_GENERIC = "generic"
 
 # The ai manifest to merge our changes into
 DEFAULT_AI_FILENAME = "/usr/share/auto_install/manifest/default.xml"
-DEFAULT_AI_DTD_FILENAME = "/usr/share/install/ai.dtd"
+DEFAULT_AI_DTD_FILENAME = SYS_AI_MANIFEST_DTD
 DEFAULT_SC_PROFILE_DTD_FILENAME = "/usr/share/lib/xml/dtd/service_bundle.dtd.1"
 RULES_FILENAME = "rules"
 SYSIDCFG_FILENAME = "sysidcfg"

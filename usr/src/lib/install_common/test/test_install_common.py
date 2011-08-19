@@ -32,7 +32,8 @@ import test.test_subprocess
 import time
 import unittest
 
-from solaris_install import Popen, CalledProcessError, force_delete
+from solaris_install import Popen, CalledProcessError, force_delete, \
+    path_matches_dtd
 
 
 class MockLogger(object):
@@ -312,3 +313,28 @@ class TestForceDelete(unittest.TestCase):
             force_delete(path)
         except (OSError, IOError) as err:
             self.fail(err)
+
+
+class TestPathMatches(unittest.TestCase):
+
+    def test_path_matches_dtd(self):
+        '''Check expected behaviour for dtd path regexp'''
+        possible_paths = (
+            ("/usr/share/install/ai.dtd", False),
+            ("/usr/share/install/ai.xxx.1", False),
+            ("/.usr/share/install/ai.xxx.1", False),
+            ("/usr/.share/install/ai.dtd.1", True),
+            ("/usr/share/install/ai.dtd.1", True),
+            ("/usr/share/install/ai.dtd.2", True),
+            ("/usr/share/install/ai.dtd.100", True),
+            ("/usr/share/install/ai.dtd.XX0", False),
+            ("/usr/share/install/ai.dtd.0XX", False))
+
+        for (path, expected) in possible_paths:
+            matched = path_matches_dtd(path)
+            self.assertEqual(matched, expected,
+                "Path match for %s returned %s when expecting %s" %
+                (path, matched, expected))
+
+if __name__ == '__main__':
+    unittest.main()

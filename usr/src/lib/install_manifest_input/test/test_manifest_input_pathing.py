@@ -30,6 +30,7 @@ Module containing tests for pathing.
 import os
 import unittest
 
+from solaris_install import SYS_AI_MANIFEST_DTD
 import solaris_install.manifest_input.mim as mim
 import solaris_install.manifest_input as milib
 
@@ -83,7 +84,7 @@ class TestMIMPathing(unittest.TestCase):
         # suite of tests.  Indeed, the above xml file does not match it at all.
         root = os.environ["ROOT"]
         self.mim_obj = mim.ManifestInput("dummy", root +
-                                         "/usr/share/install/ai.dtd")
+                                         SYS_AI_MANIFEST_DTD)
         self.mim_obj.load(self.MIM_TEST_XML_FILENAME)
 
     def tearDown(self):

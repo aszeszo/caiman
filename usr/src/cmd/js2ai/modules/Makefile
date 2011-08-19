@@ -30,12 +30,17 @@ install:=	TARGET=	install
 
 MSG_DOMAIN =	../js2ai
 
+SRCPYFILES =	default_xml.py.src
+
+GENERATEDPYFILES =	default_xml.py
+
 PYMODULES=	__init__.py \
 		common.py \
 		conv.py \
 		conv_sysidcfg.py \
 		default_xml.py \
-		ip_address.py
+		ip_address.py \
+		$(GENERATEDPYMODULES)
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
@@ -47,10 +52,10 @@ ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLJS2AI)/%)
 
 MSGFILES =  $(PYMODULES)
 
-all:		python
+all:		$(GENERATEDPYFILES) python
 
 clean:
-	rm -f $(PYCMODULES)
+	rm -f $(PYCMODULES) $(GENERATEDPYFILES)
 
 clobber: clean
 
@@ -60,6 +65,8 @@ install: all .WAIT $(ROOTPYTHONVENDOR) \
 	$(ROOTPYMODULES) \
 	$(ROOTPYCMODULES) \
 	.WAIT msgs
+
+$(GENERATEDPYFILES):
 
 python:
 	$(PYTHON) -m compileall -l $(@D)

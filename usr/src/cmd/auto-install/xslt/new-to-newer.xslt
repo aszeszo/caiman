@@ -26,7 +26,7 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
     <xsl:output method="xml" indent="yes" encoding="UTF-8" 
-     doctype-system="file:///usr/share/install/ai.dtd"/>
+     doctype-system="file:///usr/share/install/ai.dtd.1"/>
     
 
     <xsl:template match="/">

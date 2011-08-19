@@ -32,6 +32,7 @@ import unittest
 
 import solaris_install.manifest_input as milib
 
+from solaris_install import SYS_AI_MANIFEST_DTD
 from solaris_install.manifest_input.mim import ManifestInput
 
 # Eventually bring names into convention.
@@ -45,7 +46,7 @@ class TestMIMValidateCommitCommon(unittest.TestCase):
 
     ROOT = os.environ["ROOT"]
     BASE_MANIFEST = ROOT + "/usr/share/auto_install/manifest/ai_manifest.xml"
-    SCHEMA = ROOT + "/usr/share/install/ai.dtd"
+    SCHEMA = ROOT + SYS_AI_MANIFEST_DTD
     AIM_MANIFEST_FILE = "/tmp/mim_test.xml"
     IN_XML_FILE = "/tmp/test_main.xml"
 

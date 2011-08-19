@@ -26,7 +26,9 @@
 
 APPMANIFESTSRC= auto-installer.xml manifest-locator.xml
 
-SVCMETHODSRC= auto-installer manifest-locator
+GENSVCMETHODS = auto-installer
+
+SVCMETHODSRC= $(GENSVCMETHODS) manifest-locator
 
 include $(SRC)/cmd/Makefile.cmd
 
@@ -37,12 +39,18 @@ APPMANIFESTS= $(APPMANIFESTSRC:%=$(ROOTMANAPP)/%)
 SVCMETHODS= $(SVCMETHODSRC:%=$(ROOTLIBSVCMETHOD)/%)
 $(SVCMETHODS) :=	FILEMODE= 0555
 
-all:
+CLOBBERFILES = $(GENSVCMETHODS)
+CLEANFILES = $(CLOBBERFILES)
+
+all: $(SVCMETHODSRC)
 
 install: all $(ROOTMANAPP) $(ROOTLIBSVCMETHOD) $(APPMANIFESTS) $(SVCMETHODS)
 
 install_h:
 
+$(GENSVCMETHODS):
+
 clobber clean:
+	$(RM) -f $(GENSVCMETHODS)
 
 include $(SRC)/cmd/Makefile.targ

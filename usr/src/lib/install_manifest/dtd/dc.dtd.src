@@ -24,19 +24,19 @@
 
 <!ELEMENT dc (distro)>
 
-<!ENTITY % boot_mods SYSTEM "boot_mods.dtd">
+<!ENTITY % boot_mods SYSTEM "boot_mods.dtd.@DTD_VERSION_BOOT_MODS@">
 %boot_mods;
 
-<!ENTITY % target SYSTEM "target.dtd">
+<!ENTITY % target SYSTEM "target.dtd.@DTD_VERSION_TARGET@">
 %target;
 
-<!ENTITY % execution SYSTEM "execution.dtd">
+<!ENTITY % execution SYSTEM "execution.dtd.@DTD_VERSION_EXECUTION@">
 %execution;
 
-<!ENTITY % configuration SYSTEM "configuration.dtd">
+<!ENTITY % configuration SYSTEM "configuration.dtd.@DTD_VERSION_CONFIGURATION@">
 %configuration;
 
-<!ENTITY % software SYSTEM "software.dtd">
+<!ENTITY % software SYSTEM "software.dtd.@DTD_VERSION_SOFTWARE@">
 %software;
 
 <!--

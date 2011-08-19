@@ -26,7 +26,7 @@ Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 DTD sample manifest for Automatic Installer input manifest specification.
 ===============================================================================
 -->
-<!DOCTYPE auto_install SYSTEM "file:///usr/share/install/ai.dtd">
+<!DOCTYPE auto_install SYSTEM "file:///usr/share/install/ai.dtd.@DTD_VERSION_AI@">
 <auto_install>
   <!--
 	"auto_reboot" set to "true" may be an issue for x86 machines.

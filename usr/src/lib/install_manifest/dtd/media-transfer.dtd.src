@@ -28,7 +28,7 @@ DTD used for specifying software information for media transfer
 
 <!ELEMENT media_transfer (media_trans)>
 
-<!ENTITY % software SYSTEM "software.dtd">
+<!ENTITY % software SYSTEM "software.dtd.@DTD_VERSION_SOFTWARE@">
 %software;
 
 <!ELEMENT media_trans (software+)>

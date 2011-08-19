@@ -34,7 +34,7 @@ import unittest
 import solaris_install.manifest_input as milib
 
 from lxml import etree
-from solaris_install import Popen
+from solaris_install import Popen, SYS_AI_MANIFEST_DTD
 from solaris_install.manifest_input.mim import ManifestInput
 
 # Note: Some python strings split across lines have a "+" at the end of their
@@ -50,7 +50,7 @@ class TestMIMOverlayCommon(unittest.TestCase):
     # Provided files.
     ROOT = os.environ["ROOT"]
     BASE_MANIFEST = ROOT + "/usr/share/auto_install/manifest/ai_manifest.xml"
-    SCHEMA = ROOT + "/usr/share/install/ai.dtd"
+    SCHEMA = ROOT + SYS_AI_MANIFEST_DTD
 
     # Created files.
     AIM_MANIFEST_FILE = "/tmp/mim_test.xml"
@@ -281,7 +281,7 @@ class TestOverlay3(TestOverlayBCommon):
         '''
         TestOverlayBCommon.tearDown(self)
         self.destroy_starting_file()
-        
+
     def test_overlay_3(self):
         '''
         Change an attribute of an existing non-leaf element.

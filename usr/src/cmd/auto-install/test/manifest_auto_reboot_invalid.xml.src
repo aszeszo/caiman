@@ -26,7 +26,7 @@ Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 DTD sample manifest for Automatic Installer input manifest specification.
 ===============================================================================
 -->
-<!DOCTYPE auto_install SYSTEM "file:///usr/share/install/ai.dtd">
+<!DOCTYPE auto_install SYSTEM "file:///usr/share/install/ai.dtd.@DTD_VERSION_AI@">
 <auto_install>
   <!--
 	"auto_reboot" set to "true" may be an issue for x86 machines.
@@ -40,7 +40,7 @@ DTD sample manifest for Automatic Installer input manifest specification.
            <ai_instance name="my_ai_manifest" auto_reboot="true">
         3) manifest filename 
     -->
-  <ai_instance auto_reboot="false" http_proxy="192.168.1.1" name="rebootfalse">
+  <ai_instance auto_reboot="invalid" http_proxy="192.168.1.1" name="rebootinvalid">
     <!--
       =======================================================================
       <target/target_device> - selections for AI target Device specification

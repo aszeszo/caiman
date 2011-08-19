@@ -47,7 +47,8 @@ import tempfile
 
 from lxml import etree
 
-from solaris_install import Popen, CalledProcessError, system_temp_path
+from solaris_install import Popen, CalledProcessError, system_temp_path, \
+    SYS_AI_MANIFEST_DTD
 from solaris_install.auto_install.ai_get_manifest import AICriteriaNetwork
 from solaris_install.data_object import DataObject
 from solaris_install.engine import InstallEngine
@@ -66,7 +67,6 @@ MSG_HEADER = "Derived Manifest Module: "
 
 # Other configurables
 DEFAULT_AIM_MANIFEST = system_temp_path("manifest.xml")
-DEFAULT_AI_SCHEMA = "/usr/share/install/ai.dtd"
 SYSTEM_CONF = "/etc/netboot/system.conf"
 
 # Commands
@@ -479,7 +479,7 @@ class DerivedManifestModule(AbstractCheckpoint):
             dtd = tree.docinfo.system_url
             self.logger.info(MSG_HEADER + "Using DTD from header of manifest.")
         else:
-            dtd = DEFAULT_AI_SCHEMA
+            dtd = SYS_AI_MANIFEST_DTD
             self.logger.info(MSG_HEADER + "Manifest header refers to no DTD.")
         self.logger.info(MSG_HEADER + "Validating against DTD: %s" % dtd)
 

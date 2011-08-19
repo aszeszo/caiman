@@ -24,30 +24,31 @@
 #
 
 
-include ../../../Makefile.cmd
+include $(SRC)/cmd/Makefile.cmd
 
 all:=		TARGET=	all
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-XSLT_FILES=	doc2_media_transfer.xslt
+XSLT_FILES_SRC =	doc2_media_transfer.xslt.src
 
-ROOTXSLT_DIR = $(ROOTPYTHONVENDORINSTALLDCCHKPT)/xslt
-ROOTXSLT_FILES= $(XSLT_FILES:%=$(ROOTXSLT_DIR)/%)
+XSLT_FILES_GEN =	doc2_media_transfer.xslt
 
-all:		
+XSLT_FILES =		$(XSLT_FILES_GEN)
+
+ROOTXSLT_FILES= $(XSLT_FILES:%=$(ROOTPYTHONVENDORINSTALLDCCHKPTXSLT)/%)
+
+CLEANFILES =		$(XSLT_FILES_GEN)
+CLOBBERFILES =		$(CLEANFILES)
+
+all:	$(XSLT_FILES_GEN)
+
+install: all .WAIT $(ROOTXSLT_FILES)
 
 clean:	
+	$(RM) $(CLEANFILES)
 
 clobber: clean
 
-$(ROOTXSLT_DIR):
-	$(INS.dir)
-
-$(ROOTXSLT_DIR)/%: %
-	$(INS.file)
-
-install: $(ROOTXSLT_DIR) .WAIT $(ROOTXSLT_FILES)
-
-include ../../../Makefile.targ
+include $(SRC)/cmd/Makefile.targ

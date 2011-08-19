@@ -1,38 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE dc SYSTEM "/usr/share/install/dc.dtd">
+<!DOCTYPE dc SYSTEM "/usr/share/install/dc.dtd.@DTD_VERSION_DC@">
 <!--
   CDDL HEADER START
- 
+
   The contents of this file are subject to the terms of the
   Common Development and Distribution License (the "License").
   You may not use this file except in compliance with the License.
- 
+
   You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
   or http://www.opensolaris.org/os/licensing.
   See the License for the specific language governing permissions
   and limitations under the License.
- 
+
   When distributing Covered Code, include this CDDL HEADER in each
   file and include the License file at usr/src/OPENSOLARIS.LICENSE.
   If applicable, add the following below this CDDL HEADER, with the
   fields enclosed by brackets "[]" replaced with your own identifying
   information: Portions Copyright [yyyy] [name of copyright owner]
- 
+
   CDDL HEADER END
- 
+
   Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
   XML specification for building an Oracle Solaris installer iso image
 -->
 <dc>
   <!--
-    add_timestamp controls if the iso/usb should have a timestamp
-    appended to it. Useful if the intent is to do serial builds and to keep
-    all the incremental images around
+    add_timestamp controls if the iso/usb should
+    have a timestamp appended to it. Useful if the intent
+    is to do serial builds and to keep all the incremental
+    images around
   -->
-  <distro name="Oracle_Solaris_Live_X86" add_timestamp="false">
+  <distro name="Oracle_Solaris_Text_X86" add_timestamp="false">
   <!-- Uncomment if http_proxy needs to be set
-  <distro name="Oracle_Solaris_Live_X86" add_timestamp="false"
+  <distro name="Oracle_Solaris_Text_X86" add_timestamp="false"
       http_proxy="http://example.com">
   -->
     <distro_spec>
@@ -48,12 +49,9 @@
             timeout - boot loader timeout value before the default boot entry
                       is automatically activated.
           -->
-          <!-- Sample boot_mods with title and timeout attributes.
-               Uncomment and replace un-attributed boot_mods entry below
-               before using.
+          <!-- Uncomment before using
           <boot_mods title="myentry" timeout="5">
           -->
-          <boot_mods>
             <!--
               Boot entries to add to the default boot menu in the image. Each
               entry is either prepended or appended sequentially to the boot
@@ -83,24 +81,19 @@
               Optional sub-elements:
               kernel_args   - Optional kernel arguments passed to the kernel by
                               the boot loader.
-
-              NOTE: It is strongly suggested that any entries to be added
-                    must be specified *before* the "with magnifier" entry
-                    below.
             -->
-            <boot_entry>
-              <title_suffix>with magnifier</title_suffix>
-              <kernel_args>-B assistive_tech=magnifier</kernel_args>
+            <!-- Uncomment before using
+            <boot_entry default_entry="false" insert_at="end">
+              <title_suffix>My Title</title_suffix>
+              <kernel_args></kernel_args>
             </boot_entry>
-            <boot_entry>
-              <title_suffix>with screen reader</title_suffix>
-              <kernel_args>-B assistive_tech=reader</kernel_args>
-            </boot_entry>
+            -->
+          <!-- Uncomment before using
           </boot_mods>
+          -->
         </media_im>
       </img_params>
     </distro_spec>
-
     <!--
       Target Section: defines zfs build dataset to be used for the build.
       Filesystem name should not include the name of the zpool.
@@ -108,13 +101,13 @@
     <target name="desired">
       <logical>
         <zpool name="rpool" action="use_existing">
-          <filesystem name="dc/livecd" action="preserve"/>
+          <filesystem name="dc/text" action="preserve"/>
         </zpool>
       </logical>
     </target>
 
     <!--
-    Software section: defines the payload for the transfer checkpoints.
+      Software section: defines the payload for the transfer checkpoints.
     -->
     <!--
       Sofware node names should match a corresponding Execution node
@@ -162,8 +155,8 @@
       -->
       <software_data action="install">
         <name>pkg:/entire</name>
-        <name>pkg:/group/system/solaris-desktop</name>
-        <name>pkg:/system/install/gui-install</name>
+        <name>pkg:/group/system/solaris-large-server</name>
+        <name>pkg:/system/install/text-install</name>
         <name>pkg:/system/install/media/internal</name>
       </software_data>
     </software>
@@ -176,7 +169,7 @@
       </destination>
       <source>
         <publisher name="solaris">
-          <origin name="http://pkg.oracle.com/solaris/release"/>
+          <origin name="http://pkg.oracle.com/solaris/release/"/>
           <!-- 
             If mirrors for this publisher are desired, they can be set here
           -->
@@ -189,7 +182,6 @@
     <!--
       Items below this line are rarely configured
     -->
-
     <!--
       This section defines the contents of the boot_archive
     -->
@@ -213,6 +205,8 @@
         <name>usr/lib/devfsadm/linkmod</name>
         <name>root</name>
         <name>jack</name>
+        <name>usr/sbin/ibd_delete_link</name>
+        <name>usr/sbin/ibd_upgrade</name>
         <name>var/svc/manifest</name>
         <name>var/svc/profile</name>
         <name>var/sadm</name>
@@ -226,7 +220,6 @@
         <name>var/sadm/pkg</name>
       </software_data>
     </software>
-
     <!--
       Execution section: This section lists the checkpoints that are run to
       create an image. The checkpoints listed below are run in order.
@@ -243,7 +236,7 @@
       <checkpoint name="pre-pkg-img-mod"
           desc="Pre package image modification"
           mod_path="solaris_install/distro_const/checkpoints/pre_pkg_img_mod"
-          checkpoint_class="LiveCDPrePkgImgMod">
+          checkpoint_class="TextPrePkgImgMod">
           <!--
             root user/role password in the image.
           -->
@@ -266,7 +259,7 @@
       <checkpoint name="ba-config"
           desc="Boot Archive Configuration"
           mod_path="solaris_install/distro_const/checkpoints/boot_archive_configure"
-          checkpoint_class="LiveCDBootArchiveConfigure">
+          checkpoint_class="TextBootArchiveConfigure">
       </checkpoint>
       <checkpoint name="ba-arch"
           desc="Boot Archive Archival"
@@ -279,8 +272,8 @@
             size_pad increases the amount of free space in the boot_archive
             at the expense of available memory on the booted system.
 
-            bytes_per_inode is used to control the 'nbpi' used in sizing up
-            the boot_archive
+            bytes_per_inode is used to control the 'nbpi' used in sizing up the
+            boot_archive
           -->
           <kwargs>
             <arg name="compression_type">gzip</arg>
@@ -290,21 +283,21 @@
           </kwargs>
       </checkpoint>
       <checkpoint name="boot-setup"
-          desc="Setup LiveCD boot menu"
+          desc="Setup boot menu"
           mod_path="solaris_install/boot/boot"
-          checkpoint_class="LiveCDISOImageBootMenu"/>
+          checkpoint_class="TextISOImageBootMenu"/>
       <checkpoint name="pkg-img-mod"
           desc="Pkg image area modification"
           mod_path="solaris_install/distro_const/checkpoints/pkg_img_mod"
-          checkpoint_class="LiveCDPkgImgMod">
+          checkpoint_class="TextPkgImgMod">
           <!--
             compression_type controls the compression algorithm to be used in
-            compressing solaris.zlib and solarismisc.zlib. Valid values are
-            gzip and lzma
+            compressing solaris.zlib and solarismisc.zlib. Valid values are gzip
+            and lzma
           -->
           <kwargs>
             <arg name="dist_iso_sort">
-                /usr/share/distro_const/sort/livecd.sort</arg>
+                /usr/share/distro_const/sort/text_x86.sort</arg>
             <arg name="compression_type">lzma</arg>
           </kwargs>
       </checkpoint>
@@ -322,11 +315,11 @@
 
     <!--
       SMF service profiles to be applied to the boot_archive.
-      
+    
       These profiles are applied in the order they are specified.
     -->
     <configuration name="pre-pkg-img-mod" type="sysconf"
-        source="/etc/svc/profile/generic_limited_net.xml">
+         source="/etc/svc/profile/generic_limited_net.xml">
       <validation path="/usr/sbin/svccfg" args="apply -n"/>
     </configuration>
     <configuration name="pre-pkg-img-mod" type="sysconf"
@@ -334,7 +327,7 @@
       <validation path="/usr/sbin/svccfg" args="apply -n"/>
     </configuration>
     <configuration name="pre-pkg-img-mod" type="sysconf"
-        source="/usr/share/distro_const/profile/livecd.xml">
+        source="/usr/share/distro_const/profile/text.xml">
       <validation path="/usr/sbin/svccfg" args="apply -n"/>
     </configuration>
     <configuration name="pre-pkg-img-mod" type="sysconf"

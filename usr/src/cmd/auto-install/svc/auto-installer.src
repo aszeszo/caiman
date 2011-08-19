@@ -111,7 +111,10 @@ fi
 # is stored. This is just temporary solution, better approach should be to
 # point XML validator to where these file are.
 #
-for dtd_file in "ai.dtd" "configuration.dtd" "software.dtd" "target.dtd" ; do
+for dtd_file in "ai.dtd.@DTD_VERSION_AI@" \
+                "configuration.dtd.@DTD_VERSION_CONFIGURATION@" \
+                "software.dtd.@DTD_VERSION_SOFTWARE@" \
+                "target.dtd.@DTD_VERSION_TARGET@" ; do
 	if [ ! -f "/usr/share/install/$dtd_file" ] ; then
 		echo "Could not find /usr/share/install/$dtd_file"
 		exit $SMF_EXIT_ERR_FATAL

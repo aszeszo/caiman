@@ -30,24 +30,36 @@ clean:=        TARGET= clean
 clobber:=      TARGET= clobber
 install:=      TARGET= install
 
-MANIFEST_FILES=	dc_livecd.xml \
+MANIFEST_FILES_SRC=	dc_ai_sparc.xml.src \
+	dc_ai_x86.xml.src \
+	dc_livecd.xml.src \
+	dc_text_sparc.xml.src \
+	dc_text_x86.xml.src
+
+MANIFEST_FILES_GEN=	dc_ai_sparc.xml \
 	dc_ai_x86.xml \
-	dc_ai_sparc.xml \
-	dc_text_x86.xml \
+	dc_livecd.xml \
 	dc_text_sparc.xml \
+	dc_text_x86.xml
+
+MANIFEST_FILES=	$(MANIFEST_FILES_GEN) \
 	boot_archive_contents_x86.xml \
 	boot_archive_contents_sparc.xml \
 	lang_facets.xml
 
 ROOT_MANIFEST_FILES=	$(MANIFEST_FILES:%=$(ROOTDC)/%)
 
-all:
+CLEANFILES= $(MANIFEST_FILES_GEN)
+CLOBBERFILES= $(CLEANFILES)
 
-install: .WAIT $(ROOTDC) \
+all: $(MANIFEST_FILES_GEN)
+
+install: all .WAIT $(ROOTDC) \
 	$(ROOT_MANIFEST_FILES)
 
-clean:
+$(MANIFEST_FILES_GEN):
 
-clobber:
+clean:
+	$(RM) $(CLEANFILES)
 
 include ../../Makefile.targ
