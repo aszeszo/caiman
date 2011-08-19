@@ -1,0 +1,242 @@
+'\" te
+.\" Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+.TH distro_const 1M "2011 年 7 月 14 日" "SunOS 5.11" "システム管理コマンド"
+.SH 名前
+distro_const \- Oracle Solaris のイメージとメディアを作成するユーティリティー
+.SH 形式
+.LP
+.nf
+/usr/bin/distro_const
+.fi
+
+.LP
+.nf
+distro_const --help
+.fi
+
+.LP
+.nf
+distro_const build [\fB-v\fR] [\fB -r \fR \fIcheckpoint name\fR] [\fB-p\fR \fIcheckpoint name\fR] [\fB-l\fR] \fImanifest\fR
+.fi
+
+.SH 機能説明
+.sp
+.LP
+\fBdistro_const\fR コマンドでは、指定したマニフェストファイルをイメージの青写真として使用してイメージを作成できます。
+.sp
+.LP
+x86 システムまたは SPARC システムのどちらかで Oracle Solaris オペレーティングシステムをインストールするために使用できるテキストインストーライメージを作成できます。
+.sp
+.LP
+または、Oracle Solaris オペレーティングシステムを含む Live CD イメージと同等の ISO イメージを作成できます。
+.sp
+.LP
+あるいは、SPARC クライアントに Oracle Solaris OS をネットワークインストールするために使用できる SPARC AI ISO イメージか、x86 クライアントに Oracle Solaris OS をネットワークインストールするために使用できる x86 AI ISO イメージを作成できます。
+.sp
+.LP
+カスタム ISO イメージを作成することもできます。
+.sp
+.LP
+基本の \fBdistro_const\fR コマンドをオプションなしで実行すると、1 回のステップでフルイメージが作成されます。
+.sp
+.LP
+コマンドオプションを使用すると、さまざまな「チェックポイント」でイメージ作成処理を一時停止および再開できるため、各段階でイメージの状態を確認したり、バグの有無を確認したりできます。チェックポイントを使用することで、すでに少なくとも一度は実行された時間のかかるステップを省略できるため、構築にかかる時間が短縮されます。
+.LP
+注 - 
+.sp
+.RS 2
+\fBdistro_const\fR コマンドを実行するには、ルートの役割になるか、ルートの権限を持っている必要があります。
+.LP
+ディストリビューションコンストラクタを使用する場合、SPARC システムでは SPARC イメージのみを作成できます。同様に、x86 システムでは x86 イメージのみを作成できます。また、システム上のオペレーティングシステムのリリースバージョンが、構築しているイメージと同じリリースバージョンである必要があります。
+.RE
+.SH サブコマンド
+.sp
+.LP
+\fBdistro_const\fR コマンドには、次に示されているサブコマンドとオプションがあります。「使用例」の節も参照してください。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--help\fR\fR
+.ad
+.sp .6
+.RS 4n
+使用法を表示します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBbuild\fR
+.ad
+.sp .6
+.RS 4n
+\fBdistro_const build\fR \fImanifest\fR
+.sp
+サブコマンド「build」は必須です。
+.sp
+指定したマニフェストファイルをイメージの青写真として使用して、フルイメージを作成します。マニフェスト名は必須です。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR \fBdistro_const build\fR \fB- v\fR\fR
+.ad
+.sp .6
+.RS 4n
+詳細表示モードを指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fBdistro_const build\fR [\fB- l\fR] \fImanifest\fR\fR
+.ad
+.sp .6
+.RS 4n
+イメージの構築の一時停止または再開を選択できるすべての有効なチェックポイントを一覧表示します。このコマンドオプションは、有効なチェックポイントの有無をマニフェストファイルに問い合わせます。このコマンドによって表示された名前を、他のチェックポイント処理コマンドオプションの有効な値として使用してください。build サブコマンドは必須です。
+.sp
+チェックポイントの値は、マニフェストファイル内のエントリによって決まります。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fBdistro_const build\fR [\fB- p\fR \fIcheckpoint\fR] \fImanifest\fR\fR
+.ad
+.sp .6
+.RS 4n
+イメージを構築しますが、指定したチェックポイント名でイメージの構築を一時停止します。有効な名前を検索するには、-l オプションを使用します。-r オプションと -p オプションを組み合わせることができます。チェックポイント名とマニフェスト名は必須です。build サブコマンドは必須です。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fBdistro_const build\fR [\fB- r\fR \fIcheckpoint\fR] \fImanifest\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定したチェックポイント名からイメージの構築を再開します。指定する名前は、前に構築の実行を停止したチェックポイント、またはそれ以前のチェックポイントにしてください。それより後のチェックポイントは無効です。どのチェックポイントが再開可能かを判定するには、-l オプションを使用します。-p オプションは、-r オプションと組み合わせることができます。チェックポイント名とマニフェスト名は必須です。build サブコマンドは必須です。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR \fBdistro_const\fR [\fB- h\fR]\fR
+.ad
+.sp .6
+.RS 4n
+コマンドの使用法を表示します。
+.RE
+
+.SH 使用例
+.LP
+\fB例 1 \fRチェックポイントのオプションを使用したイメージの作成
+.RS +4
+.TP
+1.
+利用可能なチェックポイントを確認します。この例のマニフェスト名は \fBdc_livecd.xml\fR です。
+.sp
+.in +2
+.nf
+# \fBdistro_const build -l /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+有効なチェックポイント名が、このサンプル出力のように表示されます。
+.sp
+.in +2
+.nf
+ 
+
+  Checkpoint           Resumable  Description
+  --------------------------------------------
+  transfer-ips-install X Transfer pkg contents from IPS
+  set-ips-attributes   X Set post-install IPS attributes
+  pre-pkg-img-mod      X Pre-package image modification
+  ba-init              X Boot archive initialization
+  ba-config            X Boot archive configuration
+  ba-arch              X Boot archive archival
+  grub-setup           X Set up GRUB menu
+  pkg-img-mod          X Pkg image area modification
+  create-iso             ISO media creation
+  create-usb             USB media creation     
+.fi
+.in -2
+.sp
+
+.RE
+.RS +4
+.TP
+2.
+イメージの構築を開始し、ba-init チェックポイントで一時停止します。
+.sp
+.in +2
+.nf
+# \fBdistro_const build -p ba-init /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+.RE
+.RS +4
+.TP
+3.
+ba-init チェックポイントから構築を再開します。イメージの作成を完了します。
+.sp
+.in +2
+.nf
+# \fBdistro_const build -r ba-init /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+.RE
+.LP
+\fB例 2 \fRイメージを 1 ステップで作成
+.sp
+.LP
+一時停止せずにイメージの完全な構築を実行するには、チェックポイントオプションを指定せずに基本の \fBdistro_const\fR コマンドを使用します。マニフェストファイル名は dc_livecd.xml です。
+
+.sp
+.in +2
+.nf
+# \fBdistro_const build /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+.SH 属性
+.sp
+.LP
+属性についての詳細は、マニュアルページの \fBattributes\fR(5) を参照してください。
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+属性タイプ属性値
+_
+使用条件install/distribution-constructor
+_
+インタフェースの安定性開発中
+.TE
+
+.SH 関連項目
+.sp
+.LP
+\fBdc_manifest\fR(4)
+.sp
+.LP
+現在のリリースの OTN ドキュメントライブラリの『\fICreating a Custom Oracle Solaris 11 Installation Image\fR』。

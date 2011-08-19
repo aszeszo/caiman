@@ -25,45 +25,35 @@
 include $(SRC)/Makefile.master
 
 MANPAGES1M = aimanifest.1m distro_const.1m installadm.1m js2ai.1m
-MANPAGES4 = ai_manifest.4 dc_manifest.4
+MANPAGES4 = dc_manifest.4
 
 FILEMODE = 0444
 
-ROOTMANPAGES1M = $(MANPAGES1M:%=$(ROOTMAN1M)/%)
-ROOTMANPAGES4 = $(MANPAGES4:%=$(ROOTMAN4)/%)
+ROOTMANPAGESJAJP1M = $(MANPAGES1M:%=$(ROOTMANJAJP1M)/%)
+ROOTMANPAGESJAJP4 = $(MANPAGES4:%=$(ROOTMANJAJP4)/%)
 
 all :=		TARGET = all
 clean :=	TARGET = clean
 clobber :=	TARGET = clobber
 install :=	TARGET = install
 
-SUBDIRS = 	ja_JP zh_CN
-
 all:	$(MANPAGES1M) $(MANPAGES4)
 
-headers:
-
-clean:	$(SUBDIRS)
-	$(RM) $(ROOTMANPAGES1M) $(ROOTMANPAGES4)
+clean:
+	$(RM) $(ROOTMANPAGESJAJP1M) $(ROOTMANPAGESJAJP4)
 
 clobber: clean
 
-install: all $(ROOTMANPAGES1M) $(ROOTMANPAGES4) \
-	$(SUBDIRS)
+install: all $(ROOTMANPAGESJAJP1M) $(ROOTMANPAGESJAJP4)
 
-$(ROOTMAN1M)/%: %
+$(ROOTMANJAJP1M)/%: %
 	$(INS.file)
 
-$(ROOTMAN4)/%: %
+$(ROOTMANJAJP4)/%: %
 	$(INS.file)
 
-$(ROOTMAN1M):
+$(ROOTMANJAJP1M):
 	$(INS.dir)
 
-$(ROOTMAN4):
+$(ROOTMANJAJP4):
 	$(INS.dir)
-
-$(SUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-FRC:

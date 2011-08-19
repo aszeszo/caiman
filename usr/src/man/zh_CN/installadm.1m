@@ -1,0 +1,1970 @@
+'\" te
+.\" Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+.TH installadm 1M "2011 年 7 月 30 日" "SunOS 5.11" "系统管理命令"
+.SH 名称
+installadm \- 管理网络上的自动化安装
+.SH 用法概要
+.LP
+.nf
+/usr/bin/installadm [-h|--help]
+.fi
+
+.LP
+.nf
+installadm help [\fIsubcommand\fR]
+.fi
+
+.LP
+.nf
+installadm create-service
+    [-n|--service \fIsvcname\fR]
+    [-t|--aliasof \fIexisting_service\fR]
+    [-p|--publisher \fIprefix\fR=\fIorigin\fR]
+    [-a|--arch \fIarchitecture\fR]
+    [-s|--source \fIFMRI_or_ISO\fR]
+    [-b|--boot-args \fIboot_property\fR=\fIvalue\fR,...]
+    [-i|--ip-start \fIdhcp_ip_start\fR]
+    [-c|--ip-count \fIcount_of_ipaddr\fR]
+    [-B|--bootfile-server \fIserver_ipaddr\fR]
+    [-d|--imagepath \fIimagepath\fR]
+    [-y|--noprompt]
+.fi
+
+.LP
+.nf
+installadm set-service
+    -o|--option \fIprop\fR=\fIvalue\fR \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm rename-service \fIsvcname\fR \fInewsvcname\fR
+.fi
+
+.LP
+.nf
+installadm enable \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm disable \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm delete-service
+    [-r|--autoremove] [-y|--noprompt] \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm list
+    [-n|--service \fIsvcname\fR]
+    [-c|--client] [-m|--manifest] [-p|--profile]
+.fi
+
+.LP
+.nf
+installadm create-manifest -n|--service \fIsvcname\fR
+    -f|--file \fImanifest_or_script_filename\fR
+    [-m|--manifest \fImanifest_name\fR]
+    [-c|--criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... |
+    -C|--criteria-file \fIcriteriafile\fR]
+    [-d|--default]
+.fi
+
+.LP
+.nf
+installadm update-manifest -n|--service \fIsvcname\fR
+    -f|--file \fImanifest_or_script_filename\fR
+    [-m|--manifest \fImanifest_name\fR]
+.fi
+
+.LP
+.nf
+installadm delete-manifest
+    -m|--manifest \fImanifest_name\fR
+    -n|--service \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm create-profile -n|--service \fIsvcname\fR
+    -f|--file \fIprofile_filename\fR... 
+    [-p|--profile \fIprofile_name\fR]
+    [-c|--criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... |
+    -C|--criteria-file \fIcriteriafile\fR]
+.fi
+
+.LP
+.nf
+installadm delete-profile -p|--profile \fIprofile_name\fR...
+    -n|--service \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm export -n|--service \fIsvcname\fR
+    -m|--manifest \fImanifest_name\fR...
+    -p|--profile \fIprofile_name\fR...
+    -o|--output \fIpathname\fR
+.fi
+
+.LP
+.nf
+installadm validate -n|--service \fIsvcname\fR
+    -P|--profile-file \fIprofile_filename\fR... |
+    -p|--profile \fIprofile_name\fR...
+.fi
+
+.LP
+.nf
+installadm set-criteria
+    -m|--manifest \fImanifest_name\fR
+    -p|--profile \fIprofile_name\fR
+    -n|--service \fIsvcname\fR
+    -c|--criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... |
+    -C|--criteria-file \fIcriteriafile\fR |
+    -a|--append-criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR...
+.fi
+
+.LP
+.nf
+installadm create-client
+    [-b|--boot-args \fIproperty\fR=\fIvalue\fR,...]
+    -e|--macaddr \fImacaddr\fR -n|--service \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm delete-client \fImacaddr\fR
+.fi
+
+.SH 描述
+.sp
+.LP
+自动化安装程序 (Automated Installer, AI) 用于通过网络在一个或多个 SPARC 和 x86 系统上自动完成 Oracle Solaris OS 的安装。
+.sp
+.LP
+通过网络利用 AI 所需的计算机拓扑需要包含一台安装服务器、一台 DHCP 服务器（这可以是与安装服务器相同的系统），以及安装客户机。在安装服务器上，安装服务设置为包含 AI 引导映像（为客户机提供该映像以便它们通过网络引导）、输入规范（AI 清单和派生的清单脚本，将为客户机选择其中一项）和服务管理工具 (Service Management Facility, SMF) 配置文件（将为客户机选择其中的零项或多项）。
+.sp
+.LP
+AI 引导映像的内容作为软件包 \fBinstall-image/solaris-auto-install\fR 发布，并通过 \fBcreate-service\fR 子命令安装。\fBcreate-service\fR 子命令还能够接受和解压缩 AI ISO 文件以创建 AI 引导映像。
+.sp
+.LP
+安装服务是使用缺省 AI 清单创建的，但是可以使用 \fBcreate-manifest\fR 子命令将自定义的清单或派生的清单脚本（以下称"脚本"）添加到安装服务。有关如何创建清单和派生的清单脚本的信息，请参见 \fI《Installing Oracle Solaris 11 Systems》\fR。\fBcreate-manifest\fR 子命令还允许指定条件，这些条件用于确定应该为安装客户机选择哪个清单或脚本。可以使用 \fBset-criteria\fR 子命令修改已经与清单或脚本关联的条件。
+.sp
+.LP
+清单可以包括诸如目标设备、分区信息、软件包列表和其他参数之类的信息。脚本包含的命令用于查询正在运行的 AI 客户机系统并基于它找到的信息构建自定义清单。使用脚本调用 AI 时，AI 的第一项任务是运行该脚本以生成清单。
+.sp
+.LP
+在客户机引导时，将启动与客户机的计算机条件匹配的清单或脚本搜索。在找到匹配的清单或脚本时，将根据匹配清单文件中的规范或派生自匹配脚本的清单文件中的规范，在客户机上安装 Oracle Solaris 发行版。每个客户机只能使用一个清单或脚本。
+.sp
+.LP
+每个服务都有一个缺省清单或脚本。其他清单或脚本的条件与所安装的系统不匹配时，会使用缺省清单或脚本。可以将任何清单或脚本指定为缺省清单或脚本。与缺省清单或脚本关联的任何条件将变为非活动，且在选择清单或脚本期间不予考虑。如果稍后将其他清单或脚本设为缺省清单或脚本，则之前的缺省清单或脚本的条件重新变为活动。没有与其关联的条件的清单或脚本只能用作缺省清单或脚本。将其他清单或脚本指定为缺省清单或脚本时，没有条件的清单或脚本将变为非活动。
+.sp
+.LP
+系统配置文件是对清单和脚本的补充，因为它们也包含安装规范。特别是，使用配置文件指定配置信息，如用户名、用户口令、时区、主机名和 IP 地址。配置文件可以包含变量，用于从安装服务器环境或从 \fBcreate-profile\fR 子命令中指定的条件获取配置参数。这样，单个配置文件可以在不同的客户机上设置不同的配置参数。请参见"示例"部分。
+.sp
+.LP
+系统配置文件由 \fBsmf\fR(5) 处理且符合文档格式 \fBservice_bundle\fR(4)。有关系统配置文件的更多信息，请参见 \fBsysconfig\fR(1M) 和\fI《Installing Oracle Solaris 11 Systems》\fR。每个客户机可以使用任意数目的系统配置文件。不能为每个客户机系统多次指定某个特定的 SMF 属性。
+.sp
+.LP
+如果希望特定的客户机使用某个特定的安装服务，可以使用 \fBcreate-client\fR 子命令将该客户机与该服务关联。也可以使用 \fBcreate-client\fR 修改现有的客户机。
+.sp
+.LP
+\fBinstalladm\fR 实用程序可以用于完成以下任务：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+设置安装服务和别名
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+设置安装映像
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+设置或删除客户机
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+添加、更新或删除清单和脚本
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+指定或修改清单或脚本的条件
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+导出清单和脚本
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+添加或删除系统配置文件
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+验证配置文件
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+指定或修改配置文件的条件
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+导出配置文件
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+启用或禁用安装服务
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+列出安装服务
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+列出安装服务的客户机
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+列出安装服务的清单和脚本
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+列出安装服务的配置文件
+.RE
+.SH 选项
+.sp
+.LP
+\fBinstalladm\fR 命令具有以下选项：
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR，\fB--help\fR\fR
+.ad
+.RS 15n
+.rt  
+显示用法帮助消息。
+.RE
+
+.SH 子命令
+.sp
+.LP
+\fBinstalladm\fR 命令具有下面列出的子命令。另请参见下面的"示例"部分。 
+.sp
+.ne 2
+.mk
+.na
+\fB\fBhelp [\fIsubcommand\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+显示 \fBinstalladm\fR 实用程序的语法。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIsubcommand\fR\fR\fR
+.ad
+.RS 14n
+.rt  
+仅显示指定子命令的语法。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-service [\fB-n\fR|\fB--service\fR\fI svcname\fR] [\fB-t\fR|\fB--aliasof\fR\fI existing_service\fR] [\fB-p\fR|\fB--publisher\fR\fI prefix\fR=\fIorigin\fR] [\fB-a\fR|\fB- -arch\fR\fIarchitecture\fR] [\fB-s\fR|\fB- -source\fR\fIFMRI_or_ISO\fR] [\fB-b\fR|\fB- -boot-args\fR\fIboot_property\fR=\fIvalue\fR,...][\fB-i\fR|\fB--ip-start\fR\fIdhcp_ip_start\fR] [\fB-c\fR|\fB--ip-count\fR\fIcount_of_ipaddr\fR] [\fB-B\fR|\fB--bootfile-server\fR\fIserver_ipaddr\fR] [\fB-d\fR|\fB--imagepath\fR\fIimagepath\fR] [\fB-y\fR|\fB--noprompt\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+该子命令在指定的 \fIimagepath\fR 目录中设置网络引导映像（网络映像），并创建一个安装服务，用于指定如何安装从网络映像引导的客户机。
+.sp
+AI 引导映像内容作为软件包 \fBinstall-image/solaris-auto-install\fR 发布。如果未指定 \fB-s\fR 选项，则从系统发布者首选项列表中第一个提供该软件包实例的发布者安装该软件包。\fB-s\fR 选项接受 \fBpkg\fR 规范作为映像 ISO 文件的完整 FMRI 或位置。生成的网络映像最终位于 \fIimagepath\fR 中。该网络映像将用于客户机安装。
+.sp
+.LP
+请注意以下规范：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+在安装服务器上创建给定体系结构的第一个安装服务时，会自动创建该服务的别名 \fBdefault-i386\fR 或 \fBdefault-sparc\fR。此缺省服务用于具有该体系结构、且未通过 \fBcreate-client\fR 子命令显式添加到安装服务器的客户机的所有安装。要更改 \fBdefault-\fIarch\fR\fR 服务用作别名的服务，请使用 \fBset-service\fR 子命令。
+.sp
+如果将 \fBdefault-\fIarch\fR\fR 别名更改为新的安装服务且找到了本地 ISC DHCP 配置，则此缺省别名引导文件将设置为该体系结构的缺省 DHCP 服务器范围的引导文件。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+如果希望客户机使用与该体系结构的缺省安装服务不同的安装服务，则必须使用 \fBcreate-client\fR 子命令创建特定于客户机的配置。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+如果使用了 \fB-i\fR 选项和 \fB-c\fR 选项，且尚未配置 DHCP 服务器，则会配置 ISC DHCP 服务器。
+.sp
+如果已配置 ISC DHCP 服务器，将更新该 DHCP 服务器。
+.sp
+即使提供了 \fB-i\fR 和 \fB-c\fR 参数且配置了 DHCP，在所创建的安装服务和 IP 范围之间也不会存在绑定。传递 \fB-i\fR 和 \fB-c\fR 时，会设置 IP 范围，根据需要创建新的 DHCP 服务器，并且该 DHCP 服务器将保持打开状态并为要使用的所有安装服务和所有客户机运行。为 DHCP 服务器提供的网络信息与所创建的服务没有特定的关系。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+如果请求的 IP 范围不在安装服务器与之具有直接连接的子网上且安装服务器是多宿主的，则 \fB-B\fR 选项将用于提供引导文件服务器的地址（通常为此系统上的 IP 地址）。仅当在安装服务器上配置了多个 IP 地址且使用了 DHCP 中继时，才需要使用该选项。在其他所有配置中，软件可以自动确定此情况。
+.RE
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：使用此安装服务名称而不是系统生成的服务名称。
+.sp
+如果未指定 \fB-n\fR 选项，则自动生成服务名称。 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-t\fR|\fB--aliasof\fR \fI existing_service\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：此新服务是 \fIexisting_service\fR 的替代名称。 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-a\fR|\fB--arch\fR \fI architecture\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：选择特定的变体体系结构。合法值为 \fBi386\fR 或 \fBsparc\fR。如果未指定，则选择与服务器的体系结构相对应的变体。
+.sp
+仅当 \fB-s\fR 参数是 \fBpkg\fR(5) 软件包时，\fB-a\fR 选项才适用。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--publisher\fR \fI prefix\fR=\fIorigin\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：\fBpkg\fR(5) 发布者，格式为 \fIprefix\fR=\fIorigin\fR（从其安装客户机映像）。
+.sp
+如果未指定 \fB-p\fR 选项，则使用系统的发布者首选项列表中第一个提供该软件包实例的发布者。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-s\fR|\fB--source\fR \fI FMRI_or_ISO\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定网络映像的数据源。它可以是以下任一项：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBpkg\fR(5) 软件包的完整 FMRI。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+AI ISO 映像的路径。
+.RE
+.sp
+.LP
+如果未指定 \fB-s\fR，则使用的 \fBinstall-image/solaris-auto-install\fR 软件包来自以下任一项：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+使用 \fB-p\fR 参数指定的发布者。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+系统的发布者首选项列表中第一个提供该软件包实例的发布者。
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-b\fR|\fB--boot-args\fR \fI boot_property\fR=\fIvalue\fR,...\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：仅用于 x86 客户机。在服务映像中特定于服务的 \fBmenu.lst\fR 文件中设置属性值。使用此选项可设置特定于此服务的引导属性。此选项可以接受多个逗号分隔的 \fIboot_property\fR=\fIvalue\fR 对。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-i\fR|\fB--ip-start\fR \fI dhcp_ip_start\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定要添加到本地 DHCP 配置的范围中的起始 IP 地址。IP 地址的数量由 \fB-c\fR 选项提供。如果本地 ISC DHCP 配置不存在，则启动 ISC DHCP 服务器。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--ip-count\fR \fI count_of_ipaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：设置 DHCP 配置中的 IP 地址总数（等于 \fIcount_of_ipaddr\fR 的值）。第一个 IP 地址是 \fB-i\fR 选项提供的 \fIdhcp_ip_start\fR 的值。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-B\fR|\fB--bootfile-server\fR \fI server_ipaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：用于提供客户机应该从其请求引导文件的引导服务器的 IP 地址。仅当通过其他方法无法确定此 IP 地址时才是必需的。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-d\fR|\fB--imagepath\fR \fI imagepath\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定创建网络映像的路径。如果未指定，则使用缺省位置 \fB/export/auto_install/\fI svcname\fR\fR。除非还指定了 \fB-y\fR，否则将显示确认提示。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-y\fR|\fB--noprompt\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：禁止任何确认提示，并使用提供的选项和任何缺省值继续进行服务创建（请参见 \fB-d\fR）。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBset-service \fB-o\fR|\fB--option\fR \fI prop\fR=\fIvalue\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-o\fR|\fB--option\fR \fI prop\fR=\fIvalue\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定要设置的属性和值。
+.sp
+.LP
+\fB\fIprop\fR=\fIvalue\fR\fR 可以是：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBaliasof=\fIexisting_service\fR\fR
+.sp
+使 \fIsvcname\fR 成为 \fIexisting_service\fR 的别名。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBdefault-manifest=\fImanifest_name\fR\fR
+.sp
+将已向给定服务注册的特定清单或脚本指定为该服务的缺省清单或脚本。使用以下命令可显示向此服务注册的清单和脚本的列表。
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -n \fIsvcname\fR -m\fR
+.fi
+.in -2
+.sp
+
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定要设置其属性的安装服务名称。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBrename-service \fIsvcname\fR \fI newsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+将安装服务 \fIsvcname\fR 重命名为 \fInewsvcname\fR。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBenable \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+启用 \fIsvcname\fR 安装服务。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdisable \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+禁用 \fIsvcname\fR 安装服务。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-service [\fB-r\fR|\fB--autoremove \fR] [\fB-y\fR|\fB--noprompt\fR] \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+删除安装服务。完成以下操作：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+删除此安装服务的清单、配置文件、客户机配置文件和 Web 服务器配置。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+删除用于实例化服务的映像。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+如果服务为缺省别名且存在本地 ISC DHCP 配置，则从 ISC DHCP 配置中删除与此服务关联的引导文件。
+.RE
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-r\fR|\fB--autoremove\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+如果已指定，则分配给此服务的任何客户机和作为此服务的别名的任何服务也将被删除。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-y\fR|\fB--noprompt\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+禁止任何确认提示并继续进行服务删除。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定要删除的安装服务名称。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlist [\fB-n\fR|\fB--service\fR \fI svcname\fR] [\fB-c\fR|\fB--client\fR] [\fB-m\fR|\fB- -manifest\fR] [\fB-p\fR|\fB--profile\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+列出服务器上已启用的所有安装服务。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：列出有关本地服务器上特定安装服务的信息。
+.RS +4
+.TP
+.ie t \(bu
+.el o
+如果指定了 \fB-c\fR 选项，则列出与安装服务关联的客户机信息。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+如果指定了 \fB-m\fR 选项，则列出与安装服务关联的清单和脚本。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+如果指定了 \fB-p\fR 选项，则列出与安装服务关联的配置文件。
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--client\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：列出本地服务器上安装服务的客户机。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：列出本地服务器上与安装服务关联的清单和脚本。
+.sp
+如果未指定 \fB-n\fR，则显示每个服务的简化列表。这包括缺省清单和脚本以及具有与之关联的条件的所有非缺省清单和脚本。不列出条件。
+.sp
+如果指定了 \fB-n\fR，则使用包括每个清单的条件的更完整列表格式，显示给定服务的所有清单和脚本。没有关联的条件且未指定为缺省清单的非活动清单会进行相应的标记。与缺省清单关联的条件被标记为非活动。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：列出本地服务器上与安装服务关联的配置文件。
+.sp
+如果未指定 \fB-n\fR，则显示每个服务的简写列表，其中包括配置文件名称。
+.sp
+如果指定了 \fB-n\fR，则显示所请求的服务的配置文件及其条件。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-manifest \fB-n\fR|\fB--service\fR\fI svcname\fR\fB-f\fR|\fB--file\fR\fImanifest_or_script_filename \fR [\fB-m\fR|\fB--manifest\fR\fImanifest_name \fR] [\fB-c\fR|\fB--criteria\fR\fIcriteria \fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...| \fB-C\fR|\fB--criteria-file\fR\fI criteriafile\fR] [\fB-d\fR|\fB--default\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+为特定的服务创建清单或脚本，从而使该清单或脚本在网络上可用，该操作独立于创建服务。非缺省清单或脚本在没有关联的条件时才可以使用（可以处于活动状态）。可以在命令行上输入条件 (\fB-c\fR)，也可以通过条件 XML 文件输入条件 (\fB-C\fR)。在清单或脚本不再指定为缺省值之前，暂时忽略指定的任何条件以及 \fB-d\fR 选项。
+.sp
+.LP
+按以下顺序确定清单的名称：
+.RS +4
+.TP
+1.
+由 \fB-m\fR 选项指定的 \fImanifest_name\fR（如果存在）。
+.RE
+.RS +4
+.TP
+2.
+\fBai_instance\fR\fBname\fR 属性的值（如果在清单中存在）。
+.RE
+.RS +4
+.TP
+3.
+清单或脚本文件名的基名。
+.RE
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定此清单或脚本要与之关联的安装服务名称。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-f\fR|\fB--file\fR \fI manifest_or_script_filename\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定要添加的清单或脚本的路径名称。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fI manifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定清单或脚本的 AI 实例名称。将清单的 \fBai_instance\fR 元素的 \fBname\fR 属性设置为 \fImanifest_name\fR。在后续的 \fBinstalladm\fR 命令和 \fBinstalladm list\fR 输出中，清单或脚本由 \fImanifest_name\fR 引用。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--criteria\fR \fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定要与添加的清单或脚本关联的条件。请参见下面的"条件"部分。发布缺省清单时，会注册条件，但在清单或脚本不再指定为缺省清单或脚本之前使其保持非活动状态。可以多次指定 \fB-c\fR 选项。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-C\fR|\fB--criteria-file\fR \fI criteriafile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定包含要与添加的清单或脚本关联的条件的条件 XML 文件的路径名称。发布缺省清单或脚本时，会注册条件，但在清单或脚本不再指定为缺省清单或脚本之前使其保持非活动状态。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-d\fR|\fB--default\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定此清单或脚本是服务的新缺省清单或脚本。在清单或脚本不再是缺省值之前，将忽略指定的任何条件。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBupdate-manifest \fB-n\fR|\fB--service\fR \fI svcname\fR \fB-f\fR|\fB--file\fR \fImanifest_or_script_filename \fR [\fB-m\fR|\fB--manifest\fR \fImanifest_name \fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+更新与特定的安装服务关联的特定清单或脚本。在对清单或脚本进行更新时，任何条件或缺省状态都保持不变。
+.sp
+.LP
+按以下顺序确定清单的名称：
+.RS +4
+.TP
+1.
+由 \fB-m\fR 选项指定的 \fImanifest_name\fR（如果存在）。
+.RE
+.RS +4
+.TP
+2.
+\fBai_instance\fR\fBname\fR 属性的值（如果在更改后的清单中存在，且它与现有清单的 \fBai_instance\fR\fBname\fR 值匹配）。
+.RE
+.RS +4
+.TP
+3.
+清单或脚本文件名的基名（如果它与现有清单中的 \fBai_instance\fR\fBname\fR 属性值匹配）或由 \fBinstalladm list\fR 提供的名称（如果它与现有脚本的名称匹配）。
+.RE
+供替换的清单或脚本由 \fImanifest_or_script_filename\fR 提供。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定此清单或脚本要与之关联的安装服务名称。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-f\fR|\fB--file\fR \fI manifest_or_script_filename\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定供替换的清单或脚本的路径名称。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fI manifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定供替换的清单或脚本的 AI 实例名称。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-manifest \fB-m\fR|\fB--manifest \fR \fImanifest_name\fR \fB-n\fR|\fB--service \fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+删除通过特定的安装服务发布的清单或脚本。不能删除缺省清单或脚本。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fI manifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：使用 \fB-n\fR 选项将清单或脚本的 AI 实例名称指定为 \fBinstalladm list\fR 的输出。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定此清单与之关联的安装服务名称。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-profile \fB-n\fR|\fB--service\fR\fI svcname\fR\fB-f\fR|\fB--file\fR\fIprofile_filename \fR...[\fB-p\fR|\fB--profile\fR\fIprofile_name \fR] [\fB-c\fR|\fB--criteria\fR\fIcriteria \fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...| \fB-C\fR|\fB--criteria-file\fR\fI criteriafile\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+为特定的安装服务创建配置文件。通过在命令行 (\fB-c\fR) 上或者通过条件 XML 文件 (\fB-C\fR) 输入条件，可以根据需要使这些条件与配置文件关联。在没有条件的情况下创建的配置文件与服务的所有客户机关联。
+.sp
+.LP
+按以下顺序确定配置文件的名称：
+.RS +4
+.TP
+1.
+由 \fB-p\fR 选项指定的 \fIprofile_name\fR（如果存在）。
+.RE
+.RS +4
+.TP
+2.
+配置文件名称的基名。
+.RE
+配置文件名称对于 AI 服务必须是唯一的。如果使用了多个 \fB-f\fR 选项来创建具有相同条件的多个配置文件，则 \fB-p\fR 选项无效，且配置文件的名称派生自其文件名。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定要更新的配置文件的安装服务名称。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-f\fR|\fB--file\fR \fI profile_filename\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定添加配置文件所使用的文件的路径名称。可以指定多个配置文件。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fI profile_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定要创建的配置文件的名称。仅对单个配置文件的创建有效。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--criteria\fR \fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定要与配置文件关联的条件。请参见下面的"条件"部分。可以指定多个 \fB-c\fR 选项。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-C\fR|\fB--criteria-file\fR \fI criteriafile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：指定条件 XML 文件的路径名称，该文件包含与指定配置文件相关联的条件。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-profile \fB-p\fR|\fB--profile\fR \fI profile_name\fR... \fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+从 \fIsvcname\fR 安装服务中删除 \fIprofile_name\fR 配置文件。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fI profile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定要删除的配置文件的名称。可以指定多个 \fB-p\fR 选项。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定要删除的配置文件的安装服务名称。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBexport \fB-n\fR|\fB--service\fR \fI svcname\fR \fB-m\fR|\fB--manifest\fR \fI manifest_name\fR... \fB-p\fR|\fB--profile\fR \fI profile_name\fR... \fB-o\fR|\fB--output\fR \fI pathname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+显示（导出）属于服务的指定清单/脚本和/或配置文件。必须至少指定一个清单/脚本或配置文件。除非 \fB-o\fR 选项重定向到文件或目录，否则显示转到 \fBstdout\fR。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定与要导出的清单或配置文件关联的安装服务。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fI manifest_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定要导出的清单或脚本的 AI 实例名称。可以指定多个 \fB-m\fR 选项：
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fI profile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定要导出的配置文件的名称。可以指定多个 \fB-p\fR 选项。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-o\fR|\fB--output\fR \fI pathname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：重定向输出。如果请求多个清单、脚本和/或配置文件，则 \fIpathname\fR 必须是目录。如果仅请求一个清单、脚本或配置文件，则 \fIpathname\fR 可以是文件。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvalidate \fB-n\fR|\fB--service\fR\fI svcname\fR\fB-P\fR|\fB--profile-file\fR\fI profile_filename\fR...| \fB-p\fR|\fB--profile\fR\fI profile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+验证指定的配置文件。\fBvalidate\fR 子命令可以用于验证数据库中的配置文件 (\fB-p\fR)，或者对正在开发、尚未进入数据库的配置文件进行验证 (\fB-P\fR)。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定配置文件与之关联的服务。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-P\fR|\fB--profile-file\fR \fI profile_filename\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定要验证的外部配置文件。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fI profile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定要验证的配置文件的名称。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBset-criteria \fB-m\fR|\fB--manifest\fR\fI manifest_name\fR\fB-p\fR|\fB--profile\fR\fI profile_name\fR\fB-n\fR|\fB--service\fR\fI svcname\fR\fB-c\fR|\fB--criteria\fR\fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...| \fB-C\fR|\fB--criteria-file\fR\fI criteriafile\fR | \fB-a\fR|\fB--append-criteria\fR\fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+更新已发布的清单/脚本和/或配置文件的条件。可以通过命令行或者通过条件 XML 文件指定条件。必须使用互斥选项 \fB-a\fR、\fB-c\fR 和 \fB-C\fR 之一指定条件。
+.sp
+在 \fBcreate-manifest\fR 子命令下对有效条件进行了描述。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fI manifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定清单或脚本的 AI 实例名称。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fI profile_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定配置文件的名称。可以指定任意数目的配置文件。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定与此清单/脚本或配置文件关联的安装服务名称。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--criteria\fR \fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定用于替换清单/脚本或配置文件的所有现有条件的条件。请参见下面的"条件"部分。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-C\fR|\fB--criteria-file\fR \fI criteriafile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定一个条件 XML 文件的路径名称，该文件包含用于替换清单/脚本或配置文件的所有现有条件的条件。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-a\fR|\fB--append-criteria\fR \fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定要附加到清单/脚本或配置文件的现有条件的条件。请参见下面的"条件"部分。如果指定的 \fIcriteria\fR 已存在，则该条件的 \fIvalue\fR|\fIlist\fR|\fIrange\fR 将由指定的 \fIvalue \fR|\fIlist\fR|\fIrange\fR 替换。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-client [\fB-b\fR|\fB--boot-args \fR \fIproperty\fR=\fIvalue\fR,...] \fB- e\fR|\fB--macaddr\fR \fImacaddr\fR \fB-n \fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+完成指定客户机的可选设置任务，以便提供与 \fBcreate-service\fR 子命令使用的缺省设置不同的自定义客户机设置。使用户可以指定客户机的非缺省服务名称和引导参数。也可以用于修改现有的客户机。
+.sp
+如果客户机是 x86 系统且存在本地 ISC DHCP 配置，则将在 ISC DHCP 配置中配置客户机。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-b\fR|\fB--boot-args\fR \fI property\fR=\fIvalue\fR,...\fR\fR
+.ad
+.sp .6
+.RS 4n
+可选：仅用于 x86 客户机。在 \fB/etc/netboot\fR 中特定于客户机的 \fBmenu.lst\fR 文件中设置属性值。使用此选项可设置特定于此客户机的引导属性。此选项可以接受多个 \fIproperty\fR=\fIvalue\fR 对。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-e\fR|\fB--macaddr\fR \fI macaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定客户机的 MAC 地址。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必需：指定客户机安装的安装服务。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-client \fImacaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+删除现有客户机的具体服务信息，这些信息是以前使用 \fBcreate-client\fR 子命令设置的。
+.sp
+如果客户机是 x86 系统且存在本地 ISC DHCP 配置，则将在 ISC DHCP 配置中取消配置客户机。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fImacaddr\fR\fR\fR
+.ad
+.RS 11n
+.rt  
+必需：指定要删除的客户机的 MAC 地址。
+.RE
+
+.RE
+
+.SH 条件
+.sp
+.LP
+清单、脚本和配置文件可以用于根据某些特征或条件以不同方式配置 AI 客户机。只有一个清单或脚本可以与特定的客户机关联。任意数目的配置文件可以与特定的客户机关联。
+.sp
+.LP
+条件值由 AI 客户机在启动期间确定。
+.sp
+.LP
+除非另有说明，否则可以同时为清单/脚本和配置文件指定以下 AI 客户机系统条件。
+.sp
+.LP
+请参见"示例"部分以了解如何在命令行上指定条件。有关创建条件文件的信息，请参见\fI《Installing Oracle Solaris 11 Systems》\fR。
+.sp
+
+.sp
+.TS
+tab();
+cw(1.38i) cw(4.13i) 
+lw(1.38i) lw(4.13i) 
+.
+条件说明
+\fBarch\fR每个 \fBuname -m\fR 的体系结构。
+\fBcpu\fR每个 \fBuname -p\fR 的 CPU 类
+\fBhostname\fRT{
+已指定主机名。只能用于配置文件，而不能用于清单。
+T}
+\fBipv4\fRIP 版本 4 网络地址。
+\fBmac\fRT{
+含有冒号 (:) 分隔符的十六进制 MAC 地址。
+T}
+\fBmem\fRT{
+每个 \fBprtconf\fR(1M) 的内存大小 (MB)。
+T}
+\fBnetwork\fRIP 版本 4 网络编号。
+\fBplatform\fR每个 \fBuname -i\fR 的平台名称。
+\fBzonename\fR每个 \fBzones\fR(5) 的区域名称。
+.TE
+
+.sp
+.LP
+\fBipv4\fR、\fBmac\fR、\fBmem\fR 和 \fBnetwork\fR 规范可以表示为由连字符 (\fB-\fR) 分隔的范围值。要指定对范围的一端没有限制，请使用 \fBunbounded\fR。
+.sp
+.LP
+不能指定为范围的任何条件都可以指定为空格分隔值列表。
+.SH 示例
+.LP
+\fB示例 1 \fR从 ISO 文件设置新的 x86 安装服务
+.sp
+.LP
+首次设置安装服务器和 x86 安装服务。命令包括起始 IP 地址和 IP 地址的总计数，以便配置 DHCP 服务器。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n sol-11-i386-svc \e\fR
+\fB-s /export/isos/sol-11-i386.iso \e\fR
+\fB-i 172.0.0.10 -c 10 -d /export/images/soli386\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+AI ISO 映像位于 \fB/export/isos/sol-11-i386.iso\fR。命令在基于 AI ISO 映像的 \fB/export/images/soli386\fR 处设置网络映像和安装服务。此网络映像将用于客户机安装。
+
+.sp
+.LP
+起始 IP 地址 172.0.0.10 和十个 IP 地址将添加到本地 ISC DHCP 配置。如果本地 ISC DHCP 配置不存在，则启动 ISC DHCP 服务器。
+
+.sp
+.LP
+由于这是创建的第一个 \fBi386\fR 服务，因此会自动创建 \fBdefault-i386\fR 服务并将其作为此服务的别名。\fBdefault-i386\fR 别名是可操作的，通过 PXE 引导的客户机将从 \fBdefault-i386\fR 服务引导和安装。
+
+.LP
+\fB示例 2 \fR从 ISO 文件设置新的 SPARC 安装服务
+.sp
+.LP
+首次设置 SPARC 安装服务。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n sol-11-sparc-svc \e\fR
+\fB-s /export/isos/sol-11-sparc.iso \e\fR
+\fB-d /export/images/solsparc\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+AI ISO 映像位于 \fB/export/isos/sol-11-sparc.iso\fR。命令在基于 AI ISO 映像的 \fB/export/images/solsparc\fR 处设置网络映像和安装服务。此网络映像将用于客户机安装。
+
+.sp
+.LP
+由于这是创建的第一个 SPARC 服务，因此会自动创建 \fBdefault-sparc\fR 服务并将其作为此服务的别名。\fBdefault-sparc\fR 别名是可操作的，SPARC 客户机将从 \fBdefault-sparc\fR 服务引导和安装。
+
+.LP
+\fB示例 3 \fR从软件包系统信息库设置 i386 安装服务
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -y -n mysvc\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+在 i386 安装服务器上，此命令在缺省映像位置 \fB/export/auto_install/mysvc\fR 设置 i386 网络映像和名为 \fBmysvc\fR 的安装服务。\fB-y\fR 选项提供对缺省位置可接受的确认。由于未指定体系结构，因此创建的服务具有与安装服务器相同的体系结构。此命令假定安装服务器的 \fBpkg publisher\fR 列表上的软件包系统信息库包含 \fBinstall-image/solaris-auto-install\fR 软件包。
+
+.sp
+.LP
+要指定在此服务器上创建 SPARC 服务，请使用 \fB-a\fR 选项。
+
+.sp
+.LP
+要指定 \fBinstall-image/solaris-auto-install\fR 软件包的源，请使用 \fB-p\fR 选项。例如，使用以下命令可将位于 \fBhttp://example.company.com:4281\fR 的 \fBai-image\fR 系统信息库指定为 \fBinstall-image/solaris-auto-install\fR 软件包的源：
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -y -n mysvc \e\fR
+\fB-p ai-image=http://example.company.com:4281\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 4 \fR将客户机与安装服务关联
+.sp
+.LP
+使用以下样例命令可将客户机与特定的安装服务关联。安装服务必须已存在。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-client -b "console=ttya" \e\fR
+\fB-e 0:e0:81:5d:bf:e0 -n my-i386-service\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+在此示例中，该命令为 MAC 地址为 \fB0:e0:81:5d:bf:e0\fR 的系统创建了一个特定于客户机的设置。此客户机将使用以前设置的、名为 \fBmy-i386-service\fR 的安装服务以及该服务的关联网络映像。此命令将在 \fB/etc/netboot\fR 中特定于客户机的 \fBmenu.lst\fR 文件中设置引导属性 \fBconsole=ttya\fR。
+
+.LP
+\fB示例 5 \fR在不修改缺省服务的情况下添加新安装服务
+.sp
+.LP
+使用以下样例命令可添加名为 \fBmy-sparc-service\fR 的新服务、保留现有的服务并使现有的缺省服务保持不变。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n my-sparc-service \e\fR
+\fB-s /export/isos/mysparc.iso \e\fR
+\fB-d /export/ai/mysparc-image\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 6 \fR添加新的安装服务并更新缺省服务
+.sp
+.LP
+使用以下两个样例命令可添加名为 \fBmy-sparc-service\fR 的新服务、保留现有的服务并使新服务成为 SPARC 客户机的缺省服务。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n my-sparc-service \e\fR
+\fB-s /export/isos/mysparc.iso \e\fR
+\fB-d /export/ai/mysparc-image\fR
+# \fBinstalladm set-service \e\fR
+\fB-o aliasof=my-sparc-service default-sparc\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 7 \fR将自定义的缺省 AI 清单添加到安装服务
+.sp
+.LP
+使用以下样例命令可将新清单添加到 \fBservice_092910\fR 安装服务，并使其成为服务的缺省清单。清单数据在 \fBmy_manifest.xml\fR 中。将来的 \fBinstalladm\fR 命令会将此清单作为 \fBmy_manifest\fR 进行引用。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -d -f my_manifest.xml \e\fR
+\fB-m my_manifest -n service_092910\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 8 \fR将派生的清单脚本添加到安装服务
+.sp
+.LP
+使用以下样例命令可将名为 \fBmy_script\fR 的派生清单脚本添加到名为 \fBservice_092910\fR 的现有安装服务。脚本的添加方式与清单相同。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f my_script.py \e\fR
+\fB-m my_script -n service_092910\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+有关如何创建派生的清单脚本的信息，请参见\fI《Installing Oracle Solaris 11 Systems》\fR。
+
+.LP
+\fB示例 9 \fR替换安装服务的缺省 AI 清单
+.sp
+.LP
+使用以下样例命令可将现有安装服务 \fBservice_092910\fR 的缺省清单替换为已作为 \fBmy_manifest\fR 添加到服务的自定义清单。通过为 \fBcreate-manifest\fR 子命令指定 \fB-m my_manifest\fR，将此清单添加到了服务。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm set-service -o default-manifest=my_manifest \e\fR
+\fB-n service_092910\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 10 \fR列出安装服务
+.sp
+.LP
+使用以下样例命令可列出本地服务器上的安装服务。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list\fR
+Service Name     Alias Of         Status  Arch  Image Path 
+------------     --------         ------  ----  ---------- 
+default-i386     sol-11-i386-svc  on      x86   /export/images/soli386
+default-sparc    sol-11-sparc-svc on      Sparc /export/images/solsparc
+sol-11-i386-svc  -                on      x86   /export/images/soli386
+sol-11-sparc-svc -                on      Sparc /export/images/solsparc
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 11 \fR列出与安装服务关联的客户机
+.sp
+.LP
+使用以下样例命令可列出本地服务器上特定安装服务的客户机。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -c -n my-x86-service\fR
+Service Name   Client Address    Arch  Image Path 
+------------   --------------    ----  ---------- 
+my-x86-service 01:C2:52:E6:4B:E1 i386  /export/images/myimage
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 12 \fR列出与安装服务关联的清单
+.sp
+.LP
+使用以下样例命令可列出与本地服务器上的特定安装服务关联的清单和脚本。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n my-x86-service\fR
+Manifest      Status    Criteria 
+--------      ------    -------- 
+manifest2               arch = i86pc
+                        mem  = 4096 MB - unbounded
+
+sparc_setup             arch = sun4v
+
+new_default   Default   (Ignored: mem = 2048 MB - 4095 MB)
+
+orig_default  Inactive  None
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+此示例显示以下输出：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+具有条件的非缺省清单 (\fBmanifest2\fR)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+具有条件的非缺省脚本 (\fBsparc_setup\fR)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+具有被忽略的条件的缺省清单 (\fBnew_default \fR)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+由于没有条件而被标记为非活动的非缺省清单 (\fBorig_default\fR)
+.RE
+.LP
+\fB示例 13 \fR列出配置文件
+.sp
+.LP
+使用以下样例命令可列出本地服务器上的配置文件。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -p\fR
+Service Name Profile
+------------ -------
+sparc2       myprofile.xml
+             myprofile2.xml
+svc0817      profile3
+svc0819      profile4.xml
+             newprofile
+             foo.xml
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 14 \fR将没有名称的自定义 AI 清单添加到安装服务
+.sp
+.LP
+使用以下样例命令可将 \fB/export/my_manifest.xml\fR 中的清单添加到 \fBsvc1\fR（具有 MAC 地址等于 \fBaa:bb:cc:dd:ee:ff\fR 的条件）。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f /export/my_manifest.xml \e\fR
+\fB-n svc1 -c MAC="aa:bb:cc:dd:ee:ff"\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+在此示例中，清单不包含名称属性，因此清单名称取自文件名。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n svc1\fR
+Manifest       Criteria
+--------       --------
+my_manifest    mac  = AA:BB:CC:DD:EE:FF
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 15 \fR将具有自定义名称的自定义 AI 清单添加到安装服务
+.sp
+.LP
+使用以下样例命令可将 \fB/export/my_manifest.xml\fR 中的清单添加到 \fBsvc1\fR（具有 IPv4 范围从 10.0.2.100 到 10.0.2.199 的条件）。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f /export/my_manifest.xml \e\fR
+\fB-n svc1 -m chosen_name \e\fR
+\fB-c IPV4="10.0.2.100-10.0.2.199"\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+在此示例中，清单名称取自 \fB-m\fR 选项。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n svc1\fR
+Manifest       Criteria
+--------       --------
+chosen_name    ipv4 = 10.0.2.100 - 10.0.2.199
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 16 \fR添加具有在清单中指定的名称的自定义 AI 清单
+.sp
+.LP
+使用以下样例命令可将 \fB/export/manifest3.xml\fR 中的清单添加到 \fBsvc1\fR（具有内存为 2048 MB 或更大且体系结构为 \fBi86pc\fR 的条件）。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f /export/manifest3.xml -n svc1 \e\fR
+\fB-c MEM="2048-unbounded" -c ARCH=i86pc\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+在此示例中，清单名称取自清单中 \fBai_instance\fR 元素的 \fBname\fR 属性，如以下部分清单所示：
+
+.sp
+.in +2
+.nf
+<auto_install>
+    <ai_instance name="my_name" />
+</auto_install>
+.fi
+.in -2
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n svc1\fR
+Manifest    Criteria
+--------    --------
+my_name     arch = i86pc
+            mem  = 2048 MB - unbounded
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 17 \fR将系统配置文件添加到安装服务
+.sp
+.LP
+使用以下样例命令可将 \fB/export/profile4.xml\fR 中的配置文件添加到 \fBsvc1\fR（具有为 \fBmyhost1\fR、\fBhost3\fR 或 \fBhost6\fR 中任一主机名的条件）。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -f /export/profile4.xml -n svc1 \e\fR
+\fB-p profile4 -c hostname="myhost1 host3 host6"\fR
+$ \fBinstalladm list -p -n svc1\fR
+Profile          Criteria
+-------          --------
+profile4         hostname = myhost1 host3 host6
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 18 \fR添加所有客户机的系统配置文件
+.sp
+.LP
+如果未指定条件，则配置文件将由使用指定安装服务的所有客户机使用。在以下示例中，创建的配置文件由使用 \fBsvc1\fR 服务的所有客户机使用。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -f /export/locale.xml -n svc1\fR
+$ \fBinstalladm list -p -n svc1\fR
+Profile          Criteria
+-------          --------
+profile4         hostname = myhost1 host3 host6
+locale
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 19 \fR添加具有替换标记的系统配置文件
+.sp
+.LP
+配置文件可以使用替换标记，这些标记充当来自用户环境（请参见 \fBenviron\fR(4)）或来自 \fBcreate-profile\fR 子命令的 \fB-c\fR 选项中指定的条件的自定义客户机配置信息的占位符。使用替换标记可对任意数目的不同系统重用配置文件。在以下示例中，每个配置文件将与取自 \fB-c\fR 条件选项的 \fBhostname\fR 值一起存储：
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -p myhost1_hostname \e\fR
+\fB-f /export/hostname.xml -n svc1 -c hostname=myhost1\fR
+# \fBinstalladm create-profile -p myhost2_hostname \e\fR
+\fB-f /export/hostname.xml -n svc1 -c hostname=myhost2\fR
+$ \fBinstalladm list -p -n svc1\fR
+Profile               Criteria
+-------               --------
+myhost1_hostname      hostname = myhost1
+myhost2_hostname      hostname = myhost2
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fBhostname.xml\fR 文件包含以下行： 
+
+.sp
+.in +2
+.nf
+<propval name="nodename" value="{{AI_HOSTNAME}}"/>
+.fi
+.in -2
+
+.sp
+.LP
+\fBcreate-profile\fR 命令进行替换，以便 \fBmyhost1_hostname\fR 配置文件包含以下行：
+
+.sp
+.in +2
+.nf
+<propval name="nodename" value="myhost1"/>
+.fi
+.in -2
+
+.sp
+.LP
+使用相同的 \fBhostname.xml\fR 输入文件，\fBmyhost2_hostname\fR 配置文件包含以下行：
+
+.sp
+.in +2
+.nf
+<propval name="nodename" value="myhost2"/>
+.fi
+.in -2
+
+.sp
+.LP
+替换标记 \fB{{AI_HOSTNAME}}\fR 已替换为每个 \fBcreate-profile\fR 调用的不同值，因为使用了 \fBhostname\fR 条件并将其替换到了配置文件中。有关将替换标记与配置文件一起使用的更多信息，请参见\fI《Installing Oracle Solaris 11 Systems》\fR。
+
+.LP
+\fB示例 20 \fR将条件添加到现有清单
+.sp
+.LP
+使用以下样例命令可将内存为 4096 MB 或更大的条件附加到 \fBsvc1\fR 的 \fBmanifest2\fR 的条件。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm set-criteria -m manifest2 -n svc1 \e\fR
+\fB-a MEM="4096-unbounded"\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 21 \fR替换现有清单的条件
+.sp
+.LP
+使用以下样例命令可将 \fBsvc1\fR 的 \fBmanifest2\fR 的条件替换为在文件 \fB/tmp/criteria.xml\fR 中指定的条件。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm set-criteria -m manifest2 -n svc1 \e\fR
+\fB-C /tmp/criteria.xml\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+有关条件 XML 文件的内容的信息，请参见\fI《Installing Oracle Solaris 11 Systems》\fR。
+
+.LP
+\fB示例 22 \fR验证正在开发的配置文件
+.sp
+.LP
+使用以下样例命令可验证存储在文件 \fBmyprofdir/myprofile.xml\fR 和 \fBherprofdir/herprofile.xml\fR 中、正在开发的配置文件。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm validate -P myprofdir/myprofile.xml \e\fR
+\fB-P herprofdir/herprofile.xml -n svc1\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 23 \fR导出配置文件的内容
+.sp
+.LP
+使用以下样例命令可导出 \fBsvc1\fR 服务中的配置文件 \fBmyprofile.xml\fR。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm export -p myprofile -n svc1\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 24 \fR替换现有 AI 清单的内容
+.sp
+.LP
+使用以下样例命令可用文件 \fB/home/admin/new_spec.xml\fR 中清单的内容更新服务 \fBsvc2\fR 中具有清单名称或 AI 实例名称 \fBspec\fR 的清单。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm update-manifest -n svc2 \e\fR
+\fB-f /home/admin/new_spec.xml -m spec\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 25 \fR导出并更新现有的 AI 清单
+.sp
+.LP
+使用以下样例命令可导出服务 \fBsvc2\fR 中名为 \fBspec\fR 的现有清单的数据，然后用修改后的内容更新清单。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm export -n svc2 -m spec -o /home/admin/spec.xml\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+对 \fB/home/admin/spec.xml\fR 进行更改。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm update-manifest -n svc2 \e\fR
+\fB-f /home/admin/spec.xml -m spec\fR
+.fi
+.in -2
+.sp
+
+.SH 属性
+.sp
+.LP
+有关下列属性的描述，请参见 \fBattributes\fR(5)：
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+属性类型属性值
+_
+可用性T{
+\fBinstall/installadm\fR（安装/installadm）
+T}
+_
+接口稳定性Uncommitted（未确定）
+.TE
+
+.SH 另请参见
+.sp
+.LP
+aimanifest(1M)、\fBsysconfig \fR(1M)、\fBdhcp\fR(5)、\fBdhcpd\fR(8)、\fBsmf\fR(5)、\fBservice_bundle\fR(4)、\fBai_manifest\fR(4)、\fBenviron\fR(5)
+.sp
+.LP
+Part\ III, \fI"Installing Using an Install Server,"\fR in \fI《Installing Oracle Solaris 11 Systems》\fR
+.sp
+.LP
+\fI《Transitioning From Oracle Solaris 10 Custom JumpStart to Oracle Solaris 11 Automated Installer》\fR

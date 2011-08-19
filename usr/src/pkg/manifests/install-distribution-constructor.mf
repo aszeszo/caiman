@@ -52,8 +52,14 @@ dir path=usr/share/distro_const
 dir path=usr/share/distro_const/profile
 dir path=usr/share/distro_const/sort
 dir path=usr/share/man
+dir path=usr/share/man/ja_JP.UTF-8
+dir path=usr/share/man/ja_JP.UTF-8/man1m
+dir path=usr/share/man/ja_JP.UTF-8/man4
 dir path=usr/share/man/man1m
 dir path=usr/share/man/man4
+dir path=usr/share/man/zh_CN.UTF-8
+dir path=usr/share/man/zh_CN.UTF-8/man1m
+dir path=usr/share/man/zh_CN.UTF-8/man4
 file path=etc/security/exec_attr.d/distribution-constructor group=sys
 file path=etc/security/prof_attr.d/distribution-constructor group=sys
 file path=usr/bin/distro_const mode=0555
@@ -161,8 +167,12 @@ file path=usr/share/distro_const/profile/livecd.xml group=sys mode=0444
 file path=usr/share/distro_const/profile/text.xml group=sys mode=0444
 file path=usr/share/distro_const/sort/livecd.sort group=sys mode=0444
 file path=usr/share/distro_const/sort/text_x86.sort group=sys mode=0444
+file path=usr/share/man/ja_JP.UTF-8/man1m/distro_const.1m mode=0444
+file path=usr/share/man/ja_JP.UTF-8/man4/dc_manifest.4 mode=0444
 file path=usr/share/man/man1m/distro_const.1m mode=0444
 file path=usr/share/man/man4/dc_manifest.4 mode=0444
+file path=usr/share/man/zh_CN.UTF-8/man1m/distro_const.1m mode=0444
+file path=usr/share/man/zh_CN.UTF-8/man4/dc_manifest.4 mode=0444
 license cr_Sun license=cr_Sun
 
 # /usr/bin/gunzip

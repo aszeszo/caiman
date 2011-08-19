@@ -47,8 +47,12 @@ dir path=usr/share group=sys
 dir path=usr/share/auto_install group=sys
 dir path=usr/share/auto_install/sc_profiles group=sys
 dir path=usr/share/man
+dir path=usr/share/man/ja_JP.UTF-8
+dir path=usr/share/man/ja_JP.UTF-8/man1m
 dir path=usr/share/man/man1m
 dir path=usr/share/man/man4
+dir path=usr/share/man/zh_CN.UTF-8
+dir path=usr/share/man/zh_CN.UTF-8/man1m
 file path=etc/user_attr.d/system%2Finstall%2Fauto-install group=sys
 file path=usr/bin/ai_get_manifest mode=0555
 file path=usr/bin/aimanifest mode=0555
@@ -172,8 +176,10 @@ file path=usr/share/auto_install/sc_profiles/sc_sample.xml group=sys mode=0444
 file path=usr/share/auto_install/sc_profiles/static_network.xml group=sys \
     mode=0444
 file path=usr/share/auto_install/version group=sys mode=0444
+file path=usr/share/man/ja_JP.UTF-8/man1m/aimanifest.1m mode=0444
 file path=usr/share/man/man1m/aimanifest.1m mode=0444
 file path=usr/share/man/man4/ai_manifest.4 mode=0444
+file path=usr/share/man/zh_CN.UTF-8/man1m/aimanifest.1m mode=0444
 license cr_Sun license=cr_Sun
 link \
     path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_get_manifest.py \

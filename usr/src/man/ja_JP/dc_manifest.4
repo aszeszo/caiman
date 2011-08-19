@@ -1,0 +1,425 @@
+'\" te
+.\" Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+.TH dc_manifest 4 "2011 年 7 月 18 日" "SunOS 5.11" "システム管理コマンド"
+.SH 名前
+dc_manifest \- ディストリビューションコンストラクタのマニフェストファイルのカスタマイズ
+.SH 形式
+.LP
+.nf
+次のマニフェストファイルを使用して、さまざまな Oracle Solaris イメージを構築できます。ディストリビューションコンストラクタのパッケージには次のマニフェストが含まれています。
+.fi
+
+.LP
+.nf
+x86 Oracle Solaris Live CD イメージを構築するには: 
+\fB/usr/share/distro_const/dc_livecd.xml\fR
+.fi
+
+.LP
+.nf
+x86 自動インストールイメージを構築するには: 
+\fB/usr/share/distro_const/dc_ai_x86.xml\fR
+.fi
+
+.LP
+.nf
+SPARC 自動インストールイメージを構築するには: 
+\fB/usr/share/distro_const/dc_ai_sparc.xml\fR
+.fi
+
+.LP
+.nf
+x86 テキストインストールイメージを構築するには: 
+\fB/usr/share/distro_const/dc_text_x86.xml\fR
+.fi
+
+.LP
+.nf
+SPARC テキストインストールイメージを構築するには: 
+\fB/usr/share/distro_const/dc_text_sparc.xml\fR
+.fi
+
+.SH 機能説明
+.sp
+.LP
+ディストリビューションコンストラクタ (DC) を使用して、Oracle Solaris インストールイメージを構築できます。
+.sp
+.LP
+DC XML マニフェストファイルは、ディストリビューションコンストラクタへの入力として使用されます。これらのマニフェストは、ディストリビューションコンストラクタが構築するイメージを定義します。上記のリストごとに、異なるマニフェストを使用してさまざまな種類のイメージを構築できます。
+.sp
+.LP
+イメージを構築するには、\fBdistro_const\fR コマンドを使用します。これにより、コマンド内のマニフェストファイルが参照されます。
+.sp
+.LP
+イメージの仕様をカスタマイズする場合は、マニフェストファイルをコピーし、そのコピーをカスタマイズし、イメージを構築するときにそのコピーを \fBdistro_const\fR コマンドの入力として使用します。
+.sp
+.LP
+少なくとも、マニフェスト内でターゲット要素を編集し、イメージを作成できる構築領域の場所を指定する必要があります。また、ソフトウェア名要素を編集し、イメージの構築に必要なパッケージを含むパブリッシャーとリポジトリの場所を指定する必要があります。
+.SH マニフェストセクション
+.sp
+.LP
+マニフェストには、次の一次要素が含まれます。
+.LP
+注 - 
+.sp
+.RS 2
+次に示されているデフォルトの要素と属性は、使用するマニフェストによって異なります。
+.RE
+.sp
+.LP
+\fB<distro name="Oracle_Solaris_Text_X86" add_timestamp="false">\fR
+.sp
+.LP
+この要素は、構築する予定のイメージに対してデフォルトの名前 Oracle_Solaris_Text_X86 を指定します。この名前を使用するか、またはイメージに対して一意の名前を指定できます。 
+.sp
+.LP
+イメージの構築作業を続けて実行して複数の増分イメージを保持する場合、タイムスタンプ変数を「true」に変更すると、タイムスタンプが各イメージの名前に自動的に追加されます。
+.sp
+.LP
+HTTP プロキシを指定する必要がある場合、プロキシ変数を含む配布名要素のコメントを解除して、プロキシの場所を入力します。例:
+.sp
+.in +2
+.nf
+<distro name="Oracle_Solaris_Text_SPARC" add_timestamp="false"
+http_proxy="http://example.com">
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fB<boot_mods>\fR
+.sp
+.LP
+この要素は、イメージに適用されるブートメニュー変更を指定します。
+.sp
+.LP
+次の例では、「myentry」というタイトルの特殊なブートメニューがイメージに適用されます。タイムアウト属性は、デフォルトのブートエントリが自動的に有効にされるまでの時間を指定します。
+.sp
+.in +2
+.nf
+<boot_mods title="myentry" timeout="5">
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+新しいエントリごとに boot_entry 要素を追加することで、ブートメニューエントリを個別に追加できます。エントリは、各ブートエントリの「start」または「end」の insert_at 属性値に基づいた順序でブートメニューに順次追加されます。
+.LP
+注 - 
+.sp
+.RS 2
+新しいエントリは、既存の「with magnifier」エントリの前に追加します。
+.LP
+個々の boot_entry 要素については、次の例を参照してください。
+.RE
+.sp
+.in +2
+.nf
+<boot_entry>
+     <title_suffix>with screen reader</title_suffix>
+     <kernel_args>-B assistive_tech=reader</kernel_args>
+   </boot_entry>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+この例ではタイトルサブ要素が含まれていないため、デフォルトが使用されます。デフォルトのタイトルは、\fB/etc/release\fR の先頭行です。
+.sp
+.LP
+title_suffix は必須のサブ要素で、エントリのタイトルに追加されるテキスト文字列です。オプションの kernel_args サブ要素は、カーネル引数をブートローダーに渡します。
+.sp
+.LP
+boot_entry 要素のオプションの属性には次のものがあります。
+.sp
+.ne 2
+.mk
+.na
+\fBdefault_entry\fR
+.ad
+.RS 17n
+.rt  
+この属性を「true」に設定すると、このブートエントリがデフォルトになります。複数のエントリが「true」に設定されている場合、最後のエントリとして定義されたエントリによってそれ以前のエントリは無効にされます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBinsert_at\fR
+.ad
+.RS 17n
+.rt  
+値を「start」または「end」に設定して、その他のブートエントリに対する挿入ポイントを示します。
+.RE
+
+.sp
+.LP
+\fB<target>\fR
+.sp
+.LP
+この要素は、構築に使用する ZFS 構築データセットを定義します。このデータセットは、イメージが作成される場所です。有効なデータセットの場所を入力する必要があります。
+.sp
+.LP
+次の例を参照してください。
+.sp
+.in +2
+.nf
+<target>
+      <logical>
+        <zpool action="use_existing" name="rpool">
+          <dataset>
+            <filesystem name="dc/sample-dataset-location" 
+            action="preserve"/>
+          </dataset>
+        </zpool>
+      </logical>
+    </target>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fB<software name="transfer-ips-install">\fR
+.sp
+.LP
+このセクションでは、イメージ構築のためにダウンロードおよび使用するパッケージをディストリビューションコンストラクタが取得できる場所を指定します。
+.sp
+.LP
+Image Packaging System (IPS) のパブリッシャーは、1 つまたは複数のパッケージリポジトリでパッケージを提供します。
+.sp
+.LP
+このセクションのソース要素で、パブリッシャー名要素と起点名要素を編集し、使用するパブリッシャーとパッケージリポジトリが存在する場所を指定します。複数のパブリッシャーを一覧表示できます。ディストリビューションコンストラクタがインストールするパッケージの検出を試みると、ここに一覧表示されている順序でパブリッシャーが検索されます。
+.sp
+.LP
+パブリッシャーのミラーを指定する必要がある場合は、ミラー名要素をコメント解除して編集します。
+.sp
+.LP
+次の例を参照してください。
+.sp
+.in +2
+.nf
+<source>
+  <publisher name="publisher1">
+    <origin name="http://example.oracle.com/primary-pub"/>
+    <mirror name="mirror.example.com"></mirror>
+  </publisher>
+  <publisher name="publisher2">
+    <origin name="http://example2.com/dev/solaris"></origin>
+  </publisher>
+  <publisher name="publisher3.org">
+    <origin name="http://example3.com/dev"></origin>
+  </publisher>
+</source>  
+.fi
+.in -2
+.sp
+
+.LP
+注 - 
+.sp
+.RS 2
+この要素には、イメージの構築中に使用されるデータマウントポイントを指定する宛先タグも含まれます。宛先属性の変更は推奨されません。
+.RE
+.sp
+.LP
+\fB<software_data action="install">\fR
+.sp
+.LP
+インストール属性を持つこの software_data 要素は、使用しているマニフェストに応じて、特定の種類のイメージを構築するためにインストールされるパッケージのセットを一覧表示します。たとえば、dc_livecd.xml マニフェストは、Live CD イメージの構築に必要なパッケージを一覧表示します。
+.sp
+.LP
+各名前タグは、1 つのパッケージの名前、または多数のパッケージを含む 1 つのグループパッケージの名前を一覧表示します。
+.sp
+.in +2
+.nf
+<software_data action="install" type="IPS">
+  <name>pkg:/entire</name>
+  <name>pkg:/server_install</name>
+  <name>pkg:/system/install/text-install</name>
+  <name>pkg:/system/install/media/internal</name>
+</software_data>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+イメージに追加するパッケージがある場合、パッケージごとに名前タグを追加することによってパッケージ名を追加します。
+.sp
+.LP
+デフォルトでは、指定されたリポジトリで利用できる最新のパッケージバージョンがインストールされます。他のバージョンが必要な場合、次の形式を使用して「entire」参照にバージョン番号を追加します。
+.sp
+.in +2
+.nf
+<name>pkg:/entire@0.5.11-0.build#</name>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+利用できるバージョンを確認するには、次のコマンドを使用します。
+.sp
+.in +2
+.nf
+# \fBpkg list -af entire\fR
+.fi
+.in -2
+.sp
+
+.LP
+注 - 
+.sp
+.RS 2
+「entire」エントリは削除しないでください。「entire」は、複数のパッケージを管理するために使用される incorporation です。
+.RE
+.sp
+.LP
+\fB<software_data action="uninstall" type="IPS">\fR
+.sp
+.LP
+アンインストール属性を持つ software_data 要素は、個々のパッケージのアンインストールまたはグループパッケージ定義のアンインストールに使用できます。
+.sp
+.LP
+次の例で、「server_install」は、多数の個別パッケージを含むグループパッケージの名前です。
+.sp
+.in +2
+.nf
+<software_data action="uninstall" type="IPS">
+  <name>pkg:/server_install</name>
+</software_data>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+グループパッケージはアンインストールできます。グループパッケージをアンインストールしても、実際にアンインストールされるのはグループ定義だけです。そのグループの一部として以前にインストールされた個々のパッケージはアンインストールされません。ただし、グループパッケージをアンインストールせずに、それらの個々のパッケージをアンインストールできます。グループパッケージを保持すると、参照を継続する場合に役立つ可能性があります。
+.sp
+.LP
+また、名前タグを使用して個々のパッケージをアンインストールすることもできます。アンインストールするパッケージをアンインストールセクションの終わりに追加します。
+.sp
+.LP
+\fB<software name="set-ips-attributes">\fR
+.sp
+.LP
+ディストリビューションコンストラクタを使用して作成されたイメージでシステムがインストールされるまで、この要素がそのシステムに影響を与えることはありません。
+.sp
+.LP
+ソース要素で、パブリッシャー名とオプションのミラー名のタグを使用して、ダウンロードおよびインストールする追加パッケージにインストール済みシステムがアクセスできる場所を指定します。次の例を参照してください。
+.sp
+.in +2
+.nf
+<source>
+  <publisher name="solaris">
+    <origin name="http://pkg.oracle.com/solaris/release/"/>
+  </publisher>
+</source>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fB<software name="ba-init">\fR
+.sp
+.LP
+この要素は、構築されるイメージのブートアーカイブに、インストールまたはアンインストールされるファイルとディレクトリを一覧表示します。詳細は、マニフェストファイルのコメントを参照してください。
+.LP
+注意 - 
+.sp
+.RS 2
+ブートアーカイブの内容を変更すると、システムがブートできなくなる可能性があります。
+.RE
+.sp
+.LP
+\fB<execution stop_on_error="true">\fR
+.sp
+.LP
+マニフェストの実行要素は、イメージ作成処理中に実行される一連のチェックポイントを一覧表示します。チェックポイントは、このセクションに一覧表示された順序で実行されます。デフォルトのインストールイメージの構築に必要なデフォルトのチェックポイントは、各マニフェストに含まれています。
+.sp
+.LP
+各チェックポイント名タグには、チェックポイントスクリプトが存在する場所を指定する mod-path 属性が含まれています。
+.sp
+.LP
+特定のチェックポイントで構築処理の一時停止と再開を制御するには、\fBdistro_const\fR(1M) コマンドオプションを使用します。
+.sp
+.LP
+一部のチェックポイントタグには、デフォルト値を持つ引数が含まれています。詳細は、マニフェストのコメントを参照してください。
+.sp
+.LP
+イメージの構築中に使用されるカスタムスクリプトを作成する場合、スクリプトの場所を指し示すチェックポイント名タグを追加する必要があります。
+.sp
+.LP
+カスタムスクリプトを指し示す新しいチェックポイント名タグを追加する方法については、次の例を参照してください。
+.sp
+.LP
+あるユーザーが、デフォルトの transfer-ips-checkpoint の後に構築処理で実行するカスタムスクリプト \fB/tmp/myscript.sh\fR を作成します。
+.sp
+.LP
+この新しいスクリプトを指し示すには、transfer-ips-checkpoint 名のあとで次のタグをマニフェストに追加して、新しいスクリプトを指し示します。
+.sp
+.in +2
+.nf
+<checkpoint name="custom-script"
+ desc="my new script"
+ mod_path="solaris_install/distro_const/checkpoints/custom_script"
+ checkpoint_class="CustomScript">
+   <args>/tmp/myscript.sh arg1 arg2/{PKG_IMAGE_PATH}</args>
+</checkpoint>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+ここで、「arg1」と「arg2」は、スクリプトが取るオプションの引数です。
+.sp
+.LP
+「{PKG_IMAGE_PATH}」または「{BOOT_ARCHIVE}」の値は、 \fBdistro_const\fR ユーティリティーによって、実行中にそれぞれ \fB<ZFS Dataset>/build_data/pkg_image\fR または \fB<ZFS Dataset>/build_data/boot_archive\fR に置き換えられます。
+.LP
+注 - 
+.sp
+.RS 2
+DC マニフェスト内では、複数のカスタムスクリプトチェックポイントを指定できます。各チェックポイントの名前は一意である必要があります。
+.RE
+.sp
+.LP
+\fB<configuration name="pre-pkg-img-mod" type="sysconf" source="/etc/svc/profile/generic_limited_net.xml">\fR
+.sp
+.LP
+マニフェスト内の構成名要素は、イメージ作成処理中にメディアに適用される SMF サービスプロファイルを一覧表示します。これらの SMF サービスは、ブートされたメディア上で実行されるサービスと実行されないサービスを指定します。プロファイルは、この要素内で指定された順序で適用されます。
+.sp
+.LP
+この要素を変更することはほとんどありません。
+.SH 属性
+.sp
+.LP
+次の属性については、attributes(5) のマニュアルページを参照してください。
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+属性タイプ属性値
+_
+使用条件install/distribution-constructor package
+_
+インタフェースの安定性開発中
+.TE
+
+.SH 関連項目
+.sp
+.LP
+\fBdistro_const\fR(1M), \fBpkg\fR(1)
+.sp
+.LP
+現在のリリースの OTN ドキュメントライブラリの『\fICreating a Custom Oracle Solaris 11 Installation Image\fR』。

@@ -1,0 +1,915 @@
+'\" te
+.\" Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+.TH aimanifest 1M "2011 年 7 月 22 日" "SunOS 5.11" "系统管理命令"
+.SH 名称
+aimanifest \- 修改自动化安装程序 (Automated Installer, AI) 使用的 XML 文件
+.SH 用法概要
+.LP
+.nf
+/usr/bin/aimanifest [\fB-h\fR]
+.fi
+
+.LP
+.nf
+aimanifest add [\fB-r\fR] \fIpath\fR \fIvalue\fR
+.fi
+
+.LP
+.nf
+aimanifest get [\fB-r\fR] \fIpath\fR
+.fi
+
+.LP
+.nf
+aimanifest set [\fB-r\fR] \fIpath\fR \fIvalue\fR
+.fi
+
+.LP
+.nf
+aimanifest load [\fB-i\fR] \fIfilename\fR
+.fi
+
+.LP
+.nf
+aimanifest validate
+.fi
+
+.SH 描述
+.sp
+.LP
+\fBaimanifest\fR 命令可创建新的 XML 清单，或修改现有的 XML 清单。尽管包含对某个 DTD 定义的有效 \fB!DOCTYPE\fR 引用的任何 XML 文件都可以使用 \fBaimanifest\fR，但是，该命令的目标用途是创建自动化安装程序 (Automated Installer, AI) 使用的派生清单。有关 AI 派生清单的信息，请参见"\fI安装 Oracle Solaris 11 系统\fR"。
+.sp
+.LP
+可以多次调用 \fBaimanifest\fR 命令来开发清单。\fBAIM_MANIFEST\fR 环境变量用于指定 \fBaimanifest\fR 要修改的清单的位置。必须设置 \fBAIM_MANIFEST\fR。每次结合 \fBload\fR、\fBadd\fR 或 \fBset\fR 子命令调用 \fB aimanifest\fR 命令时都会打开、修改和保存 \fBAIM_MANIFEST \fR 文件。
+.sp
+.LP
+\fBaimanifest\fR 命令可以修改的 \fBAIM_MANIFEST\fR 文件至少必须同时包含下列两个片段：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+对某个 DTD 的 \fB!DOCTYPE\fR 引用，该引用对于所开发的 XML 清单应该有效。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+该清单的根元素。
+.RE
+.sp
+.LP
+如果使用一个空的 \fBAIM_MANIFEST\fR 文件开始操作（就像 AI 执行派生的清单脚本时那样），那么，第一个 \fBaimanifest\fR 命令必须指定 \fBload\fR 子命令来加载最起码所需的 \fBAIM_MANIFEST\fR 文件。用于修改清单的后续 \fBaimanifest\fR 命令将使用该 DTD 来确定在开发清单中的哪个位置添加元素。
+.sp
+.LP
+如果既要在 \fBstdout\fR 和 \fBstderr\fR 中显示消息，又要在某个文件中保存错误消息和提示性消息，请将 \fBAIM_LOGFILE\fR 环境变量设置为某个日志文件位置。信息将附加在该日志文件中。该日志文件不被清除。
+.SH 选项
+.sp
+.LP
+\fBaimanifest\fR 命令包括以下选项：
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR，\fB--help\fR\fR
+.ad
+.RS 15n
+.rt  
+显示用法帮助消息。
+.RE
+
+.sp
+.LP
+\fBaimanifest\fR 命令的 \fBadd\fR、\fBget\fR 和 \fBset\fR 子命令包括以下选项：
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR, \fB--return-path\fR\fR
+.ad
+.RS 21n
+.rt  
+返回该 \fBaimanifest\fR 命令创建或对其执行操作的 XML 元素的路径。该返回路径是一个节点 ID 链。您可以保存这个返回路径，以便对 \fBaimanifest\fR 执行后续调用时使用。使用 \fB-r\fR 选项返回的路径，比使用 XML 元素和属性值指定路径更加可靠，因为在构建 AI 清单时，这些值可能会更改。有关 \fB- r\fR 选项返回的路径的更多信息，请参见"返回路径"部分。
+.RE
+
+.sp
+.LP
+\fBaimanifest\fR 命令的 \fBload\fR 子命令包括以下选项：
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR, \fB--incremental\fR\fR
+.ad
+.RS 21n
+.rt  
+添加新数据之前不清除 \fBAIM_MANIFEST\fR 数据。
+.RE
+
+.SH 子命令
+.sp
+.LP
+支持以下子命令：
+.sp
+.ne 2
+.mk
+.na
+\fB\fBadd [\fB-r\fR | \fB--return-path\fR] \fI path\fR \fIvalue\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+向 XML 清单添加新元素。在 \fIpath\fR 上使用值 \fIvalue\fR 添加新元素。有关 \fIpath \fR 的更多信息，请参见"操作数"部分。如果 \fIpath\fR 以某个属性结尾 (\fB @\fIattr\fR\fR)，则新元素将包含 \fI attr\fR 属性，\fIvalue\fR 是该属性的值。
+.sp
+除了检查 \fIpath\fR 中的父/子关系外，不执行任何验证。
+.sp
+\fB-r\fR 选项返回新增节点的路径。有关更多信息，请参见"返回路径"部分。
+.sp
+如果父路径与 \fBAIM_MANIFEST\fR 文件中的某个元素匹配，则该路径只能与一个元素匹配。新元素创建为匹配父元素的子级。路径可以指定元素和属性值，以匹配唯一的父元素，如本部分的"示例 2：包含值的路径"中所示。
+.sp
+.LP
+如果父路径与 \fBAIM_MANIFEST\fR 文件中的元素不匹配，则会根据需要创建新元素，并将新的子元素添加到新父级。根据以下规则，将所添加元素的路径与现存元素分割开来：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+分割发生在路径中用于指定某个值的所有组成部分之后。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+分割发生在路径中用于指定某个值的所有组成部分之后，且在 DTD 允许多个带相同标记的相关元素的第一个位置处。
+.RE
+.sp
+.LP
+使用此 XML 清单结构分析以下示例：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+清单以单个 A 节点开头。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A 节点只能包含一个 B 节点子级。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+B 节点可以包含多个 C 节点子级。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+C 节点可以包含多个 D 节点子级。
+.RE
+\fB示例 1：简单路径\fR。AI 清单包含一个 A 节点、一个 B 节点和一个 C 节点： \fB/A/B/C\fR. 使用 \fIpath\fR 值 \fB /A/B/C/D\fR 发出了 \fB add\fR 子命令。在此情况下，将会创建新的 C 节点，因为 C 节点是路径中可以包含具有相同标记的同级的首批节点。将为新的 C 节点添加新的 D 节点作为子级。生成的清单的结构为 \fB/A/B/{C,C/D}\fR。针对 D 的不同值发出相同的命令将会导致生成三个 C 节点： \fB/A/B/{C,C/D,C/D}\fR.
+.sp
+\fB示例 2：包含值的路径\fR。AI 清单包含一个 A 节点、一个 B 节点和两个 C 节点。其中只有一个 C 节点使用值 1，因此，清单的结构为 \fB/A/B/{C,C=1}\fR。使用 \fIpath \fR 值 \fB/A/B/C=1/D\fR 和 \fIvalue\fR 值 10 发出了 \fBadd\fR 子命令。在此情况下，将不会添加新的 C 节点，原因是为 C 指定值 1 将会标识一个唯一节点，并且无法在指定某个值的分支位置上或该位置的前面分割路径。可以分割该路径的第一个位置是 D。将新增一个值为 10 的 D 节点，作为值为 1 的 C 节点的子级。生成的清单的结构为 \fB/A/B/{C,C=1/D=10}\fR。使用值 20 针对 D 发出同一命令会导致生成 \fB /A/B/{C,C=1/{D=10,D=20}}\fR。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBget [\fB-r\fR | \fB--return-path\fR] \fI path\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+检索元素或属性值。对于空的元素或属性值，将显示空字符串 (\fB""\fR)。\fI path\fR 必须匹配某个现有的唯一元素或属性。有关 \fIpath\fR 的更多信息，请参见"操作数"部分。
+.sp
+\fB-r\fR 选项返回所访问节点的路径，作为第二个返回字符串。有关更多信息，请参见"返回路径"部分。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBset [\fB-r\fR | \fB--return-path\fR] \fI path\fR \fIvalue\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+更改现有元素或属性的值，或者为现有元素创建新属性。不执行验证。
+.sp
+更改现有元素的值时，\fIpath\fR 必须匹配某个现有的唯一元素。如果该元素包含标记相同的同级，则使用元素值或属性或者目标元素的子元素来使路径保持唯一。请参见"路径操作数"部分。
+.sp
+设置某个属性的值时，该属性不需要存在，但该属性所属的元素必须存在。
+.sp
+\fB-r\fR 选项返回所更改元素的路径。有关更多信息，请参见"返回路径"部分。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBload [\fB-i\fR | \fB--incremental\fR] \fI filename\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+从文件 \fI filename\fR 加载某个 XML 清单或部分 XML 清单。除了检查元素的父/子关系外，不执行任何验证。
+.sp
+如果未指定 \fB-i\fR 选项，则会覆盖任何现有的 XML 数据。\fBAIM_MANIFEST\fR 文件中的所有数据将替换为 \fIfilename\fR 文件的内容。\fIfilename \fR 文件必须包含对某个 DTD 的 \fB!DOCTYPE\fR 引用，以便后续的 \fBaimanifest\fR 命令能够修改此文件。
+.sp
+如果指定了 \fB-i\fR 选项，则添加新数据之前不清除 \fBAIM_MANIFEST \fR 数据。而是以递增方式在现有 XML 数据中插入新数据，或者将新数据与现有 XML 数据合并。\fBAIM_MANIFEST\fR 中的 \fB!DOCTYPE\fR 引用指定的 DTD 用于确定如何以及在何处合并 \fIfilename\fR 数据。如果缺少 \fB!DOCTYPE\fR 引用，将使用位于 \fB/usr/share/install/ai.dtd\fR 的 AI 清单 DTD。如果无法使用 DTD 对 \fIfilename\fR 中的数据进行核对，将返回非零错误状态。
+.sp
+.LP
+以下事项会影响新数据在 \fBAIM_MANIFEST\fR 清单中的插入位置：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+靠近 \fBAIM_MANIFEST\fR 数据路径开头的元素标记与 \fIfilename\fR 数据路径的匹配程度
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+这些 \fBAIM_MANIFEST\fR 数据元素下面允许哪些子元素
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+在哪个位置允许标记相同的同级元素
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+无子级 \fBAIM_MANIFEST\fR 数据节点位于哪个位置
+.RE
+.sp
+.LP
+在处理 \fIfilename\fR 数据的每个元素时，如果下列所有情况属实，则一般而言，不会为 \fBAIM_MANIFEST\fR 数据中的该元素创建新节点。而是使用新数据替换某个现有节点。
+.RS +4
+.TP
+.ie t \(bu
+.el o
+两组数据都包含一个标记与位置相同的节点。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBAIM_MANIFEST\fR 中的 \fB!DOCTYPE\fR 引用指定的 DTD 不允许这两个节点作为标记相同的同级元素共同存在。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fIfilename\fR 数据元素包含子级。
+.RE
+插入 \fIfilename\fR 中的某个元素后，将在尽量靠近 \fBAIM_MANIFEST\fR 数据根、开始创建新节点的位置完成分割。将在允许带相同标记的同级元素的第一个位置，或者 \fB AIM_MANIFEST\fR 中不存在带相同标记的元素的第一个相应位置，创建分割操作的第一个新节点。
+.sp
+.LP
+使用此 XML 清单结构分析以下示例：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+清单以单个 A 节点开头。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A 节点只能包含一个 B 节点子级。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+B 节点可以包含多个 C 节点子级。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+B 节点只能包含一个 E 节点子级。
+.RE
+.sp
+.LP
+\fB示例 1：插入标记相同的元素\fR。如果 \fBAIM_MANIFEST\fR 的内容为 \fB/A/B/C1/D1\fR，\fIfilename\fR 的内容为 \fB/A/B/C2/D2\fR，则发出 \fBload -i\fR 命令后，\fBAIM_MANIFEST \fR 文件的内容为 \fB/A/B/{C1/D1,C2/D2}\fR。C 节点是第一个可以添加新节点的位置。\fIfilename \fR 数据中的 C 节点添加在 \fBAIM_MANIFEST \fR 数据中的现有 C 节点之后。如果两个 A 元素使用不同的值，或者两个 B 元素使用不同值，则 \fIfilename\fR 元素的值将替换 \fBAIM_MANIFEST\fR 元素的值。如果两个 A 元素使用不同的属性，或者两个 B 元素使用不同的属性，则会合并这些属性值。
+.RS +4
+.TP
+.ie t \(bu
+.el o
+同时在 \fBAIM_MANIFEST\fR 文件和 \fIfilename\fR 文件中存在的 A 与 B 的属性将使用合并文件中 \fI filename\fR 文件的值。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+在 \fBAIM_MANIFEST \fR 文件或 \fIfilename\fR 文件中存在（但不在这两个文件中同时存在）的 A 与 B 的属性全部保留在合并文件中。
+.RE
+\fB示例 2：插入标记不同的元素\fR。如果 \fBAIM_MANIFEST\fR 的内容为 \fB/A/B/C/D\fR，\fIfilename\fR 的内容为 \fB/A/B/E/F\fR，则发出 \fBload -i\fR 命令后，\fBAIM_MANIFEST \fR 文件的内容为 \fB/A/B/{E/F,C/D}\fR。E 节点添加在 DTD 允许这种节点的第一个位置。元素 A 和 B 的值是 \fIfilename\fR 中的值，A 和 B 的属性已根据上述"示例 1"从 \fIfilename\fR 合并为 \fBAIM_MANIFEST \fR。
+.sp
+有时，无法确定正确的合并位置。如果需要跟在待合并节点后面的某个同级尚未添加，则可能会发生此情况。为避免出现此问题，请按照 DTD 强制要求的顺序，将多个节点或子树添加到某个公用父节点。如果无法确定某个节点在其新同级中的适当位置，请将此节点放置在新同级列表的末尾。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvalidate\fR\fR
+.ad
+.sp .6
+.RS 4n
+根据 \fB!DOCTYPE\fR 语句中引用的 DTD 验证 \fBAIM_MANIFEST\fR 清单。错误将在 \fBstderr\fR 中显示。如果验证失败，则返回非零状态。
+.RE
+
+.SH 操作数
+.sp
+.LP
+需要使用以下操作数。
+.SS "Filename 操作数"
+.sp
+.LP
+\fBload\fR 子命令需要使用 \fIfilename\fR 操作数，该操作数是要加载到 \fBAIM_MANIFEST \fR 清单的完整清单或部分清单的名称。
+.SS "Value 操作数"
+.sp
+.LP
+\fBadd\fR 和 \fBset\fR 子命令需要使用 \fIvalue\fR 操作数。\fIvalue\fR 操作数是 \fIpath\fR 操作数指定的元素或属性的有效值。
+.SS "Path 操作数"
+.sp
+.LP
+\fBaimanifest\fR 命令的 \fBadd\fR、\fBget\fR 和 \fBset\fR 子命令需要使用 \fIpath\fR 操作数。该路径定义了由元素和属性组成的 XML 分层结构中的某个节点。
+.sp
+.LP
+XML 元素分层结构又称为 XML 树。在以下部分 AI 清单中，\fBauto_install\fR 元素是树根，\fBai_instance\fR 和 \fBsoftware \fR 元素是分枝，或子树的根。
+.sp
+.in +2
+.nf
+<auto_install>
+  <ai_instance>
+    <software type="IPS"/>
+  </ai_instance>
+</auto_install>
+.fi
+.in -2
+
+.sp
+.LP
+在 \fBaimanifest\fR 路径语法中，使用正斜杠字符 (/) 表示树结构中的分枝。在当前示例中，\fBsoftware\fR 元素的路径为 \fB/auto_install/ai_instance/software \fR。
+.sp
+.LP
+属性与某个元素绑定。在 \fBaimanifest\fR 路径语法中，使用 @ 符号标识属性名称。\fBsoftware\fR 元素的 \fB type\fR 属性的路径为 \fB/auto_install/ai_instance/software@type \fR。
+.sp
+.LP
+\fBaimanifest\fR\fIpath\fR 操作数必须对应于单个元素。请根据需要包含元素和属性值，以使路径保持唯一。例如，要为以下部分 AI 清单中定义的第二个分片指定大小，可以使用路径 \fB/auto_install/ai_instance/target/disk/slice[@name="4"]/size@val\fR 来指明要为哪个分片指定大小。
+.sp
+.in +2
+.nf
+<auto_install>
+  <ai_instance>
+    <target>
+        <disk>
+          <slice name="0"/>
+          <slice name="4"/>
+        </disk>
+    </target>
+  </ai_instance>
+</auto_install>
+.fi
+.in -2
+
+.sp
+.LP
+允许相对路径。以上段落中显示的 \fBslice\fR 路径在指定时可以使用 \fBai_instance\fR、\fB target\fR、\fBdisk\fR 或 \fBslice\fR 开头，因为只有一个 \fBslice\fR 使用了 \fBname\fR 属性值 4。例如，可以使用路径 \fBslice[@name="4"]/size@val\fR。
+.sp
+.LP
+如果 \fIpath\fR 中的某个 \fIvalue\fR 包含正斜杠字符，则必须将该值括在单引号或双引号中，例如 \fB/name="pkg:/entire"\fR。
+.sp
+.LP
+如果 \fBaimanifest\fR 调用发生在 shell 脚本中，包含引号的值可能需要额外的特殊处理。在 shell 脚本中，可能需要使用前导反斜杠字符 (\e) 对 \fBaimanifest\fR 路径值中的引号进行转义，使得 shell 不会删除或解释这些引号。检查使用的 shell 规则。以下示例显示了某个 \fBksh93\fR 脚本中的一个包含正斜杠字符的值：
+.sp
+.in +2
+.nf
+/usr/bin/aimanifest get software_data[name=\e"pkg:/entire\e"]@action
+.fi
+.in -2
+
+.sp
+.LP
+本手册页中的大多数示例都省略了反斜杠转义字符，因为本手册页假定 \fBaimanifest\fR 不是在脚本或特定 shell 中调用的。有关 AI 派生的清单脚本的信息，请参见"\fI安装 Oracle Solaris 11 系统\fR"。
+.sp
+.LP
+下列格式的分支显示了如何构造某个元素或元素属性的路径。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBA\fR 是元素的标记名称，例如 \fB /auto_install\fR。此分支规范又称为简单分支。仅包含简单分支的路径称为简单路径。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A=\fIvalue\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBA\fR 是元素的标记名称，\fI value\fR 是该元素的值，例如 \fB/name="pkg:/entire"\fR。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[B/C=\fIvalue\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBA\fR 是元素，\fBB\fR 是作为 \fBA\fR 子级的元素，\fBC\fR 是作为 \fBB\fR 子级的元素，\fIvalue\fR 是 \fBC\fR 元素的值。此路径格式指定了 \fB A\fR 元素，该元素包含值为 \fIvalue\fR 的孙级元素 \fBC\fR。例如，如果您的 AI 清单包含多个 software 部分，则可以使用此格式对用于安装软件包 \fBpkg:/entire\fR 的 software 部分进行操作，如以下路径所示：
+.sp
+.in +2
+.nf
+software[software_data/name="pkg:/entire"]
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[@Aattr=\fIvalue\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBA\fR 是元素，\fBAattr\fR 是 \fBA\fR 的属性，\fIvalue\fR 是 \fBAattr\fR 属性的值。此路径格式指定了 \fBA\fR 元素，该元素包含值为 \fIvalue\fR 的属性 \fBAattr\fR。例如，如果您的 AI 清单定义了多个分片，则可以使用此格式对 \fBname\fR 值为 4 的分片进行操作，例如 \fBslice[@name="4"]\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[B/C@Cattr=\fIvalue\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBA\fR 是元素，\fBB\fR 是 \fBA\fR 的子级，\fBC\fR 是 \fBB\fR 的子级，\fB Cattr\fR 是 \fBC\fR 的属性，\fIvalue\fR 是 \fBCattr\fR 属性的值。此路径格式指定了 \fBA\fR 元素，该元素包含一个孙级元素 \fBC\fR，该孙级元素的 \fBCattr\fR 属性值为 \fIvalue\fR。例如，如果您的 AI 清单包含多个 software 部分，则可以使用此格式对包含某个 publisher 部分（其 name 值为 \fBsolaris\fR）的 software 部分进行操作，例如，使用路径 \fB software[source/publisher@name="solaris"] \fR。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[1]\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fB/A[1]\fR 指定清单中某个 \fB A\fR 元素的第一个实例。例如，如果您的 AI 清单包含多个 software 部分，则可以使用此格式对第二个 software 部分进行操作，例如 \fB/auto_install[1]/ai_instance[1]/software[2] \fR。
+.sp
+这是 \fB-r\fR 选项返回的路径格式。请参见"返回路径"部分。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A@Aattr\fR\fR
+.ad
+.sp .6
+.RS 4n
+此路径指定了 \fBA\fR 元素的 \fBAattr\fR 属性。此路径没有指定 \fBA\fR 元素，而是指定了 \fBAattr\fR 属性。使用此格式可以设置或获取 \fBAattr\fR 属性。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[B/C=\fIvalue\fR]@Aattr\fR\fR
+.ad
+.sp .6
+.RS 4n
+此路径格式指定了 \fBA\fR 元素的 \fBAattr\fR 属性，该元素包含值为 \fIvalue\fR 的孙级元素 \fBC\fR。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A[B/C@Cattr=\fIvalue\fR]@Aattr \fR\fR
+.ad
+.sp .6
+.RS 4n
+此路径格式指定了 \fBA\fR 元素的 \fBAattr\fR 属性，该元素包含孙级元素 \fBC\fR，该孙级元素的 \fBCattr\fR 属性值为 \fIvalue\fR。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/A/B=\fIvalue\fR@Battr\fR\fR
+.ad
+.sp .6
+.RS 4n
+此路径指定了值为 \fIvalue\fR 的 \fBB\fR 元素的 \fBBattr\fR 属性。\fBB\fR 元素是 \fBA\fR 元素的子级。
+.RE
+
+.SH 返回路径
+.sp
+.LP
+使用 \fB-r\fR 选项，\fBadd\fR、\fBget \fR 和 \fBset\fR 子命令将返回子命令创建或访问的元素的地址。这个返回的地址采用了节点 ID 链的格式。可以使用这个返回的地址来再次访问相同的元素，即使与该元素关联的值已发生更改。
+.sp
+.LP
+下列示例表明，使用 \fB-r\fR 选项返回的地址，比使用用于指定元素和属性值的路径可能要容易得多。从以下节点树开始：
+.sp
+.in +2
+.nf
+        auto_install
+             |
+        ai_instance
+             |
+           target
+             |
+           disk
+         attribute: whole_disk=true
+             |
+         disk_name
+         attribute: name=data1
+         attribute: name_type=volid
+.fi
+.in -2
+
+.sp
+.LP
+添加一个 \fBname\fR 属性值为 \fBdata2\fR、\fBname_type\fR 属性值为 \fBvolid\fR 的新 \fBdisk\fR 节点：
+.sp
+.in +2
+.nf
+        auto_install
+             |
+        ai_instance
+             |
+           target
+             |
+  |----------|----------|
+disk                  disk
+whole_disk=true       whole_disk=true
+    |                     |
+disk_name             disk_name
+name=data1            name=data2
+name_type=volid       name_type=volid
+.fi
+.in -2
+
+.sp
+.LP
+使用一条命令就能轻松添加一个包含单个属性的新 \fBdisk_name\fR 元素。要添加第二个和第三个属性，必须指定要更改的 \fBdisk_name\fR 元素。比较用于多次访问同一节点的以下两种方法。
+.SS "通过使用值来指定路径"
+.sp
+.LP
+本示例中的命令通过使用值来指定路径。请注意，您必须在第一个命令中分配唯一值，以便能够使用该值在后续命令中指定唯一路径。如果值发生变化，该方法可能会产生错误的结果。
+.sp
+.in +2
+.nf
+$ \fBaimanifest add target/disk/disk_name@name data2\fR
+$ \fBaimanifest set \e\fR
+> \fBtarget/disk/disk_name[@name=data2]@name_type volid\fR
+$ \fBaimanifest set \e\fR
+> \fBtarget/disk[disk_name@name=data2]@whole_disk true\fR
+.fi
+.in -2
+.sp
+
+.SS "通过使用返回路径来指定路径"
+.sp
+.LP
+多次访问同一节点的最可靠方法是将路径保存到新的 \fBdisk_name\fR 元素，然后使用这个保存的路径进行后续访问。
+.sp
+.in +2
+.nf
+$ \fBNewDisk=$(aimanifest add -r target/disk@whole_disk true)\fR
+$ \fBaimanifest add ${NewDisk}/disk_name@name data2\fR
+$ \fBaimanifest add ${NewDisk}/disk_name@name_type volid\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+通过 \fB- r\fR 选项返回到 \fB$NewDisk\fR 的路径以 ID 形式表示节点，并且未赋值：
+.sp
+.in +2
+.nf
+$ \fBaimanifest add -r target/disk/@whole_disk true\fR
+/auto_install[1]/ai_instance[1]/target[1]/disk[2]
+.fi
+.in -2
+.sp
+
+.SH 示例
+.sp
+.LP
+要尝试演示这些示例，需要设置 \fBAIM_MANIFEST\fR。
+.sp
+.in +2
+.nf
+$ \fBexport AIM_MANIFEST=/tmp/aimtest.xml\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fBaimanifest\fR 命令可以修改的 \fBAIM_MANIFEST\fR 文件至少必须同时包含下列两个片段：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+对某个 DTD 的 \fB!DOCTYPE\fR 引用，该引用对于所开发的 XML 清单应该有效。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+该清单的根元素。
+.RE
+.sp
+.LP
+以下示例显示了某个 AI 清单最起码所需的 \fBAIM_MANIFEST\fR 清单文件：
+.sp
+.in +2
+.nf
+<!DOCTYPE auto_install SYSTEM "file:///usr/share/install/ai.dtd">
+<auto_install/>
+.fi
+.in -2
+
+.sp
+.LP
+通常，您会在对现有有效 AI 清单执行操作的派生清单脚本中使用 \fBaimanifest\fR 命令。要尝试演示这些示例，您可以复制 \fB/usr/share/auto_install/manifest/default.xml \fR，然后定义 \fBAIM_MANIFEST\fR 以引用该副本。确保该副本可写。
+.LP
+\fB示例 1 \fR设置 \fBauto_reboot\fR 属性
+.sp
+.in +2
+.nf
+$ \fBaimanifest set /auto_install/ai_instance@auto_reboot false\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 2 \fR获取 \fBauto_reboot\fR 值
+.sp
+.in +2
+.nf
+$ \fBaimanifest get /auto_install/ai_instance@auto_reboot\fR
+false
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 3 \fR通过使用值路径添加发布者
+.sp
+.LP
+此示例中的软件包系统信息库是位于 \fBfile:///net/host2/export/extras_repo \fR 的文件系统信息库。发布者为 \fBextras\fR。
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest add \e\fR
+> \fBsoftware/source/publisher@name extras\fR
+$ \fBaimanifest add \e\fR
+> \fBsoftware/source/publisher[@name=extras]/origin@name \e\fR
+> \fBfile:///net/host2/export/extras_repo\fR
+$ \fBaimanifest set \e\fR
+> \fBsoftware[source/publisher@name=extras]@name extras\fR
+$ \fBaimanifest set \e\fR
+> \fBsoftware[source/publisher@name=extras]@type IPS\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+这些 \fBaimanifest\fR 命令将导致生成下列 AI 清单条目。\fBsoftware\fR 元素是允许相同标记的同级的 \fIpath\fR 中的第一个元素，因此，该 XML 代码部分跟在已出现在输出文件中的最后一个 \fBsoftware\fR 部分的后面。
+
+.sp
+.in +2
+.nf
+<software name="extras" type="IPS">
+  <source>
+    <publisher name="extras">
+      <origin name="file:///net/host2/export/extras_repo"/>
+    </publisher>
+  </source>
+</software>
+.fi
+.in -2
+
+.LP
+\fB示例 4 \fR通过使用返回路径添加发布者
+.sp
+.LP
+该示例与前一示例相同，但使用不同的方法来实现相同的结果。
+
+.sp
+.in +2
+.nf
+$ \fBSW_PATH=$(aimanifest add -r \e\fR
+> \fB/auto_install/ai_instance/software@name extras)\fR
+$ \fBaimanifest set ${SW_PATH}@type IPS\fR
+$ \fBPUB_PATH=$(aimanifest add ${SW_PATH}/source/publisher@name extras)\fR
+$ \fBaimanifest add \e\fR
+\fB${PUB_PATH}/origin@name file:///net/host2/export/extras_repo)\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 5 \fR通过添加清单段来添加发布者
+.sp
+.LP
+该示例与前一示例相同，但使用第三种方法来实现相同的结果。
+
+.sp
+.LP
+创建一个名称为 \fBextras.xml\fR、包含以下内容的文件：
+
+.sp
+.in +2
+.nf
+<auto_install>
+  <ai_instance>
+    <software name="extras" type="IPS">
+      <source>
+        <publisher name="extras">
+          <origin name="file:///net/host2/export/extras_repo"/>
+        </publisher>
+      </source>
+    </software>
+  </ai_instance>
+</auto_install>
+.fi
+.in -2
+
+.sp
+.LP
+尽管您只需要 software 部分，但您必须同时包含 \fB auto_install\fR 和 \fBai_instance\fR 元素。必须包含 \fIpath\fR 操作数中所需的任何内容。如果加载的文件为 \fBauto_install\fR 或 \fB ai_instance\fR 元素指定了属性，则这些属性值将替换现有值，或者被添加。
+
+.sp
+.LP
+使用以下命令将此 \fBsoftware\fR 部分添加到 \fBAIM_MANIFEST\fR 清单：
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest load -i extras.xml\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 6 \fR通过使用值路径添加软件包
+.sp
+.LP
+该示例通过指定发布者名称作为路径中的值，将一个软件包添加到前一示例生成的 \fBsoftware\fR 元素，该元素包含名称为 \fBextras\fR 的 \fBpublisher\fR 元素。该示例还显示了如何使用相对路径规范。
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest add \e\fR
+> \fBsoftware[source/publisher@name=extras]/software_data/name \e\fR
+> \fBpkg:/system/utils\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+该 \fBaimanifest\fR 命令添加了以下 \fBsoftware_data \fR 部分。
+
+.sp
+.in +2
+.nf
+<software name="extras" type="IPS">
+  <source>
+    <publisher name="extras">
+      <origin name="file:///net/host2/export/extras_repo"/>
+    </publisher>
+  </source>
+  <software_data>
+    <name>pkg:/system/utils</name>
+  </software_data>
+</software>
+.fi
+.in -2
+
+.LP
+\fB示例 7 \fR通过使用返回路径添加软件包
+.sp
+.LP
+该示例与前一示例相同，但使用不同的方法来实现相同的结果。该示例没有指定发布者名称作为路径中的值，而是使用了示例"通过使用返回路径添加发布者"所述的保存在 \fBSW_PATH\fR 中的 \fBsoftware\fR 元素的路径。
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest add ${SW_PATH}/software_data/name pkg:/system/utils\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 8 \fR验证清单
+.sp
+.LP
+验证 \fBAIM_MANIFEST\fR 清单。
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest validate\fR
+.fi
+.in -2
+.sp
+
+.SH 退出状态
+.sp
+.LP
+将返回以下退出值：
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 13n
+.rt  
+该命令已成功处理。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB>0\fR\fR
+.ad
+.RS 13n
+.rt  
+出现错误。
+.RE
+
+.SH 文件
+.sp
+.ne 2
+.mk
+.na
+\fB\fBAIM_MANIFEST\fR\fR
+.ad
+.RS 16n
+.rt  
+该环境变量值是正在构建的 AI 清单的位置。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBAIM_LOGFILE\fR\fR
+.ad
+.RS 16n
+.rt  
+该环境变量值是 \fBaimanifest\fR 操作的日志文件的位置。
+.RE
+
+.SH 属性
+.sp
+.LP
+有关下列属性的描述，请参见 \fBattributes\fR(5)：
+.sp
+
+.sp
+.TS
+tab() box;
+cw(1.65i) |cw(3.85i) 
+lw(1.65i) |lw(3.85i) 
+.
+属性类型属性值
+_
+可用性T{
+\fBsystem/install/auto-install/auto-install-common\fR（系统/安装/自动安装/通用自动安装）
+T}
+_
+接口稳定性Uncommitted（未确定）
+.TE
+
+.SH 另请参见
+.sp
+.LP
+installadm(1M)、\fBpkg\fR(1)
+.sp
+.LP
+Part\ III, \fI"Installing Using an Install Server,"\fR in \fI《Installing Oracle Solaris 11 Systems》\fR

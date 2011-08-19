@@ -1,0 +1,981 @@
+'\" te
+.\" Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+.TH js2ai 1M "2011 年 7 月 22 日" "SunOS 5.11" "系统管理命令"
+.SH 名称
+js2ai \- 转换 JumpStart 规则和配置文件以用于自动化安装程序 (Automated Installer, AI)。
+.SH 用法概要
+.LP
+.nf
+js2ai [\fB-h\fR | \fB --version \fR]
+.fi
+
+.LP
+.nf
+js2ai \fB-r\fR | \fB -p \fR \fIprofile_name\fR [\fB-d\fR \fIjumpstart_dir\fR]
+    [\fB-D\fR \fIdestination_dir\fR] [\fB-lSv\fR]
+.fi
+
+.LP
+.nf
+js2ai \fB-s\fR [\fB -d \fR \fIjumpstart_dir\fR]
+    [\fB-D\fR \fIdestination_dir\fR] [\fB-Sv\fR]
+.fi
+
+.LP
+.nf
+js2ai \fB-V\fR \fImanifest\fR
+.fi
+
+.SH 描述
+.sp
+.LP
+\fBjs2ai\fR 是一个实用程序，用于将 Oracle Solaris 10 JumpStart \fBrules\fR、配置文件和 \fBsyscfg\fR 配置文件转换为与自动化安装程序 (Automated Installer, AI) 兼容的格式。此实用程序"尽力"将那些可以转换的 JumpStart 关键字转换为 AI 上下文。虽然此转换过程并不能一对一地与 JumpStart 建立对等，但是它确实能够提供 AI 清单和系统配置 (system configuration, SC) 配置文件条目，然后，可将这些条目用作模板，根据从 JumpStart 配置文件收集的信息创建完整的 AI 配置设置。
+.sp
+.LP
+使用 \fBjs2ai\fR 可以实现以下目的：
+.RS +4
+.TP
+.ie t \(bu
+.el o
+处理当前工作目录中的 \fBrules\fR 文件和关联的配置文件。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+处理指定目录中的 \fBrules\fR 文件和关联的配置文件。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+处理特定的配置文件或 \fBsysidcfg\fR 文件。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+将生成的输出文件定向到特定的目录。有关 \fBjs2ai\fR 输出文件的更多信息，请参见"示例"和"文件"部分。
+.RE
+.SS "转换规则关键字"
+.sp
+\fB表 1 \fRJumpStart 规则关键字转换
+.sp
+.TS
+tab();
+cw(1.38i) cw(4.13i) 
+lw(1.38i) lw(4.13i) 
+.
+JumpStart 规则关键字AI 条件关键字
+_
+\fBarch\fR\fBcpu\fR
+\fBhostaddress\fR\fBipv4\fR
+\fBkarch\fR\fBarch\fR
+\fBmemsize\fR\fBmem\fR
+\fBmodel\fR\fBplatform\fR
+\fBnetwork\fR\fBipv4\fR
+.TE
+
+.sp
+.LP
+不受 \fBjs2ai\fR 支持的 JumpStart 规则关键字：
+.sp
+.in +2
+.nf
+any             installed
+disksize        osname
+domainname      probe
+hostname        totaldisk
+.fi
+.in -2
+
+.SS "转换配置文件关键字"
+.sp
+\fB表 2 \fRJumpStart 配置文件关键字
+.sp
+.TS
+tab();
+cw(1.38i) cw(4.13i) 
+lw(1.38i) lw(4.13i) 
+.
+JumpStart 配置文件关键字备注
+_
+\fBboot_device\fRT{
+如果事先未通过 \fBroot_device\fR 关键字进行设置，\fBrootdisk\fR 将设置为指定的设备。
+T}
+\fBfdisk\fRT{
+\fBdisk_name\fR 的值必须为设备。不支持 \fBall\fR 设备。\fBfdisk\fR 类型必须为 \fBsolaris\fR。不支持大小为 0 或 \fBdelete\fR。如果 \fBpartitioning\fR 为 \fBdefault\fR 且尚未设置 \fBrootdisk\fR，则遇到的第一个 \fBfdisk solaris\fR 分区将用作 \fBrootdisk\fR。
+T}
+\fBfilesys\fRT{
+当指定的挂载点为 / 或 \fBswap\fR 时，支持本地文件系统和镜像文件系统。不执行大小验证。可能需要调整生成的 AI 清单中指定的大小才能使用此清单实现成功安装。
+T}
+\fBinstall_type\fR仅支持值 \fBinitial_install\fR。
+\fBlocale（语言环境）\fRT{
+不执行转换。请确保指定的语言环境在 Oracle Solaris 11 中受支持。
+T}
+\fBpackage（软件包）\fRT{
+尝试将指定的软件包转换为其 Oracle Solaris 11 等效项。不支持指定软件包的位置。软件包查找可能会花费大量的时间。如果配置文件包含的软件包列表很长，则在转换过程中可能需要使用 \fB--local\fR 标志。
+T}
+\fBpartitioning\fRT{
+支持的类型是 \fBdefault\fR 和 \fBexplicit\fR。与 JumpStart 不同，在指定 \fBpartitioning default\fR 时，仅使用 \fBjs2ai\fR 可识别的磁盘。如果任何关键字中都未指定磁盘，则生成的配置文件将通知 AI 选择要使用的磁盘。
+T}
+\fBpool（池）\fRT{
+如果在配置文件中指定了池，则使用指定的设备创建 ZFS 根池。在确定用于 ZFS 根池的设备时，\fBpool\fR 关键字将取代所有其他关键字。不执行对池大小、交换大小或转储大小的验证。可能需要调整生成的 AI 清单中的这些大小才能使用此清单实现成功安装。
+T}
+\fBroot_device\fR\fBrootdisk\fR 设置为指定的设备。
+\fBsystem_type\fR仅支持值 \fBstandalone\fR。
+\fBusedisk\fRT{
+在转换期间，可以使用指定的设备解析 \fBany\fR 或 \fB rootdisk\fR 设备。在未镜像 ZFS 根池时，不用于此目的任何指定设备都将添加到该池。
+T}
+.TE
+
+.sp
+.LP
+不受 \fBjs2ai\fR 支持的 JumpStart 配置文件关键字：
+.sp
+.in +2
+.nf
+archive_location       geo
+backup_media           layout_constraint
+bootenv                local_customization
+client_arch            metabd
+client_root            no_master_check
+client_swap            no_content_check
+cluster                num_clients
+dontuse                patch
+forced_deployment
+.fi
+.in -2
+
+.sp
+.LP
+\fB如何在配置文件转换期间确定系统的根磁盘\fR
+.sp
+.LP
+由于在配置文件转换期间 \fBjs2ai\fR 无法访问配置文件所引用的实际系统，因此 \fBjs2ai\fR 将在转换期间使用尽可能与 JumpStart 匹配的进程来尝试确定根磁盘。
+.sp
+.LP
+\fBjs2ai\fR 工具执行以下步骤以确定用于根磁盘的设备。
+.sp
+
+.sp
+.TS
+tab();
+cw(.44i) cw(5.06i) 
+lw(.44i) lw(5.06i) 
+.
+阶段操作
+_
+1T{
+如果在配置文件中指定了 \fBroot_device\fR 关键字，则 \fB js2ai\fR 会将 \fBrootdisk\fR 设置为分片所在的设备。
+T}
+2T{
+如果未设置 \fBrootdisk\fR 但在配置文件中指定了 \fBboot_device\fR 关键字，则 \fBjs2ai\fR 将 \fBrootdisk\fR 设置为引导设备。
+T}
+3T{
+如果未设置 \fBrootdisk\fR 但指定了 \fBpartitioning default\fR，且遇到了 \fBsolaris\fR\fBfdisk\fR 条目，则 \fBjs2ai\fR 将 \fBrootdisk\fR 设置为指定的 \fBdisk_name\fR。
+T}
+4T{
+如果未设置 \fBrootdisk\fR 但在配置文件中指定了 \fBfilesys cwtxdysz size /\fR 条目，则 \fBjs2ai\fR 将 \fB rootdisk\fR 设置为该条目中指定的 \fBcwtxdysz\fR 磁盘。
+T}
+5T{
+如果未设置 \fBrootdisk\fR 但在配置文件中指定了 \fBusedisk disk_name\fR 条目，则 \fBjs2ai\fR 将 \fBrootdisk\fR 设置为该条目中指定的 \fBdisk_name\fR 磁盘。
+T}
+6T{
+如果未设置 \fBrootdisk\fR，则将设备指定为 \fBrootdisk\fR 的任何实例都会生成转换错误。
+T}
+.TE
+
+.sp
+.LP
+\fB如何在配置文件转换期间转换 any 设备\fR
+.sp
+.LP
+\fBjs2ai\fR 工具执行以下步骤以确定在指定了 \fBany\fR 关键字时要使用的设备。
+.sp
+
+.sp
+.TS
+tab();
+cw(.44i) cw(5.06i) 
+lw(.44i) lw(5.06i) 
+.
+阶段操作
+_
+1T{
+如果指定了 \fBany\fR 设备且指定了关键字操作（非镜像 \fBpool\fR 或具有 / 挂载点的 \fBfilesys\fR），则在设置了 \fB rootdisk\fR 时 \fBany\fR 设备将设置为 \fBrootdisk\fR。
+T}
+2T{
+如果 \fBany\fR 设备尚未转换且配置文件中存在 \fB usedisk\fR 语句，则 \fBany\fR 设备将设置为由 \fBusedisk\fR 语句指定的设备。
+T}
+3T{
+如果 \fBany\fR 设备尚未转换且指定了 \fBany\fR 设备的操作导致创建 ZFS 根池，则 AI 将选择该设备。在指定镜像 \fBpool\fR 时，这一点并不适用。
+T}
+.TE
+
+.sp
+.LP
+\fB如何在配置文件转换期间确定 ZFS 根池\fR
+.sp
+.LP
+\fBjs2ai\fR 工具执行以下步骤以确定用于 ZFS 根池的设备。在确定 ZFS 根池后，如果遇到的后续定义与已经确定的 ZFS 根池相冲突，则它们将标记为错误。
+.sp
+
+.sp
+.TS
+tab();
+cw(.44i) cw(5.06i) 
+lw(.44i) lw(5.06i) 
+.
+阶段操作
+_
+1T{
+如果配置文件指定了 \fBpool\fR 关键字，则 \fBjs2ai \fR 将 ZFS 根池设置为由 \fBpool\fR 关键字指定的设备。
+T}
+2T{
+如果尚未确定 ZFS 根池，而且配置文件指定了挂载点为 / 的 \fBfilesys\fR 或者类型为 \fBsolaris\fR 且大小不是 0 或 \fBdelete\fR 的 \fBfdisk\fR，则使用指定的设备创建 ZFS 根池。
+T}
+3T{
+如果尚未确定 ZFS 根池但已处理配置文件中的所有关键字，且设置了 \fBrootdisk\fR，则使用 \fBrootdisk\fR 设备创建 ZFS 根池。
+T}
+4T{
+如果尚未确定 ZFS 根池且分区类型为 \fBdefault\fR，则 AI 将选择要用于 ZFS 根池的设备。
+T}
+5T{
+如果尚未确定 ZFS 根池且在处理期间未出现错误，则 AI 将选择要用于 ZFS 根池的设备。
+T}
+6T{
+如果 ZFS 根池不是镜像池，且指定的一个或多个 \fBusedisk \fR 设备尚未用于 \fBrootdisk \fR 或 \fBany\fR 设备转换，则这些磁盘将添加到 ZFS 根池。
+T}
+.TE
+
+.SS "转换 \fBsysidcfg\fR 关键字"
+.sp
+\fB表 3 \fRJumpStart \fBsysidcfg\fR 关键字
+.sp
+.TS
+tab();
+cw(1.38i) cw(4.13i) 
+lw(1.38i) lw(4.13i) 
+.
+\fBsysidcfg\fR 关键字备注
+_
+\fBkeyboard\fRT{
+不执行转换。请确保在 Oracle Solaris 11 中支持 \fBsysidcfg\fR 文件中指定的键盘。
+T}
+\fBname_service\fRT{
+支持的值为 \fBNone\fR、\fBDNS\fR、\fBNIS \fR 和 \fBLDAP\fR。NIS+ 名称服务将转换为 NIS。
+T}
+\fBnetwork_interface\fRT{
+仅支持单个接口。对 \fBPRIMARY\fR 的支持有限。仅处理在 \fBsysidcfg\fR 文件中遇到的第一个接口。
+T}
+\fBroot_password\fR不需要进行转换。
+\fBsecurity_policy\fR支持的值如下： \fBNone\fR
+\fBservice_profile\fR支持的值如下： \fBlimited_net\fR
+\fBsystem_locale\fRT{
+不执行转换。请确保在 Oracle Solaris 11 中支持 \fB sysidcfg\fR 文件中指定的语言环境。
+T}
+\fBterminal\fRT{
+不执行转换。请确保在 Oracle Solaris 11 中支持 \fBsysidcfg\fR 文件中指定的终端类型。
+T}
+\fBtimeserver\fR支持的值如下： \fBlocalhost\fR
+\fBtimezone\fR不需要进行转换。
+.TE
+
+.sp
+.LP
+不受 \fB js2ai\fR 支持的 JumpStart \fBsysidcfg\fR 关键字：
+.sp
+.in +2
+.nf
+nfs4_domain
+.fi
+.in -2
+
+.SH 选项
+.sp
+.LP
+\fBjs2ai\fR 命令具有以下选项。在"示例"部分中对这些选项的作用进行了说明。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR，\fB--help\fR\fR
+.ad
+.sp .6
+.RS 4n
+显示用法帮助消息。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--version\fR\fR
+.ad
+.sp .6
+.RS 4n
+显示 \fBjs2ai\fR 实用程序的版本号。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fIjumpstart_dir\fR, \fB- -dir\fR \fIjumpstart_dir\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定 \fBrules\fR 以及配置文件或 \fBsysidcfg\fR 文件的位置。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-D\fR \fIdestination_dir\fR, \fB- -dest\fR \fIdestination_dir\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定输出文件的位置。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR, \fB--local\fR\fR
+.ad
+.sp .6
+.RS 4n
+在 JumpStart 配置文件中搜索 \fBpackage\fR 关键字值的映像包管理系统 (Image Packaging System, IPS) 等效项时，会搜索在主机系统上安装的 IPS 软件包而不是 IPS 软件包系统信息库中的软件包。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fIprofile_name\fR, \fB- -profile\fR \fIprofile_name\fR\fR
+.ad
+.sp .6
+.RS 4n
+转换指定的 JumpStart 配置文件并为所处理的配置文件生成清单。在这种情况下，不需要或不生成条件文件。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR, \fB--rule\fR\fR
+.ad
+.sp .6
+.RS 4n
+转换规则和关联的配置文件并为所处理的每个配置文件生成清单。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR, \fB--sysidcfg\fR\fR
+.ad
+.sp .6
+.RS 4n
+处理 \fBsysidcfg\fR 文件并将结果输出到 \fBsc_profile.xml\fR。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-S\fR, \fB--skip\fR\fR
+.ad
+.sp .6
+.RS 4n
+跳过验证。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR，\fB--verbose\fR\fR
+.ad
+.sp .6
+.RS 4n
+提供有关在处理期间发生的操作的详细信息。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-V\fR \fIfilename\fR\fR
+.ad
+.sp .6
+.RS 4n
+验证指定的 AI 清单文件或 SC 配置文件。不支持 AI 条件验证。
+.RE
+
+.SH 错误报告
+.sp
+.LP
+在转换期间出现一个或多个错误时，\fBjs2ai\fR 工具将生成错误报告。
+.sp
+.in +2
+.nf
+# \fBjs2ai -r\fR
+                    Process  Unsupported  Conversion  Validation
+Name      Warnings  Errors   Items        Errors      Errors
+--------  --------  -------  -----------  ----------  ----------
+rules            0        0            2           0           -
+profile1         0        0            0           2           1
+
+Conversion completed. One or more failures occurred.
+For errors see ./js2ai.log
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+对于 \fBjs2ai\fR 在其中遇到错误的每个文件，该报告中都包含一个条目。要生成错误报告（即使未出现错误），请指定 \fB- v\fR 或 \fB--verbose\fR。
+.sp
+.LP
+该报告将告知您在哪些文件中出现了哪种类型的错误。定义了以下五种错误类型：警告、处理错误、不支持的项、转换错误和验证错误。
+.sp
+.ne 2
+.mk
+.na
+\fB警告\fR
+.ad
+.sp .6
+.RS 4n
+不需要更正这些消息中的项。例如，您可能收到一条警告消息，指出未提供诸如主机名或超级用户口令之类的信息，将使用缺省值。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB处理错误\fR
+.ad
+.sp .6
+.RS 4n
+这些错误表示出现了阻止 \fBjs2ai\fR 处理文件或文件中某行的问题。当文件存在语法错误时，通常就会发生处理错误。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB不支持的项\fR
+.ad
+.sp .6
+.RS 4n
+这些项是指 \fBjs2ai\fR 不支持的行。更改与关键字关联的值可能会消除此错误。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB转换错误\fR
+.ad
+.sp .6
+.RS 4n
+这些错误表示出现了阻止 \fBjs2ai\fR 处理行的情况。应该手动更正这些错误，或者从文件中删除有问题的行。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB验证错误\fR
+.ad
+.sp .6
+.RS 4n
+这些错误是指根据 AI 所用的架构定义验证生成的清单时出现的错误。必须先更正这些错误，AI 才能使用清单。
+.RE
+
+.sp
+.LP
+\fBjs2ai.log\fR 文件指出了在哪个行上出现了哪个错误。
+.sp
+.in +2
+.nf
+# \fBcat js2ai.log\fR
+rules: line 4: unsupported keyword: disksize
+rules: line 4: unsupported keyword: installed
+net924_sun4c: line 4: unsupported keyword: cluster
+net924_sun4c: line 5: unsupported keyword: num_clients
+net924_sun4c: line 6: unsupported keyword: client_swap
+net924_sun4c: line 7: unsupported keyword: client_arch
+upgrade: line 1: unsupported value for 'install_type' specified: upgrade
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+如果出现清单验证错误，\fBjs2ai.log\fR 文件将提供一个指向包含验证错误的日志文件的指针，如以下示例所示：
+.sp
+.in +2
+.nf
+Validation Errors:
+    profile1: manifest validation of
+    ./AI_profile1/profile1.xml failed.
+    For details see ./AI_profile1/profile_validation.log
+.fi
+.in -2
+
+.SH 转换策略
+.sp
+.LP
+\fB规则和配置文件转换的建议策略\fR
+.sp
+.LP
+不存在 JumpStart 和 AI 之间的一对一转换。以下步骤提供了执行转换的一般过程。
+.RS +4
+.TP
+1.
+\fBjs2ai\fR 实用程序尝试标记它遇到的任何错误，但是 \fBjs2ai\fR 假定所转换的规则、配置文件和 \fBsysidcfg\fR 文件是有效的。
+.RE
+.RS +4
+.TP
+2.
+将 \fBrules\fR、配置文件和 \fBsyscfg\fR 配置文件的 JumpStart 配置目录复制到已安装 \fBinstall/installadm\fR 软件包的 Oracle Solaris 11 系统。
+.RE
+.RS +4
+.TP
+3.
+在步骤 2 中复制到 Oracle Solaris 11 系统的 JumpStart 配置目录中，运行 \fBjs2ai\fR 转换工具。
+.sp
+.in +2
+.nf
+# \fBjs2ai -rS\fR
+.fi
+.in -2
+.sp
+
+此命令将对 \fBrules\fR 文件和 \fBrules\fR 文件所引用的配置文件执行转换操作。将根据 AI 客户机置备清单 \fB/usr/share/auto_install/manifest/default.xml \fR 处理 \fBrules\fR 文件中引用的每个配置文件。此步骤将为 JumpStart \fBrules \fR 文件中指定的每个配置文件创建一个名为 \fBAI_\fIprofile_name \fR\fR 的目录。\fBAI_\fIprofile_name\fR\fR 目录包含已转换配置文件的一个或多个 AI 清单，其格式为 \fB\fI profile_name\fR${arch}.xml\fR。有关更多信息，请参见"文件"部分。
+.sp
+\fB-S\fR 选项用于跳过验证序列。验证在步骤 5 中执行。
+.RE
+.RS +4
+.TP
+4.
+如果输出了消息"成功完成转换"，请跳到步骤 5。否则，请检查 \fBjs2ai.log\fR 文件并按以下步骤操作：
+.RS +4
+.TP
+a.
+更正任何处理错误。
+.RE
+.RS +4
+.TP
+b.
+从 \fBrules\fR 和配置文件中删除作为不支持的项列出的任何行。
+.RE
+.RS +4
+.TP
+c.
+检查转换错误并更正错误（如果可能）。否则，请删除导致错误的行。
+.RE
+.RS +4
+.TP
+d.
+检查任何警告消息并确保不需要进行更正。
+.RE
+.RS +4
+.TP
+e.
+重复步骤 3，直到不再报告处理错误、不支持的项和转换错误。
+.RE
+.RE
+.RS +4
+.TP
+5.
+不使用 \fB-S\fR 选项重新运行 \fBjs2ai\fR。
+.sp
+.in +2
+.nf
+# \fBjs2ai -r\fR
+.fi
+.in -2
+.sp
+
+如果已处理的任何配置文件出现任何验证错误，则必须手动更正生成的 AI 清单。检查 \fBjs2ai.log \fR 文件以了解有关故障的详细信息。有关 AI 清单的信息，请参见 AI 文档。
+.RE
+.RS +4
+.TP
+6.
+转换与此 JumpStart 配置关联的任何 \fBsysidcfg\fR 文件。
+.sp
+对于每个 \fBsysidcfg\fR 文件，执行以下命令：
+.sp
+.in +2
+.nf
+# \fBjs2ai -sS -d \fIsysidcfg_dir\fR\fR
+.fi
+.in -2
+.sp
+
+对于所处理的每个 \fBsysidcfg\fR 文件，此步骤将在调用 \fBjs2ai\fR 命令的目录中创建一个名为 \fBsc_profile.xml\fR 的 AI SC 配置文件。使用 \fB-D\fR 选项为 \fBsc_profile.xml\fR 文件指定其他目录。
+.RE
+.RS +4
+.TP
+7.
+如果输出了消息"成功完成转换"，请跳到步骤 8。否则，请检查 \fBjs2ai.log\fR 文件并按以下步骤操作：
+.RS +4
+.TP
+a.
+更正任何处理错误。
+.RE
+.RS +4
+.TP
+b.
+从 \fBsysidcfg\fR 文件中删除作为不支持的项列出的任何行。
+.RE
+.RS +4
+.TP
+c.
+检查转换错误并更正错误（如果可能）。否则，请删除导致错误的行。
+.RE
+.RS +4
+.TP
+d.
+检查任何警告消息并确保不需要进行更正。
+.RE
+.RS +4
+.TP
+e.
+重复步骤 6，直到不再报告处理错误、不支持的项和转换错误。
+.RE
+.RE
+.RS +4
+.TP
+8.
+不使用 \fB-S\fR 选项重新运行 \fBjs2ai\fR。
+.sp
+.in +2
+.nf
+# \fBjs2ai -s -d \fIsysidcfg_dir\fR\fR
+.fi
+.in -2
+.sp
+
+如果已处理的任何 \fBsysidcfg\fR 文件出现任何验证错误，则必须手动更正生成的 AI SC 配置文件。检查 \fBjs2ai.log \fR 文件以了解有关故障的详细信息。有关 SC 配置文件的信息，请参见 AI 文档。
+.RE
+.RS +4
+.TP
+9.
+\fBjs2ai\fR 转换过程已完成。执行对生成的条件、AI 清单和 SC 配置文件的手动验证。Oracle Solaris 11 安装的磁盘空间要求与 Oracle Solaris 10 安装的磁盘空间要求不同。请确保在 AI 清单中分配的磁盘空间满足 Oracle Solaris 11 的要求。
+.RE
+.RS +4
+.TP
+10.
+配置 AI 以使用新生成的文件。将新生成的条件、AI 清单和 SC 配置文件添加到现有的 AI 安装服务。
+.sp
+使用带有 \fB create-manifest\fR 子命令的 \fBinstalladm\fR 命令添加每个 AI 清单以及用于选择该清单的条件。每个客户机只能使用一个 AI 清单。
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -n \fIai_service_name\fR \e\fR
+\fB-f \fImanifest_file\fR -m \fImanifest_name\fR \e\fR
+\fB-C \fIcriteria_file\fR\fR
+.fi
+.in -2
+.sp
+
+使用 \fBcreate-profile\fR 子命令添加每个配置文件以及用于选择该配置文件的条件。每个客户机可以使用一个或多个 SC 配置文件。
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -n \fIai_service_name\fR \e\fR
+\fB-f \fIprofile_file\fR -p \fIprofile_name\fR \e\fR
+\fB-C \fIcriteria_file\fR\fR
+.fi
+.in -2
+.sp
+
+有关配置 AI 安装服务的信息，请参见 AI 文档和 \fBinstalladm\fR(1M) 手册页。
+.RE
+.SH 示例
+.LP
+\fB示例 1 \fR处理 JumpStart 配置
+.sp
+.LP
+以下命令处理当前目录中的 JumpStart 规则和配置文件。输出也放置在此目录中。
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -r\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 2 \fR处理特定的 JumpStart 目录
+.sp
+.LP
+以下命令将处理指定目录中的 JumpStart 规则和配置文件，并将输出文件放置在同一目录中。
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -r -d /export/jumpstart\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+有关输出文件的更多信息，请参见示例 4 和"文件"部分。
+
+.LP
+\fB示例 3 \fR处理特定的 JumpStart 目录和单独的目标目录中的配置文件
+.sp
+.LP
+以下命令处理 \fB/export/jumpstart\fR 目录中的 JumpStart \fBrules\fR 和配置文件，并将输出文件放置在 \fB/export/output\fR 中。
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -p profile1 -d /export/jumpstart -D /export/output\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 4 \fR指定的规则及其配置文件的示例输入和生成的输出
+.sp
+.LP
+规则：
+
+.sp
+.in +2
+.nf
+arch sparc && karch sun4u && \e
+    model 'SUNW,Serverblade1'  -   profile    -
+.fi
+.in -2
+
+.sp
+.LP
+配置文件:
+
+.sp
+.in +2
+.nf
+install_type    initial_install
+pool mypool auto auto auto c1t0d0s0
+.fi
+.in -2
+
+.sp
+.LP
+转换命令：
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -r -d /jumpstart -D /tmp/output\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+输出文件：
+
+.sp
+.in +2
+.nf
+/tmp/output/AI_profile/profile.x86.xml
+/tmp/output/AI_profile/profile.sparc.xml
+/tmp/output/AI_profile/criteria-1.xml
+.fi
+.in -2
+
+.sp
+.LP
+将创建两个清单，一个用于 SPARC，另一个用于 x86，即使 \fBrules\fR 文件将 CPU 类型指定为 SPARC 也是如此。在转换过程中，将彼此独立地处理规则和配置文件。
+
+.LP
+\fB示例 5 \fR将生成的文件添加到 AI 安装服务
+.sp
+.LP
+此示例使用在示例 4 中生成的文件将清单和条件添加到现有的服务。
+
+.sp
+.LP
+文件:
+
+.sp
+.in +2
+.nf
+/tmp/output/AI_profile/profile.sparc.xml
+/tmp/output/AI_profile/criteria-1.xml
+.fi
+.in -2
+
+.sp
+.LP
+\fBinstalladm\fR 命令：
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -n svc-name \e\fR
+\fB-f /tmp/output/AI_profile/profile.sparc.xml \e\fR
+\fB-m sparc_profile \e\fR
+\fB-C /tmp/output/AI_profile/criteria-1.xml\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB示例 6 \fR处理 \fBsysidcfg\fR 文件
+.sp
+.LP
+以下命令处理当前目录中的 \fBsysidcfg\fR 文件，并将生成的 SC 配置文件作为 \fBsc_profile.xml \fR 输出到同一目录中。
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -s\fR
+.fi
+.in -2
+.sp
+
+.SH 退出状态
+.sp
+.LP
+将返回以下退出值：
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 13n
+.rt  
+所有文件都已成功处理。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB>0\fR\fR
+.ad
+.RS 13n
+.rt  
+出现错误。
+.RE
+
+.SH 文件
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/AI_${\fI profile_name\fR}\fR\fR
+.ad
+.sp .6
+.RS 4n
+包含已转换为与配置文件关联的新 AI 语法的所有对应文件的目录。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/AI_${\fI profile_name\fR}.${\fIarch\fR}.xml\fR\fR
+.ad
+.sp .6
+.RS 4n
+作为转换配置文件的结果而创建的清单文件。\fB ${\fIarch\fR}\fR 可以是以下三个值之一：\fB sparc\fR、\fBx86\fR 或 \fBgeneric\fR。格式为 \fB${\fIprofile_name\fR}.generic.xml \fR 的清单文件可以同时用于安装 x86 和 SPARC 系统。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/AI_${\fI profile_name\fR}/criteria-\fIrule_number\fR.xml\fR\fR
+.ad
+.sp .6
+.RS 4n
+生成的 \fBcriteria-\fIrule_number\fR.xml \fR 文件与 \fBrules\fR 文件中的规则相对应，\fB\fIrule_number\fR\fR 是基于其在 \fBrules\fR 文件中位置的规则编号。然后可以将此条件文件与 \fBinstalladm\fR 命令的 \fB-C\fR 选项一起使用。
+.sp
+由于多个规则可以指定同一配置文件，因此每个目录中可以存在多个条件文件，但是每个输出目录中应仅存在 \fB ${\fIprofile_name\fR}.${\fIarch\fR}.xml \fR 文件的一个实例。
+.LP
+注 - 
+.sp
+.RS 2
+如果使用了 \fB-p\fR 选项，则不为所处理的配置文件生成条件文件。仅当与 \fB-r\fR 选项一起使用时才生成条件文件。
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/js2ai.err \fR\fR
+.ad
+.sp .6
+.RS 4n
+此文件包含在处理期间出现的意外情况的栈跟踪。通常不创建此文件。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/js2ai.log \fR\fR
+.ad
+.sp .6
+.RS 4n
+此文件包含所处理文件以及在处理期间发现的任何错误的日志。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/sc_profile.xml \fR\fR
+.ad
+.sp .6
+.RS 4n
+此文件是使用 \fB-s\fR 选项转换 \fBsysidcfg\fR 文件时生成的 SC 配置文件。
+.RE
+
+.SH 属性
+.sp
+.LP
+有关下列属性的描述，请参见 \fBattributes\fR(5)：
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+属性类型属性值
+_
+可用性\fBinstall/js2ai\fR（安装/js2ai）
+_
+接口稳定性Uncommitted（未确定）
+.TE
+
+.SH 另请参见
+.sp
+.LP
+installadm(1M)、\fBpkg\fR(1)
+.sp
+.LP
+\fI《Transitioning From Oracle Solaris 10 Custom JumpStart to Oracle Solaris 11 Automated Installer》\fR
+.sp
+.LP
+Part\ III, \fI"Installing Using an Install Server,"\fR in \fI《Installing Oracle Solaris 11 Systems》\fR

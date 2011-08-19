@@ -1,0 +1,995 @@
+'\" te
+.\" Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+.TH js2ai 1M "2011 年 7 月 22 日" "SunOS 5.11" "システム管理コマンド"
+.SH 名前
+js2ai \- 自動インストーラ (AI) で使用するための JumpStart ルールおよびプロファイルの変換
+.SH 形式
+.LP
+.nf
+js2ai [\fB-h\fR | \fB --version \fR]
+.fi
+
+.LP
+.nf
+js2ai \fB-r\fR | \fB -p \fR \fIprofile_name\fR [\fB-d\fR \fIjumpstart_dir\fR]
+    [\fB-D\fR \fIdestination_dir\fR] [\fB-lSv\fR]
+.fi
+
+.LP
+.nf
+js2ai \fB-s\fR [\fB -d \fR \fIjumpstart_dir\fR]
+    [\fB-D\fR \fIdestination_dir\fR] [\fB-Sv\fR]
+.fi
+
+.LP
+.nf
+js2ai \fB-V\fR \fImanifest\fR
+.fi
+
+.SH 機能説明
+.sp
+.LP
+\fBjs2ai\fR は、Oracle Solaris 10 JumpStart の \fBrules\fR、プロファイル、および \fBsyscfg\fR 構成ファイルを、自動インストーラ (AI) と互換性がある形式に変換するためのユーティリティーです。このユーティリティーは最適な方法で、AI コンテキストに変換可能な JumpStart キーワードを変換します。この変換では JumpStart と完全に 1 対 1 で一致するものは作成されませんが、AI マニフェストおよびシステム構成 (SC) プロファイルのエントリが提供されます。これらは、JumpStart 構成ファイルから収集された情報に基づいて設定された完全な AI 構成を作成するためのテンプレートとして使用できます。
+.sp
+.LP
+\fBjs2ai\fR を使用すると、次の操作を実行できます。
+.RS +4
+.TP
+.ie t \(bu
+.el o
+現在の作業用ディレクトリにおける \fBrules\fR ファイルおよび関連付けられたプロファイルの処理。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+指定されたディレクトリにおける \fBrules\fRファイルおよび関連付けられたプロファイルの処理。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+特定のプロファイルまたは \fBsysidcfg\fR ファイルの処理。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+生成された出力ファイルの特定のディレクトリへの送信。\fBjs2ai\fR 出力ファイルについての詳細は、「使用例」および「ファイル」の節を参照してください。
+.RE
+.SS "ルールのキーワードを変換する"
+.sp
+\fB表 1 \fRJumpStart ルールのキーワード変換
+.sp
+.TS
+tab();
+cw(1.38i) cw(4.13i) 
+lw(1.38i) lw(4.13i) 
+.
+JumpStart ルールのキーワードAI 条件のキーワード
+_
+\fBarch\fR\fBcpu\fR
+\fBhostaddress\fR\fBipv4\fR
+\fBkarch\fR\fBarch\fR
+\fBmemsize\fR\fBmem\fR
+\fBmodel\fR\fBplatform\fR
+\fBnetwork\fR\fBipv4\fR
+.TE
+
+.sp
+.LP
+\fBjs2ai\fR でサポートされていない JumpStart ルールのキーワード:
+.sp
+.in +2
+.nf
+any             installed
+disksize        osname
+domainname      probe
+hostname        totaldisk
+.fi
+.in -2
+
+.SS "プロファイルのキーワードを変換する"
+.sp
+\fB表 2 \fRJumpStart プロファイルのキーワード
+.sp
+.TS
+tab();
+cw(1.38i) cw(4.13i) 
+lw(1.38i) lw(4.13i) 
+.
+T{
+JumpStart プロファイルのキーワード
+T}注意事項
+_
+\fBboot_device\fRT{
+\fBrootdisk\fR は、事前に \fBroot_device\fR キーワードで設定されていない場合、指定されたデバイスに設定されます。
+T}
+\fBfdisk\fRT{
+\fBdisk_name\fR の値はデバイスにする必要があります。\fBall\fR のデバイスはサポートされていません。\fBfdisk\fR タイプは \fBsolaris\fR にする必要があります。サイズ 0 または \fBdelete\fR はサポートされていません。\fBpartitioning\fR が \fBdefault\fR であり、\fBrootdisk\fR が設定されていない場合は、検出された 1 番目の \fBfdisk solaris\fR パーティションが \fBrootdisk\fR として使用されます。
+T}
+\fBfilesys\fRT{
+指定されたマウントポイントが / または \fBswap\fR の場合は、ローカルおよびミラー化されたファイルシステムがサポートされます。サイズの検証は実行されません。このマニフェストを使用したインストールに成功するには、生成された AI マニフェストに指定されたサイズを調整する必要がある場合があります。
+T}
+\fBinstall_type\fRT{
+値 \fBinitial_install\fR のみがサポートされています。
+T}
+\fBlocale\fRT{
+変換は実行されません。指定されたロケールが Oracle Solaris 11 でサポートされていることを確認してください。
+T}
+\fBpackage\fRT{
+指定されたパッケージを Oracle Solaris 11 のパッケージに変換しようと試みられます。パッケージの場所の指定はサポートされていません。パッケージの検索には、非常に長い時間がかかる可能性があります。プロファイルにパッケージの長形式のリストが含まれる場合は、変換プロセス中に \fB--local\fR フラグを使用できます。
+T}
+\fBpartitioning\fRT{
+サポートされているタイプは \fBdefault\fR および \fBexplicit\fR です。JumpStart とは異なり、\fBpartitioning default\fR が指定された場合は、\fBjs2ai\fR で認識されるディスクのみが使用されます。ディスクがどのキーワードでも指定されていない場合は、生成されたプロファイルによって、使用するディスクを選択するように AI に通知されます。
+T}
+\fBpool\fRT{
+プロファイルでプールが指定されている場合は、指定されたデバイスを使用して ZFS ルートプールが作成されます。ZFS ルートプールで使用するデバイスを決定する際には、\fBpool\fR キーワードが他のすべてのキーワードに優先されます。プールサイズ、スワップワイズ、またはダンプサイズの検証は実行されません。このマニフェストを使用したインストールに成功するには、生成された AI マニフェストでこれらのサイズを調整する必要がある場合があります。
+T}
+\fBroot_device\fRT{
+\fBrootdisk\fR は指定されたデバイスに設定されます。
+T}
+\fBsystem_type\fRT{
+値 \fBstandalone\fR のみがサポートされています。
+T}
+\fBusedisk\fRT{
+指定されたデバイスは、変換中に \fBany\fR または \fBrootdisk\fR デバイスを解決するために使用される場合があります。ZFS ルートプールがミラー化されていない場合は、この目的で使用されない指定されたデバイスが、そのプールに追加されます。
+T}
+.TE
+
+.sp
+.LP
+\fBjs2ai\fR でサポートされていない JumpStart プロファイルのキーワード:
+.sp
+.in +2
+.nf
+archive_location       geo
+backup_media           layout_constraint
+bootenv                local_customization
+client_arch            metabd
+client_root            no_master_check
+client_swap            no_content_check
+cluster                num_clients
+dontuse                patch
+forced_deployment
+.fi
+.in -2
+
+.sp
+.LP
+\fBプロファイルの変換中にシステムのルートディスクを決定する方法\fR
+.sp
+.LP
+プロファイルの変換プロセス中は、\fBjs2ai\fR はプロファイルが参照する実際のシステムにアクセスしないため、\fBjs2ai\fR はできる限り JumpStart と一致するプロセスを使用して、変換中にルートディスクを決定しようとします。
+.sp
+.LP
+\fBjs2ai\fR ツールは次のステップを実行して、ルートディスクで使用するデバイスを決定します。
+.sp
+
+.sp
+.TS
+tab();
+cw(.44i) cw(5.06i) 
+lw(.44i) lw(5.06i) 
+.
+手順動作
+_
+1T{
+プロファイルで \fBroot_device\fR キーワードが指定されている場合、\fB js2ai\fR は \fBrootdisk\fR をスライスが存在するデバイスに設定します。
+T}
+2T{
+\fBrootdisk\fR が設定されておらず、プロファイルで \fBboot_device\fR キーワードが指定されている場合、\fBjs2ai\fR は \fBrootdisk\fR をブートデバイスに設定します。
+T}
+3T{
+\fBrootdisk\fR が設定されておらず、\fBpartitioning default\fR が指定され、\fBsolaris\fR \fBfdisk\fR エントリが指定されている場合、\fBjs2ai\fR は \fBrootdisk\fR を指定された \fBdisk_name\fR に設定します。
+T}
+4T{
+\fBrootdisk\fR が設定されておらず、プロファイルで \fBfilesys cwtxdysz size /\fR エントリが指定されている場合、\fBjs2ai\fR は \fBrootdisk\fR をそのエントリで指定された \fBcwtxdysz\fR ディスクに設定します。
+T}
+5T{
+\fBrootdisk\fR が設定されておらず、プロファイルで \fBusedisk disk_name\fR エントリが指定されている場合、\fBjs2ai\fR は \fBrootdisk\fR をそのエントリで指定された \fBdisk_name\fR ディスクに設定します。
+T}
+6T{
+\fBrootdisk\fR が設定されていない場合、デバイスが \fBrootdisk\fR として指定されたオカレンスで変換エラーが生成されます。
+T}
+.TE
+
+.sp
+.LP
+\fBプロファイルの変換中に任意のデバイスを変換する方法\fR
+.sp
+.LP
+\fBjs2ai\fR ツールは次のステップを実行して、\fBany\fR キーワードが指定されているときに使用するデバイスを決定します。
+.sp
+
+.sp
+.TS
+tab();
+cw(.44i) cw(5.06i) 
+lw(.44i) lw(5.06i) 
+.
+手順動作
+_
+1T{
+\fBany\fR デバイスが指定されていて、キーワードアクション (ミラー化されていない \fBpool\fR、または / マウントポイントを使用した \fBfilesys\fR) が指定されている場合、\fBany\fR デバイスが \fBrootdisk\fR に設定されます (\fBrootdisk\fR が設定されている場合)。
+T}
+2T{
+\fBany\fR デバイスが変換されておらず、\fBusedisk\fR 文がプロファイル内に存在する場合、\fBany\fR デバイスが \fBusedisk\fR 文で指定されたデバイスに設定されます。
+T}
+3T{
+\fBany\fR デバイスが変換されておらず、\fBany\fR デバイスが指定されたアクションによって ZFS ルートプールが作成される場合、AI はそのデバイスを選択します。ミラー化された \fBpool\fR が指定されている場合、これは適用できません。
+T}
+.TE
+
+.sp
+.LP
+\fBプロファイルの変換中に ZFS ルートプールを決定する方法\fR
+.sp
+.LP
+\fBjs2ai\fR ツールは次のステップを実行して、ZFS ルートプールで使用するデバイスを決定します。ZFS ルートプールが決定されると、その後に検出される定義がすでに決定されている ZFS ルートプールと競合する場合、エラーとしてフラグが設定されます。
+.sp
+
+.sp
+.TS
+tab();
+cw(.44i) cw(5.06i) 
+lw(.44i) lw(5.06i) 
+.
+手順動作
+_
+1T{
+プロファイルで \fBpool\fR キーワードが指定されている場合、\fBjs2ai \fR は ZFS ルートプールを \fBpool\fR キーワードで指定されたデバイスに設定します。
+T}
+2T{
+ZFS ルートプールが決定されておらず、プロファイルでマウントポイントが / の \fBfilesys\fR、またはタイプが \fBsolaris\fR でサイズが 0 以外または \fBdelete\fR の \fBfdisk\fR が指定されている場合、ZFS ルートプールは指定されたデバイスを使用して作成されます。
+T}
+3T{
+ZFS ルートプールが決定されておらず、プロファイル内のすべてのキーワードが処理され、\fBrootdisk\fR が設定されている場合、ZFS ルートプールは \fBrootdisk\fR デバイスを使用して作成されます。
+T}
+4T{
+ZFS ルートプールが決定されておらず、パーティションタイプが \fBdefault\fR の場合、AI は ZFS ルートプールで使用するデバイスを選択します。
+T}
+5T{
+ZFS ルートプールが決定されておらず、処理中にエラーが発生しなかった場合、AI は ZFS ルートプールで使用するデバイスを選択します。
+T}
+6T{
+ZFS ルートプールがミラー化されたプールではなく、指定された 1 つ以上の \fBusedisk\fR デバイスが \fBrootdisk\fR デバイスまたは \fBany\fR デバイスの変換で使用されていない場合、これらのディスクが ZFS ルートプールに追加されます。
+T}
+.TE
+
+.SS "\fBsysidcfg\fR キーワードを変換する"
+.sp
+\fB表 3 \fRJumpStart \fBsysidcfg\fR キーワード
+.sp
+.TS
+tab();
+cw(1.38i) cw(4.13i) 
+lw(1.38i) lw(4.13i) 
+.
+\fBsysidcfg\fR キーワード注意事項
+_
+\fBkeyboard\fRT{
+変換は実行されません。\fBsysidcfg\fR ファイルで指定されたキーボードが Oracle Solaris 11 でサポートされていることを確認してください。
+T}
+\fBname_service\fRT{
+値 \fBNone\fR、\fBDNS\fR、\fBNIS \fR、および \fBLDAP\fR がサポートされています。NIS+ ネームサービスは NIS として変換されます。
+T}
+\fBnetwork_interface\fRT{
+単一のインタフェースのみがサポートされています。\fBPRIMARY\fR のサポートは制限されています。\fBsysidcfg\fR ファイルで指定された 1 番目のインタフェースのみが処理されます。
+T}
+\fBroot_password\fR変換は必要ありません。
+\fBsecurity_policy\fRT{
+値 \fBNone\fR がサポートされています。
+T}
+\fBservice_profile\fRT{
+値 \fBlimited_net\fR がサポートされています。
+T}
+\fBsystem_locale\fRT{
+変換は実行されません。\fBsysidcfg\fR ファイルで指定されたロケールが Oracle Solaris 11 でサポートされていることを確認してください。
+T}
+\fBterminal\fRT{
+変換は実行されません。\fBsysidcfg\fR ファイルで指定された端末タイプが Oracle Solaris 11 でサポートされていることを確認してください。
+T}
+\fBtimeserver\fRT{
+値 \fBlocalhost\fR がサポートされています。
+T}
+\fBtimezone\fR変換は必要ありません。
+.TE
+
+.sp
+.LP
+\fB js2ai\fR でサポートされていない JumpStart \fBsysidcfg\fR キーワード:
+.sp
+.in +2
+.nf
+nfs4_domain
+.fi
+.in -2
+
+.SH オプション
+.sp
+.LP
+\fBjs2ai\fR コマンドには次のオプションがあります。これらのオプションの使用については、「使用例」の節で説明します。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR、\fB--help\fR\fR
+.ad
+.sp .6
+.RS 4n
+使用法のヘルプメッセージを表示します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--version\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBjs2ai\fR ユーティリティーのバージョン番号を表示します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fIjumpstart_dir\fR、\fB- -dir\fR \fIjumpstart_dir\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBrules\fR ファイルおよびプロファイルファイル、または \fBsysidcfg\fR ファイルの場所を指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-D\fR \fIdestination_dir\fR、\fB- -dest\fR \fIdestination_dir\fR\fR
+.ad
+.sp .6
+.RS 4n
+出力ファイルの場所を指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR、\fB--local\fR\fR
+.ad
+.sp .6
+.RS 4n
+JumpStart プロファイルでの \fBpackage\fR キーワード値に相当する Image Packaging System (IPS) の値を検索する場合は、IPS パッケージリポジトリのパッケージではなく、ホストシステムにインストールされている IPS パッケージを検索します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fIprofile_name\fR、\fB- -profile\fR \fIprofile_name\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定された JumpStart プロファイルを変換し、処理されたプロファイルに対応するマニフェストを生成します。この場合、条件ファイルは必要ないか、または生成されません。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR、\fB--rule\fR\fR
+.ad
+.sp .6
+.RS 4n
+ルールおよび関連付けられたプロファイルを変換し、処理されたプロファイルごとにマニフェストを生成します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR、\fB--sysidcfg\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBsysidcfg\fR ファイルを処理し、その結果を \fBsc_profile.xml\fR に出力します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-S\fR、\fB--skip\fR\fR
+.ad
+.sp .6
+.RS 4n
+検証をスキップします。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR、\fB--verbose\fR\fR
+.ad
+.sp .6
+.RS 4n
+処理中に発生したアクションに関する詳細を表示します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-V\fR \fIfilename\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定された AI マニフェストファイルまたは SC プロファイルファイルを検証します。AI 条件の検証はサポートされていません。
+.RE
+
+.SH エラーレポート
+.sp
+.LP
+\fBjs2ai\fR ツールは、変換中に 1 つ以上のエラーが発生するとエラーレポートを生成します。
+.sp
+.in +2
+.nf
+# \fBjs2ai -r\fR
+                    Process  Unsupported  Conversion  Validation
+Name      Warnings  Errors   Items        Errors      Errors
+--------  --------  -------  -----------  ----------  ----------
+rules            0        0            2           0           -
+profile1         0        0            0           2           1
+
+Conversion completed. One or more failures occurred.
+For errors see ./js2ai.log
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+レポートには、\fBjs2ai\fR でエラーが発生したファイルごとに 1 つのエントリが含まれます。エラーが発生しない場合でもエラーレポートを生成するには、\fB- v\fR または \fB--verbose\fR を指定します。
+.sp
+.LP
+レポートでは、どのファイルでどのタイプのエラーが発生したのかが報告されます。定義されるエラーのタイプは、警告、処理エラー、サポート外項目、変換エラー、および検証エラーの 5 つです。
+.sp
+.ne 2
+.mk
+.na
+\fB警告\fR
+.ad
+.sp .6
+.RS 4n
+このメッセージの項目は修正する必要がありません。たとえば、ホスト名や root パスワードなどの情報が指定されなかったため、デフォルト値が使用される旨の警告メッセージを受信する場合があります。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB処理エラー\fR
+.ad
+.sp .6
+.RS 4n
+このエラーは、\fBjs2ai\fR がファイルまたはファイル内の行を処理できなくなる問題を指します。通常、処理エラーはファイルに構文エラーがある場合に発生します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBサポート外項目\fR
+.ad
+.sp .6
+.RS 4n
+この項目は、\fBjs2ai\fR でサポートされていない行を指します。キーワードに関連付けられた値を変更すると、このエラーが発生しなくなる場合があります。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB変換エラー\fR
+.ad
+.sp .6
+.RS 4n
+このエラーは、\fBjs2ai\fR が行を処理できなくなる状況を指します。これらのエラーを手動で修正するか、または問題のある行をファイルから削除するようにしてください。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB検証エラー\fR
+.ad
+.sp .6
+.RS 4n
+このエラーは、AI で使用されるスキーマ定義に対して生成されたマニフェストを検証したときに発生するエラーを指します。マニフェストが AI で使用される前に、これらのエラーを修正する必要があります。
+.RE
+
+.sp
+.LP
+\fBjs2ai.log\fR ファイルには、どの行でどのエラーが発生したのかが示されます。
+.sp
+.in +2
+.nf
+# \fBcat js2ai.log\fR
+rules: line 4: unsupported keyword: disksize
+rules: line 4: unsupported keyword: installed
+net924_sun4c: line 4: unsupported keyword: cluster
+net924_sun4c: line 5: unsupported keyword: num_clients
+net924_sun4c: line 6: unsupported keyword: client_swap
+net924_sun4c: line 7: unsupported keyword: client_arch
+upgrade: line 1: unsupported value for 'install_type' specified: upgrade
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+マニフェストの検証エラーが発生した場合、次の例で示すように、\fBjs2ai.log\fR ファイルには検証エラーを含むログファイルへのポインタが含まれます。
+.sp
+.in +2
+.nf
+Validation Errors:
+    profile1: manifest validation of
+    ./AI_profile1/profile1.xml failed.
+    For details see ./AI_profile1/profile_validation.log
+.fi
+.in -2
+
+.SH 変換の方針
+.sp
+.LP
+\fBルールおよびプロファイルの変換で推奨される方針\fR
+.sp
+.LP
+JumpStart と AI との間には 1 対 1 の変換は存在しません。次のステップは、変換を実行するための一般的な手順を提供します。
+.RS +4
+.TP
+1.
+\fBjs2ai\fR ユーティリティーは、発生したエラーへのフラグ設定を試みます。ただし、\fBjs2ai\fR では、変換されるルール、プロファイル、および \fBsysidcfg\fR ファイルが有効であることが前提となっています。
+.RE
+.RS +4
+.TP
+2.
+\fBrules\fR、プロファイル、および \fBsyscfg\fR 構成ファイルの JumpStart 構成ディレクトリを、\fBinstall/installadm\fR パッケージがインストールされている Oracle Solaris 11 システムにコピーします。
+.RE
+.RS +4
+.TP
+3.
+ステップ 2 で Oracle Solaris 11 システムにコピーした JumpStart 構成ディレクトリで、\fBjs2ai\fR 変換ツールを実行します。
+.sp
+.in +2
+.nf
+# \fBjs2ai -rS\fR
+.fi
+.in -2
+.sp
+
+このコマンドは、\fBrules\fR ファイルおよび \fBrules\fR ファイルによって参照されるプロファイルで変換操作を実行します。\fBrules\fR ファイルで参照される各プロファイルは、AI クライアントプロビジョニングマニフェスト (\fB/usr/share/auto_install/manifest/default.xml \fR) に対して処理されます。このステップでは、JumpStart \fBrules \fR ファイルで指定されたプロファイルごとに、\fBAI_\fIprofile_name \fR\fR という名前のディレクトリを作成します。\fBAI_\fIprofile_name\fR\fR ディレクトリには、変換されたプロファイルごとに 1 つ以上の AI マニフェストが \fB\fI profile_name\fR${arch}.xml\fR の形式で含まれています。詳細は、「ファイル」の節を参照してください。
+.sp
+\fB-S\fR オプションは検証処理をスキップします。検証はステップ 5 で実行されます。
+.RE
+.RS +4
+.TP
+4.
+「Successfully completed conversion」というメッセージが出力された場合は、ステップ 5 にスキップします。それ以外の場合は、\fBjs2ai.log\fR ファイルを検査して、次のステップに従います。
+.RS +4
+.TP
+a.
+処理エラーを修正します。
+.RE
+.RS +4
+.TP
+b.
+\fBrules\fR ファイルおよびプロファイルファイルから、サポート外項目として一覧表示されたすべての行を削除します。
+.RE
+.RS +4
+.TP
+c.
+変換エラーを検査して、可能な場合はエラーを修正します。それ以外の場合は、エラーの原因となっている行を削除します。
+.RE
+.RS +4
+.TP
+d.
+警告メッセージを検査して、修正が必要ないことを確認します。
+.RE
+.RS +4
+.TP
+e.
+処理中のエラー、サポート外項目、および変換エラーが報告されなくなるまで、ステップ 3 を繰り返します。
+.RE
+.RE
+.RS +4
+.TP
+5.
+\fB-S\fR オプションを指定せずに \fBjs2ai\fR を再実行します。
+.sp
+.in +2
+.nf
+# \fBjs2ai -r\fR
+.fi
+.in -2
+.sp
+
+処理されたプロファイルのいずれかで検証エラーが発生した場合は、生成された AI マニフェストを手動で修正する必要があります。失敗の詳細について、\fBjs2ai.log\fR ファイルを検査します。AI マニフェストについての詳細は、AI のドキュメントを参照してください。
+.RE
+.RS +4
+.TP
+6.
+この JumpStart 構成に関連付けられた \fBsysidcfg\fR ファイルを変換します。
+.sp
+\fBsysidcfg\fR ファイルごとに、次のコマンドを実行します。
+.sp
+.in +2
+.nf
+# \fBjs2ai -sS -d \fIsysidcfg_dir\fR\fR
+.fi
+.in -2
+.sp
+
+このステップでは、処理された \fBsysidcfg\fR ファイルごとに、\fBjs2ai\fR コマンドが起動されたディレクトリ内に \fBsc_profile.xml\fR という名前の AI SC プロファイルファイルを作成します。\fBsc_profile.xml\fR ファイルに別のディレクトリを指定するには、\fB-D\fR オプションを使用します。
+.RE
+.RS +4
+.TP
+7.
+「変換は正常に完了しました」というメッセージが出力された場合は、ステップ 8 にスキップします。それ以外の場合は、\fBjs2ai.log\fR ファイルを検査して、次のステップに従います。
+.RS +4
+.TP
+a.
+処理エラーを修正します。
+.RE
+.RS +4
+.TP
+b.
+\fBsysidcfg\fR ファイルから、サポート外項目として一覧表示されたすべての行を削除します。
+.RE
+.RS +4
+.TP
+c.
+変換エラーを検査して、可能な場合はエラーを修正します。それ以外の場合は、エラーの原因となっている行を削除します。
+.RE
+.RS +4
+.TP
+d.
+警告メッセージを検査して、修正が必要ないことを確認します。
+.RE
+.RS +4
+.TP
+e.
+処理中のエラー、サポート外項目、および変換エラーが報告されなくなるまで、ステップ 6 を繰り返します。
+.RE
+.RE
+.RS +4
+.TP
+8.
+\fB-S\fR オプションを指定せずに \fBjs2ai\fR を再実行します。
+.sp
+.in +2
+.nf
+# \fBjs2ai -s -d \fIsysidcfg_dir\fR\fR
+.fi
+.in -2
+.sp
+
+処理された \fBsysidcfg\fR ファイルのいずれかで検証エラーが発生した場合は、生成された AI SC プロファイルを手動で修正する必要があります。失敗の詳細について、\fBjs2ai.log\fR ファイルを検査します。SC プロファイルについての詳細は、AI のドキュメントを参照してください。
+.RE
+.RS +4
+.TP
+9.
+\fBjs2ai\fR 変換プロセスが完了しました。生成された条件、AI マニフェスト、および SC プロファイルファイルの検証を手動で実行します。Oracle Solaris 11 インストールのディスク容量の要件は、Oracle Solaris 10 インストールで必要なディスク容量とは異なります。AI マニフェスト内で割り当てられたディスク容量が Oracle Solaris 11 の要件を満たしていることを確認します。
+.RE
+.RS +4
+.TP
+10.
+新しく生成されたファイルを使用するように AI を構成します。新しく生成された条件、AI マニフェスト、および SC プロファイルファイルを、既存の AI インストールサービスに追加します。
+.sp
+マニフェストを選択するための条件付きで各 AI マニフェストを追加するには、\fBcreate-manifest\fR サブコマンドを指定した \fBinstalladm\fR コマンドを使用します。各クライアントは、1 つの AI マニフェストのみを使用できます。
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -n \fIai_service_name\fR \e\fR
+\fB-f \fImanifest_file\fR -m \fImanifest_name\fR \e\fR
+\fB-C \fIcriteria_file\fR\fR
+.fi
+.in -2
+.sp
+
+構成プロファイルを選択するための条件付きで各プロファイルを追加するには、\fBcreate-profile\fR サブコマンドを使用します。各クライアントは、1 つ以上の SC プロファイルを使用できます。
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -n \fIai_service_name\fR \e\fR
+\fB-f \fIprofile_file\fR -p \fIprofile_name\fR \e\fR
+\fB-C \fIcriteria_file\fR\fR
+.fi
+.in -2
+.sp
+
+AI インストールサービスの構成についての詳細は、AI のドキュメントおよび \fBinstalladm\fR(1M) のマニュアルページを参照してください。
+.RE
+.SH 使用例
+.LP
+\fB例 1 \fRJumpStart 構成を処理する
+.sp
+.LP
+次のコマンドは、現在のディレクトリで JumpStart のルールおよびプロファイルを処理します。出力は、このディレクトリにも配置されます。
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -r\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 2 \fR特定の JumpStart ディレクトリを処理する
+.sp
+.LP
+次のコマンドは、指定されたディレクトリから JumpStart のルールおよびプロファイルを処理し、同じディレクトリに出力ファイルを配置します。
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -r -d /export/jumpstart\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+出力ファイルについての詳細は、例 4 および「ファイル」の節を参照してください。
+
+.LP
+\fB例 3 \fR特定の JumpStart ディレクトリおよび個別のインストール先ディレクトリでプロファイルを処理する
+.sp
+.LP
+次のコマンドは、\fB/export/jumpstart\fR ディレクトリから JumpStart の \fBrules\fR ファイルおよびプロファイルファイルを処理し、\fB/export/output\fR に出力ファイルを配置します。
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -p profile1 -d /export/jumpstart -D /export/output\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 4 \fR指定されたルールおよびそのプロファイルの入力例および生成された出力
+.sp
+.LP
+ルール:
+
+.sp
+.in +2
+.nf
+arch sparc && karch sun4u && \e
+    model 'SUNW,Serverblade1'  -   profile    -
+.fi
+.in -2
+
+.sp
+.LP
+プロファイル:
+
+.sp
+.in +2
+.nf
+install_type    initial_install
+pool mypool auto auto auto c1t0d0s0
+.fi
+.in -2
+
+.sp
+.LP
+変換コマンド:
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -r -d /jumpstart -D /tmp/output\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+出力ファイル:
+
+.sp
+.in +2
+.nf
+/tmp/output/AI_profile/profile.x86.xml
+/tmp/output/AI_profile/profile.sparc.xml
+/tmp/output/AI_profile/criteria-1.xml
+.fi
+.in -2
+
+.sp
+.LP
+\fBrules\fR ファイルに CPU タイプが SPARC と指定されている場合でも、2 つのマニフェストファイル (SPARC と x86 で 1 つずつ) が作成されます。変換プロセス中は、ルールとプロファイルは相互に独立して処理されます。
+
+.LP
+\fB例 5 \fR生成されたファイルを AI インストールサービスに追加する
+.sp
+.LP
+この例では、例 4 で生成されたファイルを使用して、マニフェストおよび条件を既存のサービスに追加します。
+
+.sp
+.LP
+ファイル:
+
+.sp
+.in +2
+.nf
+/tmp/output/AI_profile/profile.sparc.xml
+/tmp/output/AI_profile/criteria-1.xml
+.fi
+.in -2
+
+.sp
+.LP
+\fBinstalladm\fR コマンド:
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -n svc-name \e\fR
+\fB-f /tmp/output/AI_profile/profile.sparc.xml \e\fR
+\fB-m sparc_profile \e\fR
+\fB-C /tmp/output/AI_profile/criteria-1.xml\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 6 \fR\fBsysidcfg\fRファイルを処理する
+.sp
+.LP
+次のコマンドは、現在のディレクトリで \fBsysidcfg\fR ファイルを処理し、生成された SC プロファイルを同じディレクトリに \fBsc_profile.xml\fR として出力します。
+
+.sp
+.in +2
+.nf
+# \fBjs2ai -s\fR
+.fi
+.in -2
+.sp
+
+.SH 終了ステータス
+.sp
+.LP
+次の終了値が返されます。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 13n
+.rt  
+すべてのファイルが正常に処理されました。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB>0\fR\fR
+.ad
+.RS 13n
+.rt  
+エラーが発生しました。
+.RE
+
+.SH ファイル
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/AI_${\fI profile_name\fR}\fR\fR
+.ad
+.sp .6
+.RS 4n
+プロファイルに関連付けられた新しい AI 構文に変換されたすべての対応するファイルが含まれるディレクトリ。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/AI_${\fI profile_name\fR}.${\fIarch\fR}.xml\fR\fR
+.ad
+.sp .6
+.RS 4n
+プロファイルを変換した結果として作成されるマニフェストファイル。\fB ${\fIarch\fR}\fR には、3 つの値 \fB sparc\fR、\fBx86\fR、または \fBgeneric\fR のいずれかを指定できます。\fB${\fIprofile_name\fR}.generic.xml \fR 形式のマニフェストファイルを使用して、x86 と SPARC の両方のシステムをインストールできます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/AI_${\fI profile_name\fR}/criteria-\fIrule_number\fR.xml\fR\fR
+.ad
+.sp .6
+.RS 4n
+生成された \fBcriteria-\fIrule_number\fR.xml\fR ファイルは \fBrules\fR ファイル内のルールに対応し、\fB\fIrule_number\fR\fR は \fBrules\fR ファイル内での場所に基づいたルール番号です。この条件ファイルは、\fBinstalladm\fR コマンドの \fB-C\fR オプションで使用できます。
+.sp
+複数のルールで同じプロファイルを指定できるため、各ディレクトリに複数の条件ファイルが存在できますが、\fB ${\fIprofile_name\fR} のインスタンスは 1 つのみです。各出力ディレクトリには、${\fIarch\fR}.xml \fR ファイルが存在する必要があります。
+.LP
+注 - 
+.sp
+.RS 2
+\fB-p\fR オプションが使用される場合は、処理されるプロファイルに対して条件ファイルが生成されません。条件ファイルは、\fB-r\fR オプションを指定して使用された場合にのみ生成されます。
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/js2ai.err \fR\fR
+.ad
+.sp .6
+.RS 4n
+このファイルには、処理中に発生した予期しない状況のスタックトレースが含まれています。通常、このファイルは作成されません。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/js2ai.log \fR\fR
+.ad
+.sp .6
+.RS 4n
+このファイルには、処理されたファイルおよび処理中に見つかったエラーのログが含まれています。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIoutput_directory\fR/sc_profile.xml \fR\fR
+.ad
+.sp .6
+.RS 4n
+このファイルは、\fB-s\fR オプションを使用して \fBsysidcfg\fR ファイルを変換する場合に生成される SC プロファイルです。
+.RE
+
+.SH 属性
+.sp
+.LP
+次の属性についての詳細は、マニュアルページの \fBattributes\fR(5) を参照してください。
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+属性タイプ属性値
+_
+使用条件\fBinstall/js2ai\fR
+_
+インタフェースの安定性不確実
+.TE
+
+.SH 関連項目
+.sp
+.LP
+installadm(1M), \fBpkg\fR(1)
+.sp
+.LP
+\fI『Transitioning From Oracle Solaris 10 Custom JumpStart to Oracle Solaris 11 Automated Installer』\fR
+.sp
+.LP
+Part\ III, \fI「Installing Using an Install Server,」\fR in \fI『Installing Oracle Solaris 11 Systems』\fR

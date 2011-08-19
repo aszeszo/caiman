@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -74,10 +74,20 @@ set name=org.opensolaris.consolidation value=install
 <transform file path=usr/share/src/grub/.+ -> default mode 0644>
 <transform file path=usr/share/.+ -> default mode 0444>
 
+#
+# Add facets for man page entries
+#
+# for all dirs and files under usr/.../man
+<transform dir file link path=usr/.+/man(/.+)?$ -> default facet.doc.man true>
+# for per-locale manpage dirs or symlinks
+<transform dir link path=usr/.+/man/([a-z]{2,3}(_[A-Z]{2,3})?)([.@][^/]+)?$ -> default facet.locale.%<1> true>
+# for per-locale section dirs, files, or symlinks
+<transform dir file link path=usr/.+/man/([a-z]{2,3}(_[A-Z]{2,3}){0,1})[/.@].+ -> default facet.locale.%<1> true>
+# locale dir, section dir, and manpages (add zh_SG to zh_CN)
+<transform dir file link path=.+/man/zh_CN([/.@].+)?$ -> default facet.locale.zh_SG true>
 
 #
 # For what's left, go with root:bin 0644, +x for directories
-#
 #
 <transform file dir -> default owner root>
 <transform file dir -> default group bin>

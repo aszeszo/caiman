@@ -1,0 +1,423 @@
+'\" te
+.\" Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+.TH dc_manifest 4 "2011 年 7 月 18 日" "SunOS 5.11" "系统管理命令"
+.SH 名称
+dc_manifest \- 定制分发构造器的清单文件
+.SH 用法概要
+.LP
+.nf
+下列清单文件可用于构建各种 Oracle Solaris 映像。这些清单文件包含于分发构造器软件包中。
+.fi
+
+.LP
+.nf
+构建 x86 Oracle Solaris 实时 CD 映像：\fB/usr/share/distro_const/dc_livecd.xml\fR
+.fi
+
+.LP
+.nf
+构建 x86 自动化安装映像：\fB/usr/share/distro_const/dc_ai_x86.xml\fR
+.fi
+
+.LP
+.nf
+构建 SPARC 自动化安装映像：\fB/us / hare/distro_const/dc_ai_sparc.xml\fR
+.fi
+
+.LP
+.nf
+构建 x86 文本安装映像：\fB/usr/share/distro_const/dc_text_x86.xml\fR
+.fi
+
+.LP
+.nf
+构建 SPARC 文本安装映像：/usr/share/distro_const/\fBdc_text_sparc.xml\fR
+.fi
+
+.SH 描述
+.sp
+.LP
+分发构造器 (distribution constructor, DC) 可用于构建 Oracle Solaris 安装映像。
+.sp
+.LP
+DC XML 清单文件用作分发构造器的输入。这些清单定义分发构造器构建的映像。按照上述列表，可以使用不同的清单构建不同种类的映像。
+.sp
+.LP
+使用 \fBdistro_const\fR 命令构建映像，在命令中引用清单文件。
+.sp
+.LP
+如果要定制映像规范，请复制清单文件，定制该副本，然后在构建映像时将该副本用作 \fBdistro_const\fR 命令的输入。
+.sp
+.LP
+至少，您需要编辑清单中的目标元素，以指定可构造映像的构建区域的位置。并且，需要编辑软件名称元素来指定发布者和系统信息库的位置（其中包含构建映像所需的软件包）。
+.SH 清单部分
+.sp
+.LP
+清单包括下列主要元素。
+.LP
+注 - 
+.sp
+.RS 2
+下列提供的缺省元素和属性因使用的清单而异。
+.RE
+.sp
+.LP
+\fB<distro name="Oracle_Solaris_Text_X86" add_timestamp="false"> \fR
+.sp
+.LP
+该元素为计划构建的映像提供缺省名称 Oracle_Solaris_Text_X86。您可以使用该名称，或为您的映像提供唯一的名称。 
+.sp
+.LP
+如果您要构建一系列映像，并保留增量式映像，可以将时间戳变量更改为 "true"，然后时间戳将自动附加到每个映像的名称。
+.sp
+.LP
+如果需要指定 HTTP 代理，取消注释包含代理变量的 distro 名称元素，然后输入代理位置。例如，
+.sp
+.in +2
+.nf
+<distro name="Oracle_Solaris_Text_SPARC" add_timestamp="false"
+http_proxy="http://example.com">
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fB<boot_mods>\fR
+.sp
+.LP
+该元素指定要应用于映像的引导菜单修改。
+.sp
+.LP
+在下列示例中，一个标题为 "myentry" 的专门的引导菜单将应用于映像。超时属性指定自动激活缺省引导条目之前的时间。
+.sp
+.in +2
+.nf
+<boot_mods title="myentry" timeout="5">
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+可以通过为每个新条目添加新的 boot_entry 元素来添加各个引导菜单条目。各条目被按顺序添加到引导菜单，该顺序基于每个引导条目的 insert_at 属性值 "start" 或 "end"。
+.LP
+注 - 
+.sp
+.RS 2
+在现有 "with magnifier" 条目之前添加新条目。
+.LP
+请参见下列单个 boot_entry 元素的示例。
+.RE
+.sp
+.in +2
+.nf
+<boot_entry>
+     <title_suffix>with screen reader</title_suffix>
+     <kernel_args>-B assistive_tech=reader</kernel_args>
+   </boot_entry>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+因为标题子元素未包含在本示例中，因此使用缺省标题。缺省标题为首行 \fB/etc/release\fR。
+.sp
+.LP
+title_suffix 是必需的子元素，它是将附加到条目标题的文本字符串。可选的 kernel_args 子元素将内核参数传递到引导加载器。
+.sp
+.LP
+boot_entry 元素的可选属性包括：
+.sp
+.ne 2
+.mk
+.na
+\fBdefault_entry\fR
+.ad
+.RS 17n
+.rt  
+将该属性设置为 "true" 可使该引导条目成为缺省值。如果多个条目被设置为 "true"，则如此定义的最后一个条目将覆盖前面的条目。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBinsert_at\fR
+.ad
+.RS 17n
+.rt  
+将值设置为 "start" 或 "end" 以指示相对于其他引导条目的插入点。
+.RE
+
+.sp
+.LP
+\fB<target>\fR
+.sp
+.LP
+该元素定义将用于该构建的 ZFS 构建数据集。该数据集是将创建映像的区域。您必须输入有效的数据集位置。
+.sp
+.LP
+请参见以下示例。
+.sp
+.in +2
+.nf
+<target>
+      <logical>
+        <zpool action="use_existing" name="rpool">
+          <dataset>
+            <filesystem name="dc/sample-dataset-location" 
+            action="preserve"/>
+          </dataset>
+        </zpool>
+      </logical>
+    </target>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fB<software name="transfer-ips-install">\fR
+.sp
+.LP
+此部分指定分发构造器可以下载软件包并用于构建映像的位置。
+.sp
+.LP
+映像包管理系统 (Image Packaging System, IPS) 发布者提供一个或多个软件包系统信息库的软件包。
+.sp
+.LP
+在本部分的源元素中，编辑发布者名称和源名称元素来指定要使用的发布者以及软件包系统信息库所处的位置。可以列出多个发布者。当分发构造器尝试定位要安装的软件包时，按在此处列出的顺序搜索发布者。
+.sp
+.LP
+如果需要指定发布者的镜像，请取消注释并编辑镜像名称元素。
+.sp
+.LP
+请参见以下示例。
+.sp
+.in +2
+.nf
+<source>
+  <publisher name="publisher1">
+    <origin name="http://example.oracle.com/primary-pub"/>
+    <mirror name="mirror.example.com"></mirror>
+  </publisher>
+  <publisher name="publisher2">
+    <origin name="http://example2.com/dev/solaris"></origin>
+  </publisher>
+  <publisher name="publisher3.org">
+    <origin name="http://example3.com/dev"></origin>
+  </publisher>
+</source>  
+.fi
+.in -2
+.sp
+
+.LP
+注 - 
+.sp
+.RS 2
+该元素还包括一个目标标记，该标记指定在构建映像期间将使用的数据挂载点。建议不要更改目标属性。
+.RE
+.sp
+.LP
+\fB<software_data action="install">\fR
+.sp
+.LP
+带有 install 属性的该 software_data 元素根据您使用的清单，列出为了构建特定类型的映像而需安装的一组软件包。例如，the dc_livecd.xml 清单列出构建实时 CD 映像所需的软件包。
+.sp
+.LP
+每个名称标记列出一个软件包名称或包含许多软件包的软件包组的名称。
+.sp
+.in +2
+.nf
+<software_data action="install" type="IPS">
+  <name>pkg:/entire</name>
+  <name>pkg:/server_install</name>
+  <name>pkg:/system/install/text-install</name>
+  <name>pkg:/system/install/media/internal</name>
+</software_data>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+如果您有要添加到映像的软件包，通过为每个软件包添加名称标记来附加软件包名称。
+.sp
+.LP
+缺省情况下，将安装指定系统信息库中可用的最新软件包版本。如果需要其他版本，使用以下格式将版本号附加到 'entire' 引用：
+.sp
+.in +2
+.nf
+<name>pkg:/entire@0.5.11-0.build#</name>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+使用以下命令检查可用的版本。
+.sp
+.in +2
+.nf
+# \fBpkg list -af entire\fR
+.fi
+.in -2
+.sp
+
+.LP
+注 - 
+.sp
+.RS 2
+请勿删除 'entire' 条目。'entire' 是用于管理多个软件包的集合。
+.RE
+.sp
+.LP
+\fB<software_data action="uninstall" type="IPS">\fR
+.sp
+.LP
+带有 uninstall 属性的 software_data 元素可用于卸载单个软件包或卸载软件包组定义。
+.sp
+.LP
+在下列示例中，'server_install' 是包含许多单个软件包的软件包组的名称。
+.sp
+.in +2
+.nf
+<software_data action="uninstall" type="IPS">
+  <name>pkg:/server_install</name>
+</software_data>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+可以卸载软件包组。卸载软件包组实际只卸载了组定义。不会卸载之前作为该组的一部分安装的单个软件包。但是，可以在不卸载软件包组的情况下卸载这些单独的软件包。保留软件包组可用于正在进行的引用。
+.sp
+.LP
+还可以使用名称标记来卸载单个软件包。在卸载部分的末尾附加将卸载的其他软件包。
+.sp
+.LP
+\fB<software name="set-ips-attributes">\fR
+.sp
+.LP
+当使用映像（使用分发构造器创建）安装系统后，该元素将影响该系统。
+.sp
+.LP
+在源元素中，使用发布者名称和可选镜像名称标记来指定已安装系统可访问将下载并安装的其他软件包的位置。请参见以下示例。
+.sp
+.in +2
+.nf
+<source>
+  <publisher name="solaris">
+    <origin name="http://pkg.oracle.com/solaris/release/"/>
+  </publisher>
+</source>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fB<software name="ba-init">\fR
+.sp
+.LP
+该元素为构建的映像列出在引导归档文件中将安装或卸载的文件和目录。相关信息请参见清单文件中的注释。
+.LP
+注意 - 
+.sp
+.RS 2
+修改引导归档文件内容会导致系统不可引导。
+.RE
+.sp
+.LP
+\fB<execution stop_on_error="true">\fR
+.sp
+.LP
+清单中的执行元素列出在映像构建过程中执行的一系列检查点。按此部分中的排列顺序执行检查点。构建缺省安装映像所需的缺省检查点包含在每个清单中。
+.sp
+.LP
+每个检查点名称标记都包括用于指定检查点脚本所在位置的 mod 路径属性。
+.sp
+.LP
+使用 \fBdistro_const\fR(1M) 命令选项可控制在特定的检查点停止和重新启动构建过程。
+.sp
+.LP
+某些检查点标记包括带有提供的缺省值的参数。有关详细信息，请参见清单注释。
+.sp
+.LP
+如果创建将在构建映像期间使用的定制脚本，必须添加指向该脚本位置的检查点名称标记。
+.sp
+.LP
+有关如何添加新的检查点名称标记以指向定制脚本的信息，请参见以下示例。
+.sp
+.LP
+用户创建定制脚本 \fB/tmp/myscript.sh\fR 以在构建过程中运行（在缺省 transfer-ips-checkpoint 之后）。
+.sp
+.LP
+为了指向新的脚本，在 transfer-ips-checkpoint 名称之后将下列标记添加到清单。
+.sp
+.in +2
+.nf
+<checkpoint name="custom-script"
+ desc="my new script"
+ mod_path="solaris_install/distro_const/checkpoints/custom_script"
+ checkpoint_class="CustomScript">
+   <args>/tmp/myscript.sh arg1 arg2/{PKG_IMAGE_PATH}</args>
+</checkpoint>
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+其中 'arg1' 和 'arg2' 是脚本使用的可选参数。
+.sp
+.LP
+\&'{PKG_IMAGE_PATH}' 或 '{BOOT_ARCHIVE}' 的值在执行过程中由 \fBdistro_const\fR 分别替换为 \fB<ZFS Dataset>/build_data/pkg_image\fR 和 \fB<ZFS Dataset>/build_data/boot_archive\fR。
+.LP
+注 - 
+.sp
+.RS 2
+可以在 DC 清单中指定多个定制脚本检查点。每个检查点必须具有唯一的名称。
+.RE
+.sp
+.LP
+\fB<configuration name="pre-pkg-img-mod" type="sysconf" source="/etc/svc/profile/generic_limited_net.xml">\fR
+.sp
+.LP
+清单中的配置名称元素列出在映像构建过程中应用到介质的 SMF 服务配置文件。这些 SMF 服务指定将在引导的介质上运行或不运行的服务。按在该元素中指定的顺序应用配置文件。
+.sp
+.LP
+此元素很少会被修改。
+.SH 属性
+.sp
+.LP
+有关下列属性的描述，请参见 attributes(5)：
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+属性类型属性值
+_
+可用性T{
+install/distribution-constructor package（安装/分发构造器软件包）
+T}
+_
+接口稳定性Under Development（开发中）
+.TE
+
+.SH 另请参见
+.sp
+.LP
+\fBdistro_const\fR(1M)、\fBpkg\fR(1)UN_MAPPED_ENT:middot:
+
+.sp
+.LP
+在 OTN 文档库中为当前版本\fI创建定制 Oracle Solaris 11 安装映像\fR。

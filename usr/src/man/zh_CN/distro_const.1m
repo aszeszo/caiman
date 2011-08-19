@@ -1,0 +1,244 @@
+'\" te
+.\" Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+.TH distro_const 1M "2011 年 7 月 14 日" "SunOS 5.11" "系统管理命令"
+.SH 名称
+distro_const \- 用于创建 Oracle Solaris 映像和介质的实用程序
+.SH 用法概要
+.LP
+.nf
+/usr/bin/distro_const
+.fi
+
+.LP
+.nf
+distro_const --help
+.fi
+
+.LP
+.nf
+distro_const build [\fB-v\fR] [\fB -r \fR \fIcheckpoint name\fR] [\fB-p\fR \fIcheckpoint name\fR] [\fB-l\fR] \fImanifest\fR
+.fi
+
+.SH 描述
+.sp
+.LP
+\fBdistro_const\fR 命令使用户能够通过将指定的清单文件用作映像蓝图来创建映像。
+.sp
+.LP
+可以创建用于在 x86 系统或 SPARC 系统上安装 Oracle Solaris 操作系统的文本安装程序映像。
+.sp
+.LP
+或者，您可以创建与包含 Oracle Solaris 操作系统的实时 CD 映像相当的 ISO 映像。
+.sp
+.LP
+或者，您可以创建可用于 SPARC 客户机上 Oracle Solaris OS 的网络安装的 SPARC AI ISO 映像，或者可用于 x86 客户机上 Oracle Solaris OS 的网络安装的 x86 AI ISO 映像。
+.sp
+.LP
+亦或者，可以创建自定义 ISO 映像。
+.sp
+.LP
+不带选项的基本 \fBdistro_const\fR 命令在一个步骤中创建完整映像。
+.sp
+.LP
+命令选项使用户能够在各种检查点暂停和继续映像创建过程，从而使用户能够在每个阶段查看映像的状态并检查错误。检查点通过允许您忽略已执行至少一次的冗长步骤来节省构建时间。
+.LP
+注 - 
+.sp
+.RS 2
+您必须采用超级用户角色或具有超级用户特权来运行 \fB distro_const\fR 命令。
+.LP
+使用分发构造器时，只能在 SPARC 系统上创建 SPARC 映像。并且，只能在 x86 系统上创建 x86 映像。此外，系统上的操作系统发行版必须与您构建的映像的发行版相同。
+.RE
+.SH 子命令
+.sp
+.LP
+\fBdistro_const\fR 命令具有下面列出的子命令和选项。另请参见"示例"部分。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--help\fR\fR
+.ad
+.sp .6
+.RS 4n
+显示用法。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBbuild\fR
+.ad
+.sp .6
+.RS 4n
+\fBdistro_const build\fR \fImanifest\fR
+.sp
+需要 "build" 子命令。
+.sp
+将指定的清单文件用作映像的蓝图来创建完整映像。需要清单名称。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR \fBdistro_const build\fR \fB- v\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定详细模式。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fBdistro_const build\fR [\fB- l\fR] \fImanifest\fR\fR
+.ad
+.sp .6
+.RS 4n
+列出您可以选择停止或继续构建映像的所有有效检查点。该命令选项查询清单文件以寻找有效检查点。对于其他检查点命令选项，将该命令提供的名称用作有效值。需要 build 子命令。
+.sp
+检查点值取决于清单文件中的条目。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fBdistro_const build\fR [\fB- p\fR \fIcheckpoint\fR] \fImanifest\fR\fR
+.ad
+.sp .6
+.RS 4n
+构建映像，但在指定的检查点名称处暂停构建映像。使用 -l 选项查找有效名称。可以将 -r 选项和 -p 选项结合使用。需要检查点名称和清单名称。需要 build 子命令。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fBdistro_const build\fR [\fB- r\fR \fIcheckpoint\fR] \fImanifest\fR\fR
+.ad
+.sp .6
+.RS 4n
+从指定的检查点名称处继续构建映像。指定的名称必须是上一次构建停止执行的检查点，或者是更早的检查点。以后的检查点无效。使用 -l 选项可确定可继续进行的检查点。-p 选项可与 -r 选项结合使用。需要检查点名称和清单名称。需要 build 子命令。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR \fBdistro_const\fR [\fB- h\fR]\fR
+.ad
+.sp .6
+.RS 4n
+显示命令用法。
+.RE
+
+.SH 示例
+.LP
+\fB示例 1 \fR使用检查点选项创建映像
+.RS +4
+.TP
+1.
+检查可用的检查点。本示例中的清单名称为 \fBdc_livecd.xml\fR。
+.sp
+.in +2
+.nf
+# \fBdistro_const build -l /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+显示有效的检查点名称，如本样例输出。
+.sp
+.in +2
+.nf
+ 
+
+  Checkpoint           Resumable  Description
+  --------------------------------------------
+  transfer-ips-install X Transfer pkg contents from IPS
+  set-ips-attributes   X Set post-install IPS attributes
+  pre-pkg-img-mod      X Pre-package image modification
+  ba-init              X Boot archive initialization
+  ba-config            X Boot archive configuration
+  ba-arch              X Boot archive archival
+  grub-setup           X Set up GRUB menu
+  pkg-img-mod          X Pkg image area modification
+  create-iso             ISO media creation
+  create-usb             USB media creation     
+.fi
+.in -2
+.sp
+
+.RE
+.RS +4
+.TP
+2.
+开始构建映像，在 ba-init 检查点暂停。
+.sp
+.in +2
+.nf
+# \fBdistro_const build -p ba-init /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+.RE
+.RS +4
+.TP
+3.
+从 ba-init 检查点重新启动构建。完成创建映像。
+.sp
+.in +2
+.nf
+# \fBdistro_const build -r ba-init /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+.RE
+.LP
+\fB示例 2 \fR在一个步骤中创建映像
+.sp
+.LP
+要运行完整的映像构建过程而不暂停，请使用不带检查点选项的基本 \fB distro_const\fR 命令。清单文件名称为 dc_livecd.xml。
+
+.sp
+.in +2
+.nf
+# \fBdistro_const build /usr/share/distro_const/dc_livecd.xml\fR
+.fi
+.in -2
+.sp
+
+.SH 属性
+.sp
+.LP
+有关下列属性的描述，请参见 \fBattributes\fR(5)：
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+属性类型属性值
+_
+可用性T{
+install/distribution-constructor（安装/分发构造器）
+T}
+_
+接口稳定性Under Development（开发中）
+.TE
+
+.SH 另请参见
+.sp
+.LP
+\fBdc_manifest\fR(4)
+.sp
+.LP
+在 OTN 文档库中为当前版本\fI创建定制 Oracle Solaris 11 安装映像\fR。

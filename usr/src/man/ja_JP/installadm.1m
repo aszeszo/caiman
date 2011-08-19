@@ -1,0 +1,1976 @@
+'\" te
+.\" Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+.TH installadm 1M "2011 年 7 月 30 日" "SunOS 5.11" "システム管理コマンド"
+.SH 名前
+installadm \- ネットワーク上の自動インストールの管理
+.SH 形式
+.LP
+.nf
+/usr/bin/installadm [-h|--help]
+.fi
+
+.LP
+.nf
+installadm help [\fIsubcommand\fR]
+.fi
+
+.LP
+.nf
+installadm create-service
+    [-n|--service \fIsvcname\fR]
+    [-t|--aliasof \fIexisting_service\fR]
+    [-p|--publisher \fIprefix\fR=\fIorigin\fR]
+    [-a|--arch \fIarchitecture\fR]
+    [-s|--source \fIFMRI_or_ISO\fR]
+    [-b|--boot-args \fIboot_property\fR=\fIvalue\fR,...]
+    [-i|--ip-start \fIdhcp_ip_start\fR]
+    [-c|--ip-count \fIcount_of_ipaddr\fR]
+    [-B|--bootfile-server \fIserver_ipaddr\fR]
+    [-d|--imagepath \fIimagepath\fR]
+    [-y|--noprompt]
+.fi
+
+.LP
+.nf
+installadm set-service
+    -o|--option \fIprop\fR=\fIvalue\fR \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm rename-service \fIsvcname\fR \fInewsvcname\fR
+.fi
+
+.LP
+.nf
+installadm enable \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm disable \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm delete-service
+    [-r|--autoremove] [-y|--noprompt] \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm list
+    [-n|--service \fIsvcname\fR]
+    [-c|--client] [-m|--manifest] [-p|--profile]
+.fi
+
+.LP
+.nf
+installadm create-manifest -n|--service \fIsvcname\fR
+    -f|--file \fImanifest_or_script_filename\fR
+    [-m|--manifest \fImanifest_name\fR]
+    [-c|--criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... |
+    -C|--criteria-file \fIcriteriafile\fR]
+    [-d|--default]
+.fi
+
+.LP
+.nf
+installadm update-manifest -n|--service \fIsvcname\fR
+    -f|--file \fImanifest_or_script_filename\fR
+    [-m|--manifest \fImanifest_name\fR]
+.fi
+
+.LP
+.nf
+installadm delete-manifest
+    -m|--manifest \fImanifest_name\fR
+    -n|--service \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm create-profile -n|--service \fIsvcname\fR
+    -f|--file \fIprofile_filename\fR... 
+    [-p|--profile \fIprofile_name\fR]
+    [-c|--criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... |
+    -C|--criteria-file \fIcriteriafile\fR]
+.fi
+
+.LP
+.nf
+installadm delete-profile -p|--profile \fIprofile_name\fR...
+    -n|--service \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm export -n|--service \fIsvcname\fR
+    -m|--manifest \fImanifest_name\fR...
+    -p|--profile \fIprofile_name\fR...
+    -o|--output \fIpathname\fR
+.fi
+
+.LP
+.nf
+installadm validate -n|--service \fIsvcname\fR
+    -P|--profile-file \fIprofile_filename\fR... |
+    -p|--profile \fIprofile_name\fR...
+.fi
+
+.LP
+.nf
+installadm set-criteria
+    -m|--manifest \fImanifest_name\fR
+    -p|--profile \fIprofile_name\fR
+    -n|--service \fIsvcname\fR
+    -c|--criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR... |
+    -C|--criteria-file \fIcriteriafile\fR |
+    -a|--append-criteria \fIcriteria\fR=\fIvalue\fR|\fIlist\fR|\fIrange\fR...
+.fi
+
+.LP
+.nf
+installadm create-client
+    [-b|--boot-args \fIproperty\fR=\fIvalue\fR,...]
+    -e|--macaddr \fImacaddr\fR -n|--service \fIsvcname\fR
+.fi
+
+.LP
+.nf
+installadm delete-client \fImacaddr\fR
+.fi
+
+.SH 機能説明
+.sp
+.LP
+自動インストーラ (AI) は、1 つ以上の SPARC および x86 システムにネットワーク経由で Oracle Solaris OS を自動インストールするために使用します。
+.sp
+.LP
+ネットワーク経由で AI を使用するために必要なマシントポグラフィーは、インストールサーバー、DHCP サーバー (インストールサーバーと同じシステムでも可)、およびインストールクライアントです。インストールサーバーでは、AI ブートイメージ (クライアントがネットワーク経由でブートするために提供されます)、入力仕様 (AI マニフェストおよび派生したマニフェストスクリプト、このうち 1 つがクライアントに選択されます)、サービス管理機構 (SMF) 構成プロファイル (このうちゼロ個以上がクライアントに選択されます) が含まれるようにインストールサービスが設定されます。
+.sp
+.LP
+AI ブートイメージの内容は、パッケージ \fBinstall-image/solaris-auto-install\fR として公開され、\fBcreate-service\fR サブコマンドでインストールされます。 \fBcreate-service\fR サブコマンドを使用すると、AI ブートイメージを作成する AI ISO ファイルを受け入れて、展開することもできます。
+.sp
+.LP
+インストールサービスはデフォルトの AI マニフェストを使用して作成されますが、カスタマイズされたマニフェストまたは派生したマニフェストスクリプト (今後は「スクリプト」と呼びます) は、\fBcreate-manifest\fR サブコマンドを使用してインストールサービスに追加できます。マニフェストおよび派生したマニフェストスクリプトの作成方法についての詳細は、『\fI『Oracle Solaris 11 システムのインストール』\fR』を参照してください。\fBcreate-manifest\fR サブコマンドを使用すると、インストールクライアントに選択するマニフェストまたはスクリプトを決定する際に使用される条件を指定することもできます。すでにマニフェストまたはスクリプトに関連付けられている条件は、\fBset-criteria\fR サブコマンドを使用すれば変更できます。
+.sp
+.LP
+マニフェストには、ターゲットデバイス、パーティション情報、パッケージ一覧、その他のパラメータなどの情報が含まれています。スクリプトには、実行中の AI クライアントシステムを照会し、検索される情報に基づいてカスタムマニフェストを作成するコマンドが含まれています。AI がスクリプトで起動されると、マニフェストを生成するために、そのスクリプトが最初のタスクとして実行されます。
+.sp
+.LP
+クライアントがブートされると、クライアントのマシン条件に一致するマニフェストまたはスクリプトの検索が開始されます。一致するマニフェストまたはスクリプトが見つかると、一致するマニフェストファイルの仕様、または一致するスクリプトから派生したマニフェストファイルの仕様に従って、Oracle Solaris リリースを使用してクライアントがインストールされます。各クライアントは、1 つのマニフェストまたはスクリプトしか使用できません。
+.sp
+.LP
+各サービスには、1 つのデフォルトマニフェストまたはスクリプトが含まれています。デフォルトは、インストールされるシステムに一致するマニフェストまたはスクリプトの条件が他にない場合に使用されます。どのマニフェストまたはスクリプトでも、デフォルトとして指定できます。 デフォルトのマニフェストまたはスクリプトに関連付けられた条件は非アクティブになり、マニフェストまたはスクリプトの選択時には考慮されません。後で別のマニフェストまたはスクリプトをデフォルトにすると、前にデフォルトだったマニフェストまたはスクリプトの条件が再びアクティブになります。条件が関連付けられていないマニフェストまたはスクリプトは、デフォルトのマニフェストまたはスクリプトとしてのみ使用できます。条件がないマニフェストまたはスクリプトは、別のマニフェストまたはスクリプトがデフォルトに指定されると非アクティブになります。
+.sp
+.LP
+システム構成プロファイルはマニフェストおよびスクリプトを補完するものであり、インストールの仕様も含まれています。特に、ユーザー名、ユーザーパスワード、タイムゾーン、ホスト名、IP アドレスなどの情報を指定する際に使用されます。 プロファイルには、インストールサーバー環境から、または \fBcreate-profile\fR サブコマンドで指定された条件から構成パラメータを取得する変数を含めることができます。このように、単一のプロファイルファイルで、さまざまなクライアント上にさまざまな構成パラメータを設定できます。「使用例」の節を参照してください。
+.sp
+.LP
+システム構成プロファイルは \fBsmf\fR(5) で処理され、ドキュメント形式 \fBservice_bundle\fR(4) に準拠しています。システム構成プロファイルについての詳細は、\fBsysconfig\fR(1M) および『\fI『Oracle Solaris 11 システムのインストール』\fR』を参照してください。各クライアントは、任意の数のシステム構成プロファイルを使用できます。 特定の SMF プロパティーは、クライアントシステムごとに 1 回しか指定できません。
+.sp
+.LP
+特定のクライアントが特定のインストールサービスを使用する場合は、\fBcreate-client\fR サブコマンドを使用してクライアントにサービスを関連付けることができます。\fBcreate-client\fR を使用すると、既存のクライアントを変更することもできます。
+.sp
+.LP
+\fBinstalladm\fR ユーティリティーを使用すると、次のタスクを実行できます。
+.RS +4
+.TP
+.ie t \(bu
+.el o
+インストールサービスおよびエイリアスの設定
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+インストールイメージの設定 
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+クライアントの設定または削除
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+マニフェストおよびスクリプトの追加、更新、または削除
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+マニフェストまたはスクリプトに対する条件の指定または変更
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+マニフェストおよびスクリプトのエクスポート
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+システム構成プロファイルの追加または削除 
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+プロファイルの検証
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+プロファイルに対する条件の指定または変更
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+プロファイルのエクスポート 
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+インストールサービスの有効化または無効化
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+インストールサービスの一覧表示
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+インストールサービスのクライアントの一覧表示
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+インストールサービスのマニフェストおよびスクリプトの一覧表示
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+インストールサービスのプロファイルの一覧表示
+.RE
+.SH オプション
+.sp
+.LP
+\fBinstalladm\fR コマンドには次のオプションがあります。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR、\fB--help\fR\fR
+.ad
+.RS 15n
+.rt  
+使用法のヘルプメッセージを表示します。
+.RE
+
+.SH サブコマンド
+.sp
+.LP
+\fBstmfadm\fR コマンドには、次のサブコマンドを指定できます。後述の「使用例」の節を参照してください。 
+.sp
+.ne 2
+.mk
+.na
+\fB\fBhelp [\fIsubcommand\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBinstalladm\fR ユーティリティーの構文を表示します。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIsubcommand\fR\fR\fR
+.ad
+.RS 14n
+.rt  
+指定されたサブコマンドの構文のみを表示します。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-service [\fB-n\fR|\fB--service\fR \fI svcname\fR] [\fB-t\fR|\fB--aliasof\fR \fI existing_service\fR] [\fB-p\fR|\fB--publisher\fR \fI prefix\fR=\fIorigin\fR] [\fB-a\fR|\fB- -arch\fR \fIarchitecture\fR] [\fB-s\fR|\fB- -source\fR \fIFMRI_or_ISO\fR] [\fB-b\fR|\fB- -boot-args\fR \fIboot_property\fR=\fIvalue\fR,...] [\fB-i\fR|\fB--ip-start\fR \fIdhcp_ip_start\fR] [\fB-c\fR|\fB--ip-count\fR \fIcount_of_ipaddr\fR] [\fB-B\fR|\fB--bootfile-server\fR \fIserver_ipaddr\fR] [\fB-d\fR|\fB--imagepath\fR \fIimagepath\fR] [\fB-y\fR|\fB--noprompt\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+このサブコマンドは、指定された \fIimagepath\fR ディレクトリにネットワークブートイメージ (ネットイメージ) を設定し、ネットイメージからブートされたクライアントのインストール方法が指定されたインストールサービスを作成します。 
+.sp
+AI ブートイメージの内容は、パッケージ \fBinstall-image/solaris-auto-install\fR として公開されています。 \fB-s\fR オプションが指定されない場合は、そのパッケージのインスタンスが記載されているシステムのパブリッシャー設定一覧の 1 番目のパブリッシャーからパッケージがインストールされます。 \fB-s\fR オプションは、\fBpkg\fR の指定をフル FMRI またはイメージ ISO ファイルの場所として受け入れます。ネットイメージは最終的に \fIimagepath\fR に配置されます。ネットイメージを使用すると、クライアントインストールを実行できます。
+.sp
+.LP
+次のような仕様があります。
+.RS +4
+.TP
+.ie t \(bu
+.el o
+指定されたアーキテクチャーの 1 番目のインストールサービスがインストールサーバーに作成されると、そのサービスのエイリアス (\fBdefault-i386\fR または \fB default-sparc\fR) が自動的に作成されます。このデフォルトサービスは、明示的に \fBcreate-client\fR サブコマンドを使用してインストールサーバーに追加されなかったアーキテクチャーのクライアントへのすべてのインストールで使用されます。\fBdefault-\fIarch\fR\fR サービスによってエイリアスが設定されたサービスを変更するには、\fBset-service\fR サブコマンドを使用します。
+.sp
+\fBdefault-\fI arch\fR\fR エイリアスが新しいインストールサービスに変更されたときに、ローカル ISC DHCP 構成が見つかった場合は、このデフォルトエイリアスブートファイルが、そのアーキテクチャーのデフォルト DHCP サーバー全体のブートファイルとして設定されます。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+クライアントがそのアーキテクチャーのデフォルト以外のインストールサービスを使用する場合は、\fBcreate-client\fR サブコマンドを使用してクライアント固有の構成を作成する必要があります。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fB-i\fR オプションと \fB-c\fR オプションを使用するときに、まだ DHCP サーバーが構成されていない場合は、ISC DHCP サーバーが構成されます。
+.sp
+ISC DHCP サーバーがすでに構成されている場合は、その DHCP サーバーが更新されます。
+.sp
+\fB-i\fR と \fB-c\fR 引数が指定され、DHCP が構成されている場合でも、作成されるインストールサービスと IP 範囲との結合は存在しません。\fB-i\fR と \fB-c\fR が渡され、IP 範囲が設定されている場合は、必要に応じて新規 DHCP サーバーが作成され、その DHCP サーバーは使用するすべてのインストールサービスおよびすべてのクライアントで起動され、実行された状態のままです。DHCP サーバーに指定されたネットワーク情報には、作成されるサービスとの特定の関係はありません。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+インストールサーバーが直接接続され、インストールサーバーがマルチホームになっているサブネット上に、要求された IP 範囲がない場合は、\fB-B\fR オプションを使用して、ブートファイルサーバーのアドレス (通常はこのシステム上の IP アドレス) を指定します。このアドレスは、複数の IP アドレスがインストールサーバーに構成され、DHCP リレーが採用されている場合にのみ必要です。その他のすべての構成では、これはソフトウェアで自動的に決定できます。
+.RE
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: システムで生成されたサービス名の代わりに、このインストールサービス名を使用します。
+.sp
+\fB-n\fR オプションを指定しない場合は、サービス名が自動的に生成されます。  
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-t\fR|\fB--aliasof\fR \fI existing_service\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: この新規サービスは \fIexisting_service\fR の代替名です。 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-a\fR|\fB--arch\fR \fI architecture\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: 特定のバリアントのアーキテクチャーを選択します。 正当な値は \fBi386\fR または \fBsparc\fR です。 これが指定されない場合は、サーバーのアーキテクチャーに対応するバリアントが選択されます。
+.sp
+\fB-a\fR オプションは、\fB-s\fR 引数が \fBpkg\fR パッケージである場合にのみ適用されます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--publisher\fR \fI prefix\fR=\fIorigin\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: クライアントイメージをインストールする \fBpkg\fR パブリッシャー (形式 \fIprefix\fR=\fIorigin\fR)。
+.sp
+\fB-p\fR オプションを指定しない場合は、パッケージのインスタンスが記載されたシステムのパブリッシャー設定一覧の 1 番目のパブリッシャーが使用されます。 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-s\fR|\fB--source\fR \fI FMRI_or_ISO\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: ネットイメージのデータソースを指定します。指定可能な値は次のいずれかです。 
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBpkg\fR(5) パッケージのフル FMRI。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+AI ISO イメージへのパス。
+.RE
+.sp
+.LP
+\fB-s\fR が指定されない場合は、使用される \fBinstall-image/solaris-auto-install\fR パッケージは次のいずれかです。
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fB-p\fR パラメータで指定されたパブリッシャー。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+パッケージのインスタンスが記載されたシステムのパブリッシャー設定一覧の 1 番目のパブリッシャー。
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-b\fR|\fB--boot-args\fR \fI boot_property\fR=\fIvalue\fR,...\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: x86 クライアント専用。 サービスイメージのサービス固有の \fBmenu.lst\fR ファイルにプロパティー値を設定します。このオプションを使用して、このサービスに固有のブートプロパティーを設定します。このオプションでは、コンマで区切った \fIboot_property\fR=\fI value\fR のペアを複数指定できます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-i\fR|\fB--ip-start\fR \fI dhcp_ip_start\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: ローカル DHCP 構成に追加される範囲内の開始 IP アドレスを指定します。IP アドレスの数は、\fB-c\fR オプションで指定されます。 ローカル ISC DHCP 構成が存在しない場合は、ISC DHCP サーバー が起動されます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--ip-count\fR \fI count_of_ipaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: DHCP 構成の IP アドレスの総数を \fIcount_of_ipaddr\fR の値と同じ数に設定します。最初の IP アドレスは、\fB-i\fR オプションで指定される \fIdhcp_ip_start\fR の値です。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-B\fR|\fB--bootfile-server\fR \fI server_ipaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: クライアントがブートファイルを要求する起動サーバーの IP アドレスを指定します。 この IP アドレスをその他の方法で決定できない場合にのみ必要です。 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-d\fR|\fB--imagepath\fR \fI imagepath\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: ネットイメージを作成するパスを指定します。 これが指定されない場合は、デフォルトの場所 (\fB/export/auto_install/\fIsvcname\fR\fR) が使用されます。\fB-y\fR も指定しなければ、確認プロンプトが表示されます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-y\fR|\fB--noprompt\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: 確認プロンプトを非表示にして、指定されたオプションおよびデフォルト値を使用したサービスの作成を続行します (\fB-d\fR を参照)。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBset-service \fB-o\fR|\fB--option\fR \fI prop\fR=\fIvalue\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-o\fR|\fB--option\fR \fI prop\fR=\fIvalue\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+設定するプロパティーおよび値を指定します。
+.sp
+.LP
+\fB\fIprop\fR=\fIvalue\fR\fR に指定可能な値は次のとおりです。
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBaliasof=\fIexisting_service\fR\fR
+.sp
+\fIsvcname\fR を \fIexisting_service\fR のエイリアスにします。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBdefault-manifest=\fImanifest_name\fR\fR
+.sp
+指定されたサービスにすでに登録されている特定のマニフェストまたはスクリプトを、そのサービスのデフォルトマニフェストまたはスクリプトに指定します。このサービスに登録されているマニフェストおよびスクリプトの一覧を表示するには、次のコマンドを使用します。
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -n \fIsvcname\fR -m\fR
+.fi
+.in -2
+.sp
+
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: 設定するプロパティーを含むインストールサービスの名前を指定します。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBrename-service \fIsvcname\fR \fI newsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+インストールサービス \fIsvcname\fR の名前を \fI newsvcname\fR に変更します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBenable \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fIsvcname\fR インストールサービスを有効化します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdisable \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fIsvcname\fR インストールサービスを無効化します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-service [\fB-r\fR|\fB--autoremove \fR] [\fB-y\fR|\fB--noprompt\fR] \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+インストールサービスを削除します。次の操作を実行します。
+.RS +4
+.TP
+.ie t \(bu
+.el o
+このインストールサービスのマニフェスト、プロファイル、クライアント構成ファイル、および Web サーバー構成を削除します。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+サービスのインスタンス化に使用されたイメージを削除します。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+サービスがデフォルトのエイリアスであり、ローカル ISC DHCP 構成が存在する場合は、このサービスに関連付けられたブートファイルが ISC DHCP 構成から削除されます。
+.RE
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-r\fR|\fB--autoremove\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+これが指定された場合は、このサービスに割り当てられたクライアント、およびこのサービスにエイリアスが設定されたサービスも削除されます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-y\fR|\fB--noprompt\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+確認プロンプトを非表示にして、サービスの削除を続行します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: 削除するインストールサービス名を指定します。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlist [\fB-n\fR|\fB--service\fR \fI svcname\fR] [\fB-c\fR|\fB--client\fR] [\fB-m\fR|\fB- -manifest\fR] [\fB-p\fR|\fB--profile\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+サーバーで有効化されているすべてのインストールサービスを一覧表示します。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: ローカルサーバーにある特定のインストールサービスに関する情報を一覧表示します。
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fB-c\fR オプションが指定された場合は、インストールサービスに関連付けられたクライアント情報を一覧表示します。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fB-m\fR オプションが指定された場合は、インストールサービスに関連付けられたマニフェストおよびスクリプトを一覧表示します。
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fB-p\fR オプションが指定された場合は、インストールサービスに関連付けられたプロファイルを一覧表示します。
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--client\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: ローカルサーバーにあるインストールサービスのクライアントを一覧表示します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: ローカルサーバーにあるインストールサービスに関連付けられたマニフェストおよびスクリプトを一覧表示します。
+.sp
+\fB-n\fR が指定されない場合は、サービスごとに簡易一覧を表示します。この一覧には、デフォルトのマニフェストまたはスクリプト、および関連付けられた条件があるデフォルト以外のすべてのマニフェストおよびスクリプトが含まれます。条件は一覧表示されません。 
+.sp
+\fB-n\fR が指定された場合は、指定されたサービスのすべてのマニフェストおよびスクリプトを、マニフェストごとの条件を含む完全な一覧形式を使用して表示します。アクティブでない (関連付けられた条件がなく、デフォルトとして指定されていない) マニフェストは、非アクティブとマークされます。デフォルトのマニフェストに関連付けられた条件は、非アクティブとマークされます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: ローカルサーバーにあるインストールサービスに関連付けられたプロファイルを一覧表示します。
+.sp
+\fB-n\fR が指定されない場合は、プロファイル名を含むサービスごとに簡易一覧を表示します。 
+.sp
+\fB-n\fR が指定された場合は、要求されたサービスのプロファイルをその条件とともに表示します。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-manifest \fB-n\fR|\fB--service\fR \fI svcname\fR \fB-f\fR|\fB--file\fR \fImanifest_or_script_filename \fR [\fB-m\fR|\fB--manifest\fR \fImanifest_name \fR] [\fB-c\fR|\fB--criteria\fR \fIcriteria \fR=\fIvalue\fR|\fIlist\fR|\fI range\fR... | \fB-C\fR|\fB--criteria-file\fR \fI criteriafile\fR] [\fB-d\fR|\fB--default\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+特定のインストールサービスのマニフェストまたはスクリプトを作成します。したがって、サービスの作成とは別に、マニフェストまたはスクリプトをネットワーク上で使用可能にします。デフォルト以外のマニフェストまたはスクリプトは、条件が関連付けられている場合にのみ使用できます (アクティブにすることができます)。条件はコマンド行 (\fB-c\fR) または条件 XML ファイル (\fB-C\fR) 経由で入力できます。\fB-d\fR オプションとともに指定された条件は、マニフェストまたはスクリプトがデフォルトとして指定されなくなるまで、一時的に無視されます。
+.sp
+.LP
+マニフェストの名前は次の順序で決定されます。
+.RS +4
+.TP
+1.
+\fB-m\fR オプションで指定された \fImanifest_name\fR (存在する場合)。
+.RE
+.RS +4
+.TP
+2.
+\fBai_instance\fR \fBname\fR 属性の値 (マニフェストに存在する場合)。
+.RE
+.RS +4
+.TP
+3.
+マニフェストまたはスクリプトファイル名のベース名。
+.RE
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: このマニフェストまたはスクリプトが関連付けられるインストールサービスの名前を指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-f\fR|\fB--file\fR \fI manifest_or_script_filename\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: 追加するマニフェストまたはスクリプトのパス名を指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fI manifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: マニフェストまたはスクリプトの AI インスタンス名を指定します。マニフェストの \fBai_instance\fR 要素の \fBname\fR 属性を \fImanifest_name\fR に設定します。 マニフェストまたはスクリプトは、後続の \fBinstalladm\fR コマンドおよび \fBinstalladm list\fR 出力の \fImanifest_name\fR で参照されます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--criteria\fR \fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: 追加されたマニフェストまたはスクリプトに関連付けられる条件を指定します。後述の「条件」の節を参照してください。デフォルトのマニフェストを公開すると、条件は登録されますが、マニフェストまたはスクリプトがデフォルトに指定されなくなるまで非アクティブのままです。\fB-c\fR オプションは複数回指定できます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-C\fR|\fB--criteria-file\fR \fI criteriafile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: 追加されたマニフェストまたはスクリプトに関連付けられる条件を含む条件 XML ファイルのパス名を指定します。 デフォルトのマニフェストまたはスクリプトを公開すると、条件は登録されますが、マニフェストまたはスクリプトがデフォルトに指定されなくなるまで非アクティブのままです。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-d\fR|\fB--default\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: このマニフェストまたはスクリプトがサービスの新規デフォルトマニフェストまたはスクリプトであることを指定します。マニフェストまたはスクリプトがデフォルトに設定されなくなるまで、指定された条件は無視されます。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBupdate-manifest \fB-n\fR|\fB--service\fR \fI svcname\fR \fB-f\fR|\fB--file\fR \fImanifest_or_script_filename \fR [\fB-m\fR|\fB--manifest\fR \fImanifest_name \fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+特定のインストールサービスに関連付けられた特定のマニフェストまたはスクリプトを更新します。更新後もマニフェストまたはスクリプトの条件やデフォルトステータスはそのままです。
+.sp
+.LP
+マニフェストの名前は次の順序で決定されます。
+.RS +4
+.TP
+1.
+\fB-m\fR オプションで指定された \fImanifest_name\fR (存在する場合)。
+.RE
+.RS +4
+.TP
+2.
+\fBai_instance\fR \fBname\fR 属性の値 (変更されたマニフェストに存在する場合、または既存のマニフェストの \fBai_instance\fR \fB name\fR 値に一致する場合)。
+.RE
+.RS +4
+.TP
+3.
+マニフェストまたはスクリプトファイル名のベース名 (既存マニフェストの \fBai_instance\fR \fBname\fR 属性値に一致する場合)、または \fBinstalladm list\fR で指定された名前 (既存スクリプトの名前に一致する場合)。
+.RE
+置換用のマニフェストまたはスクリプトは \fI manifest_or_script_filename\fR で指定されます。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: このマニフェストまたはスクリプトが関連付けられるインストールサービスの名前を指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-f\fR|\fB--file\fR \fI manifest_or_script_filename\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: 置換用のマニフェストまたはスクリプトのパス名を指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fI manifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: 置換用のマニフェストまたはスクリプトの AI インスタンス名を指定します。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-manifest \fB-m\fR|\fB--manifest \fR \fImanifest_name\fR \fB-n\fR|\fB--service \fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+特定のインストールサービスで公開されたマニフェストまたはスクリプトを削除します。 デフォルトのマニフェストまたはスクリプトは削除できません。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fI manifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: \fBinstalladm list\fR に \fB-n\fR オプションを付けてマニフェストまたはスクリプトの AI インスタンス名を出力として指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: このマニフェストが関連付けられたインストールサービスの名前を指定します。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-profile \fB-n\fR|\fB--service\fR \fI svcname\fR \fB-f\fR|\fB--file\fR \fIprofile_filename \fR... [\fB-p\fR|\fB--profile\fR \fIprofile_name \fR] [\fB-c\fR|\fB--criteria\fR \fIcriteria \fR=\fIvalue\fR|\fIlist\fR|\fI range\fR... | \fB-C\fR|\fB--criteria-file\fR \fI criteriafile\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+特定のインストールサービスのプロファイルを作成します。条件はオプションで、コマンド行 (\fB-c\fR) で入力するか、または条件 XML ファイル (\fB-C\fR) 経由でプロファイルに関連付けることができます。条件なしで作成されたプロファイルは、サービスのすべてのクライアントに関連付けられます。
+.sp
+.LP
+プロファイルの名前は次の順序で決定されます。
+.RS +4
+.TP
+1.
+\fB- p\fR オプションで指定された \fIprofile_name\fR (存在する場合)。
+.RE
+.RS +4
+.TP
+2.
+プロファイルファイル名のベース名。
+.RE
+プロファイル名は AI サービスで一意である必要があります。 複数の \fB-f\fR オプションを使用して、同じ条件を持つ複数のプロファイルを作成すると、\fB-p\fR オプションは無効になり、プロファイルの名前はファイル名から派生します。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: 更新されるインストールサービスの名前を指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-f\fR|\fB--file\fR \fI profile_filename\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: プロファイルを追加するためのファイルのパス名を指定します。複数のプロファイルを指定できます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fI profile_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: 作成されるプロファイルの名前を指定します。単一プロファイルの作成にのみ有効です。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--criteria\fR \fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: プロファイルに関連付ける条件を指定します。後述の「条件」の節を参照してください。複数の \fB-c\fR オプションを指定できます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-C\fR|\fB--criteria-file\fR \fI criteriafile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: 指定されたプロファイルに関連付けられる条件を含む条件 XML ファイルのパス名を指定します。 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-profile \fB-p\fR|\fB--profile\fR \fI profile_name\fR... \fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fIprofile_name\fR プロファイルを \fIsvcname\fR インストールサービスから削除します。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fI profile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: 削除するプロファイルの名前を指定します。複数の \fB-p\fR オプションを指定できます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: 削除するプロファイルのインストールサービスの名前を指定します。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBexport \fB-n\fR|\fB--service\fR \fI svcname\fR \fB-m\fR|\fB--manifest\fR \fI manifest_name\fR... \fB-p\fR|\fB--profile\fR \fI profile_name\fR... \fB-o\fR|\fB--output\fR \fI pathname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定されたマニフェスト/スクリプト、またはサービスに属するプロファイル (あるいはその両方) を表示 (エクスポート) します。1 つ以上のマニフェスト/スクリプトまたはプロファイルを指定する必要があります。\fB-o\fR オプションでファイルまたはディレクトリにリダイレクトされない限り、標準出力に表示されます。\fB\fR
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: エクスポートするマニフェストまたはプロファイルに関連付けられたインストールサービスを指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fI manifest_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+エクスポートするマニフェストまたはスクリプトの AI インスタンス名を指定します。複数の \fB-m\fR オプションを指定できます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fI profile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: エクスポートするプロファイルの名前を指定します。複数の \fB-p\fR オプションを指定できます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-o\fR|\fB--output\fR \fI pathname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: 出力をリダイレクトします。複数のマニフェスト、スクリプト、またはプロファイル (あるいは両方) が要求される場合は、\fIpathname\fR にディレクトリを指定する必要があります。1 つのマニフェスト、スクリプト、またはプロファイルのみが要求される場合は、\fIpathname\fR にファイルを指定できます。 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvalidate \fB-n\fR|\fB--service\fR \fI svcname\fR \fB-P\fR|\fB--profile-file\fR \fI profile_filename\fR... | \fB-p\fR|\fB--profile\fR \fI profile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+指定されたプロファイルを検証します。 \fBvalidate\fR サブコマンドを使用すると、データベース (\fB-p\fR) 内のプロファイルを検証したり、データベース (\fB-P\fR) への入力前に開発中のプロファイルを検証したりできます。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: プロファイルが関連付けられたサービスを指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-P\fR|\fB--profile-file\fR \fI profile_filename\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+検証する外部プロファイルファイルを指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fI profile_name\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+検証するプロファイルの名前を指定します。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBset-criteria \fB-m\fR|\fB--manifest\fR \fI manifest_name\fR \fB-p\fR|\fB--profile\fR \fI profile_name\fR \fB-n\fR|\fB--service\fR \fI svcname\fR \fB-c\fR|\fB--criteria\fR \fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR... | \fB-C\fR|\fB--criteria-file\fR \fI criteriafile\fR | \fB-a\fR|\fB--append-criteria\fR \fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+公開済みのマニフェスト/スクリプトまたはプロファイル (あるいは両方) の条件を更新します。条件はコマンド行または条件 XML ファイル経由で指定できます。相互に排他的なオプション \fB-a\fR、\fB-c\fR、または \fB-C\fR のいずれかを使用して、条件を指定する必要があります。
+.sp
+有効な条件については、\fBcreate-manifest\fR サブコマンドで説明します。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-m\fR|\fB--manifest\fR \fI manifest_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+マニフェストまたはスクリプトの AI インスタンス名を指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fI profile_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+プロファイルの名前を指定します。任意の数のプロファイルを指定できます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: このマニフェスト/スクリプトまたはプロファイルに関連付けられたインストールサービスの名前を指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-c\fR|\fB--criteria\fR \fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+マニフェスト/スクリプトまたはプロファイルに対する既存の条件をすべて置換するための条件を指定します。後述の「条件」の節を参照してください。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-C\fR|\fB--criteria-file\fR \fI criteriafile\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+マニフェスト/スクリプトまたはプロファイルに対する既存の条件をすべて置換するための条件を含む条件 XML ファイルのパス名を指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-a\fR|\fB--append-criteria\fR \fI criteria\fR=\fIvalue\fR|\fIlist\fR|\fI range\fR...\fR\fR
+.ad
+.sp .6
+.RS 4n
+マニフェスト/スクリプトまたはプロファイルに対する既存の条件に追加するための条件を指定します。後述の「条件」の節を参照してください。指定済みの \fIcriteria\fR がすでに存在する場合は、その条件の \fIvalue\fR|\fIlist\fR|\fI range\fR は \fIvalue \fR|\fIlist\fR|\fIrange\fR で置換されます。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-client [\fB-b\fR|\fB--boot-args \fR \fIproperty\fR=\fIvalue\fR,...] \fB- e\fR|\fB--macaddr\fR \fImacaddr\fR \fB-n \fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBcreate-service\fR サブコマンドで使用されるデフォルト設定とは異なるカスタムクライアント設定を行うために、指定されたクライアントに省略可能な設定タスクを実行します。 ユーザーはクライアントにデフォルト以外のサービス名およびブート引数を指定できます。既存クライアントの変更にも使用できます。
+.sp
+クライアントが x86 システムであり、ローカル ISC DHCP 構成が存在する場合は、ISC DHCP 構成でクライアントが構成されます。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-b\fR|\fB--boot-args\fR \fI property\fR=\fIvalue\fR,...\fR\fR
+.ad
+.sp .6
+.RS 4n
+省略可能: x86 クライアント専用。 \fB/etc/netboot\fR にあるクライアント固有の \fBmenu.lst\fR ファイルにプロパティー値を設定します。このオプションは、対象クライアントに固有のブートプロパティーを設定するのに使用します。このオプションでは、\fIproperty\fR=\fIvalue\fR のペアを複数指定できます。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-e\fR|\fB--macaddr\fR \fI macaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: クライアントの MAC アドレスを指定します。
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fI svcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+必須: クライアントインストールのインストールサービスを指定します。
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete-client \fImacaddr\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBcreate-client\fR サブコマンドを使用して事前に設定された既存クライアントの特定のサービス情報を削除します。
+.sp
+クライアントが x86 システムであり、ローカル ISC DHCP 構成が存在する場合は、 ISC DHCP 構成でクライアントが構成解除されます。
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fImacaddr\fR\fR\fR
+.ad
+.RS 11n
+.rt  
+必須: 削除するクライアントの MAC アドレスを指定します。
+.RE
+
+.RE
+
+.SH 条件
+.sp
+.LP
+マニフェスト、スクリプト、およびプロファイルを使用すれば、特定の特性または条件に従って AI クライアントを個別に構成できます。 特定のクライアントには、1 つのマニフェストまたはスクリプトのみを関連付けることができます。 特定のクライアントには、任意の数のプロファイルを関連付けることができます。
+.sp
+.LP
+条件の値は、起動中に AI クライアントによって決定されます。
+.sp
+.LP
+次の AI クライアントシステムは、特に注記がない限り、マニフェスト/スクリプトおよびプロファイルの両方に指定できます。
+.sp
+.LP
+コマンド行で条件を指定する方法については、「使用例」の節を参照してください。条件ファイルの作成についての詳細は、『\fI『Oracle Solaris 11 システムのインストール』\fR』を参照してください。
+.sp
+
+.sp
+.TS
+tab();
+cw(1.38i) cw(4.13i) 
+lw(1.38i) lw(4.13i) 
+.
+条件説明
+\fBarch\fRT{
+\fBuname -m\fR ごとのアーキテクチャー。
+T}
+\fBcpu\fR\fBuname -p\fR ごとの CPU クラス。
+\fBhostname\fRT{
+割り当てられたホスト名。 プロファイルでのみ使用可能です (マニフェストでは不可)。
+T}
+\fBipv4\fRT{
+IP バージョン 4 のネットワークアドレス。
+T}
+\fBmac\fRT{
+コロン (:) で区切られた 16 進数の MAC アドレス。
+T}
+\fBmem\fRT{
+\fBprtconf\fR(1M) ごとのメモリーサイズ (MB)。
+T}
+\fBnetwork\fRT{
+IP バージョン 4 のネットワーク番号。
+T}
+\fBplatform\fRT{
+\fBuname -i\fR ごとのプラットフォーム名。
+T}
+\fBzonename\fR\fBzones\fR(5) ごとのゾーン名。
+.TE
+
+.sp
+.LP
+\fBipv4\fR、\fBmac\fR、\fBmem\fR、および  \fBnetwork\fR の指定は、ハイフン (\fB-\fR) で区切られた範囲値で表現できます。範囲の一端に制限なしを指定するには、\fBunbounded\fR を使用します。
+.sp
+.LP
+範囲として指定できない条件は、空白で区切られた値の一覧として指定できます。
+.SH 使用例
+.LP
+\fB例 1 \fRISO ファイルから新規 x86 インストールサービスを設定する
+.sp
+.LP
+インストールサーバーおよび x86 インストールサービスをはじめて設定します。DHCP サーバーを構成するために、コマンドには開始 IP アドレスおよび IP アドレスの合計数が含まれます。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n sol-11-i386-svc \e\fR
+\fB-s /export/isos/sol-11-i386.iso \e\fR
+\fB-i 172.0.0.10 -c 10 -d /export/images/soli386\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+AI ISO イメージは \fB/export/isos/sol-11-i386.iso\fR にあります。コマンドは、AI ISO イメージに基づいた \fB/export/images/soli386 \fR にあるネットイメージおよびインストールサービスを設定します。 このネットイメージを使用すると、クライアントインストールを実行できます。
+
+.sp
+.LP
+開始 IP アドレス 172.0.0.10 および 10 個の IP アドレスがローカル ISC DHCP 構成に追加されます。 ローカル ISC DHCP 構成が存在しない場合は、ISC DHCP サーバー が起動されます。
+
+.sp
+.LP
+これは最初に作成される \fBi386\fR サービスであるため、\fBdefault-i386\fR サービスが自動的に作成され、このサービスにエイリアスが設定されます。\fBdefault-i386\fR エイリアスは稼働中であり、PXE 経由でブートされたクライアントは \fBdefault-i386\fR サービスからブートおよびインストールします。
+
+.LP
+\fB例 2 \fRISO ファイルから新規 SPARC インストールサービスを設定する
+.sp
+.LP
+SPARC インストールサービスをはじめて設定します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n sol-11-sparc-svc \e\fR
+\fB-s /export/isos/sol-11-sparc.iso \e\fR
+\fB-d /export/images/solsparc\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+AI ISO イメージは \fB/export/isos/sol-11-sparc.iso\fR にあります。コマンドは、AI ISO イメージに基づいた \fB/export/images/solsparc\fR にあるネットイメージおよびインストールサービスを設定します。 このネットイメージを使用すると、クライアントインストールを実行できます。
+
+.sp
+.LP
+これは最初に作成される SPARC サービスであるため、\fBdefault-sparc\fR サービスが自動的に作成され、このサービスにエイリアスが設定されます。\fBdefault-sparc\fR エイリアスは稼働中であり、PXE 経由でブートされたクライアントは \fBdefault-sparc\fR サービスからブートおよびインストールします。
+
+.LP
+\fB例 3 \fRパッケージリポジトリから i386 インストールサービスを設定する 
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -y -n mysvc\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+i386 インストールサーバーでは、このコマンドはデフォルトのイメージの場所 ( \fB/export/auto_install/mysvc\fR) に、i386 ネットイメージおよび \fBmysvc\fR というインストールサービスを設定します。 \fB-y\fR オプションは、デフォルトの場所が受け入れ可能かどうかを確認します。アーキテクチャーが指定されていない場合は、作成されるサービスがインストールサーバーと同じアーキテクチャーのものになります。 このコマンドでは、インストールサーバーの \fBpkg publisher\fR 一覧にあるパッケージリポジトリに \fBinstall-image/solaris-auto-install\fR パッケージが含まれることが前提となっています。
+
+.sp
+.LP
+このサーバーへの SPARC サービスの作成を指定するには、\fB-a\fR オプションを使用します。
+
+.sp
+.LP
+\fBinstall-image/solaris-auto-install\fR パッケージのソースを指定するには、\fB-p\fR オプションを使用します。 たとえば、\fBhttp://example.company.com:4281\fR にある \fBai-image\fR リポジトリを \fBinstall-image/solaris-auto-install\fR パッケージのソースとして指定するには、次のコマンドを使用します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -y -n mysvc \e\fR
+\fB-p ai-image=http://example.company.com:4281\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 4 \fRクライアントをインストールサービスに関連付ける
+.sp
+.LP
+クライアントを特定のインストールサービスに関連付けるには、次のサンプルコマンドを使用します。インストールサービスはすでに存在する必要があります。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-client -b "console=ttya" \e\fR
+\fB-e 0:e0:81:5d:bf:e0 -n my-i386-service\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+この例のコマンドは、MAC アドレスが \fB0:e0:81:5d:bf:e0\fR のシステムにクライアント固有の設定を作成します。このクライアントは、事前に設定された \fBmy-i386-service\fR というインストールサービス、およびそのサービスに関連付けられたネットイメージを使用します。このコマンドは、\fB/etc/netboot\fR にあるクライアント固有の \fBmenu.lst\fR ファイルにブートプロパティー\fB console=ttya\fR を設定します。
+
+.LP
+\fB例 5 \fRデフォルトサービスを変更せずに新規インストールサービスを追加する
+.sp
+.LP
+既存のサービスを保持し、既存のデフォルトを変更しないで、\fBmy-sparc-service\fR という新規サービスを追加するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n my-sparc-service \e\fR
+\fB-s /export/isos/mysparc.iso \e\fR
+\fB-d /export/ai/mysparc-image\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 6 \fR新規インストールサービスを追加してデフォルトサービスを変更する
+.sp
+.LP
+既存のサービスを保持し、新規サービスを SPARC クライアントのデフォルトにして、\fBmy-sparc-service \fR という新規サービスを追加するには、次の 2 つのサンプルコマンドを使用します。 
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-service -n my-sparc-service \e\fR
+\fB-s /export/isos/mysparc.iso \e\fR
+\fB-d /export/ai/mysparc-image\fR
+# \fBinstalladm set-service \e\fR
+\fB-o aliasof=my-sparc-service default-sparc\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 7 \fRカスタムのデフォルト AI マニフェストをインストールサービスに追加する
+.sp
+.LP
+新規マニフェストを \fBservice_092910 \fR インストールサービスに追加して、サービスのデフォルトマニフェストにするには、次のサンプルコマンドを使用します。マニフェストデータは \fBmy_manifest.xml\fR にあります。将来の \fBinstalladm \fR コマンドでは、このマニフェストは \fBmy_manifest\fR として参照されます。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -d -f my_manifest.xml \e\fR
+\fB-m my_manifest -n service_092910\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 8 \fR派生したマニフェストスクリプトをインストールサービスに追加する
+.sp
+.LP
+\fB my_script\fR という派生したマニフェストスクリプトを \fBservice_092910\fR という既存のインストールサービスに追加するには、次のサンプルコマンドを使用します。スクリプトはマニフェストと同じ方法で追加されます。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f my_script.py \e\fR
+\fB-m my_script -n service_092910\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+派生したマニフェストスクリプトの作成方法についての詳細は、『\fI『Oracle Solaris 11 システムのインストール』\fR』を参照してください。 
+
+.LP
+\fB例 9 \fRインストールサービスのデフォルト AI マニフェストを置換する
+.sp
+.LP
+既存のインストールサービス \fBservice_092910\fR のデフォルトマニフェストを、すでに \fBmy_manifest\fR としてサービスに追加されているカスタムマニフェストに置換するには、次のサンプルコマンドを使用します。マニフェストは \fB-m my_manifest\fR を \fBcreate-manifest\fR サブコマンドに指定することによって、サービスに追加されました。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm set-service -o default-manifest=my_manifest \e\fR
+\fB-n service_092910\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 10 \fRインストールサービスを一覧表示する
+.sp
+.LP
+ローカルサーバーにあるインストールサービスを一覧表示するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list\fR
+Service Name     Alias Of         Status  Arch  Image Path 
+------------     --------         ------  ----  ---------- 
+default-i386     sol-11-i386-svc  on      x86   /export/images/soli386
+default-sparc    sol-11-sparc-svc on      Sparc /export/images/solsparc
+sol-11-i386-svc  -                on      x86   /export/images/soli386
+sol-11-sparc-svc -                on      Sparc /export/images/solsparc
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 11 \fRインストールサービスに関連付けられたクライアントを一覧表示する
+.sp
+.LP
+ローカルサーバーにある特定のインストールサービスのクライアントを一覧表示するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -c -n my-x86-service\fR
+Service Name   Client Address    Arch  Image Path 
+------------   --------------    ----  ---------- 
+my-x86-service 01:C2:52:E6:4B:E1 i386  /export/images/myimage
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 12 \fRインストールサービスに関連付けられたマニフェストを一覧表示する
+.sp
+.LP
+ローカルサーバーにある特定のインストールサービスに関連付けられたマニフェストおよびスクリプトを一覧表示するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n my-x86-service\fR
+Manifest      Status    Criteria 
+--------      ------    -------- 
+manifest2               arch = i86pc
+                        mem  = 4096 MB - unbounded
+
+sparc_setup             arch = sun4v
+
+new_default   Default   (Ignored: mem = 2048 MB - 4095 MB)
+
+orig_default  Inactive  None
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+この例では、次の出力が表示されます。 
+.RS +4
+.TP
+.ie t \(bu
+.el o
+条件付きのデフォルト以外のマニフェスト (\fBmanifest2\fR)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+条件付きのデフォルト以外のスクリプト (\fBsparc_setup\fR)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+無視される条件付きのデフォルトマニフェスト (\fBnew_default \fR)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+条件がないために非アクティブとマークされているデフォルト以外のマニフェスト (\fBorig_default\fR)
+.RE
+.LP
+\fB例 13 \fRプロファイルを一覧表示する
+.sp
+.LP
+ローカルサーバーにあるプロファイルを一覧表示するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -p\fR
+Service Name Profile
+------------ -------
+sparc2       myprofile.xml
+             myprofile2.xml
+svc0817      profile3
+svc0819      profile4.xml
+             newprofile
+             foo.xml
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 14 \fR名前なしのカスタム AI マニフェストをインストールサービスに追加する
+.sp
+.LP
+\fB/export/my_manifest.xml \fR のマニフェストを、MAC アドレスが \fB aa:bb:cc:dd:ee:ff\fR に等しいという条件付きで \fBsvc1\fR に追加するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f /export/my_manifest.xml \e\fR
+\fB-n svc1 -c MAC="aa:bb:cc:dd:ee:ff"\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+この例では、マニフェストに名前属性が含まれないため、マニフェスト名はファイル名から取得されます。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n svc1\fR
+Manifest       Criteria
+--------       --------
+my_manifest    mac  = AA:BB:CC:DD:EE:FF
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 15 \fRカスタム名付きのカスタム AI マニフェストをインストールサービスに追加する
+.sp
+.LP
+\fB/export/my_manifest.xml \fR のマニフェストを、IPv4 範囲が 10.0.2.100 ～ 10.0.2.199 という条件付きで \fBsvc1\fR に追加するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f /export/my_manifest.xml \e\fR
+\fB-n svc1 -m chosen_name \e\fR
+\fB-c IPV4="10.0.2.100-10.0.2.199"\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+この例では、マニフェスト名は \fB-m\fR オプションから取得されます。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n svc1\fR
+Manifest       Criteria
+--------       --------
+chosen_name    ipv4 = 10.0.2.100 - 10.0.2.199
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 16 \fRマニフェストに指定された名前付きのカスタム AI マニフェストを追加する
+.sp
+.LP
+\fB/export/manifest3.xml\fR のマニフェストを、メモリーが 2048 MB 以上で、アーキテクチャーが \fBi86pc\fR であるという条件付きで \fBsvc1\fR に追加するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-manifest -f /export/manifest3.xml -n svc1 \e\fR
+\fB-c MEM="2048-unbounded" -c ARCH=i86pc\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+この例では、次の部分的なマニフェストで示すように、マニフェスト名はマニフェストの \fBai_instance\fR 要素の \fBname\fR 属性から取得されます。
+
+.sp
+.in +2
+.nf
+<auto_install>
+    <ai_instance name="my_name" />
+</auto_install>
+.fi
+.in -2
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm list -m -n svc1\fR
+Manifest    Criteria
+--------    --------
+my_name     arch = i86pc
+            mem  = 2048 MB - unbounded
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 17 \fRシステム構成プロファイルをインストールサービスに追加する
+.sp
+.LP
+\fB/export/profile4.xml \fR のプロファイルを、ホスト名のいずれかが \fB myhost1\fR、\fBhost3\fR、または \fBhost6\fR であるという条件付きで \fBsvc1\fR に追加するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -f /export/profile4.xml -n svc1 \e\fR
+\fB-p profile4 -c hostname="myhost1 host3 host6"\fR
+$ \fBinstalladm list -p -n svc1\fR
+Profile          Criteria
+-------          --------
+profile4         hostname = myhost1 host3 host6
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 18 \fRすべてのクライアントのシステム構成プロファイルを追加する 
+.sp
+.LP
+条件を指定しない場合、プロファイルは指定されたインストールサービスを使用するすべてのクライアントによって使用されます。次の例では、作成されたプロファイルが \fBsvc1\fR サービスを使用するすべてのクライアントによって使用されます。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -f /export/locale.xml -n svc1\fR
+$ \fBinstalladm list -p -n svc1\fR
+Profile          Criteria
+-------          --------
+profile4         hostname = myhost1 host3 host6
+locale
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 19 \fR置換タグ付きのシステム構成プロファイルを追加する 
+.sp
+.LP
+プロファイルでは、置換タグを使用できます。置換タグは、ユーザーの環境 (\fBenviron\fR(4) を参照) から、または \fBcreate-profile\fR サブコマンドの \fB-c\fR オプションで指定された条件から取得されたカスタムクライアント構成情報のためのプレースホルダとして機能します。置換タグを使用すると、さまざまなシステム向けにプロファイルファイルを再利用できます。次の例では、各プロファイルが \fB-c\fR 条件オプションから取得された \fBhostname \fR 値で格納されます。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm create-profile -p myhost1_hostname \e\fR
+\fB-f /export/hostname.xml -n svc1 -c hostname=myhost1\fR
+# \fBinstalladm create-profile -p myhost2_hostname \e\fR
+\fB-f /export/hostname.xml -n svc1 -c hostname=myhost2\fR
+$ \fBinstalladm list -p -n svc1\fR
+Profile               Criteria
+-------               --------
+myhost1_hostname      hostname = myhost1
+myhost2_hostname      hostname = myhost2
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fBhostname.xml\fR ファイルには次の行が含まれます。 
+
+.sp
+.in +2
+.nf
+<propval name="nodename" value="{{AI_HOSTNAME}}"/>
+.fi
+.in -2
+
+.sp
+.LP
+\fBcreate-profile\fR コマンドは、\fBmyhost1_hostname\fR プロファイルに次の行が含まれるように置換します。
+
+.sp
+.in +2
+.nf
+<propval name="nodename" value="myhost1"/>
+.fi
+.in -2
+
+.sp
+.LP
+同じ \fBhostname.xml\fR 入力ファイルを使用すると、\fB myhost2_hostname\fR プロファイルに次の行が含まれます。
+
+.sp
+.in +2
+.nf
+<propval name="nodename" value="myhost2"/>
+.fi
+.in -2
+
+.sp
+.LP
+\fBhostname\fR 条件が使用され、プロファイルに代入されたため、置換タグ \fB{{AI_HOSTNAME}}\fR は \fBcreate-profile\fR 呼び出しごとに異なる値で置換されます。置換タグの使用についての詳細は、『\fI『Oracle Solaris 11 システムのインストール』\fR』を参照してください。
+
+.LP
+\fB例 20 \fR条件を既存のマニフェストに追加する
+.sp
+.LP
+メモリーが 4096 MB 以上であるという条件を \fBsvc1\fR の \fBmanifest2\fR の条件に追加するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm set-criteria -m manifest2 -n svc1 \e\fR
+\fB-a MEM="4096-unbounded"\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 21 \fR既存のマニフェストに対する条件を置換する
+.sp
+.LP
+\fBsvc1\fR の \fBmanifest2\fR の条件を \fB /tmp/criteria.xml\fR ファイルに指定された条件で置換するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm set-criteria -m manifest2 -n svc1 \e\fR
+\fB-C /tmp/criteria.xml\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+条件 XML ファイルの内容についての詳細は、『\fI『Oracle Solaris 11 システムのインストール』\fR』を参照してください。
+
+.LP
+\fB例 22 \fR開発中にプロファイルファイルを検証する 
+.sp
+.LP
+\fBmyprofdir/myprofile.xml\fR および \fBherprofdir/herprofile.xml\fR ファイルに格納されたプロファイルを開発中に検証するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm validate -P myprofdir/myprofile.xml \e\fR
+\fB-P herprofdir/herprofile.xml -n svc1\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 23 \fRプロファイルの内容をエクスポートする
+.sp
+.LP
+サービス \fBsvc1\fR のプロファイル \fBmyprofile.xml \fR をエクスポートするには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm export -p myprofile -n svc1\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 24 \fR既存の AI マニフェストの内容を置換する
+.sp
+.LP
+マニフェスト名 (または AI インスタンス名) が \fBspec\fR のサービス \fBsvc2\fR のマニフェストを、\fB/home/admin/new_spec.xml\fR ファイルのマニフェストの内容に置換するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm update-manifest -n svc2 \e\fR
+\fB-f /home/admin/new_spec.xml -m spec\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fB例 25 \fR既存の AI マニフェストをエクスポートして更新する
+.sp
+.LP
+サービス \fBsvc2\fR の \fBspec\fR という既存のマニフェストのデータをエクスポートし、そのマニフェストを変更済みの内容で更新するには、次のサンプルコマンドを使用します。
+
+.sp
+.in +2
+.nf
+$ \fBinstalladm export -n svc2 -m spec -o /home/admin/spec.xml\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fB/home/admin/spec.xml\fR の変更を行います。
+
+.sp
+.in +2
+.nf
+# \fBinstalladm update-manifest -n svc2 \e\fR
+\fB-f /home/admin/spec.xml -m spec\fR
+.fi
+.in -2
+.sp
+
+.SH 属性
+.sp
+.LP
+属性についての詳細は、マニュアルページの \fBattributes\fR(5) を参照してください。
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+属性タイプ属性値
+_
+使用条件\fBinstall/installadm\fR
+_
+インタフェースの安定性不確実
+.TE
+
+.SH 関連項目
+.sp
+.LP
+aimanifest(1M), \fBsysconfig \fR(1M), \fBdhcp\fR(5), \fBdhcpd\fR(8), \fBsmf\fR(5), \fBservice_bundle\fR(4), \fBai_manifest\fR(4), \fBenviron\fR(5)
+.sp
+.LP
+『\fI『Oracle Solaris 11 システムのインストール』\fR』のパート III、「\fI「インストールサーバーを使用したインストール」\fR」
+.sp
+.LP
+『\fI『Oracle Solaris 10 カスタム JumpStart から Oracle Solaris 11 自動インストーラへの移行』\fR』
