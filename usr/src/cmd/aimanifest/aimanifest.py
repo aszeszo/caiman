@@ -111,8 +111,14 @@ def _handle_error(error):
     Returns:
       errno: EINVAL unless overridden by an IOError exception's errno.
     '''
-    print >> sys.stderr, str(error)
-    AIM_LOGGER.exception(str(error))
+    if isinstance(error, milib.MimMultMsgError):
+        for msg in error.errors:
+            # These messages come already localized.
+            print >> sys.stderr, msg
+            AIM_LOGGER.error(msg)
+    else:
+        print >> sys.stderr, str(error)
+        AIM_LOGGER.exception(str(error))
     rval = getattr(error, "errno", errno.EINVAL)
 
     # Handle the cases where the errno field exists in the exception
@@ -232,12 +238,6 @@ def _do_aimanifest(argv):
     try:
         mim = ManifestInput(os.environ.get("AIM_MANIFEST"),
                             os.environ.get("AIM_DTD"))
-    except (milib.MimEtreeParseError, milib.MimDTDInvalid) as err:
-        for error in err.errors:
-            # These messages come already localized.
-            print >> sys.stderr, error
-            AIM_LOGGER.error(error)
-        return errno.EINVAL
     except (milib.MimError, IOError) as err:
         return (_handle_error(err))
 
@@ -288,12 +288,6 @@ def _do_aimanifest(argv):
         try:
             mim.load(path, options.is_incremental)
             mim.commit(NO_VALIDATE)
-        except (milib.MimEtreeParseError, milib.MimDTDInvalid) as err:
-            for error in err.errors:
-                # These messages come already localized.
-                print >> sys.stderr, error
-                AIM_LOGGER.error(error)
-            return errno.EINVAL
         except (milib.MimError, IOError) as err:
             return (_handle_error(err))
 
@@ -304,13 +298,6 @@ def _do_aimanifest(argv):
         try:
             mim.validate()
             AIM_LOGGER.info(_("Validation successful"))
-        except (milib.MimEtreeParseError, milib.MimDTDInvalid) as err:
-            errorlist = err.errors
-            for error in errorlist:
-                # These messages come already localized.
-                print >> sys.stderr, error
-                AIM_LOGGER.error(error)
-            return errno.EINVAL
         except (milib.MimError, IOError) as err:
             return (_handle_error(err))
 

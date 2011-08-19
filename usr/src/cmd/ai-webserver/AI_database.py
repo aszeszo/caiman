@@ -34,7 +34,7 @@ from osol_install.auto_install.installadm_common import _
 from sqlite3 import dbapi2 as sqlite
 
 MANIFESTS_TABLE = 'manifests'  # DB table name for manifests
-PROFILES_TABLE = 'profiles'  # DB table name for profiles
+PROFILES_TABLE = 'profiles'    # DB table name for profiles
 
 # Defined list of criteria that we treat as case sensitive.
 CRIT_LIST_CASE_SENSITIVE = ['zonename']
@@ -449,17 +449,13 @@ def getCriteria(queue, table=MANIFESTS_TABLE, onlyUsed=True, strip=True):
 
     if not (onlyUsed or strip):
         # if we are not gleaning the unused columns and not stripping the
-        # column names then yield them now
-        for column in columns:
-            yield str(column)
-        return
+        # column names then return them now
+        return columns
 
     elif not onlyUsed:
-        # if we are only stripping the column names yield the result now
-        for column in columns:
-            if not column.startswith('MAX'):
-                yield str(column.replace('MIN', ''))
-        return
+        # if we are only stripping the column names return the result now
+        return [column.replace('MIN', '')
+                for column in columns if not column.startswith('MAX')]
 
     else:
         # we need to run the query from above and determine which columns are
@@ -469,7 +465,7 @@ def getCriteria(queue, table=MANIFESTS_TABLE, onlyUsed=True, strip=True):
         query = DBrequest(query_str)
         queue.put(query)
         query.waitAns()
-        response = dict()
+        rlist = list()
         # iterate over each column
         for col_name in columns:
             # only take columns which have a positive count
@@ -483,11 +479,10 @@ def getCriteria(queue, table=MANIFESTS_TABLE, onlyUsed=True, strip=True):
                         # we have reported this criteria do not repeat it
                         col_name = col_name.replace('MIN', '', 1)
                         col_name = col_name.replace('MAX', '', 1)
-                        if col_name in response:
+                        if col_name in rlist:
                             continue
-                        response[col_name] = 1
-                yield str(col_name)
-        return
+                rlist.append(col_name)
+        return rlist
 
 
 def isRangeCriteria(queue, name, table=MANIFESTS_TABLE):

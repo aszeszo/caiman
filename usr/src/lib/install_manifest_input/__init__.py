@@ -151,7 +151,7 @@ ERR_NO_ELEM_MATCH = _("Path matches no elements")
 ERR_NO_ATTR_MATCH = _("Path matches no attributes")
 ERR_FINAL_BRANCH_VAL_INVALID = _("Final path branch has a value or is invalid")
 ERR_FINAL_BRANCH_INVALID = _("Final path branch is invalid")
-ERR_ETREE_PARSE_XPATH = _("Etree error parsing path %(mxpath)s: %(merr)s")
+ERR_ETREE_PARSE_XPATH = _("Etree error parsing path: %(merr)s")
 ERR_NODE_PLACEMENT = _("Node \"%(mnode)s\" cannot be placed as "
                        "child of \"%(mparent)s\"")
 ERR_UNBAL_QUOTES_BKTS = _("Unbalanced brackets or quotation marks")

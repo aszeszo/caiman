@@ -411,8 +411,9 @@ class ManifestInput(object):
               Narrowing-values are expressed via element IDs.
 
         Raises:
-          MimInvalidError - Argument is missing or invalid
           MimEmptyTreeError - No XML data present
+          MimEtreeParseError - Various xpath parser errors
+          MimInvalidError - Argument is missing or invalid
           MimMatchError - Ambiguity error:  Path matches more than one element
           MimMatchError - Error:  Path matches no elements
           Errors raised by etree.getpath()
@@ -741,13 +742,13 @@ class ManifestInput(object):
           A list of elements which match the xpath.  Can be an empty list.
 
         Raises:
-          MimEtreeParseError - Error parsing path <path>: <error>
+          MimInvalidError - Error parsing path <path>: <error>
         '''
         try:
             rval = self.tree.xpath(xpath)
         except etree.XPathEvalError as err:
-            raise milib.MimEtreeParseError(milib.ERR_ETREE_PARSE_XPATH %
-                                     {"mxpath": xpath, "merr": err.args[0]})
+            raise milib.MimInvalidError(milib.ERR_ETREE_PARSE_XPATH %
+                                        {"merr": err.args[0]})
 
         # If get back multiple elements, see if final value can narrow to one.
         if (len(rval) > 1) and final_val:

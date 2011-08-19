@@ -800,7 +800,6 @@ def print_service_manifests(sdict, sname, width, swidth, cwidth):
 
     width += 1
     swidth += 1
-    cwidth += 1
 
     mnames = sdict.keys()
     if not mnames:
@@ -813,7 +812,7 @@ def print_service_manifests(sdict, sname, width, swidth, cwidth):
         default_mname = ""
 
     ordered_keys = ['arch', 'mac', 'ipv4']
-    if cwidth > 1:
+    if cwidth > 0:
         # Criteria are present.
         keys = sdict[mnames[0]][0].keys()
         keys.sort()
@@ -823,7 +822,7 @@ def print_service_manifests(sdict, sname, width, swidth, cwidth):
 
     for name in mnames:
         manifest_list = [name]
-        if cwidth > 1:
+        if cwidth > 0:
             for ldict in sdict[name]:
                 for akey in ordered_keys:
                     if akey in ldict and ldict[akey] != '':
@@ -884,16 +883,13 @@ def print_service_profiles(sdict, width, cwidth):
     Raises
         None
     """
-    width += 1
-    cwidth += 1
-
     pnames = sdict.keys()
     if not pnames:
         return
     pnames.sort()
 
     ordered_keys = ['arch', 'mac', 'ipv4']
-    if cwidth > 1:
+    if cwidth > 0:
         # Criteria are present.
         keys = sdict[pnames[0]][0].keys()
         keys.sort()
@@ -904,7 +900,7 @@ def print_service_profiles(sdict, width, cwidth):
     for name in pnames:
         print name.ljust(width),
         first = True
-        if cwidth > 1:
+        if cwidth > 0:
             for ldict in sdict[name]:
                 for akey in ordered_keys:
                     if akey in ldict and ldict[akey] != '':
@@ -914,7 +910,7 @@ def print_service_profiles(sdict, width, cwidth):
                         print akey.ljust(cwidth) + ' = ' + ldict[akey]
         # Flush line if no criteria displayed.
         if first:
-            print
+            print "None"
         print
 
 
@@ -1064,9 +1060,9 @@ def list_local_manifests(services, name=None):
             sys.stdout.write(output)
             return
 
-        mwidth = max(mwidth, len(_('Manifest')))
+        mwidth = max(mwidth, len(_('Manifest'))) + 1
         fields = [[_('Manifest'), mwidth]]
-        stwidth = max([len(item) for item in STATUS_WORDS])
+        stwidth = max([len(item) for item in STATUS_WORDS]) + 1
         fields.extend([[_('Status'), stwidth]])
         fields.extend([[_('Criteria'), len(_('Criteria'))]])
 
@@ -1100,7 +1096,7 @@ def list_local_profiles(linst, name=None):
             sys.stdout.write(output)
             return
 
-        swidth = max(swidth, len(_('Service Name')))
+        swidth = max(swidth, len(_('Service Name'))) + 1
         fields = [[_('Service Name'), swidth]]
         mwidth = max(mwidth, len(_('Profile')))
         fields.extend([[_('Profile'), mwidth]])
@@ -1117,7 +1113,7 @@ def list_local_profiles(linst, name=None):
             sys.stdout.write(output)
             return
 
-        mwidth = max(mwidth, len(_('Profile')))
+        mwidth = max(mwidth, len(_('Profile'))) + 1
         fields = [[_('Profile'), mwidth]]
         fields.extend([[_('Criteria'), len(_('Criteria'))]])
 
