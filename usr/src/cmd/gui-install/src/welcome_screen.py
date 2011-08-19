@@ -39,7 +39,8 @@ RELEASENOTES_TIMEOUT_SECONDS = 0.25
 
 class WelcomeScreen(BaseScreen):
     '''Welcome Screen Class'''
-    RELEASENOTESURL = "http://docs.sun.com/doc/821-1479"
+    RELEASENOTESURL = \
+        "http://www.oracle.com/pls/topic/lookup?ctx=E23824&id=SERNS"
 
     def __init__(self, builder):
         super(WelcomeScreen, self).__init__(builder)
