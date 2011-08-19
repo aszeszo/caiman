@@ -37,6 +37,6 @@ if __name__ == '__main__':
         print "ERROR: an exception occurred.\n"
         print "\n".join(["%s%s" % ("    ", l)  for l in str(e).splitlines()])
         print "\nPlease check logs for futher information."
-        sys.exit(ai.AI_EXIT_FAILURE)
+        sys.exit(auto_install.AutoInstall.AI_EXIT_FAILURE)
     except KeyboardInterrupt:
         pass

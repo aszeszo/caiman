@@ -22,6 +22,7 @@
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 ''' Code specific for the implementation of the InstallLogger'''
+import errno
 import logging
 import logging.handlers
 import os
@@ -252,7 +253,12 @@ class InstallLogger(logging.Logger):
         # Make sure DEFAULTLOG is usable by everyone, even if created by root.
         logdir = os.path.dirname(DEFAULTLOG)
         if not os.path.exists(logdir):
-            os.mkdir(logdir)
+            try:
+                os.mkdir(logdir)
+            except OSError as err:
+                if err.errno != errno.EEXIST:
+                    raise
+
         statbuf = os.stat(logdir)
         if (statbuf.st_mode & 01777) != 01777:
             os.chmod(logdir, 01777)
