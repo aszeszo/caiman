@@ -712,13 +712,16 @@ class DiskScreen(BaseScreen):
 
         # Only create the widgets which don't come from Glade once
         if self._finding_disks_vbox is None:
-            self._finding_disks_vbox = self._create_finding_disks_vbox()
+            self._finding_disks_vbox, busy_label = \
+                self._create_finding_disks_vbox()
 
         empty_container(self._disksviewport)
         self._disksviewport.add(self._finding_disks_vbox)
         self._disksviewport.modify_bg(gtk.STATE_NORMAL, COLOR_WHITE)
         self._disksviewport.show_all()
         self._toplevel.show()
+
+        busy_label.grab_focus()
 
         self.set_back_next(back_sensitive=True, next_sensitive=False)
 
@@ -733,11 +736,13 @@ class DiskScreen(BaseScreen):
 
         # Match the currently selected disk to one of the disk
         # radio buttons and make that button active
+        active_button = None
         if self._selected_disk is not None:
             for button in self._disk_buttons:
                 td_disk = gobject.GObject.get_data(button, "Disk")
                 if td_disk.name_matches(self._selected_disk):
                     button.set_active(True)
+                    active_button = button
                     break
 
         # If an error occurred in TD or TC, then activate the
@@ -779,6 +784,9 @@ class DiskScreen(BaseScreen):
         self._diskradioalignment.show_all()
 
         self._display_selected_disk_details()
+
+        if active_button:
+            active_button.grab_focus()
 
         self._partitioningvbox.show()
         self._toplevel.show()
@@ -838,7 +846,7 @@ class DiskScreen(BaseScreen):
         finding_disks_vbox.pack_end(busyimage, expand=False,
             fill=False, padding=0)
 
-        return finding_disks_vbox
+        return finding_disks_vbox, label
 
     def _create_disk_button_icon(self, disk):
         '''

@@ -66,6 +66,7 @@ class WelcomeScreen(BaseScreen):
 
         self.releasenotesbutton.connect('clicked',
                               self.on_releasenotesbutton_clicked, None)
+        self.releasenotesbutton.grab_focus()
 
         toplevel.show_all()
 

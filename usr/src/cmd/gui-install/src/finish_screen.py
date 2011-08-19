@@ -73,6 +73,7 @@ class FinishScreen(BaseScreen):
         self.activate_stage_label("finishstagelabel")
 
         self.logbutton.connect("clicked", self.logbutton_callback, None)
+        self.logbutton.grab_focus()
         self.quitbutton.set_sensitive(True)
         self.installbutton.hide_all()
         self.rebootbutton.show_all()

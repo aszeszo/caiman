@@ -150,6 +150,8 @@ class ConfirmScreen(BaseScreen):
             vbox.pack_start(detail_hbox, expand=False, fill=False, padding=0)
             detail_hbox.show_all()
 
+            return detail_label
+
         # Fetch the user-entered details from the DOC
         engine = InstallEngine.get_instance()
         doc = engine.data_object_cache
@@ -172,14 +174,20 @@ class ConfirmScreen(BaseScreen):
 
         empty_container(self.diskvbox, destroy=True)
         self.logger.info("-- Disk --")
+        first_disk = None
         for disk in disks:
             text_str = _("%.1f GB disk (%s)") % \
                  (disk.disk_prop.dev_size.get(units=Size.gb_units),
                   disk.ctd)
             warn_str = _("This disk will be erased")
-            add_detail_line(self.diskvbox, text_str, warning=warn_str)
+            adisk = add_detail_line(self.diskvbox, text_str, warning=warn_str)
+            if first_disk == None:
+                first_disk = adisk
+
             self.logger.info('\t' + text_str + " " + warn_str)
 
+        if first_disk is not None:
+            first_disk.grab_focus()
         translated = _("The whole installation will take " \
                 "up %.1fGB hard disk space.")
         text_str = translated % \

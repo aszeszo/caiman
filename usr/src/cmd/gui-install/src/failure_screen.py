@@ -63,6 +63,7 @@ class FailureScreen(BaseScreen):
             raise RuntimeError(GLADE_ERROR_MSG)
 
         logbutton.connect("clicked", self.logbutton_callback, None)
+        logbutton.grab_focus()
         quitbutton.set_sensitive(True)
         self.installbutton.hide_all()
         self.nextbutton.show_all()
