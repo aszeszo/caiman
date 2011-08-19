@@ -160,7 +160,6 @@ def make_screen_list(main_win, target_controller, install_data):
     result = []
     result.append(WelcomeScreen(main_win, install_data))
     disk_screen = DiskScreen(main_win, target_controller)
-    disk_screen.start_discovery()
     result.append(disk_screen)
     result.append(FDiskPart(main_win, target_controller))
     result.append(PartEditScreen(main_win, target_controller))
@@ -170,6 +169,12 @@ def make_screen_list(main_win, target_controller, install_data):
         result.append(PartEditScreen(main_win, target_controller,
                                      x86_slice_mode=True))
     result.extend(sysconfig.get_all_screens(main_win))
+
+    # do not run target discovery until after all the sysconfig screens
+    # are configured.  Otherwise, subprocess.Popen will be running
+    # in parallel in multiple threads and it might lead to deadlock
+    # as discussed in Python bug 2320.
+    disk_screen.start_discovery()
     
     result.append(SummaryScreen(main_win))
     result.append(InstallProgress(main_win, install_data, target_controller))
