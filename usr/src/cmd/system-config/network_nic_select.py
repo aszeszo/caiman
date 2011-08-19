@@ -55,7 +55,7 @@ class NICSelect(BaseScreen):
     HELP_FORMAT = "  %s"
     
     LIST_OFFSET = 2
-    
+
     def __init__(self, main_win):
         global LOGGER
         if LOGGER is None:
@@ -75,7 +75,8 @@ class NICSelect(BaseScreen):
         if self.nic.type != NetworkInfo.MANUAL:
             raise SkipException
         if len(self.ether_nics) == 1:
-            self.set_nic_in_profile(self.ether_nics[0])
+            self.set_nic_in_profile(self.ether_nics[0]
+                                    [NetworkInfo.NIC_NAME_KEY])
             raise SkipException
         
         try:
@@ -104,10 +105,24 @@ class NICSelect(BaseScreen):
         
         for nic in self.ether_nics:
             self.list_area.y_loc = y_loc
-            self.list_area.columns = len(nic) + 1
+
+            #
+            # display list item in form of "NIC name (NIC device)" -
+            # e.g. "net0 (bge0)"
+            # If NIC device is not populated, display just NIC name.
+            #
+            if nic[NetworkInfo.NIC_DEV_KEY]:
+                list_item_text = "%s (%s)" % (nic[NetworkInfo.NIC_NAME_KEY],
+                                              nic[NetworkInfo.NIC_DEV_KEY])
+            else:
+                list_item_text = nic[NetworkInfo.NIC_NAME_KEY]
+
+            # list item width
+            self.list_area.columns = len(list_item_text) + 1
+
             list_item = ListItem(self.list_area, window=self.list_region,
-                                 text=nic, data_obj=nic)
-            if nic == selected_nic_name:
+                                 text=list_item_text, data_obj=nic)
+            if nic[NetworkInfo.NIC_NAME_KEY] == selected_nic_name:
                 selected_nic = list_item
             y_loc += 1
         
@@ -122,7 +137,7 @@ class NICSelect(BaseScreen):
     def on_change_screen(self):
         '''Save the highlighted NIC as the selected NIC'''
         selected_nic = self.list_region.get_active_object().data_obj
-        self.set_nic_in_profile(selected_nic)
+        self.set_nic_in_profile(selected_nic[NetworkInfo.NIC_NAME_KEY])
     
     def set_nic_in_profile(self, selected_nic):
         '''Set the name of the selected NIC in the profile '''

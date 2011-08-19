@@ -28,6 +28,7 @@ the NICs installed on the system by name (using dladm)
 '''
 
 import logging
+from operator import itemgetter
 from solaris_install import Popen, CalledProcessError
 from solaris_install.data_object import DataObject
 from solaris_install.logger import INSTALL_LOGGER_NAME
@@ -59,6 +60,9 @@ class NetworkInfo(SMFConfig):
 
     LABEL = NETWORK_LABEL
 
+    NIC_NAME_KEY = "name"
+    NIC_DEV_KEY = "device"
+
     @staticmethod
     def find_links():
         '''Use dladm show-link to find available network interfaces (NICs).
@@ -66,6 +70,14 @@ class NetworkInfo(SMFConfig):
         (this type of NIC can be configured for non-global zone with exclusive
         IP stack), since those kind of NICs are controlled from global zone
         and can't be configured within non-global zone.
+
+        Construct set of available NICs as a list of dictionaries which
+        describe each NIC as
+        { NIC_NAME_KEY: 'vanity name', NIC_DEV_KEY: 'device name'}.
+
+        If vanity name or device name can't be obtained for particular link,
+        then following simplified form is used to describe NIC:
+        { NIC_NAME_KEY: 'link name', NIC_DEV_KEY: ''}.
         '''
 
         if NetworkInfo.ETHER_NICS is not None:
@@ -109,36 +121,59 @@ class NetworkInfo(SMFConfig):
             allowed_ips = dladm_popen.stdout.strip()
 
             #
-            # If vanity name exists for link, use it.
+            # Add particular NIC to the list only if 'allowed-ips' link
+            # property is not configured (is empty).
+            #
+            if allowed_ips:
+                LOGGER().info("%s allowed-ips: <%s>" % (nic, allowed_ips))
+                continue
+
+            #
+            # If vanity name exists for link, use it as NIC name
+            # and store physical link name as a NIC device.
             #
             argslist = ['/usr/sbin/dladm', 'show-phys', '-L', '-o',
-                        'vanity', '-p', nic]
+                        'vanity,device', '-p', nic]
             try:
+                n_name = nic
+                n_dev = ""
+
                 dladm_popen = Popen.check_call(argslist, stdout=Popen.STORE,
                                                stderr=Popen.STORE,
                                                logger=LOGGER())
             except CalledProcessError:
-                n = nic
+                LOGGER().warn("'dladm show-phys -L -o vanity,device -p %s' "
+                              "failed.", nic)
             else:
                 n = dladm_popen.stdout.strip()
                 #
-                # It was observed that in some cases (e.g. in non-global
-                # zone with exclusive IP stack) dladm reports success, but
-                # returns empty string. Use non-vanity NIC name in that case.
+                # The returned string is in form of "vanity_name:device_name".
                 #
-                if not n:
-                    n = nic
+                # Populate NIC item from vanity name and device name
+                # only if both vanity name and device name were obtained.
+                # Otherwise use link name for NIC name leaving device
+                # portion empty.
+                #
+                # Also, it was observed that in some cases (e.g. in non-global
+                # zone with exclusive IP stack) 'dladm show-phys' reports
+                # success, but returns empty string, so account for that.
+                #
+                vanity_device = n.split(':')
+                if len(vanity_device) == 2 and vanity_device[0] \
+                   and vanity_device[1]:
+                    n_name = vanity_device[0]
+                    #
+                    # If vanity name and device name are the same, there
+                    # is no point to keep both.
+                    #
+                    if vanity_device[0] != vanity_device[1]:
+                        n_dev = vanity_device[1]
 
-            #
-            # Add particular NIC to the list if 'allowed-ips' link property
-            # is not configured (is empty).
-            #
-            LOGGER().info("%s allowed-ips: <%s>" % (n, allowed_ips))
-            if not allowed_ips:
-                NetworkInfo.ETHER_NICS.append(n)
+            NetworkInfo.ETHER_NICS.append({NetworkInfo.NIC_NAME_KEY: n_name,
+                                           NetworkInfo.NIC_DEV_KEY: n_dev})
 
-        # sort the final list
-        NetworkInfo.ETHER_NICS.sort()
+        # sort the final list - use NIC name as the sort key
+        NetworkInfo.ETHER_NICS.sort(key=itemgetter(NetworkInfo.NIC_NAME_KEY))
         return NetworkInfo.ETHER_NICS
 
     def __init__(self, nic_name=None, net_type=None, ip_address=None,
