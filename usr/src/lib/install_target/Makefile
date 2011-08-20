@@ -53,7 +53,6 @@ PYMODS=		__init__.py \
 		logical.py \
 		physical.py \
 		size.py \
-		test_td.py \
 		vdevs.py
 
 PYCMODS=	$(PYMODS:%.py=%.pyc)
