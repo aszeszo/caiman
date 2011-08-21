@@ -118,7 +118,6 @@ class TimeZoneScreen(BaseScreen):
         if not self.set_system_clock():
             # Not a fatal error
             LOGGER.warn("WARNING: Failed to set TZ and/or date/time")
-            print "WARNING: Failed to set TZ and/or date/time"
 
         # Save the user-entered details to the DOC
         engine = InstallEngine.get_instance()
@@ -131,7 +130,7 @@ class TimeZoneScreen(BaseScreen):
                 country.name, timezone.tz_name)
 
     def ui_init(self):
-        self.timezone = Timezone(self.builder)
+        self.timezone = Timezone(self.builder, self)
         self.timezone.show()
         self.outervbox.pack_start(self.timezone,
             expand=False, fill=False, padding=0)
@@ -318,7 +317,6 @@ class TimeZoneScreen(BaseScreen):
         try:
             p = Popen.check_call(cmd, stdout=Popen.STORE)
         except CalledProcessError, err:
-            print "ERROR: [%s] [%s]" % (cmd, err)
             LOGGER.error("ERROR: [%s] [%s]" % (cmd, err))
             return False
 

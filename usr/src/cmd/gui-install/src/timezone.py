@@ -29,6 +29,9 @@ Timezone custom widget
 import pygtk
 pygtk.require('2.0')
 
+import logging
+import os
+
 import gobject
 import gtk
 import pango
@@ -36,6 +39,9 @@ import pango
 from solaris_install.gui_install.gui_install_common import modal_dialog, \
     COLOR_WHITE, GLADE_DIR, GLADE_ERROR_MSG
 from solaris_install.gui_install.map import Map, TZTimezone
+from solaris_install.logger import INSTALL_LOGGER_NAME
+
+LOGGER = None
 
 
 class Timezone(gtk.VBox):
@@ -165,10 +171,24 @@ class Timezone(gtk.VBox):
                     self.map.allocation.width, self.map.allocation.height)
                 self.map.window.invalidate_rect(rect, False)
 
-    def __init__(self, builder):
+                LOGGER.debug("Changing TZ to %s" % tz.tz_name)
+                # Save new TZ to the environment so that future calls
+                # to datetime.now() & Co will reflect the new timezone
+                os.environ['TZ'] = tz.tz_name
+                # Call the TimeZoneScreen to update the date/time for new TZ
+                self.parent_screen.set_current_date_and_time()
+
+    def __init__(self, builder, parent_screen):
+        global LOGGER
+        LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
+
         gtk.VBox.__init__(self)
 
         self.builder = builder
+        # Save a reference to the TimeZoneScreen that contains this
+        # Timezone object, so we can call its set_current_date_and_time()
+        # when a different time zone is selected.
+        self.parent_screen = parent_screen
 
         self.map = Map()
         self.map.load_timezones()
@@ -311,7 +331,7 @@ class Timezone(gtk.VBox):
         itz = self.tz_combo.get_active() - 1
 
         if ictnt < 0 or ictry < 0 or itz < 0:
-            print "ERROR - Time Zone Invalid"
+            LOGGER.warn("WARNING - Time Zone Invalid")
             return (None, None, None)
 
         continent = self.map.world.continents[ictnt]
