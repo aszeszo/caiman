@@ -46,10 +46,10 @@
         build number has to be appended to the 'entire' package in the
         following form:
 
-        <name>pkg:/entire@0.5.11-0.build#</name>
+            <name>pkg:/entire@0.5.11-0.build#</name>
       -->
       <software_data action="install">
-        <name>pkg:/entire</name>
+        <name>pkg:/entire@latest</name>
         <name>pkg:/group/system/solaris-large-server</name>
       </software_data>
     </software>

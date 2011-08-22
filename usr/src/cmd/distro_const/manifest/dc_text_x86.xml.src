@@ -154,7 +154,7 @@
         <name>pkg:/entire@0.5.11-0.build#</name>
       -->
       <software_data action="install">
-        <name>pkg:/entire</name>
+        <name>pkg:/entire@latest</name>
         <name>pkg:/group/system/solaris-large-server</name>
         <name>pkg:/system/install/text-install</name>
         <name>pkg:/system/install/media/internal</name>

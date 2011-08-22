@@ -243,10 +243,11 @@ DTD sample manifest for Automatic Installer input manifest specification.
         if another build is required, the build number has
         to be appended to the 'entire' package in following
         form:
-      <name="entire@0.5.11-0.build#"/>
+      
+            <name="entire@0.5.11-0.build#"/>
       -->
       <software_data>
-        <name>pkg:/entire</name>
+        <name>pkg:/entire@latest</name>
         <name>pkg:/group/system/solaris-large-server</name>
       </software_data>
     </software>

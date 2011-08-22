@@ -161,7 +161,7 @@
         <name>pkg:/entire@0.5.11-0.build#</name>
       -->
       <software_data action="install">
-        <name>pkg:/entire</name>
+        <name>pkg:/entire@latest</name>
         <name>pkg:/group/system/solaris-desktop</name>
         <name>pkg:/system/install/gui-install</name>
         <name>pkg:/system/install/media/internal</name>
