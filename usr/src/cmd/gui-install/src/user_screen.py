@@ -26,6 +26,7 @@
 User Screen for GUI Install app
 '''
 
+import atk
 import gtk
 import string
 
@@ -70,14 +71,62 @@ class UserScreen(BaseScreen):
             "hostnameinfoimage")
         self.hostnameinfolabel = self.builder.get_object(
             "hostnameinfolabel")
+        loginnamelabel = self.builder.get_object("loginnamelabel")
+        userpasswordlabel1 = self.builder.get_object("userpassword1label")
+        userpasswordlabel2 = self.builder.get_object("userpassword2label")
+        userpasswordentry = self.builder.get_object("userpassword2entry")
+        hostnamelabel = self.builder.get_object("hostnamelabel")
 
         if None in [self.user_name, self.login_name, self.password,
             self.verify, self.hostname, self.loginnameinfoimage,
             self.loginnameinfolabel, self.userpasswordinfoimage,
             self.userpasswordinfolabel, self.hostnameinfoimage,
-            self.hostnameinfolabel]:
+            self.hostnameinfolabel, loginnamelabel, userpasswordlabel1,
+            userpasswordlabel2, userpasswordentry, hostnamelabel]:
             modal_dialog(_("Internal error"), GLADE_ERROR_MSG)
             raise RuntimeError(GLADE_ERROR_MSG)
+
+        # Setup Accessibility relationship for the loginname
+        atk_loginnamelabel = loginnamelabel.get_accessible()
+        self.atk_loginnameinfolabel = self.loginnameinfolabel.get_accessible()
+        atk_parent = self.login_name.get_accessible()
+
+        relation_set = atk_parent.ref_relation_set()
+        relation = atk.Relation(
+                       (atk_loginnamelabel, self.atk_loginnameinfolabel,),
+                       atk.RELATION_LABELLED_BY)
+        relation_set.add(relation)
+
+        # Setup Accessibility relationship for the password
+        self.atk_passwordinfolabel = self.userpasswordinfolabel.get_accessible()
+        atk_userpasswordlabel = userpasswordlabel1.get_accessible()
+        atk_parent = self.password.get_accessible()
+
+        relation_set = atk_parent.ref_relation_set()
+        relation = atk.Relation(
+                       (atk_userpasswordlabel, self.atk_passwordinfolabel,),
+                       atk.RELATION_LABELLED_BY)
+        relation_set.add(relation)
+
+        atk_userpasswordlabel = userpasswordlabel2.get_accessible()
+        atk_parent = userpasswordentry.get_accessible()
+
+        relation_set = atk_parent.ref_relation_set()
+        relation = atk.Relation(
+                       (atk_userpasswordlabel, self.atk_passwordinfolabel,),
+                       atk.RELATION_LABELLED_BY)
+        relation_set.add(relation)
+
+        # Setup Accessibility relationship for the hostname
+        self.atk_hostnameinfolabel = self.hostnameinfolabel.get_accessible()
+        atk_hostnamelabel = hostnamelabel.get_accessible()
+        atk_parent = self.hostname.get_accessible()
+
+        relation_set = atk_parent.ref_relation_set()
+        relation = atk.Relation(
+                       (atk_hostnamelabel, self.atk_hostnameinfolabel,),
+                       atk.RELATION_LABELLED_BY)
+        relation_set.add(relation)
 
     def enter(self):
         '''Called when the user enters the screen by pressing the appropriate
@@ -140,8 +189,10 @@ class UserScreen(BaseScreen):
             if validate_username(username, blank_ok=False):
                 self.loginnameinfoimage.hide_all()
                 self.loginnameinfolabel.hide_all()
+                self.atk_loginnameinfolabel.set_description('')
         except UsernameInvalid, err:
             self.loginnameinfolabel.set_markup(str(err))
+            self.atk_loginnameinfolabel.set_description(str(err))
             self.saved_msg = err
             self.saved_msg_type = 'account'
             self.loginnameinfoimage.show_all()
@@ -180,8 +231,9 @@ class UserScreen(BaseScreen):
             try:
                 if validate_password(password):
                     # update the label message
-                    self.userpasswordinfolabel.set_markup(_('Re-enter to '
-                        'check for typing errors.'))
+                    msg = _('Re-enter to check for typing errors.')
+                    self.userpasswordinfolabel.set_markup(msg)
+                    self.atk_passwordinfolabel.set_description(msg)
                     self.userpasswordinfolabel.show_all()
                     self.userpasswordinfoimage.hide_all()
             except PasswordInvalid, err:
@@ -190,6 +242,7 @@ class UserScreen(BaseScreen):
                 self.saved_msg_type = 'password'
                 self.userpasswordinfoimage.show_all()
                 self.userpasswordinfolabel.set_markup(self.saved_msg)
+                self.atk_passwordinfolabel.set_description(self.saved_msg)
                 self.userpasswordinfolabel.show_all()
                 user_password.grab_focus()
         elif widget == check_password:
@@ -212,6 +265,7 @@ class UserScreen(BaseScreen):
                 # update the label message with the error
                 self.userpasswordinfolabel.set_markup(msg)
                 self.userpasswordinfolabel.show_all()
+                self.atk_passwordinfolabel.set_description(msg)
 
                 self.saved_msg = msg
                 self.saved_msg_type = 'password'
@@ -222,6 +276,7 @@ class UserScreen(BaseScreen):
                 # no error, so hide the label and error image
                 self.userpasswordinfolabel.hide_all()
                 self.userpasswordinfoimage.hide_all()
+                self.atk_passwordinfolabel.set_description('')
 
     def hostname_changed(self, widget, data):
         '''callback for hostname change events'''
