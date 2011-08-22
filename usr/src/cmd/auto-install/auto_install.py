@@ -62,7 +62,7 @@ from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
 from solaris_install.engine import UnknownChkptError, UsageError, \
     RollbackError
-from solaris_install.ict import initialize_smf, update_dumpadm, ips, \
+from solaris_install.ict import initialize_smf, update_dumpadm, \
     device_config, apply_sysconfig, boot_archive, transfer_files, \
     create_snapshot, setup_swap
 from solaris_install.ict.apply_sysconfig import APPLY_SYSCONFIG_DICT, \
