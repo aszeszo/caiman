@@ -76,7 +76,7 @@ from solaris_install.target.instantiation_zone import ALT_POOL_DATASET
 from solaris_install.target.logical import BE, Logical
 from solaris_install.transfer import create_checkpoint
 from solaris_install.transfer.info import Software, Source, Destination, \
-    Image, ImType, Dir, INSTALL, IPSSpec, CPIOSpec, SVR4Spec
+    Image, ImType, Dir, INSTALL, IPSSpec, CPIOSpec, SVR4Spec, P5ISpec
 from solaris_install.transfer.ips import AbstractIPS
 
 ZPOOL = "/usr/sbin/zpool"
@@ -942,6 +942,11 @@ class AutoInstall(object):
 
             image_action = AbstractIPS.CREATE  # For first IPS only
             transfer_count = 0  # For generating names if none provided
+            # Ensure there is at least one software_data element with
+            # Install action exists, and that all software_data elements
+            # contain at least one 'name' sub element. Only one sw_data
+            # element across all Software nodes is required.
+            found_install_sw_data = False
             for sw in sw_nodes:
                 transfer_count += 1
                 if sw.name is None or len(sw.name) == 0:
@@ -958,10 +963,6 @@ class AutoInstall(object):
                             self.FIRST_TRANSFER_CHECKPOINT:
                             self.options.stop_checkpoint = sw.name
 
-                # Ensure there is at least one software_data element with
-                # Install action exists, and that all software_data elements
-                # contain at least one 'name' sub element.
-                found_install_sw_data = False
                 tran_type = sw.tran_type.upper()
                 for sw_child in sw.children:
                     found_sw_data = False
@@ -979,6 +980,11 @@ class AutoInstall(object):
                         found_sw_data = True
                         if sw_child.action == SVR4Spec.INSTALL:
                             found_install_sw_data = True
+                    elif tran_type == "P5I" and \
+                        isinstance(sw_child, P5ISpec):
+                        found_sw_data = True
+                        if sw_child.action == P5ISpec.INSTALL:
+                            found_install_sw_data = True
                     elif isinstance(sw_child, Source) or \
                          isinstance(sw_child, Destination):
                         # Skip these
@@ -993,12 +999,6 @@ class AutoInstall(object):
                             "for <software_data> element. Must specify at "
                             "least one package to install/uninstall.")
                         return False
-
-                if not found_install_sw_data:
-                    self.logger.error("No packages specified to install. "
-                        "Manifest must contain at least one <software_data> "
-                        "element with 'install' action.")
-                    return False
 
                 self.logger.debug("Setting destination for transfer: %s to %s"
                     % (sw.name, self.installed_root_dir))
@@ -1063,6 +1063,13 @@ class AutoInstall(object):
                         "Failed to register the softare install: %s"
                         % (sw.name))
                     return False
+
+            # Ensure at least one software_data exists with packages to install
+            if not found_install_sw_data:
+                self.logger.error("No packages specified to install. "
+                    "Manifest must contain at least one <software_data> "
+                    "element with 'install' action.")
+                return False
 
             # Register ICT Checkpoints
             #=========================

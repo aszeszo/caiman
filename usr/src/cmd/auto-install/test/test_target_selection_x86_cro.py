@@ -316,7 +316,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143364060secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
-        ......<size val="143363548secs" start_sector="512"/>
+        ......<size val="143363072secs" start_sector="512"/>
         ......<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="myrpool" in_vdev="vdev">
         ........<size val="143361536secs" start_sector="512"/>
