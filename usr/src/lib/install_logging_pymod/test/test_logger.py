@@ -22,12 +22,11 @@
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-import cStringIO
-import filecmp
 import solaris_install.logger
 import logging
 import os
 import random
+import tempfile
 import thread
 import time
 import unittest
@@ -38,10 +37,10 @@ import sys
 
 LOGGER = None
 INSTALL_LOGGER_NAME = 'InsLggr'
-TEST_RESULTS_FILE = '/var/tmp/install/tests/'
-
+TEST_LOG = 'test_log'
 
 #A Simple Socket Receiver for Testing
+
 
 def parse_msg(the_socket, cb_function):
     '''Parse the messages sent by the client.'''
@@ -104,7 +103,7 @@ class TestInstallEngine(object):
 
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls, default_log=None):
 
         if TestInstallEngine._instance is None:
             TestInstallEngine._instance = object.__new__(cls)
@@ -113,15 +112,15 @@ class TestInstallEngine(object):
             raise SingletonError("TestInstallEngine instance already exists",
                                  TestInstallEngine._instance)
 
-    def __init__(self):
-        self._init_logging()
+    def __init__(self, default_log=None):
+        self._init_logging(default_log)
 
-    def _init_logging(self):
+    def _init_logging(self, default_log):
         '''Initializes the logger'''
         logging.setLoggerClass(InstallLogger)
         global LOGGER
         InstallLogger.ENGINE = self
-        LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
+        LOGGER = InstallLogger.manager.getLogger(INSTALL_LOGGER_NAME, default_log)
         LOGGER.setLevel(logging.DEBUG)
 
         if not isinstance(LOGGER, InstallLogger):
@@ -306,6 +305,9 @@ class TestInstallLogger(unittest.TestCase):
     def test_transfer_log_destonly(self):
         '''Ensure that default log transfers to destination'''
         dest_dir = "/var/tmp/installLog/"
+        if not os.path.exists(dest_dir):
+            os.mkdir(dest_dir)
+
         base_name = os.path.basename(solaris_install.logger.DEFAULTLOG)
         test_filename = "/var/tmp/installLog/" + base_name
         self.test_logger.transfer_log(destination=dest_dir)
@@ -426,7 +428,8 @@ class TestProgressHandler(unittest.TestCase):
 
     def test_report_progress_fail(self):
         '''Tests that report_progress fails if value is invalid'''
-        self.failUnlessRaises(AssertionError, self.test_logger.report_progress, \
+        self.failUnlessRaises(AssertionError,
+            self.test_logger.report_progress, \
             'this is a progress message with percentage -1', progress=-1)
 
     def test_progress_reported_to_receiver(self):
@@ -459,6 +462,55 @@ class TestProgressHandler(unittest.TestCase):
             'this is a progress message with percentage 10', progress=10)
         testmsg = ["0.1 this is a progress message with percentage 10"]
         self.assertEqual(testmsg, self.list)
+
+
+class TestInstallLoggerAltDefaultLog(unittest.TestCase):
+    '''Tests the Functionality of the InstallLogger subclass
+       using a user provided default log that is passed to
+       the logger.getLogger method.
+    '''
+
+    def setUp(self):
+        logging.setLoggerClass(InstallLogger)
+        self.log_tmp_dir = tempfile.mkdtemp(dir="/var/tmp", prefix="logging_")
+        self.test_logger = \
+            InstallLogger.manager.getLogger('TestInstallLogger',
+            os.path.join(self.log_tmp_dir, TEST_LOG))
+
+    def tearDown(self):
+        try:
+            os.remove(self.test_logger.default_log)
+        except:
+            # File doesn't exist
+            pass
+
+        try:
+            os.rmdir(self.log_tmp_dir)
+        except:
+            # Directory does not exist
+            pass
+
+        InstallLogger.DEFAULTFILEHANDLER = None
+        logging.Logger.manager.loggerDict = {}
+        logging.setLoggerClass(logging.Logger)
+        self.test_logger.name = None
+        logging._defaultFormatter = logging.Formatter()
+
+    def test_defaultlog(self):
+        '''Tests that the default log is set correctly'''
+        log = self.test_logger.default_log
+        logfile = os.path.join(self.log_tmp_dir, TEST_LOG)
+        self.failIf(not log == logfile)
+
+    def test_create_defaultlog(self):
+        '''Ensure default_log is created'''
+        self.failIf(not os.path.exists(self.test_logger.default_log))
+
+    def test_log_to_alt_default_log(self):
+        '''Test logging to the alternate log'''
+        self.test_logger.debug('Test')
+        self.failIf(not os.path.getsize(self.test_logger.default_log) > 0)
+
 
 if __name__ == '__main__':
     unittest.main()

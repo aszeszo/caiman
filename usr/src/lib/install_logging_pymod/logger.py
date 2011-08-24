@@ -42,6 +42,45 @@ MAX_INT = 100
 INSTALL_LOGGER_NAME = "InstallationLogger"
 
 
+class InstallManager(logging.Manager):
+    '''A sub-class of the logging.Manager that exists for the purpose
+       of allowing applications to pass in a default log rather than
+       using the default log provided by the installLogger class.
+    '''
+    def getLogger(self, name, default_log=None):
+        """
+        This getLogger method allows the application to pass in a name,
+        a default log, and a logging level. These values are passed to
+        the InstallLogger to set up a custom default log file.
+
+        The placeholder code is an adjunct to the python logging module.
+        It is used to manage the logging hierarchy. Because this getLogger
+        method interfaces with the logging hierarchy, it is necessary to
+        comply with that structure.
+        """
+        logger_name = None
+        logging._acquireLock()
+        try:
+            if name in logging.Logger.manager.loggerDict:
+                logger_name = logging.Logger.manager.loggerDict[name]
+                if isinstance(logger_name, logging.PlaceHolder):
+                    placeholder_for_fixup = logger_name
+                    logger_name = \
+                        logging._loggerClass(name, default_log)
+                    logger_name.manager = self
+                    logging.Logger.manager.loggerDict[name] = logger_name
+                    self._fixupChildren(placeholder_for_fixup, logger_name)
+                    self._fixupParents(placeholder_for_fixup)
+            else:
+                logger_name = logging._loggerClass(name, default_log)
+                logger_name.manager = self
+                logging.Logger.manager.loggerDict[name] = logger_name
+                self._fixupParents(logger_name)
+        finally:
+            logging._releaseLock()
+        return logger_name
+
+
 class LogInitError(Exception):
     '''Raised if error occurs during initialization of logging'''
     pass
@@ -229,11 +268,17 @@ class InstallLogger(logging.Logger):
     INSTALL_FORMAT = '%(asctime)-25s %(name)-10s ' \
         '%(levelname)-10s %(message)-50s'
 
-    def __init__(self, name, level=None):
+    def __init__(self, name, default_log=None, level=None):
         # If logging level was not provided, choose the desired default one.
         # Use DEFAULTLOGLEVEL for top level logger, while default to
         # logging.NOTSET for sub-loggers. That instructs Python logging to
         # inherit logging level from parent.
+
+        if default_log is None:
+            self.default_log_file = DEFAULTLOG
+        else:
+            self.default_log_file = default_log
+
         if level is None:
             if "." in name:
                 level = logging.NOTSET
@@ -250,11 +295,12 @@ class InstallLogger(logging.Logger):
         logging.addLevelName(MAX_INT, 'MAX_INT')
         logging.addLevelName('MAX_INT', MAX_INT)
 
+        logdir = os.path.dirname(self.default_log_file)
         # Make sure DEFAULTLOG is usable by everyone, even if created by root.
         logdir = os.path.dirname(DEFAULTLOG)
         if not os.path.exists(logdir):
             try:
-                os.mkdir(logdir)
+                os.makedirs(logdir)
             except OSError as err:
                 if err.errno != errno.EEXIST:
                     raise
@@ -265,9 +311,9 @@ class InstallLogger(logging.Logger):
 
         # Create the default log
         if not InstallLogger.DEFAULTFILEHANDLER:
-            InstallLogger.DEFAULTFILEHANDLER = FileHandler(filename=DEFAULTLOG,
-                                                            mode='a')
-            InstallLogger.DEFAULTFILEHANDLER.setLevel(DEFAULTLOGLEVEL)
+            InstallLogger.DEFAULTFILEHANDLER = \
+                FileHandler(filename=self.default_log_file, mode='a')
+            InstallLogger.DEFAULTFILEHANDLER.setLevel(level)
             InstallLogger.DEFAULTFILEHANDLER.setFormatter(InstallFormatter())
             logging.Logger.addHandler(self, InstallLogger.DEFAULTFILEHANDLER)
             InstallLogger.DEFAULTFILEHANDLER.addFilter(self._prog_filter)
@@ -275,7 +321,7 @@ class InstallLogger(logging.Logger):
     @property
     def default_log(self):
         '''Returns the name of the default log '''
-        return DEFAULTLOG
+        return self.default_log_file
 
     @property
     def name(self):
@@ -326,3 +372,10 @@ class InstallLogger(logging.Logger):
 
         logging.shutdown()
         return close_log_list
+
+
+# Create an instance of the InstallManager. This is a sub-class of
+# the logging module manager. We want to use the same hierarchy
+# for this manager, so instantiate it with the root logger from
+# the logging module.
+InstallLogger.manager = InstallManager(logging.Logger.root)

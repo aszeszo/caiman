@@ -166,8 +166,8 @@ class InstallEngine(object):
         ''' thread used for execute_checkpoints() for the blocking case '''
         start = threading.Thread.run
 
-    def __new__(cls, loglevel=None, debug=False, dataset=None,
-                stop_on_error=True):
+    def __new__(cls, default_log=None, loglevel=None, debug=False,
+                dataset=None, stop_on_error=True):
 
         if InstallEngine._instance is None:
             return object.__new__(cls)
@@ -175,11 +175,16 @@ class InstallEngine(object):
             raise SingletonError("InstallEngine instance already exists",
                                  InstallEngine._instance)
 
-    def __init__(self, loglevel=None, debug=False, dataset=None,
-                 stop_on_error=True):
+    def __init__(self, default_log=None, loglevel=None, debug=False,
+                 dataset=None, stop_on_error=True):
         ''' Initializes the InstallEngine
 
         Input:
+            - default_log: Optional. Defaults to None.
+              The location of the default log for the application. If not
+              specified, the default log location is provided by the
+              logging service.
+
             - loglevel: Optional.  Defaults to None.
               Logging level to use for everything: application,
               engine and checkpoints.  This value is used while instantiating
@@ -214,7 +219,7 @@ class InstallEngine(object):
 
         # Logging must be instantiated before instantiating the DataObjectCache
         # because data object cache might need to make logging calls.
-        self._init_logging(loglevel)
+        self._init_logging(default_log, loglevel)
 
         # initialize the data object cache
         self.data_object_cache = DataObjectCache()
@@ -252,11 +257,12 @@ class InstallEngine(object):
             shutil.rmtree(self._tmp_cache_path, ignore_errors=True)
         self._tmp_cache_path = None
 
-    def _init_logging(self, loglevel):
+    def _init_logging(self, default_log, loglevel):
         ''' Initialize logging and set the loglevel if provided '''
         logging.setLoggerClass(InstallLogger)
         global LOGGER
-        LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
+        LOGGER = InstallLogger.manager.getLogger(INSTALL_LOGGER_NAME,
+                                                 default_log)
         InstallLogger.ENGINE = self
         if loglevel is not None:
             LOGGER.setLevel(loglevel)
@@ -812,8 +818,8 @@ class InstallEngine(object):
                 cp_data = self.get_cp_data(checkpoint.name)
 
                 # Take a snapshot of the state before executing the checkpoint.
-                # This snapshot, which is associated with the checkpoint's 
-                # name, is for resuming at the named checkpoint.  
+                # This snapshot, which is associated with the checkpoint's
+                # name, is for resuming at the named checkpoint.
                 if status is InstallEngine.EXEC_SUCCESS:
                     self.snapshot(cp_data=cp_data)
 
@@ -855,7 +861,7 @@ class InstallEngine(object):
                 self.__current_completed += cp_data.prog_est_ratio * 100
 
                 # Take a snapshot of the state after executing the checkpoint.
-                # if it is successful.  
+                # if it is successful.
                 if status is InstallEngine.EXEC_SUCCESS:
                     self.snapshot(self._get_completed_name(cp_data.name))
 
@@ -903,7 +909,7 @@ class InstallEngine(object):
 
     def _load_checkpoints(self, checkpoint_data_list):
         '''Load checkpoint modules to get the executable checkpoints
- 
+
            Input:
                checkpoint_data_list: list of checkpoints to be executed.  This
                                      is a list of CheckpointInfo objects.
@@ -911,7 +917,7 @@ class InstallEngine(object):
                * list of instantiated checkpoint objects, if no instantiation
                  failure occurred.
                * name of the checkpoint that failed to instantiate.  The
-                 exact traceback from the failure is registered with the 
+                 exact traceback from the failure is registered with the
                  errsvc.
 
            Raises:
@@ -991,7 +997,7 @@ class InstallEngine(object):
             List of checkpoints to be executed.
 
         Raises:
-            UsageError: There are unexecuted checkpoints before the 
+            UsageError: There are unexecuted checkpoints before the
                         checkpoint specified to start execution from.
             UnknownChkptError: Name specified for start_from and pause_before
                                is not valid.
@@ -1028,7 +1034,7 @@ class InstallEngine(object):
                 else:
                     raise UsageError("Specified pause_before checkpoint, %s, "
                                      "is registered after specified "
-                                     "start_from checkpoint, %s" % 
+                                     "start_from checkpoint, %s" %
                                      (pause_before, start_from))
 
             if found_start:
