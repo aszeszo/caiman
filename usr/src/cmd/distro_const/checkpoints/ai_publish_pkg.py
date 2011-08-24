@@ -45,7 +45,7 @@ class AIPublishPackages(Checkpoint):
     """ class to publish the package image area into a repository
     """
 
-    SVC_NAME_ATTR = "com.oracle.install.service_name"
+    SVC_NAME_ATTR = "com.oracle.install.service-name"
     DEFAULT_ARG = {"pkg_name": None, "pkg_repo": None, "prefix": None}
 
     def __init__(self, name, arg=DEFAULT_ARG):
@@ -140,12 +140,19 @@ class AIPublishPackages(Checkpoint):
         generate = run(cmd)
         manifest = [generate.stdout]
 
-        manifest.append("depend fmri=pkg:/system/core-os type=exclude\n")
+        manifest.append('set name=pkg.summary '
+                        'value="Automated Installation boot image"\n')
+        manifest.append("set name=org.opensolaris.consolidation "
+                        "value=install\n")
+        manifest.append('set name=info.classification '
+                        'value="org.opensolaris.category.2008:'
+                        'System/Administration and Configuration"\n')
         arch = platform.processor()
         manifest.append("set name=variant.arch value=%s\n" % arch)
         manifest.append("set name=%s value=%s variant.arch=%s\n" %
                         (self.SVC_NAME_ATTR, self.service_name, arch))
         manifest.append("set name=pkg.fmri value=%s\n" % self.pkg_name)
+        manifest.append("depend fmri=pkg:/system/core-os type=exclude\n")
         manifest = "".join(manifest)
 
         self.logger.info("Publishing %s", self.pkg_name)

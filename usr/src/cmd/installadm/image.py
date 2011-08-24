@@ -195,7 +195,7 @@ class InstalladmPkgImage(InstalladmImage):
     _PKG_CLIENT_NAME = "installadm"
     DEFAULT_PKG_NAME = 'install-image/solaris-auto-install'
     ARCH_VARIANT = u'variant.arch'
-    SVC_NAME_ATTR = 'com.oracle.install.service_name'
+    SVC_NAME_ATTR = 'com.oracle.install.service-name'
     NO_ZLIB = _("\nError: The pkg image is not an autoinstall image.\n")
     
     def __init__(self, image_path, pkg_image=None):
