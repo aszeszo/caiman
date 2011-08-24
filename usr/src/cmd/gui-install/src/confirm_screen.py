@@ -42,7 +42,7 @@ from solaris_install.gui_install.gui_install_common import \
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target import Target
-from solaris_install.target.physical import Disk
+from solaris_install.target.physical import Disk, Partition
 from solaris_install.target.size import Size
 
 
@@ -176,10 +176,19 @@ class ConfirmScreen(BaseScreen):
         self.logger.info("-- Disk --")
         first_disk = None
         for disk in disks:
-            text_str = _("%.1f GB disk (%s)") % \
-                 (disk.disk_prop.dev_size.get(units=Size.gb_units),
-                  disk.ctd)
-            warn_str = _("This disk will be erased")
+            # The Disk screen will have ensured there is exactly one
+            # Solaris2 partition and that Disk and Partition sizes are valid
+            parts = disk.get_children(class_type=Partition)
+            solaris_parts = [part for part in parts if part.is_solaris]
+
+            # There is no definitive way to detect whether "Use the whole
+            # disk" or "Partition the disk" was selected, so we will display
+            # a message about the Solaris2 partition details for each disk.
+            text_str = _("%.1f GB partition on %.1f GB disk (%s)") % \
+                 (solaris_parts[0].size.get(units=Size.gb_units),
+                 disk.disk_prop.dev_size.get(units=Size.gb_units),
+                 disk.ctd)
+            warn_str = _("This partition will be erased")
             adisk = add_detail_line(self.diskvbox, text_str, warning=warn_str)
             if first_disk == None:
                 first_disk = adisk
