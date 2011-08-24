@@ -28,7 +28,7 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-SUBDIRS=	svc config checkpoints manifest profile
+SUBDIRS=	svc config checkpoints manifest profile test
 
 PROGS=		ai_get_manifest ai_sd auto-install
 

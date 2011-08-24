@@ -365,10 +365,11 @@ class InstallLogger(logging.Logger):
         close_log_list = []
         # Collect the location of log files
         for val in logging.Logger.manager.loggerDict.values():
-            for handler in val.handlers:
-                if isinstance(handler, FileHandler) and \
-                    handler.baseFilename not in close_log_list:
-                    close_log_list.append(handler.baseFilename)
+            if hasattr(val, 'handlers'):
+                for handler in val.handlers:
+                    if isinstance(handler, FileHandler) and \
+                        handler.baseFilename not in close_log_list:
+                        close_log_list.append(handler.baseFilename)
 
         logging.shutdown()
         return close_log_list
