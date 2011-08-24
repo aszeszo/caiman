@@ -181,10 +181,11 @@ class CreateISO(Checkpoint):
         self.partial_dist_iso = os.path.join(self.media_dir,
             self.partial_distro_name) + ".iso"
 
-        # remove any leftover .iso file first
-        if os.path.exists(self.partial_dist_iso):
+        # If the symlink is broken, exists() will return False.  We need to
+        # also check for islink()
+        if os.path.exists(self.partial_dist_iso) or \
+           os.path.islink(self.partial_dist_iso):
             os.unlink(self.partial_dist_iso)
-
         os.symlink(self.distro_name + ".iso", self.partial_dist_iso)
 
     def execute(self, dry_run=False):
