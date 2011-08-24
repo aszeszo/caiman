@@ -253,8 +253,14 @@ if [ "${ARCH}" = "sparc" ]; then
 				INSTALL_FLAG="true"
 				shift
 				;;
-			prompt)
-				PROMPT_FLAG="true"
+			aimanifest*)
+				case $(print $1 | $CUT -f 1 -d=) in
+					aimanifest)
+						AI_MANIFEST_LOCATION=$(print $1 | $CUT -f 2- -d=)
+						;;
+					*)
+						;;
+					esac
 				shift
 				;;
 			install_debug*)
@@ -287,22 +293,10 @@ if [ "${ARCH}" = "sparc" ]; then
 		NETBOOT="false"
 	fi
 else
-	INSTALL_FLAG=$($PRTCONF -v /devices | \
-		$SED -n "/'install'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\')
-	INSTALL_DEBUG_MODE=$($PRTCONF -v /devices | \
-		$SED -n "/'install_debug'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d \')
-	AI_MANIFEST_LOCATION=$($PRTCONF -v | \
-		$SED -n "/'aimanifest'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\')
-	INSTALL_MEDIA=$($PRTCONF -v /devices | \
-		$SED -n "/'install_media'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\')
-
-	#
-	# Test to see if the manifest location should be
-	# obtained at the command prompt
-	#
-	if [ "$AI_MANIFEST_LOCATION" = "prompt" ]; then
-		PROMPT_FLAG="true"
-	fi
+	INSTALL_FLAG=$($DEVPROP -s install)
+	INSTALL_DEBUG_MODE=$($DEVPROP -s install_debug)
+	AI_MANIFEST_LOCATION=$($DEVPROP -s aimanifest)
+	INSTALL_MEDIA=$($DEVPROP -s install_media)
 
 	#
 	# We check for the existence of the install_media boot property
@@ -316,7 +310,6 @@ else
 		NETBOOT="false"
 	fi
 fi
-
 
 # Set property on auto-installer service to let it know debug mode
 # is requested.
@@ -343,7 +336,7 @@ fi
 # If the "prompt" bootarg is specified, prompt for the location of
 # the manifest
 #
-if [ "$PROMPT_FLAG" = "true" ]; then
+if [ "$AI_MANIFEST_LOCATION" = "prompt" ]; then
 	do_get_manifest </dev/console >/dev/console 2>&1
 #
 # Else no "prompt" bootarg, and we're booted from media; use the
