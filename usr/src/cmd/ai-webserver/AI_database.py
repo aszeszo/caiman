@@ -309,7 +309,10 @@ def numInstances(manifest, queue):
                       'name = "' + manifest + '"')
     queue.put(query)
     query.waitAns()
-    return(query.getResponse()[0][0])
+    rsp = query.getResponse()
+    if rsp:
+        return rsp[0][0]
+    return 0
 
 
 def numManifests(queue):
@@ -333,7 +336,10 @@ def numNames(queue, dbtable):
     query = DBrequest('SELECT COUNT(DISTINCT(name)) FROM ' + dbtable)
     queue.put(query)
     query.waitAns()
-    return(query.getResponse()[0][0])
+    rsp = query.getResponse()
+    if rsp:
+        return rsp[0][0]
+    return 0
 
 
 def getManNames(queue):
@@ -356,7 +362,9 @@ def getNames(queue, dbtable):
                           ' LIMIT 1 OFFSET %s' % i)
         queue.put(query)
         query.waitAns()
-        yield(query.getResponse()[0][0])
+        rsp = query.getResponse()
+        if rsp:   # make sure it wasn't just deleted
+            yield rsp[0][0]
 
 
 def tableExists(queue, dbtable):
@@ -415,7 +423,10 @@ def getSpecificCriteria(queue, criteria, criteria2=None,
     query = DBrequest(query_str)
     queue.put(query)
     query.waitAns()
-    return(query.getResponse())
+    rsp = query.getResponse()
+    if rsp:
+        return rsp
+    return []
 
 
 def getCriteria(queue, table=MANIFESTS_TABLE, onlyUsed=True, strip=True):
@@ -545,7 +556,9 @@ def getTableCriteria(name, instance, queue, table, humanOutput=False,
         query = DBrequest(query_str)
         queue.put(query)
         query.waitAns()
-        return query.getResponse()[0]
+        rsp = query.getResponse()
+        if rsp: # make sure it wasn't just deleted
+            return rsp[0]
     return None
 
 
