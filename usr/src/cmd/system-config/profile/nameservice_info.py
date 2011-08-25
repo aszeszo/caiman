@@ -82,10 +82,10 @@ class NameServiceInfo(SMFConfig):
 
     def __repr__(self):
         return '\n'.join(["NS %s:" % self.nameservice,
-                          "Domain: %s" % self.domain,
                           "DNS? %s" % self.dns,
                           "DNSserv: %s" % self.dns_server,
                           "DNSsearch: %s" % self.dns_search,
+                          "Domain: %s" % self.domain,
                           "LDAPprofname: %s" % self.ldap_profile,
                           "LDAPprofip: %s" % self.ldap_ip,
                           "LDAP search base: %s" % self.ldap_search_base,
@@ -125,9 +125,6 @@ class NameServiceInfo(SMFConfig):
                                                    proptype)
                     nameserver.add_value_list(propvals=ilist,
                                               proptype=proptype)
-            # configure DNS domain
-            if self.domain:
-                dns_props.setprop("propval", "domain", "astring", self.domain)
             if self.dns_search:
                 # filter empty values from list
                 ilist = [val for val in self.dns_search if val]

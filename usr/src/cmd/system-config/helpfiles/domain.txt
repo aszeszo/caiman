@@ -1,6 +1,6 @@
 DOMAIN NAME
 
-Identifies the system as part of a name service domain.
+Identifies the system as part of a name service domain for NIS or LDAP name servers.
 
 GUIDELINES
 

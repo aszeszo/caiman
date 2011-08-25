@@ -38,6 +38,7 @@ from solaris_install.sysconfig.nameservice import NameService
 from solaris_install.sysconfig.profile.nameservice_info import NameServiceInfo
 from solaris_install.sysconfig.profile.network_info import NetworkInfo
 from solaris_install.sysconfig.profile.user_info import UserInfo
+from solaris_install.sysconfig.summary import nameservice_summary
 from solaris_install.target.libdiskmgt import const as libdiskmgt_const
 from solaris_install.target.size import Size
 from solaris_install.text_install import _, RELEASE, TUI_HELP, LOCALIZED_GB
@@ -162,46 +163,10 @@ class SummaryScreen(BaseScreen):
                 network_summary.append(_("    Router: %s") % nic.gateway)
         return network_summary
     
-    def _get_nameservice(self, ns_summary):
+    def _get_nameservice(self, summary):
         ''' Find all name services information and append to summary '''
-        if not self.sysconfig.nameservice:
-            return
-        nameservice = self.sysconfig.nameservice
-        if not nameservice.dns and not nameservice.nameservice:
-            return
-        if nameservice.domain:
-            ns_summary.append(_("Domain: %s") % nameservice.domain)
-        # fetch localized name for name service
-        if nameservice.dns:
-            ns_summary.append(_("Name service: %s") %
-                              NameService.USER_CHOICE_DNS)
-            # strip empty list entries
-            dnslist = [ln for ln in nameservice.dns_server if ln]
-            ns_summary.append(_("DNS servers: ") + " ".join(dnslist))
-            dnslist = [ln for ln in nameservice.dns_search if ln]
-            ns_summary.append(_("DNS Domain search list: ") +
-                              " ".join(dnslist))
-        if nameservice.nameservice == 'LDAP':
-            ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
-            ns_summary.append(_("Name service: %s") %
-                              NameService.USER_CHOICE_LIST[ns_idx])
-            ns_summary.append(_("LDAP profile: ") + nameservice.ldap_profile)
-            ns_summary.append(_("LDAP server's IP: ") + nameservice.ldap_ip)
-            ns_summary.append(_("LDAP search base: ") + 
-                              nameservice.ldap_search_base)
-            if nameservice.ldap_proxy_bind == \
-                    NameServiceInfo.LDAP_CHOICE_PROXY_BIND:
-                ns_summary.append(_("LDAP proxy bind distinguished name: ") +
-                                  nameservice.ldap_pb_dn)
-                ns_summary.append(_("LDAP proxy bind password: [concealed]"))
-        elif nameservice.nameservice == 'NIS':
-            ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
-            ns_summary.append(_("Name service: %s") %
-                              NameService.USER_CHOICE_LIST[ns_idx])
-            if nameservice.nis_auto == NameServiceInfo.NIS_CHOICE_AUTO:
-                ns_summary.append(_("NIS server: broadcast"))
-            elif nameservice.nis_ip:
-                ns_summary.append(_("NIS server's IP: ") + nameservice.nis_ip)
+        # append lines of name service info to summary
+        nameservice_summary(self.sysconfig.nameservice, summary)
 
     def get_users(self):
         '''Build a summary of the user information, and return it as a list

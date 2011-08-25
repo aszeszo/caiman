@@ -55,8 +55,8 @@ MAXDNLEN = 256      # maximum allowed length of a distinguished name
 
 # pre-compile patterns used in incremental validation
 NO_WHITE_NO_SPECIAL_PATTERN = re.compile(r'^[A-Z0-9\-_]+$')
-INCREMENTAL_DOMAIN_LABEL_PATTERN = re.compile(r'^[A-Z0-9\-]{0,63}$')
-DOMAIN_LABEL_PATTERN = re.compile(r'^[A-Z0-9\-]{1,63}$')
+INCREMENTAL_DOMAIN_LABEL_PATTERN = re.compile(r'^[A-Z0-9\-_]{0,63}$')
+DOMAIN_LABEL_PATTERN = re.compile(r'^[A-Z0-9\-_]{1,63}$')
 
 
 class NameService(BaseScreen):
@@ -115,7 +115,7 @@ class NameService(BaseScreen):
                 LOGGER.info(nic)
                 # if values were learned from the NIC, offer those as defaults
                 if nic.domain:
-                    sc_profile.nameservice.domain = nic.domain
+                    sc_profile.nameservice.dns_search.append(nic.domain)
                 if nic.dns_address:
                     sc_profile.nameservice.dns_server = nic.dns_address
         self.nameservice = sc_profile.nameservice
@@ -227,7 +227,7 @@ class NSDomain(NameService):
     def __init__(self, main_win, screen=None):
         super(NSDomain, self).__init__(main_win)
         self.intro = \
-                _("Specify the domain where this system resides. "
+                _("Specify the domain for the NIS or LDAP name server. "
                   "Use the domain name's exact capitalization and "
                   "punctuation.")
         self.title = _("Domain Name:")
@@ -237,7 +237,7 @@ class NSDomain(NameService):
         super(NSDomain, self)._show()
         if not _has_name_service():
             raise SkipException
-        if not self.nameservice.dns and not self.nameservice.nameservice:
+        if not self.nameservice.nameservice:
             raise SkipException
         y_loc = self._paint_opening()
         cols = min(MAXDOMAINLEN + 1,
@@ -379,11 +379,7 @@ class NSDNSSearch(NameService):
             area = WindowArea(1, cols, y_loc,
                               textwidth(self.title) + INDENT + 1)
             y_loc += 1
-            if i == 0 and self.nameservice.domain:
-                # default in domain user already entered
-                text = self.nameservice.domain
-                find_last_nonblank = 0
-            elif i < len(self.nameservice.dns_search) and \
+            if i < len(self.nameservice.dns_search) and \
                     self.nameservice.dns_search[i] is not None:
                 text = self.nameservice.dns_search[i]
             else:

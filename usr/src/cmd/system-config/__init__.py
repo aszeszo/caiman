@@ -295,10 +295,10 @@ def get_screens_from_groups(main_win):
 def _append_nameservice_screens(result, main_win):
     ''' Initialize and append all name service screens '''
     result.append(NSDNSChooser(main_win))
-    result.append(NSAltChooser(main_win))
-    result.append(NSDomain(main_win))
     result.append(NSDNSServer(main_win))
     result.append(NSDNSSearch(main_win))
+    result.append(NSAltChooser(main_win))
+    result.append(NSDomain(main_win))
     result.append(NSLDAPProfile(main_win))
     result.append(NSLDAPProxyBindChooser(main_win))
     result.append(NSLDAPProxyBindInfo(main_win))

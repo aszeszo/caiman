@@ -87,7 +87,7 @@ class TestNS(unittest.TestCase):
 
     def test_validate_ns_validate_method(self):
         ''' Test SCI tool name service validation method - all screens '''
-        self.ns_domain.domain = MockField('dom.ain')
+        self.ns_domain.domain = MockField('dom.ai_n')
         self.assertEqual(self.ns_domain.validate(), None)
         self.ns_domain.domain = MockField('dom ain')
         self.assertRaises(UIMessage, self.ns_domain.validate)
@@ -160,6 +160,8 @@ class TestNS(unittest.TestCase):
         self.assertEqual(nsv.validate_domain('ddd.ooo.mmm.aaa.iii.n'), None)
         # incremental domain
         self.assertEqual(nsv.incremental_validate_domain(MockField('a')),
+                         None)
+        self.assertEqual(nsv.incremental_validate_domain(MockField('_')),
                          None)
         self.assertRaises(UIMessage, nsv.incremental_validate_domain,
                           MockField(' '))

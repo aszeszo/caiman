@@ -200,42 +200,7 @@ class SummaryScreen(BaseScreen):
 
     def _get_nameservice(self, summary):
         ''' Find all name services information and append to summary '''
-        if not self.sysconfig.nameservice:
-            return
-        nameservice = self.sysconfig.nameservice
-        if not nameservice.dns and not nameservice.nameservice:
-            return
-        if nameservice.domain:
-            summary.append(_("Domain: %s") % nameservice.domain)
-        # fetch localized name for name service
-        if nameservice.dns:
-            summary.append(_("Name service: %s") % NameService.USER_CHOICE_DNS)
-            # strip empty list entries
-            dnslist = [ln for ln in nameservice.dns_server if ln]
-            summary.append(_("DNS servers: ") + " ".join(dnslist))
-            dnslist = [ln for ln in nameservice.dns_search if ln]
-            summary.append(_("DNS Domain search list: ") + " ".join(dnslist))
-        if nameservice.nameservice == 'LDAP':
-            ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
-            summary.append(_("Name service: %s") %
-                           NameService.USER_CHOICE_LIST[ns_idx])
-            summary.append(_("LDAP profile: ") + nameservice.ldap_profile)
-            summary.append(_("LDAP server's IP: ") + nameservice.ldap_ip)
-            summary.append(_("LDAP search base: ") + 
-                           nameservice.ldap_search_base)
-            if nameservice.ldap_proxy_bind == \
-                    NameServiceInfo.LDAP_CHOICE_PROXY_BIND:
-                summary.append(_("LDAP proxy bind distinguished name: ") +
-                               nameservice.ldap_pb_dn)
-                summary.append(_("LDAP proxy bind password: [concealed]"))
-        elif nameservice.nameservice == 'NIS':
-            ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
-            summary.append(_("Name service: %s") %
-                           NameService.USER_CHOICE_LIST[ns_idx])
-            if nameservice.nis_auto == NameServiceInfo.NIS_CHOICE_AUTO:
-                summary.append(_("NIS server: broadcast"))
-            elif nameservice.nis_ip:
-                summary.append(_("NIS server's IP: ") + nameservice.nis_ip)
+        nameservice_summary(self.sysconfig.nameservice, summary)
 
     def get_users(self):
         '''Build a summary of the user information, and return it as a list
@@ -257,3 +222,58 @@ class SummaryScreen(BaseScreen):
         '''Return a string summary of the timezone selection'''
         timezone = self.sysconfig.system.tz_timezone
         return _("Time Zone: %s") % timezone
+
+
+def nameservice_summary(nameservice, summary):
+    '''sppend name service summary information
+    Args: nameservice - name service info
+        summary - list of summary lines to append to
+    '''
+    if not nameservice:
+        return
+    if not nameservice.dns and not nameservice.nameservice:
+        return
+    # fetch localized name for name service
+    if nameservice.dns:
+        summary.append(_("Name service: %s") % NameService.USER_CHOICE_DNS)
+        # strip empty list entries
+        dnslist = [ln for ln in nameservice.dns_server if ln]
+        summary.append(_("DNS servers: ") + " ".join(dnslist))
+        dnslist = [ln for ln in nameservice.dns_search if ln]
+        summary.append(_("DNS Domain search list: ") + " ".join(dnslist))
+    if nameservice.nameservice == 'LDAP':
+        ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
+        summary.append(_("Name service: %s") %
+                       NameService.USER_CHOICE_LIST[ns_idx])
+        summary.append(_("Domain: %s") % nameservice.domain)
+        summary.append(_("LDAP profile: ") + nameservice.ldap_profile)
+        summary.append(_("LDAP server's IP: ") + nameservice.ldap_ip)
+        summary.append(_("LDAP search base: ") + 
+                       nameservice.ldap_search_base)
+        if nameservice.ldap_proxy_bind == \
+                NameServiceInfo.LDAP_CHOICE_PROXY_BIND:
+            summary.append(_("LDAP proxy bind distinguished name: ") +
+                           nameservice.ldap_pb_dn)
+            summary.append(_("LDAP proxy bind password: [concealed]"))
+    elif nameservice.nameservice == 'NIS':
+        ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
+        summary.append(_("Name service: %s") %
+                       NameService.USER_CHOICE_LIST[ns_idx])
+        summary.append(_("Domain: %s") % nameservice.domain)
+        if nameservice.nis_auto == NameServiceInfo.NIS_CHOICE_AUTO:
+            summary.append(_("NIS server: broadcast"))
+        elif nameservice.nis_ip:
+            summary.append(_("NIS server's IP: ") + nameservice.nis_ip)
+        # offer user help for modifying name service sources
+        if nameservice.dns:
+            summary.append(_("Note: DNS will be configured to resolve "
+                             "host and IP node names."))
+            summary.append(_("This setting can be modified upon "
+                             "rebooting. For example:"))
+            summary.append("# svccfg -s svc:/system/name-service/switch")
+            summary.append("svc:/system/name-service/switch> "
+                           "setprop config/host=\"files nis dns\"")
+            summary.append("svc:/system/name-service/switch> quit")
+            summary.append("# svcadm refresh svc:/system/name-service/switch")
+            summary.append(_("See nsswitch.conf(4), svccfg(1M) and "
+                             "nscfg(1M)."))

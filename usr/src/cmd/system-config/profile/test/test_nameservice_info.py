@@ -71,7 +71,6 @@ SAMPLE_DNS_XML = '''<root>
           <value_node value="1.1.1.1"/>
         </net_address_list>
       </property>
-      <propval type="astring" name="domain" value="my.domain.com"/>
       <property type="astring" name="search">
         <astring_list>
           <value_node value="my.domain.com"/>
