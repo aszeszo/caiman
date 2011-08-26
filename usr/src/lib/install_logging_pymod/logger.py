@@ -70,7 +70,7 @@ class InstallManager(logging.Manager):
                     logger_name.manager = self
                     logging.Logger.manager.loggerDict[name] = logger_name
                     self._fixupChildren(placeholder_for_fixup, logger_name)
-                    self._fixupParents(placeholder_for_fixup)
+                    self._fixupParents(logger_name)
             else:
                 logger_name = logging._loggerClass(name, default_log)
                 logger_name.manager = self
