@@ -325,7 +325,9 @@ class InstalladmPkgImage(InstalladmImage):
                 manifest = self.pkg_image.get_manifest(pfmri)
                 for action in manifest.gen_actions_by_type("set"):
                     for attrval in action.attrlist("name"):
-                        if attrval == self.SVC_NAME_ATTR:
+                        if (attrval == self.SVC_NAME_ATTR and
+                            action.attrs.get("variant.arch", self.arch) ==
+                            self.arch):
                             basename = action.attrs["value"].strip()
                              
         except pkg.client.api_errors.ApiException:
