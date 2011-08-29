@@ -59,7 +59,8 @@ if [ $? -ne 0 -o -z "$usr_lofi_dev" ]; then
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
-$MOUNT -F hsfs -o ro ${usr_lofi_dev} /usr
+# Use an overlay mount to work around CR 7029145.
+$MOUNT -F hsfs -o ro -O ${usr_lofi_dev} /usr
 if [ $? -ne 0 ]; then
 	echo "Unable to mount /usr filesystem" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
