@@ -213,24 +213,24 @@ CONSOLE = "/dev/console"
 
 ALT_ROOT_ENV_VAR = "_UNCONFIG_ALT_ROOT"
 
-# DOC label for SysConfig options 
+# DOC label for SysConfig options
 SC_OPTIONS_LABEL = "sc_options"
 
 
 class SysConfigOptions(DataObject):
     '''System Configuration options'''
-    
+
     def __init__(self, options=None):
         super(SysConfigOptions, self).__init__(SC_OPTIONS_LABEL)
         self.options = options
-    
+
     def to_xml(self):
         return None
-    
+
     @classmethod
     def can_handle(cls, element):
         return False
-    
+
     @classmethod
     def from_xml(cls, element):
         return None
@@ -251,14 +251,14 @@ def get_all_screens(main_win):
     result.append(TimeZone(main_win))
     result.append(DateTimeScreen(main_win))
     result.append(UserScreen(main_win))
-      
+
     return result
 
 
 def get_screens_from_groups(main_win):
     '''Initializes subset of configuration screens matching list of specified
     configuration groups'''
-    
+
     result = []
 
     # hostname
@@ -460,7 +460,7 @@ def create_config_profiles(sub_cmd, options):
     if options.destructive:
         fhdl.writelines("<propval name=\"destructive_unconfig\" "
                         "type=\"boolean\" value=\"true\"/>\n")
-    else:   
+    else:
         fhdl.writelines("<propval name=\"destructive_unconfig\" "
                         "type=\"boolean\" value=\"false\"/>\n")
 
@@ -662,7 +662,7 @@ def parse_unconfig_args(parser, args):
     options.alt_root = os.getenv(ALT_ROOT_ENV_VAR)
 
     #
-    # unconfiguration/reconfiguration is not permitted in ROZR non-global 
+    # unconfiguration/reconfiguration is not permitted in ROZR non-global
     # zone unless such zone is booted in writable mode.
     #
     rozr_test_binary = '/sbin/sh'
@@ -829,6 +829,30 @@ def parse_unconfig_args(parser, args):
     #
     if sub_cmd[0] == CONFIGURE and not options.profile \
         and not options.alt_root:
+
+        # For now, sysconfig should halt when the user runs sysconfig configure
+        # after running sysconfig unconfigure. When the functionality that
+        # enables the unconfiguration of individual groupings is implemented,
+        # this may need to be revisited. Currently, system is the only group
+        # that can be configured/unconfigured.
+        cmd = [SVCPROP, "-c", "-p", "sysconfig/unconfigure",
+               "milestone/unconfig"]
+        p_ret = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.DEVNULL,
+                             check_result=Popen.ANY)
+
+        unconfigure_has_occurred = p_ret.stdout.strip()
+
+        cmd = [SVCPROP, "-c", "-p", "sysconfig/configure", "milestone/config"]
+        p_ret = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.DEVNULL,
+                             check_result=Popen.ANY)
+
+        config_has_occurred = p_ret.stdout.strip()
+
+        if unconfigure_has_occurred == 'true' \
+            and config_has_occurred == 'false':
+            print _("Error: system has been unconfigured. Reboot to invoke "
+               "the SCI Tool and configure the system.")
+            sys.exit(SU_FATAL_ERR)
 
         print _("Interactive configuration requested.")
         print _("System Configuration Interactive (SCI) tool will be" +
@@ -1020,7 +1044,7 @@ def _prepare_engine(options):
     LOGGER = logger
 
     terminalui.init_logging(INSTALL_LOGGER_NAME)
-    
+
     # if no directory in output profile path
     if not os.path.dirname(options.profile):
         # explicitly provide default directory for manifest writer

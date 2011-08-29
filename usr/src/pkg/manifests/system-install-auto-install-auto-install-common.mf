@@ -170,8 +170,6 @@ file path=usr/share/auto_install/derived_manifest_test_env.sh group=sys \
 file path=usr/share/auto_install/manifest/ai_manifest.xml group=sys mode=0444
 file path=usr/share/auto_install/manifest/default.xml group=sys mode=0444
 file path=usr/share/auto_install/manifest/zone_default.xml group=sys mode=0444
-file path=usr/share/auto_install/sc_profiles/enable_sci.xml group=sys \
-    mode=0444
 file path=usr/share/auto_install/sc_profiles/sc_sample.xml group=sys mode=0444
 file path=usr/share/auto_install/sc_profiles/static_network.xml group=sys \
     mode=0444
