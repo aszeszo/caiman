@@ -290,7 +290,7 @@ class SystemInfo(data_object.DataObject):
         #  svc:/system/environment:init
         #
         # configures:
-        #  locale - environment/LC_ALL smf property
+        #  locale - environment/LANG smf property
         #
         if self.locale is not None:
             smf_svc_env = SMFConfig('system/environment')
@@ -301,7 +301,7 @@ class SystemInfo(data_object.DataObject):
             smf_pg_env = SMFPropertyGroup('environment')
             smf_svc_env_init.insert_children(smf_pg_env)
 
-            smf_pg_env.add_props(LC_ALL=self.locale)
+            smf_pg_env.add_props(LANG=self.locale)
 
         #
         # fmri:

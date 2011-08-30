@@ -77,7 +77,7 @@ Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
     <service name='system/environment' version='1'>
       <instance name='default' enabled='true'>
         <property_group name='environment'>
-          <propval name='LC_ALL' value='en_US.UTF-8'/>
+          <propval name='LANG' value='en_US.UTF-8'/>
         </property_group>
       </instance>
     </service>

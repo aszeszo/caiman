@@ -92,7 +92,7 @@ See installadm(1M) for usage of 'create-profile' subcommand.
     <service name='system/environment' version='1'>
       <instance name='default' enabled='true'>
         <property_group name='environment'>
-          <propval name='LC_ALL' value='en_US.UTF-8'/>
+          <propval name='LANG' value='en_US.UTF-8'/>
         </property_group>
       </instance>
     </service>

@@ -71,13 +71,13 @@ function readintval
 	return 0
 }
 
-# Configure locale via environment/LC_ALL property
+# Configure locale via environment/LANG property
 # of environment:init smf service.
 function set_locale
 {
 	typeset lang="$1"
 
-	svccfg -s environment:init setprop environment/LC_ALL = "$lang"
+	svccfg -s environment:init setprop environment/LANG = "$lang"
 	# Remove /etc/default/init file. It's re-generated
 	# during refresh of environment:init smf service.
 	rm /etc/default/init
@@ -223,7 +223,7 @@ else
 	printf "Default selected: %s\n" "${languages.list[choice-1].name}"
 fi
 
-# let environment:init smf service populate LC_ALL environment variable
+# let environment:init smf service populate LANG environment variable
 # with the selected language
 set_locale "${languages.list[choice-1].lang}"
 
