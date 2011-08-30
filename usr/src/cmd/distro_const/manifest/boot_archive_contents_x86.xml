@@ -28,7 +28,6 @@
   <name>usr/bin/nawk</name>
   <name>usr/bin/mkdir</name>
   <name>usr/bin/cp</name>
-  <name>usr/bin/sed</name>
   <name>usr/bin/sort</name>
   <name>usr/bin/svcs</name>
   <name>usr/bin/amd64/sort</name>
@@ -154,7 +153,6 @@
   <name>usr/lib/fs/ufs/mount</name>
   <name>usr/lib/libfstyp.so.1</name>
   <name>usr/lib/platexec</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_audio_link.so</name>
   <name>usr/lib/devfsadm/linkmod/SUNW_cfg_link.so</name>
   <name>usr/lib/devfsadm/linkmod/SUNW_disk_link.so</name>
   <name>usr/lib/devfsadm/linkmod/SUNW_fssnap_link.so</name>
