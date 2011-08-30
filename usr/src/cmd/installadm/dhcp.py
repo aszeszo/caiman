@@ -644,7 +644,16 @@ class DHCPServer(object):
             raise DHCPServerError(_("init_config failed, file already exists"))
 
         domainname = _get_domain()
-        nameservers = ', '.join([ip for ip in _get_name_servers()])
+        nameservers = _get_name_servers()
+        if nameservers is not None:
+            nameservers = ', '.join([ip for ip in nameservers])
+
+        if domainname is None or nameservers is None:
+            print >> sys.stderr, cw(_("\nName services are not configured for "
+                                      "local DHCP server. Manual "
+                                      "configuration will be required, please "
+                                      "see dhcpd(8) for further "
+                                      "information.\n"))
 
         new_stanza = _DHCPConfigBase(domainname, nameservers)
         self._add_stanza_to_config_file(new_stanza)
@@ -1219,21 +1228,27 @@ def _get_domain():
     Returns the first domain name listed in the /etc/resolv.conf file.
     Note this can be labeled either 'search' or 'domain'.
     '''
-    lines = list()
-    with open(RESOLV, "r") as resolv:
-        lines = resolv.readlines()
 
-    sre = re.compile("^search\s+(\S+)")
-    dre = re.compile("^domain\s+(\S+)")
-    domains = list()
+    if os.path.exists(RESOLV):
+        lines = list()
+        with open(RESOLV, "r") as resolv:
+            lines = resolv.readlines()
 
-    domains = [m.group(1) for m in filter(bool, map(sre.match, lines))]
-    if domains:
-        return domains[0]
+        sre = re.compile("^search\s+(\S+)")
+        dre = re.compile("^domain\s+(\S+)")
+        domains = list()
 
-    domains = [m.group(1) for m in filter(bool, map(dre.match, lines))]
-    if domains:
-        return domains[0]
+        domains = [m.group(1) for m in filter(bool, map(sre.match, lines))]
+        if domains:
+            return domains[0]
+
+        domains = [m.group(1) for m in filter(bool, map(dre.match, lines))]
+        if domains:
+            return domains[0]
+    else:
+        print >> sys.stderr, _("Unable to determine DNS domain for DHCP "
+                               "configuration.")
+        return None
 
 
 def _get_name_servers():
@@ -1241,9 +1256,14 @@ def _get_name_servers():
     Returns this host's name server(s).
     '''
     regexp = re.compile("^nameserver\s+(\S+)$")
-    with open(RESOLV, "r") as resolv:
-        return [m.group(1)
-            for m in filter(bool, map(regexp.match, resolv.readlines()))]
+    if os.path.exists(RESOLV):
+        with open(RESOLV, "r") as resolv:
+            return [m.group(1)
+                for m in filter(bool, map(regexp.match, resolv.readlines()))]
+    else:
+        print >> sys.stderr, _("Unable to determine DNS servers for DHCP "
+                               "configuration.")
+        return None
 
 
 def _get_default_route_for_subnet(subnet_ip):
