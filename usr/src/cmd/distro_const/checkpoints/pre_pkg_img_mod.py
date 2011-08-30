@@ -367,7 +367,8 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
     def add_default_svcname(self, pkg):
         """ class method to populate the .image_info file with the default
-        service name.
+        service name. The default service name is used by installadm
+        create-service if no service name is explicitly specified.
         """
         self.logger.debug("adding the default service name")
 
@@ -377,6 +378,13 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # get build number from version (from '5.11-0.171' or '5.11-0.175.0.1'
         # get '171' or '175.0.1')
         build = self.dc_pers_dict[pkg].partition("-")[2].partition('.')[2]
+
+        # Replace the '.'s in the build name with '_'s.  The service name
+        # that is generated from 'build' is used as the default service
+        # name in 'installadm create-service'.  The inclusion of '.'s
+        # in the service name cause problems for the DNS server so they
+        # need to be either removed or replaced.
+        build = build.replace('.', '_')
 
         name = name % {"build": build, "arch": platform.processor()}
 

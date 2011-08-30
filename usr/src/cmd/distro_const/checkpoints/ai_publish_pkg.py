@@ -46,14 +46,14 @@ class AIPublishPackages(Checkpoint):
     """
 
     SVC_NAME_ATTR = "com.oracle.install.service-name"
-    DEFAULT_ARG = {"pkg_name": None, "pkg_repo": None, "prefix": None}
+    DEFAULT_ARG = {"pkg_name": None, "pkg_repo": None, "publisher": None}
 
     def __init__(self, name, arg=DEFAULT_ARG):
         super(AIPublishPackages, self).__init__(name)
 
         self.pkg_name = arg.get("pkg_name")
         self.pkg_repo = arg.get("pkg_repo")
-        self.prefix = arg.get("prefix")
+        self.publisher = arg.get("publisher")
         self._service_name = arg.get("service_name")
 
         # instance attributes
@@ -101,12 +101,12 @@ class AIPublishPackages(Checkpoint):
         if self.pkg_repo is None:
             self.pkg_repo = "file://%s/ai_image_repo" % self.media_dir
 
-        if self.prefix is None:
-            self.prefix = "ai-image"
+        if self.publisher is None:
+            self.publisher = "ai-image"
 
         if self.pkg_name is None:
             name = "pkg://%s/install-image/solaris-auto-install@%s" % \
-                (self.prefix, self.ai_pkg_version)
+                (self.publisher, self.ai_pkg_version)
             self.pkg_name = name
 
     @property
@@ -129,10 +129,10 @@ class AIPublishPackages(Checkpoint):
             if repo.returncode == 0:
                 # New repo was created. Add the publisher and make it default
                 cmd = [cli.PKGREPO, "-s", self.pkg_repo, "add-publisher",
-                       self.prefix]
+                       self.publisher]
                 run(cmd)
                 cmd = [cli.PKGREPO, "-s", self.pkg_repo, "set",
-                       "publisher/prefix=%s" % self.prefix]
+                       "publisher/prefix=%s" % self.publisher]
                 run(cmd)
 
         # Generate a manifest file

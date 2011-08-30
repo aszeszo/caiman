@@ -257,13 +257,13 @@
             If not specified the arguments default to:
             pkg_name - install-image/solaris-auto-install@<AI pkg version>
             pkg_repo - file://<MEDIA_DIR>/ai_image_repo
-            prefix - ai-image
+            publisher - ai-image
                 Note:  See pkg(5) and pkg.depotd(1M) for a
                 description of these optional arguments
           <kwargs>
             <arg name="pkg_name">name</arg>
             <arg name="pkg_repo">repo</arg>
-            <arg name="prefix">prefix</arg>
+            <arg name="publisher">publisher</arg>
           </kwargs>
           -->
       </checkpoint>
