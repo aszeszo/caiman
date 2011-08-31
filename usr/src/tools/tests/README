@@ -153,6 +153,7 @@ The list of tests can be found via the --help flag:
              ai-webserver:  cmd/ai-webserver/test
              auto-install:  cmd/auto-install/checkpoints/test
         auto-install/test:  cmd/auto-install/test
+ auto-install/test/manual:  cmd/auto-install/test/manual
                      boot:  lib/install_boot/test
                    common:  lib/install_common/test
              distro_const:  cmd/distro_const/checkpoints/test
@@ -160,6 +161,7 @@ The list of tests can be found via the --help flag:
                    engine:  lib/install_engine/test
                       ict:  lib/install_ict/test
                installadm:  cmd/installadm/test
+        installadm/manual:  cmd/installadm/test/manual
                     js2ai:  cmd/js2ai/modules/test
                 libaimdns:  lib/libaimdns/test
                 liberrsvc:  lib/liberrsvc/test

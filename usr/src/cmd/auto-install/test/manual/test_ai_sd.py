@@ -23,6 +23,11 @@
 #
 # test_ai_sd - test for AI Service Discovery Engine
 #
+# These tests are deemed better run as manual tests as they require
+# the machine to be configured as an AI server, and as per TTL DNS
+# defaults require 120 second timeouts which is too long for an automatic
+# test to wait around.
+#
 """ test AI Service Discovery Engine
 """
 
@@ -31,6 +36,9 @@ import subprocess
 import time
 import unittest
 
+from nose.plugins.skip import SkipTest
+
+from solaris_install import Popen
 from solaris_install.auto_install import ai_sd
 
 
@@ -71,6 +79,13 @@ class TestAISD(unittest.TestCase):
     TEXT_REC = 'aiwebserver=' + SERVICE_NAME + ':' + PORT
 
     def setUp(self):
+        # Before running any tests, ensure Multicast DNS SMF is enabled.
+        cmd = ["/usr/bin/svcs", "-H", "-o", "STATE",
+               "svc:/network/dns/multicast:default"]
+        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE)
+        if p.stdout.strip() != "online":
+            raise SkipTest("Unable to run FindAPI tests - enable SMF service "
+                           "svc:/network/dns/multicast:default")
         self.bogosvc = None
 
     def tearDown(self):
@@ -79,6 +94,13 @@ class TestAISD(unittest.TestCase):
 
     def test_no_aiservice(self):
         '''test covers when there is not an AIService'''
+        # Default TTL (Time-To-Live) for DNS records is 120 seconds
+        # To change the 120 second TTL, would require a re-architecture of the
+        # aimdns' records. Instead of doing a default DNSServceRegister we
+        # would need to create a DNS connection, create a record and then
+        # register it with a shorter TTL value. The default value which can not
+        # be modified is 120 seconds.
+        time.sleep(120)
         aisvc = ai_sd.AIService(self.SERVICE_NAME, self.TIMEOUT)
         assert aisvc.lookup() == -1, 'lookup succeeded'
         assert aisvc.found == False, 'found bogus service'
@@ -107,15 +129,6 @@ class TestAISD(unittest.TestCase):
                 'lookup did not succeed for service (%s)' % self.SERVICE_NAME
         assert aisvc.found == True, \
                 'did not find service (%s)' % self.SERVICE_NAME
-
-        aisvc = ai_sd.AIService(self.DEFAULT_SERVICE, self.TIMEOUT)
-        assert aisvc.lookup() == 0, \
-                'lookup did not succeed for default service'
-        assert aisvc.found == True, \
-                'did not find default service'
-        assert aisvc.get_txt_rec() == self.TEXT_REC, \
-                "found service's text record does not match"
-
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")
