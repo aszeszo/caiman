@@ -79,9 +79,11 @@ def delete_profiles(profs, dbo, table):
         profs - list of profiles to delete by name
         dbo - database object
         table - database table name
-    Returns: nothing
+    Returns: True if any errors encountered, False otherwise
     Exceptions: none
     '''
+    # if any serious errors encountered, set exit status
+    has_errors = False
     queue = dbo.getQueue()
     # Build a list of criteria for WHERE clause
     db_cols = [u'rowid'] + [u'file']
@@ -94,13 +96,16 @@ def delete_profiles(profs, dbo, table):
         queue.put(query)
         query.waitAns()
         # check response, if failure, getResponse prints error
-        if query.getResponse() is None:
+        rsp = query.getResponse()
+        if rsp is None:
+            has_errors = True
             continue
-        if len(query.getResponse()) == 0:
+        if len(rsp) == 0:
             print >> sys.stderr, _("\tProfile %s not found.") % profile_name
+            has_errors = True
             continue
         # delete database record and any accompanying internal profile file
-        for response in query.getResponse():
+        for response in rsp:
             deldict = dict()
             iresponse = iter(response)
             for crit in db_cols:
@@ -112,6 +117,7 @@ def delete_profiles(profs, dbo, table):
             delquery.waitAns()
             # check response, if failure, getResponse prints error
             if delquery.getResponse() is None:
+                has_errors = True
                 continue
             print >> sys.stderr, _("\tDeleted profile %s.") % profile_name
             # delete static (internal) files only
@@ -125,7 +131,9 @@ def delete_profiles(profs, dbo, table):
                     print >> sys.stderr, _(
                             "Error (%s):  Problem deleting %s (%s): %s") \
                             % (errno, profile_name, deldict['file'], errmsg)
+                has_errors = True
                 continue
+    return has_errors
 
 
 def do_delete_profile(cmd_options=None):
@@ -144,7 +152,9 @@ def do_delete_profile(cmd_options=None):
     aisql.verifyDBStructure()
 
     # delete profiles per command line
-    delete_profiles(options.profile_name, aisql, AIdb.PROFILES_TABLE)
+    errs = delete_profiles(options.profile_name, aisql, AIdb.PROFILES_TABLE)
+    if errs:
+        sys.exit(1)
 
 
 if __name__ == '__main__':

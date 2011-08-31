@@ -207,6 +207,8 @@ def do_create_profile(cmd_options=None):
     # Instantiate a Criteria object with the XML DOM of the criteria.
     criteria = df.Criteria(root)
     sc.validate_criteria_from_user(criteria, dbn, AIdb.PROFILES_TABLE)
+    # track exit status for all profiles, assuming no errors
+    has_errors = False
 
     # loop through each profile on command line
     for profile_file in options.profile_file:
@@ -220,16 +222,20 @@ def do_create_profile(cmd_options=None):
             print >> sys.stderr, \
                     _("Error:  A profile named %s is already in the database "
                       "for service %s.") % (profile_name, options.service_name)
+            has_errors = True
             continue
         # open profile file specified by user on command line
         if not os.path.exists(profile_file):
             print >> sys.stderr, _("File %s does not exist") % profile_file
+            has_errors = True
+            continue
         try:
             with open(profile_file, 'r') as pfp:
                 raw_profile = pfp.read()
         except IOError as (errno, strerror):
             print >> sys.stderr, _("I/O error (%s) opening profile %s: %s") % \
                 (errno, profile_file, strerror)
+            has_errors = True
             continue
 
         # define all criteria in local environment for imminent validation
@@ -291,9 +297,11 @@ def do_create_profile(cmd_options=None):
                                                dtd_validation=True,
                                                warn_if_dtd_missing=True)
             if profile_string is None:
+                has_errors = True
                 continue
             full_profile_path = copy_profile_internally(tmpl_profile)
             if not full_profile_path:  # some failure handling file
+                has_errors = True
                 continue
         except KeyError:  # user specified bad template variable (not criteria)
             value = sys.exc_info()[1]  # take value from exception
@@ -314,6 +322,7 @@ def do_create_profile(cmd_options=None):
                       "valid template variable.  Valid template variables: ") \
                     % (value, profile_name) + '\n\t' + \
                     ', '.join(sc.TEMPLATE_VARIABLES)
+            has_errors = True
             continue
         # profile has XML/DTD syntax problem
         except lxml.etree.XMLSyntaxError, err:
@@ -322,12 +331,17 @@ def do_create_profile(cmd_options=None):
                     profile_name
             for eline in err:
                 print >> sys.stderr, '\t' + eline
+            has_errors = True
             continue
 
         # add new profile to database
         if not add_profile(criteria, profile_name, full_profile_path, queue,
                 AIdb.PROFILES_TABLE):
             os.unlink(full_profile_path)  # failure, back out internal profile
+            has_errors = True
+    # exit with status if any errors in any profiles
+    if has_errors:
+        sys.exit(1)
 
 
 if __name__ == '__main__':
