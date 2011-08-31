@@ -124,7 +124,7 @@ class AutoInstall(object):
         self.options, self.args = self.parse_args(args)
 
         # Initialize Install Engine
-        self.engine = InstallEngine(debug=True, stop_on_error=True)
+        self.engine = InstallEngine(stop_on_error=True)
         self.doc = self.engine.data_object_cache
 
         if self.options.zonename is not None:
@@ -858,11 +858,20 @@ class AutoInstall(object):
             self.logger.critical("Failed Checkpoints:")
             for failed_cp in failed_cps:
                 err_data = errsvc.get_errors_by_mod_id(failed_cp)[0]
-                self.logger.critical("\t%s" % (failed_cp))
-                self.logger.exception(err_data.error_data[ES_DATA_EXCEPTION])
+                self.report_checkpoint_error(failed_cp,
+                    str(err_data.error_data[ES_DATA_EXCEPTION]))
             return False
         else:
             return True
+
+    def report_checkpoint_error(self, checkpoint_name, error_string):
+        '''Log error messages to ERROR'''
+        lines = ["", "\t%s" % checkpoint_name]
+        lines.extend(["", "Checkpoint execution error:", ""])
+        lines.extend("\t%s" % s for s in error_string.splitlines())
+        lines.append("")
+        for line in lines:
+            self.logger.error(line)
 
     def configure_checkpoints(self):
         """
