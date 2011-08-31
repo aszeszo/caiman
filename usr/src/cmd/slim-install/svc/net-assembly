@@ -315,7 +315,11 @@ echo "Done mounting image" > /dev/msglog
 # If requested, enable remote access via ssh
 #
 if [ $ISA_INFO = "sparc" ] ; then
-	AI_ENABLE_SSH=$($GREP "^livessh" $INSTALL_CONF_SPEC | \
+	conf_file=$SYSTEM_CONF
+	if [ -f $INSTALL_CONF_SPEC ]; then
+		conf_file=$INSTALL_CONF_SPEC
+	fi
+	AI_ENABLE_SSH=$($GREP "^livessh" $conf_file | \
 	    $CUT -d'=' -f2)
 else
 	AI_ENABLE_SSH=`/sbin/devprop -s livessh`
