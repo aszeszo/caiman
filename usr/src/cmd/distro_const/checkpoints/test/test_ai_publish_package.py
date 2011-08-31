@@ -69,7 +69,7 @@ class TestCreateRepository(unittest.TestCase):
         self.app.media_dir = tempfile.mkdtemp(dir="/var/tmp", prefix="app_")
 
         self.app.pkg_repo = "file://%s/ai_image_repo" % self.app.media_dir
-        self.app.prefix = "ai-image"
+        self.app.publisher = "ai-image"
         self.app.pkg_name = "image/distro_name@5.11-0.149"
         self.app._service_name = "test-service"
         self.app.ai_pkg_version = "5.11-0.100"
@@ -94,7 +94,7 @@ class TestCreateRepository(unittest.TestCase):
         args = {}
         args["pkg_name"] = "test@5.11-0.100"
         args["pkg_repo"] = "file://%s/test_repo" % d
-        args["prefix"] = "test-prefix"
+        args["publisher"] = "test-publisher"
         args["service_name"] = "test-service"
         self.app = AIPublishPackages("Test APP", arg=args)
         self.app.pkg_img_path = testlib.create_filesystem(*self.filelist)
