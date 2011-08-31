@@ -57,3 +57,6 @@ info_classification_path = /usr/share/lib/pkg/opensolaris.org.sections
 
 # Whether to ignore publisher differences when comparing package versions
 ignore_different_publishers = True
+
+# workaround https://defect.opensolaris.org/bz/show_bug.cgi?id=18673
+pkglint.exclude = pkg.lint.pkglint_manifest.PkgManifestChecker.variants

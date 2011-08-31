@@ -1,4 +1,3 @@
-#
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -599,9 +598,9 @@ $(PDIR)/%.mog: manifests/%.mf $(TRANSFORM_PATHS)
 	@print "Processing manifest $(<F)"
 	@pkgfmt -c $<
 	$(PKGDEBUG)$(RM) $(@) $(@:%.mog=%) $(@:%.mog=%.nodepend) \
-		$(@:%.mog=%.lics) $(@:%.mog=%).metadata.* $(@).vars
+		$(@:%.mog=%.lics) $(@:%.mog=%).metadata.*
 	$(PKGDEBUG)PKGMOG_OUT=`$(PKGMOGRIFY) $(PKGMOG_VERBOSE) $(PM_INC:%= -I %) \
-		$(PKGMOG_DEFINES:%=-D %) -P $(@).vars -O $(@) \
+		$(PKGMOG_DEFINES:%=-D %) -O $(@) \
 		$(<) $(PM_TRANSFORMS)`; \
 	if [ "$$?" != "0" ]; then \
 		exit 1; \
