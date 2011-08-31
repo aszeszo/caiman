@@ -152,6 +152,7 @@
       -->
       <software_data action="install">
         <name>pkg:/entire@latest</name>
+        <name>pkg:/diagnostic/ddu/text</name>
         <name>pkg:/system/install/media/internal</name>
         <name>pkg:/system/install/text-install</name>
         <name>pkg:/group/system/solaris-auto-install</name>
