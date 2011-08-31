@@ -129,6 +129,13 @@ class Partition(DataObject):
         # If the user specifies a name of "", turn it into a None
         if name is not None and len(name) == 0:
             name = None
+
+        if name is None and action != "use_existing_solaris2":
+            # Partition name must be provided in all cases other than
+            # use_existing_solaris2
+            raise ParsingError("Partition name must be provided if action "
+                               "is not 'use_existing_solaris2'")
+
         partition = Partition(name, validate_children=False)
 
         size = element.find("size")
