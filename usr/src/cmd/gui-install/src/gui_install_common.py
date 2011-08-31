@@ -214,3 +214,11 @@ def del_pid_file():
 
     if os.path.exists(PIDFILE):
         os.remove(PIDFILE)
+
+
+def N_(message):
+    ''' Dummy function used to mark text for delayed translation.
+        Use of this function name is standard gettext practice.
+    '''
+
+    return message

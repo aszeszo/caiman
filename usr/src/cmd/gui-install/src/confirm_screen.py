@@ -29,6 +29,7 @@ Confirm Screen for GUI Install app
 import pygtk
 pygtk.require('2.0')
 
+import locale
 import logging
 
 from gnome.ui import url_show_on_screen
@@ -184,10 +185,16 @@ class ConfirmScreen(BaseScreen):
             # There is no definitive way to detect whether "Use the whole
             # disk" or "Partition the disk" was selected, so we will display
             # a message about the Solaris2 partition details for each disk.
-            text_str = _("%.1f GB partition on %.1f GB disk (%s)") % \
-                 (solaris_parts[0].size.get(units=Size.gb_units),
-                 disk.disk_prop.dev_size.get(units=Size.gb_units),
-                 disk.ctd)
+            partsize = locale.format('%.1f',
+                solaris_parts[0].size.get(units=Size.gb_units))
+            disksize = locale.format('%.1f',
+                disk.disk_prop.dev_size.get(units=Size.gb_units))
+
+            text_str = _("%(partsize)s GB partition on "
+                 "%(disksize)s GB disk (%(disk)s)") % \
+                 {"partsize": partsize,
+                  "disksize": disksize,
+                  "disk": disk.ctd}
             warn_str = _("This partition will be erased")
             adisk = add_detail_line(self.diskvbox, text_str, warning=warn_str)
             if first_disk == None:
@@ -197,11 +204,13 @@ class ConfirmScreen(BaseScreen):
 
         if first_disk is not None:
             first_disk.grab_focus()
-        translated = _("The whole installation will take " \
-                "up %.1fGB hard disk space.")
-        text_str = translated % \
+
+        install_size = locale.format('%.1f',
             profile.target_controller.minimum_target_size.get(
-                units=Size.gb_units)
+            units=Size.gb_units))
+        translated = _("The whole installation will take " \
+                "up %s GB hard disk space.")
+        text_str = translated % install_size
         add_detail_line(self.diskvbox, text_str)
         self.logger.info('\t' + text_str)
 

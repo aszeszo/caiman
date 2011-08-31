@@ -47,7 +47,7 @@ from solaris_install.gui_install.base_screen import BaseScreen, \
 from solaris_install.gui_install.fdisk_panel import FdiskPanel
 from solaris_install.gui_install.gui_install_common import \
     empty_container, modal_dialog, IMAGE_DIR, COLOR_WHITE, \
-    DEFAULT_LOG_LOCATION, GLADE_ERROR_MSG
+    DEFAULT_LOG_LOCATION, GLADE_ERROR_MSG, N_
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target import Target
@@ -83,8 +83,8 @@ class DiskScreen(BaseScreen):
           widgets which allows the user to partition the disk, at
           the bottom.  The Next button is enabled.
     '''
-    BUSY_TEXT = _("Finding Disks")
-    BUSY_MARKUP = '<span font_desc="Bold">%s</span>' % BUSY_TEXT
+    BUSY_TEXT = N_("Finding Disks")
+    BUSY_MARKUP = '<span font_desc="Bold">%s</span>'
 
     #--------------------------------------------------------------------------
     # API methods
@@ -143,6 +143,7 @@ class DiskScreen(BaseScreen):
 
         self.fdisk_panel = FdiskPanel(self.builder)
         self._icon_theme = gtk.icon_theme_get_default()
+        self._busy_label = None
 
     def enter(self):
         ''' Show the Disk Screen.
@@ -712,7 +713,7 @@ class DiskScreen(BaseScreen):
 
         # Only create the widgets which don't come from Glade once
         if self._finding_disks_vbox is None:
-            self._finding_disks_vbox, busy_label = \
+            self._finding_disks_vbox, self._busy_label = \
                 self._create_finding_disks_vbox()
 
         empty_container(self._disksviewport)
@@ -721,7 +722,7 @@ class DiskScreen(BaseScreen):
         self._disksviewport.show_all()
         self._toplevel.show()
 
-        busy_label.grab_focus()
+        self._busy_label.grab_focus()
 
         self.set_back_next(back_sensitive=True, next_sensitive=False)
 
@@ -836,7 +837,8 @@ class DiskScreen(BaseScreen):
         finding_disks_vbox = gtk.VBox(homogeneous=False, spacing=0)
 
         label = gtk.Label()
-        label.set_markup(DiskScreen.BUSY_MARKUP)
+        markup_str = DiskScreen.BUSY_MARKUP % _(DiskScreen.BUSY_TEXT)
+        label.set_markup(markup_str)
 
         busyimage = gtk.image_new_from_file(IMAGE_DIR + "/"
             "gnome-spinner.gif")

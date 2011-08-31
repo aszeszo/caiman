@@ -29,15 +29,7 @@ Base class for the GUI Install app's screens.
 from abc import ABCMeta, abstractmethod
 
 from solaris_install.gui_install.gui_install_common import \
-    empty_container, modal_dialog, GLADE_ERROR_MSG
-
-
-def N_(message):
-    ''' Dummy function used to mark text for delayed translation.
-        Use of this function name is standard gettext practice.
-    '''
-
-    return message
+    empty_container, modal_dialog, GLADE_ERROR_MSG, N_
 
 
 class NotOkToProceedError(Exception):
