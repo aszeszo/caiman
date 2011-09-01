@@ -93,7 +93,7 @@ class DiskScreen(BaseScreen):
                     (9, _("Size(GB)")),
                     (6, _("Boot")),
                     (45, _("Device")),
-                    (3, _(""))] #blank header for the notes column
+                    (3, "")] #blank header for the notes column
     VENDOR_LEN = 15
 
     SPINNER = ["\\", "|", "/", "-"]
