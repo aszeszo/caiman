@@ -196,11 +196,7 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
                     move_file = os.path.join(root, name)
                     self.logger.debug('Moving %s to %s', move_file, target)
                     if not dry_run:
-                        if os.access(os.path.join(target, name), os.F_OK):
-                            self.logger.debug('%s exists at %s --skipping',
-                                    name, target)
-                        else:
-                            shutil.copy2(move_file, target)
+                        shutil.copy2(move_file, target)
 
         if not dry_run:
             try:
