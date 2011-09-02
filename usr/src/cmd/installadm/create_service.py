@@ -346,9 +346,15 @@ def do_alias_service(options):
     if basesvc.is_alias():
         raise SystemExit(_("\nError: Cannot create alias of another alias.\n"))
 
-    logging.debug("Creating alias of service %s", options.aliasof)
-
     image = basesvc.image
+    if options.svcname in DEFAULT_ARCH:
+        if ((image.arch == 'sparc' and 'sparc' not in options.svcname) or
+            (image.arch == 'i386' and 'i386' not in options.svcname)):
+            raise SystemExit(cw(_("\nError: %s can not be an alias of a "
+                                  "service with a different architecture.\n") % 
+                                  options.svcname))
+            
+    logging.debug("Creating alias of service %s", options.aliasof)
 
     print _("\nCreating alias %s\n") % options.svcname
 

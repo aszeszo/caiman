@@ -346,7 +346,7 @@ class AIService(object):
             service._init_wanboot(srv_address)
         else:
             service._init_grub(srv_address)
-        
+
         return service
     
     def __init__(self, name, image=None, image_class=InstalladmImage,
@@ -766,15 +766,28 @@ class AIService(object):
         For an alias, do all activities needed if the basesvc
         has been updated:
             All:
+            o disable alias
             o update aliasof property in .config to newbasesvc_name
                x86 only:
-                  o update bootargs in alias's menu.lst file to bootargs
-                    of  newbasesvc_name
-                  o update image path in menu.lst file to newbasesvc_name
-                  o update image path in menu.lst file of all dependent
-                    aliases and clients to that of newbasesvc_name
+                  o Copy over new base services's menu.lst to alias' menu.lst 
+                  o reinstate alias service name in alias' menu.lst
+                  o Replace base service bootargs with alias' bootargs in
+                    alias' menu.lst
+                  o For each dependent alias of alias:
+                    o Copy alias' revised menu.lst to dependent alias' menu.lst
+                    o reinstate dependent alias name in dependent alias'
+                      menu.lst
+                    o If bootargs were specified for dependent alias,
+                      replace alias bootargs with dependent alias bootargs 
+                  o For each client of alias:
+                    o Copy over alias' revised menu.lst to menu.lst.<clientid>
+                    o reinstate alias service_name in menu.lst.<clientid>
+                    o If client bootargs were specified during create-client,
+                      replace alias bootargs with client bootargs in
+                      menu.lst.<clientid>. Otherwise, alias bootargs are
+                      inherited.
             o revalidate manifests and profiles
-            o unmount and remount service
+            o enable alias
 
         Input:   newbasesvc_name - name of new base service
 
@@ -788,40 +801,82 @@ class AIService(object):
                                              "aliasing. Please use a service "
                                              "with a newer image.\n") %
                                              newbasesvc_name))
+        # disable the alias
+        was_mounted = False
+        if self.mounted():
+            was_mounted = True
+            self.disable(force=True) 
+
         # update props first
         logging.debug("updating alias service props for %s", self.name)
         props = {config.PROP_ALIAS_OF: newbasesvc_name}
         config.set_service_props(self.name, props)
         
         if self.arch == 'i386':
-            # Update install_media path in menu.lst file
-            menulstpath = os.path.join(self.config_dir, MENULST)
-            new_imagepath = newbasesvc.image.path
-            grub.update_installmedia(menulstpath, new_imagepath)
+            self_menulstpath = os.path.join(self.config_dir, MENULST)
             
             all_aliases = config.get_aliased_services(self.name, recurse=True)
             all_clients = config.get_clients(self.name).keys()
             for alias in all_aliases:
                 all_clients.extend(config.get_clients(alias).keys())
-            
-            # Update install_media path in menu.lst files of all
-            # aliases of this alias (and descendants)
+
+            # Copy over the new base service's menu.lst file for the alias
+            # to use. Replace the base service's name with the alias' name
+            # as well as the base service's bootargs with the alias' bootargs
+            # in the alias' menu.lst file.
+            newbasesvc_menulst = os.path.join(newbasesvc.config_dir, MENULST)
+            logging.debug("update_basesvc: copying new menu.lst from %s to %s",
+                          newbasesvc_menulst, self_menulstpath)
+            shutil.copy(newbasesvc_menulst, self_menulstpath)
+            grub.update_svcname(self_menulstpath, self.name, self.name)
+            grub.update_bootargs(self_menulstpath, newbasesvc.bootargs,
+                                 self.bootargs)
+
+            # Recreate menu.lst files of all aliases of this alias
+            # (and descendants). Use the sub alias' bootargs instead
+            # of the ones specified in the base service.
             for alias in all_aliases:
                 aliassvc = AIService(alias)
-                menulstpath = os.path.join(aliassvc.config_dir, MENULST)
-                grub.update_installmedia(menulstpath, new_imagepath)
-        
-            # Update install_media path in menu.lst files of clients
+                sub_alias_was_mounted = False
+                if aliassvc.mounted():
+                    sub_alias_was_mounted = True
+                    aliassvc.disable(force=True) 
+
+                sub_alias_menulst = os.path.join(aliassvc.config_dir, MENULST)
+                logging.debug("update_basesvc: copying new menu.lst from %s "
+                              "to %s", self_menulstpath, sub_alias_menulst)
+                shutil.copy(self_menulstpath, sub_alias_menulst)
+                grub.update_svcname(sub_alias_menulst, aliassvc.name,
+                                    aliassvc.name)
+                grub.update_bootargs(sub_alias_menulst, self.bootargs,
+                                     aliassvc.bootargs)
+                if sub_alias_was_mounted:
+                    aliassvc.enable()
+
+            # recreate menu.lst files for clients
             for clientid in all_clients:
-                menulstpath = get_client_menulst(clientid)
-                grub.update_installmedia(menulstpath, new_imagepath)
-        
+                (service, datadict) = config.find_client(clientid)
+                client_bootargs = datadict.get(config.BOOTARGS, '')
+                client_menulst = get_client_menulst(clientid)
+
+                # copy alias' menu.lst file to menu.lst.<clientid>
+                logging.debug("update_basesvc: copying new menu.lst from %s "
+                              "to %s", self_menulstpath, client_menulst)
+                shutil.copy(self_menulstpath, client_menulst)
+                grub.update_svcname(client_menulst, self.name, self.name)
+
+                # if the client has bootargs, use them. Otherwise, inherit
+                # the bootargs specified in the alias (do nothing)
+                if client_bootargs:
+                    grub.update_bootargs(client_menulst, self.bootargs,
+                                         client_bootargs)
+            
         # Turning point: Function calls prior to this line will reference
         # the 'old' base service's image. Function calls after this line
         # will reference the *new* base service's image. Keep that in mind
         # when adding to this function.
         self._image = None
-        
+
         try:
             self.check_valid()
         except InvalidServiceError:
@@ -830,11 +885,10 @@ class AIService(object):
                                       "service will be disabled until they "
                                       "have been removed or fixed.\n"))
         
-        # Unmount and remount the alias to pick up the new image
-        if self.mounted():
-            self.unmount(force=True)
-            self.mount()
-    
+        # Enable the alias to pick up the new image
+        if was_mounted:
+            self.enable()
+
     @property
     def manifest_dir(self):
         '''Full path to the directory where this service's

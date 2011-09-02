@@ -172,6 +172,9 @@ def set_aliasof(options):
     except (OSError, config.ServiceCfgError) as err:
         raise SystemExit(_("Failed to set 'aliasof' property of : %s") %
                          aliasname)
+    except svc.MultipleUnmountError as err:
+        print >> sys.stderr, _("Failed to disable alias")
+        raise SystemExit(err)
     except svc.MountError as err:
         print >> sys.stderr, _("Failed to enable alias")
         raise SystemExit(err)

@@ -31,35 +31,9 @@ import logging
 import os
 import sys
 
-from urlparse import urlparse
-
 from osol_install.auto_install.installadm_common import XDEBUG
 
 MENULST = 'menu.lst'
-
-
-def update_installmedia(menulstpath, newpath):
-    '''Update image path in menu.lst
-
-     Input:
-        menulstpath - path to menu.lst file to update
-        newpath - new image path to use in install_media url
-
-    '''
-    logging.log(XDEBUG, 'in update_installmedia %s %s', newpath, menulstpath)
-
-    # For each line, use urlparse to extract out the image path
-    # and replace it with the one passed in.
-    for line in fileinput.input(menulstpath, inplace=1):
-        newline = line
-        parts = line.partition('install_media=')
-        if parts[1]:
-            url = parts[2].partition(',')[0]
-            urlparts = urlparse(url)
-            path = urlparts.path
-            pathparts = line.partition(path)
-            newline = pathparts[0] + newpath + pathparts[2]
-        sys.stdout.write(newline)
 
 
 def update_bootargs(menulstpath, oldbootargs, bootargs):
