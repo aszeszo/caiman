@@ -44,11 +44,11 @@ import gtk
 
 import osol_install.errsvc as errsvc
 from solaris_install.engine import InstallEngine
-from solaris_install.gui_install.gui_install_common import RELEASE, \
-    GLADE_DIR, DEFAULT_LOG_LOCATION, DEFAULT_LOG_LEVEL, LOG_FORMAT, LOGNAME, \
-    other_instance_is_running, write_pid_file, exit_gui_install, \
-    modal_dialog, CLEANUP_CPIO_INSTALL, TRANSFER_PREP, TARGET_INIT, \
-    LOG_LEVEL_INPUT, LOG_NAME_INPUT
+from solaris_install.gui_install.gui_install_common import exit_gui_install, \
+    other_instance_is_running, write_pid_file, modal_dialog, \
+    CLEANUP_CPIO_INSTALL, DEFAULT_LOG_LEVEL, DEFAULT_LOG_LOCATION, GLADE_DIR, \
+    LOG_FORMAT, LOG_LEVEL_INPUT, LOG_NAME_INPUT, LOGNAME, RELEASE, \
+    TRANSFER_PREP, VAR_SHARED_DATASET
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.gui_install.screen_manager import ScreenManager
 from solaris_install.logger import INSTALL_LOGGER_NAME, FileHandler
@@ -65,6 +65,11 @@ TI_CHKPS[TRANSFER_PREP] = (TRANSFER_PREP,
                            "solaris_install/transfer/media_transfer",
                            "init_prepare_media_transfer")
 
+TI_CHKPS[VAR_SHARED_DATASET] = (VAR_SHARED_DATASET,
+                                "solaris_install/target/varshared",
+                                "VarSharedDataset")
+
+TARGET_INIT = "TargetInitialization"
 TI_CHKPS[TARGET_INIT] = (TARGET_INIT,
                          "solaris_install/target/instantiation",
                          "TargetInstantiation")
@@ -136,6 +141,8 @@ def setup_checkpoints():
     engine.register_checkpoint(*(TI_CHKPS[TARGET_DISCOVERY]))
     logger.debug("Establishing the " + TRANSFER_PREP + " checkpoint")
     engine.register_checkpoint(*(TI_CHKPS[TRANSFER_PREP]))
+    logger.debug("Establishing the " + VAR_SHARED_DATASET + " checkpoint")
+    engine.register_checkpoint(*(TI_CHKPS[VAR_SHARED_DATASET]))
     logger.debug("Establishing the " + TARGET_INIT + " checkpoint")
     engine.register_checkpoint(*(TI_CHKPS[TARGET_INIT]))
     logger.debug("Establishing the " + TRANSFER_ROOT + " checkpoint")

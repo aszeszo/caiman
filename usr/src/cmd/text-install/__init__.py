@@ -59,6 +59,7 @@ LOCALIZED_GB = _("GB")
 # Names of registered checkpoints.
 TARGET_DISCOVERY = "TargetDiscovery"
 TARGET_INIT = "TargetInitialization"
+VAR_SHARED_DATASET = "VarSharedDataset"
 TRANSFER_PREP = "PrepareTransfer"
 CLEANUP_CPIO_INSTALL = "cleanup-cpio-install"
 INIT_SMF = "initialize-smf"
@@ -241,6 +242,10 @@ def prepare_engine(options):
     eng.register_checkpoint(TRANSFER_PREP,
                            "solaris_install/transfer/media_transfer",
                            "init_prepare_media_transfer")
+
+    eng.register_checkpoint(VAR_SHARED_DATASET,
+                            "solaris_install/target/varshared",
+                            "VarSharedDataset")
 
     eng.register_checkpoint(TARGET_INIT,
                             "solaris_install/target/instantiation",

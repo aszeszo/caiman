@@ -49,7 +49,7 @@ from solaris_install.target.controller import TargetController
 from solaris_install.target.size import Size
 from solaris_install.target.libbe.be import be_unmount
 from solaris_install.text_install import TRANSFER_PREP, \
-    TARGET_INIT, CLEANUP_CPIO_INSTALL
+    VAR_SHARED_DATASET, CLEANUP_CPIO_INSTALL
 from solaris_install.text_install import ti_install_utils as ti_utils
 from solaris_install.text_install.progress import InstallProgressHandler
 from solaris_install.text_install.ti_target_utils import \
@@ -87,13 +87,13 @@ def exec_callback(status, failed_cp):
 class InstallStatus(object):
     '''Stores information on the installation progress, and provides a
     hook for updating the screen.
-    
+
     '''
 
     def __init__(self, screen, update_status_func):
         '''screen and update_status_func are values passed in from
         the main app
-        
+
         '''
 
         self.screen = screen
@@ -106,7 +106,7 @@ class InstallStatus(object):
     def report_status(self):
         '''Update the install status. Also checks the quit_event to see
         if the installation should be aborted.
-        
+
         '''
         try:
             processing_quit = False
@@ -150,11 +150,11 @@ def do_ti_install(install_data, screen, update_status_func):
     # The following information is needed for installation.
     # Make sure they are provided before even starting
     #
-        
+
     # timezone
     timezone = sysconfig_profile.system.tz_timezone
     LOGGER.debug("time zone: %s", timezone)
-        
+
     # Validate the value specified for timezone
     if not tz_isvalid(timezone):
         LOGGER.error("Timezone value specified (%s) is not valid", timezone)
@@ -163,7 +163,7 @@ def do_ti_install(install_data, screen, update_status_func):
     # Compute the time to set.
     install_time = datetime.datetime.now() + \
         sysconfig_profile.system.time_offset
-        
+
     # Set the system time to the time specified by the user.
     cmd = ["/usr/bin/date", install_time.strftime("%m%d%H%M%y")]
     Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
@@ -171,7 +171,7 @@ def do_ti_install(install_data, screen, update_status_func):
 
     hostname = sysconfig_profile.system.hostname
     LOGGER.debug("hostname: " + hostname)
-    
+
     engine = InstallEngine.get_instance()
     doc = engine.doc
     solaris_slice = get_solaris_slice(doc)
@@ -180,7 +180,7 @@ def do_ti_install(install_data, screen, update_status_func):
     inst_device_size = solaris_slice.size
 
     LOGGER.info("Installation Device Size: %sMB", inst_device_size)
-        
+
     minimum_size = screen.tc.minimum_target_size
     LOGGER.info("Minimum required size: %s", minimum_size)
     if (inst_device_size < minimum_size):
@@ -189,14 +189,14 @@ def do_ti_install(install_data, screen, update_status_func):
         LOGGER.error("Size of install device: %s", inst_device_size)
         LOGGER.error("Minimum required size: %s", minimum_size)
         raise ti_utils.InstallationError
-    
+
     recommended_size = screen.tc.recommended_target_size
     LOGGER.info("Recommended size: %s", recommended_size)
     if (inst_device_size < recommended_size):
         # Warn users that their install target size is not optimal
         # Just log the warning, but continue with the installation.
         LOGGER.warning("Size of device specified for installation is "
-                       "not optimal") 
+                       "not optimal")
         LOGGER.warning("Size of install device: %s", inst_device_size)
         LOGGER.warning("Recommended size: %s", recommended_size)
 
@@ -219,7 +219,7 @@ def do_ti_install(install_data, screen, update_status_func):
     LOGGER.info("Dump type: %s", dump_type)
     LOGGER.info("Dump size: %s", dump_size)
 
-    # Specify for the shared datasets <root_pool>/export and 
+    # Specify for the shared datasets <root_pool>/export and
     # <root_pool>/export/home be created.  We will specify
     # a mountpoint for <root_pool>/export dataset.
     # We must not specify a mountpoint for <root_pool>/export/home.
@@ -241,8 +241,8 @@ def do_ti_install(install_data, screen, update_status_func):
     # related checkpoints.  The transfer checkpoints requires
     # data setup from the prepare transfer checkpoint.
 
-    (status, failed_cp) = engine.execute_checkpoints(\
-        start_from=TRANSFER_PREP, pause_before=TARGET_INIT)
+    (status, failed_cp) = engine.execute_checkpoints(
+        start_from=TRANSFER_PREP, pause_before=VAR_SHARED_DATASET)
 
     if status != InstallEngine.EXEC_SUCCESS:
         err_data = (errsvc.get_errors_by_mod_id(TRANSFER_PREP))[0]
@@ -270,7 +270,7 @@ def do_ti_install(install_data, screen, update_status_func):
 
     if install_data.no_install_mode:
         # all subsequent code depends on the install target being
-        # setup, so, can not execute them.  
+        # setup, so, can not execute them.
         return
 
     new_be = get_desired_target_be(doc)
@@ -300,7 +300,7 @@ def post_install_cleanup(install_data):
                   final_log_loc))
     try:
         shutil.copyfile(install_data.log_location, final_log_loc)
-    except (IOError, OSError), err: 
+    except (IOError, OSError), err:
         LOGGER.error("Failed to copy %s to %s" % (install_data.log_location,
                       install_data.log_final))
         LOGGER.exception(err)

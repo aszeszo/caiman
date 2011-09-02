@@ -88,7 +88,7 @@ FIREFOX = '/usr/bin/firefox'
 # Commonly used Checkpoint definitions
 CLEANUP_CPIO_INSTALL = "cleanup-cpio-install"
 TRANSFER_PREP = "PrepareTransfer"
-TARGET_INIT = "TargetInitialization"
+VAR_SHARED_DATASET = "VarSharedDataset"
 
 
 def get_encoding():
