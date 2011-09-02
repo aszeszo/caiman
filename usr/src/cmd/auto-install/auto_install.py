@@ -1069,9 +1069,10 @@ class AutoInstall(object):
                         # to the transfer checkpoint.  Also append a kwarg
                         # specifying that we're allowing the checkpoint to
                         # show progress to stdout.
+                        arg_dict={"zonename": self.options.zonename,
+                            "show_stdout": True}
                         self.engine.register_checkpoint(*ckpt_info,
-                            kwargs={"zonename": self.options.zonename,
-                                    "show_stdout": True})
+                            kwargs={"arg": arg_dict})
                     else:
                         self.engine.register_checkpoint(*ckpt_info)
                 else:

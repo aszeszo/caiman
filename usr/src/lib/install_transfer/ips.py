@@ -842,9 +842,12 @@ class TransferIPS(AbstractIPS):
     '''
     VALUE_SEPARATOR = ","
 
-    def __init__(self, name, zonename=None, show_stdout=False):
-        super(TransferIPS, self).__init__(name, zonename=zonename,
-                                          show_stdout=show_stdout)
+    # Default values for arguments
+    DEFAULT_ARG = {'zonename': None, 'show_stdout': False}
+
+    def __init__(self, name, arg=DEFAULT_ARG):
+        super(TransferIPS, self).__init__(name, zonename=arg.get('zonename'),
+                                          show_stdout=arg.get('show_stdout'))
 
         # Holds the list of transfer dictionaries
         self._transfer_list = []

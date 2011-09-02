@@ -223,7 +223,11 @@
       <checkpoint name="transfer-ips-install"
           desc="Transfer pkg contents from IPS"
           mod_path="solaris_install/transfer/ips"
-          checkpoint_class="TransferIPS"/>
+          checkpoint_class="TransferIPS">
+          <kwargs>
+            <arg name="show_stdout">true</arg>
+          </kwargs>
+      </checkpoint>
       <checkpoint name="set-ips-attributes"
           desc="Set post-install IPS attributes"
           mod_path="solaris_install/transfer/ips"
