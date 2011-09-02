@@ -19,8 +19,7 @@
 
  CDDL HEADER END
 
- Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- Use is subject to license terms.
+ Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 
  NOTE:  This service manifest is not editable; its contents will
  be overwritten by package or patch operations, including
@@ -48,6 +47,18 @@
 		type='service'>
 		<service_fmri value='svc:/system/console-login' />
 	</dependency>
+
+        <!-- Do not start the auto-installer until devchassis daemon 
+             SMF service is online to ensure target selection works 
+             correctly for manifests that specifies receptacle
+             information for the drives -->
+        <dependency
+                name='devchassis-daemon'
+                grouping='require_all'
+                restart_on='none'
+                type='service'>
+                <service_fmri value='svc:/system/devchassis:daemon' />
+        </dependency>
 
 	<dependency
 		name='manifest-locator'

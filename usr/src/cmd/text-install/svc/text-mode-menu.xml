@@ -19,7 +19,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 
  NOTE:  This service manifest is not editable; its contents will
  be overwritten by package or patch operations, including
@@ -51,6 +51,17 @@
 		type='service'>
 		<service_fmri value='svc:/milestone/single-user' />
 	</dependency>
+
+        <!-- Don't display the menu until devchassis daemon SMF service
+             is online
+        -->
+        <dependency
+                name='devchassis-daemon'
+                grouping='require_all'
+                restart_on='none'
+                type='service'>
+                <service_fmri value='svc:/system/devchassis:daemon' />
+        </dependency>
 
 	<method_context>
 		<method_credential user='root' group='root'/>

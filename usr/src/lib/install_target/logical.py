@@ -629,6 +629,7 @@ class Zvol(DataObject):
         self.use = "none"
 
         self.size = ""
+        self.create_failure_ok = False
 
     @property
     def full_name(self):

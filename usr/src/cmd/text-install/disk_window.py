@@ -804,8 +804,10 @@ def decimal_valid(edit_field, disk_win=None):
         if new_size_rounded > max_size_rounded:
             locale_new_size = locale.format("%.1f", new_size_rounded)
             locale_max_size = locale.format("%.1f", max_size_rounded)
-            msg = _("The new size ") + locale_new_size + \
-                _(" is greater than the available space ") + locale_max_size
+            msg = _("The new size %(size)s is greater than "
+                    "the available space %(avail)s") % \
+                    {"size": locale_new_size,
+                     "avail": locale_max_size}
             raise UIMessage(msg)
     return True
 

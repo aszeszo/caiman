@@ -57,6 +57,10 @@ EXTENDED_TEXT = "Extended"
 
 UI_PRECISION = "0.05gb"
 
+UI_MIN_EMPTY_PRIMARY_PART = "1gb"
+UI_MIN_EMPTY_LOGICAL_PART = "0.1gb"
+UI_MIN_EMPTY_SLICE = "1gb"
+
 UI_TYPE_IN_USE = "UI Object In-use" # partition/slice in use
 UI_TYPE_EMPTY_SPACE = "UI Object EMPTY"   # unused components
 UI_TYPE_NOT_USED = "UI Object not-in-use" 
@@ -412,7 +416,7 @@ class UIDisk(object):
         existing_gaps.sort(size_sort)
 
         self.have_logical = add_missed_parts(numbers, existing_parts, \
-            existing_gaps, Size("1" + Size.gb_units), self.all_parts, \
+            existing_gaps, Size(UI_MIN_EMPTY_PRIMARY_PART), self.all_parts, \
             check_extended=use_partitions)
 
         if use_partitions == False:
@@ -447,7 +451,7 @@ class UIDisk(object):
 
         # Fill in all the missing logical if necessary
         add_missed_parts(numbers, existing_parts, logical_part_gaps,
-                         Size("0.1" + Size.gb_units), self.all_parts,
+                         Size(UI_MIN_EMPTY_LOGICAL_PART), self.all_parts,
                          adding_logical=True)
         
     @property
@@ -662,7 +666,7 @@ class UIPartition(object):
         existing_gaps.sort(size_sort)
 
         add_missed_parts(numbers, existing_parts, existing_gaps,
-                         Size("1gb"), self.all_parts)
+                         Size(UI_MIN_EMPTY_SLICE), self.all_parts)
 
         # If there's a backup slice, move it to end of the list for display
         slice2 = self.all_parts[2]
@@ -843,7 +847,7 @@ class UIPartition(object):
             else:
                 return False
 
-        return True
+        return False
 
     def is_extended(self):
         if self.ui_type == UI_TYPE_IN_USE and self.doc_obj.is_extended:
@@ -914,17 +918,46 @@ class UIPartition(object):
             self.cycle_type(new_type=new_type, extra_type=extra_type)
         else:
             if self.ui_type == UI_TYPE_EMPTY_SPACE:
-                LOGGER.debug("Partition used to be unsed.  Add partition with"
+                if new_type == UIPartition.UNUSED:
+                    # already cycled through all possible types, can't
+                    # change to anything
+                    return
+
+                # find largest available gap, and create a partition
+                # of the specified type in that gap.  We do not want to
+                # use the start sector and size value in the empty objects
+                # because those are fake values.
+                existing_gaps = self.parent.doc_obj.get_gaps()
+
+                if not existing_gaps:
+                    # There's no free space anymore, do not do anything
+                    return
+
+                # sort the gaps by size, largest gap will be at
+                # the end of the list.
+                existing_gaps.sort(size_sort)
+
+                largest_empty = existing_gaps[-1]
+
+                # check to make sure the largest gap is big enough.
+                # For primary partitions, we ignore all gaps smaller than 1G.
+                # For logical partitions, we ignore all gaps smaller than 0.1G. 
+                if self.is_logical():
+                    min_gap_size = Size(UI_MIN_EMPTY_LOGICAL_PART)
+                else:
+                    min_gap_size = Size(UI_MIN_EMPTY_PRIMARY_PART)
+                if largest_empty.size < min_gap_size:
+                    return
+
+                LOGGER.debug("Partition used to be unused.  Add partition with"
                              "type: %s, start_sec=%s, size=%s" %
                              (libdiskmgt_const.PARTITION_ID_MAP[new_type], 
-                             self.empty_space_obj.start_sector,
-                             self.get_max_size()))
+                             largest_empty.start_sector,
+                             largest_empty.size))
 
-                size_in_sector = self.empty_space_obj.size.get(\
-                    Size.sector_units)
-
-                new_part = self.parent.doc_obj.add_partition(self.name, \
-                    self.empty_space_obj.start_sector, size_in_sector, \
+                new_part = self.parent.doc_obj.add_partition(self.name,
+                    largest_empty.start_sector,
+                    largest_empty.size.get(Size.sector_units),
                     size_units=Size.sector_units, partition_type=new_type)
                 if new_part.is_solaris:
                     new_part.bootid = Partition.ACTIVE
@@ -1108,7 +1141,8 @@ class UISlice(object):
                 # Use the backup slice to define the absolute max size
                 # any given slice can be. (This is usually the last slice,
                 # hence the use of a reversed iterator)
-                if int(slice_info.name) == BACKUP_SLICE:
+                if int(slice_info.name) == BACKUP_SLICE and \
+                    slice_info.ui_type == UI_TYPE_IN_USE:
                     end_pt = slice_info.size.get(Size.sector_units)
                     break
             else:
@@ -1224,7 +1258,7 @@ class UISlice(object):
 
         new_type = types[type_index]
 
-        if new_type == UIPartition.UNUSED:
+        if new_type == UISlice.UNUSED:
             LOGGER.debug("new type == unused")
         else:
             LOGGER.debug("new type == %s", new_type)
@@ -1234,27 +1268,48 @@ class UISlice(object):
         else:
             if self.ui_type == UI_TYPE_EMPTY_SPACE:
                 if new_type == ROOT_POOL:
-                    # making this the new root pool
-                    size_in_sector = self.empty_space_obj.size.get( \
-                        Size.sector_units)
-                    LOGGER.debug("Used to be unused... adding new slice")
-                    new_slice = self.parent.doc_obj.add_slice(self.name, \
-                        self.empty_space_obj.start_sector, size_in_sector, \
-                        size_units=Size.sector_units)
-                    new_slice.in_zpool = ROOT_POOL
-                    new_slice.in_vdev = DEFAULT_VDEV_NAME
-                    new_slice.tag = V_ROOT
+
+                    # find largest available gap, and create a slice
+                    # of the specified type in that gap.  We do not want to
+                    # use the start sector and size value in the empty objects
+                    # because those are fake values.
+                    existing_gaps = self.parent.doc_obj.get_gaps()
+
+                    if not existing_gaps:
+
+                        # sort the gaps by size, largest gap will be at
+                        # the end of the list.
+                        existing_gaps.sort(size_sort)
+
+                        largest_empty = existing_gaps[-1]
+
+                        # check to make sure the largest gap is big enough.
+                        # gaps smaller than 1G are not used.
+                        if largest_empty.size < Size(UI_MIN_EMPTY_SLICE):
+                            return
+
+                        # making this the new root pool
+                        LOGGER.debug("Used to be unused... adding new slice")
+                        new_slice = self.parent.doc_obj.add_slice(self.name,
+                            largest_empty.start_sector,
+                            largest_empty.size.get(Size.sector_units),
+                            size_units=Size.sector_units)
+                        new_slice.in_zpool = ROOT_POOL
+                        new_slice.in_vdev = DEFAULT_VDEV_NAME
+                        new_slice.tag = V_ROOT
+                        dump_doc("After change slice type")
+                        return
+
+                # setting it back to whatever value was discovered
+                discovered_obj = self.discovered_doc_obj
+                if discovered_obj is not None:
+                    self.parent.doc_obj.insert_children(discovered_obj)
                 else:
-                    # setting it back to whatever value was discovered
-                    discovered_obj = self.discovered_doc_obj
-                    if discovered_obj is not None:
-                        self.parent.doc_obj.insert_children(discovered_obj)
-                    else:
-                        LOGGER.debug("Unable to reset to discovered value")
+                    LOGGER.debug("Unable to reset to discovered value")
                 
             else:
-                if new_type == UIPartition.UNUSED:
+                if new_type == UISlice.UNUSED:
                     LOGGER.debug("Changing to unused, deleting")
                     LOGGER.debug("Target Call: deleting %s", self.name)
                     self.parent.doc_obj.delete_slice(self.doc_obj)
-        dump_doc("AFTER change type")
+        dump_doc("After change slice type")

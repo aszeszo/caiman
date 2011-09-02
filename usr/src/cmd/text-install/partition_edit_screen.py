@@ -205,6 +205,10 @@ class PartEditScreen(BaseScreen):
                 part.in_zpool = None
                 part.bootid = Partition.ACTIVE
 
+                # Make sure in_zpool is not set on the Disk, target controller
+                # puts it there in some cases
+                disk.in_zpool = None
+
                 # perform final target validation
                 perform_final_validation(doc)
 
