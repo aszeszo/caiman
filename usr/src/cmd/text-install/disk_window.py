@@ -62,19 +62,19 @@ class DiskWindow(InnerWindow):
     '''Display and edit disk information, including partitions and slices'''
     
     STATIC_PARTITION_HEADERS = [(12, _("Primary"), _("Logical")),
-                                (9, _("Size(GB)"), _("Size(GB)"))]
+                                (10, _(" Size(GB)"), _(" Size(GB)"))]
     
     EDIT_PARTITION_HEADERS = [(13, _("Primary"), _("Logical")),
-                              (9, _("Size(GB)"), _("Size(GB)")),
+                              (10, _(" Size(GB)"), _(" Size(GB)")),
                               (7, _(" Avail"), _(" Avail"))]
     
     STATIC_SLICE_HEADERS = [(13, _("Slice"), _("Slice")),
                             (2, "#", "#"),
-                            (9, _("Size(GB)"), _("Size(GB)"))]
+                            (10, _(" Size(GB)"), _(" Size(GB)"))]
     
     EDIT_SLICE_HEADERS = [(13, _("Slice"), _("Slice")),
                           (2, "#", "#"),
-                          (9, _("Size(GB)"), _("Size(GB)")),
+                          (10, _(" Size(GB)"), _(" Size(GB)")),
                           (7, _(" Avail"), _(" Avail"))]
     
     ADD_KEYS = {curses.KEY_LEFT: no_action,
