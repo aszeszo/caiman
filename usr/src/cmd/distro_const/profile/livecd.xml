@@ -92,6 +92,12 @@
   <service name='system/basicreg' version='1' type='service'>
     <instance name='default' enabled='false' />
   </service>
+  <service name='system/ocm' version='1' type='service'>
+    <instance name='default' enabled='false' />
+  </service>
+  <service name='system/fm/smtp-notify' version='1' type='service'>
+    <instance name='default' enabled='false' />
+  </service>
   <service name='platform/i86pc/kdmconfig' version='1' type='service'>
     <instance name='default' enabled='false' />
   </service>
