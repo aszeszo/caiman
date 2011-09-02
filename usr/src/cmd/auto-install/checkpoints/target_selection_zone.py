@@ -101,7 +101,7 @@ class TargetSelectionZone(TargetSelection):
         logical = Logical(DEFAULT_LOGICAL_NAME)
         logical.noswap = True
         logical.nodump = True
-        zpool = logical.add_zpool(self.selected_dataset)
+        zpool = logical.add_zpool(self.selected_dataset, is_root=True)
 
         for manifest_target in from_manifest:
             # Copy filesystem children into desired zpool
