@@ -100,23 +100,7 @@
     <instance name='default' enabled='true'/>
   </service>
   <service name='network/location' version='1' type='service'>
-    <instance name='default' enabled='true'>
-        <!--
-            Set timeout to infinite value for start method of network/location
-            service. It is workaround for CR 7065657. Remove once
-            that bug is fixed.
-        -->
-	<exec_method
-		type='method'
-		name='start'
-		exec='/lib/svc/method/net-loc start'
-		timeout_seconds='0' >
-		<method_context>
-			<method_credential user='netadm' group='netadm'
-				supp_groups='netadm' privileges='zone' />
-		</method_context>
-	</exec_method>
-    </instance>
+    <instance name='default' enabled='true'/>
   </service>
   <service name='network/netcfg' version='1' type='service'>
     <instance name='default' enabled='true'/>
