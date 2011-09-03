@@ -684,22 +684,27 @@ class SystemBootMenu(BootMenu):
             self.logger.info('Setting console boot device property to %s' \
                              % osconsole)
             instance.boot_vars.setprop('console', osconsole)
-        # If the console device is not the framebuffer, eg. set to serial
-        # tty, disable graphical splash images in the boot loader.
-        if osconsole != 'text' and osconsole != 'graphics':
-            # Disable splash image from the bootloader which is indicated
-            # by PROP_CONSOLE_GFX and set by default by pybootmgmt.
-            # Note 'text' above indicates a framebuffer based console so
-            # don't confuse it with the meaning of PROP_CONSOLE_TEXT below.
-            self.logger.info("Disabling graphical console in boot loader")
+
+        # Detect the gui-install client by checking for it's profile object
+        # in the DOC
+        gui_prof = self.doc.persistent.get_first_child(name="GUI Install")
+        
+        # If the client is gui-install and the console device is a graphical
+        # framebuffer, enable the BootLoader splash and happy face boot.
+        # Note 'text' below indicates a framebuffer based console, not to
+        # be confused with the meaning of BootLoader.PROP_CONSOLE_TEXT
+        if osconsole in ['text', 'graphics'] and gui_prof is not None:
+            self.logger.info("Enabling happy face boot on boot instance: %s" \
+                             % instance.title)
+            self.config.boot_loader.setprop(
+                BootLoader.PROP_CONSOLE,
+                BootLoader.PROP_CONSOLE_GFX)
+            instance.kargs = "-B $ZFS-BOOTFS,console=graphics"
+        else:
+            self.logger.info("Disabling boot loader graphical splash")
             self.config.boot_loader.setprop(
                 BootLoader.PROP_CONSOLE,
                 BootLoader.PROP_CONSOLE_TEXT)
-        else:
-            # Enable happy face boot to compliment PROP_CONSOLE_GFX
-            self.logger.info("Enabling happy face boot on boot instance: %s" \
-                             % instance.title)
-            instance.kargs = "-B $ZFS-BOOTFS,console=graphics"
 
     def _set_instance_title(self, instance):
         """ Sets the title of instance to match self.boot_title
@@ -1108,6 +1113,17 @@ class AIISOImageBootMenu(ISOImageBootMenu):
         """
         self.installadm_entry = installadm_entry
 
+    def init_boot_config(self, autogen=True):
+        """ Instantiates the appropriate bootmgmt.bootConfig subclass object
+            for AI
+        """
+        super(AIISOImageBootMenu, self).init_boot_config(autogen)
+        # AI specific global bootloader configuration:
+        # - Disable graphical boot splash
+        self.config.boot_loader.setprop(
+            BootLoader.PROP_CONSOLE,
+            BootLoader.PROP_CONSOLE_TEXT)
+
     def build_default_entries(self):
         """ Constructs the default boot entries and inserts them into the
             bootConfig object's boot_instances list
@@ -1192,10 +1208,26 @@ class TextISOImageBootMenu(ISOImageBootMenu):
         Used by Distro Constructor for creation of Text installer ISO image.
     """
 
+    DEFAULT_TIMEOUT = 5
+
     def __init__(self, name):
         """ Constructor for class
         """
         super(TextISOImageBootMenu, self).__init__(name)
+        self.boot_timeout = TextISOImageBootMenu.DEFAULT_TIMEOUT
+
+    def init_boot_config(self, autogen=True):
+        """ Instantiates the appropriate bootmgmt.bootConfig subclass object
+            for Text Install
+        """
+        super(TextISOImageBootMenu, self).init_boot_config(autogen)
+        # Text Install Specific global bootloader configuration:
+        # - Hide the boot menu.
+        # - Disable graphical boot splash
+        self.config.boot_loader.setprop(BootLoader.PROP_QUIET, True)
+        self.config.boot_loader.setprop(
+            BootLoader.PROP_CONSOLE,
+            BootLoader.PROP_CONSOLE_TEXT)
 
     def build_default_entries(self):
         """ Constructs the default boot entries and inserts them into the
