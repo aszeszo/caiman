@@ -23,6 +23,11 @@
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
+import logging
+import os
+import shutil
+import unittest
+
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import InstallLogger
 from solaris_install.transfer.info import Args
@@ -35,15 +40,15 @@ from solaris_install.transfer.info import Software
 from solaris_install.transfer.info import Source
 from solaris_install.transfer.svr4 import TransferSVR4
 from solaris_install.transfer.svr4 import TransferSVR4Attr
+from solaris_install.transfer.svr4 import AbstractSVR4
 
-import logging
-import unittest
+ROOT = os.environ.get("ROOT")
 
 
 class TestTransferSVR4Functions(unittest.TestCase):
     '''Tests for the  TransferSVR4 class'''
-    TEST_SRC_DIR = "/var/tmp"
-    TEST_DST_DIR = "/tmp"
+    TEST_SRC_DIR = ROOT + "/var/tmp"
+    TEST_DST_DIR = ROOT + "/tmp"
 
     def setUp(self):
         InstallEngine._instance = None
@@ -55,6 +60,11 @@ class TestTransferSVR4Functions(unittest.TestCase):
         self.soft_node.insert_children([self.tr_node])
         self.doc.insert_children([self.soft_node])
         self.tr_svr4 = TransferSVR4("SVR4Transfer")
+        self.make_dummy_pkg(self.TEST_SRC_DIR + "/SUNWpkg1")
+        self.make_dummy_pkg(self.TEST_SRC_DIR + "/SUNWpkg2")
+        self.make_dummy_pkg(self.TEST_SRC_DIR + "/SUNWpkg3")
+        if not os.path.isdir(AbstractSVR4.ADMIN_FILE_DIR):
+            os.makedirs(AbstractSVR4.ADMIN_FILE_DIR, 0755)
 
     def tearDown(self):
         self.engine.data_object_cache.clear()
@@ -64,6 +74,18 @@ class TestTransferSVR4Functions(unittest.TestCase):
         self.tr_node = None
         self.tr_svr4 = None
         InstallEngine._instance = None
+        shutil.rmtree(self.TEST_SRC_DIR + "/SUNWpkg1")
+        shutil.rmtree(self.TEST_SRC_DIR + "/SUNWpkg2")
+        shutil.rmtree(self.TEST_SRC_DIR + "/SUNWpkg3")
+        if os.path.isdir(AbstractSVR4.ADMIN_FILE_DIR):
+            os.removedirs(AbstractSVR4.ADMIN_FILE_DIR)
+
+    def make_dummy_pkg(self, where):
+        os.makedirs(where)
+        fd = open(where + "/pkgmap", "w")
+        fd.close()
+        fd = open(where + "/pkginfo", "w")
+        fd.close()
 
     def test_software_type(self):
         self.assertTrue(self.soft_node.tran_type == "SVR4")
@@ -91,12 +113,6 @@ class TestTransferSVR4Functions(unittest.TestCase):
         '''Test error is raised when no source is registered'''
         self.tr_svr4.dst = "/mydest"
         self.tr_svr4.src = None
-        self.assertRaises(Exception, self.tr_svr4._validate_input)
-
-    def test_validate_src_accessible(self):
-        '''Test error is raised when source is not accessible'''
-        self.tr_svr4.dst = "/mydest"
-        self.tr_svr4.src = "/mysrc"
         self.assertRaises(Exception, self.tr_svr4._validate_input)
 
     def test_validate_no_transfer_list(self):
@@ -298,17 +314,16 @@ class TestTransferSVR4Functions(unittest.TestCase):
         except Exception as err:
             self.fail(str(err))
 
-    def test_uninstall_args(self):
-        '''Test that setting args for uninstall works'''
+    def test_install_uninstall_dry_run(self):
+        '''Test an install followed by an uninstall'''
         self.tr_node.action = "install"
         self.tr_node.contents = ["SUNWpkg1", "SUNWpkg2", "SUNWpkg3"]
+        args = Args({"svr4_args": "-n -R %s" % (self.TEST_DST_DIR)})
+        self.tr_node.insert_children([args])
         self.tr_node2 = SVR4Spec()
         self.tr_node2.action = "uninstall"
         self.tr_node2.contents = ["SUNWpkg2"]
-        mydest = "/mydest"
         self.soft_node.insert_children([self.tr_node2])
-        args = Args({"svr4_args": "-n -R %s" % (mydest)})
-        self.tr_node2.insert_children([args])
 
         src = Source()
         pub = Publisher()
@@ -330,7 +345,7 @@ class TestTransferSVR4Functions(unittest.TestCase):
         '''Test with accurate input dry run succeeds
         '''
         self.tr_node2 = SVR4Spec()
-        self.tr_node2.action = "uninstall"
+        self.tr_node2.action = "install"
         self.tr_node2.contents = ["SUNWpkg1", "SUNWpkg2"]
         self.soft_node.insert_children([self.tr_node2])
         args2 = Args({"svr4_args": "-n -R %s" % (self.TEST_DST_DIR)})
@@ -461,66 +476,14 @@ class TestTransferSVR4Functions(unittest.TestCase):
         args = Args({"svr4_args": "-q -r -s -t"})
         self.tr_node.insert_children([args])
         self.tr_node.action = "uninstall"
-        self.tr_node.contents = ["SUNWpkg0"]
+        self.tr_node.contents = ["SUNWpkg1"]
         self.assertRaises(Exception, self.tr_svr4.execute, dry_run=False)
-
-    def test_get_size_no_src_fails(self):
-        '''The get_size fails with no source
-        '''
-        self.tr_node.action = "install"
-        self.tr_node.contents = ["SUNWzsh", "SUNWyge", "SUNWgrub"]
-        pkg_install_size = 0
-
-        self.assertRaises(Exception, self.tr_svr4.get_size)
-
-    def test_get_size_src_not_exist_pass(self):
-        '''The get_size passes if source specified but doesn't exist yet
-        '''
-        src = Source()
-        pub = Publisher()
-        origin = Origin("/mysrc")
-        pub.insert_children([origin])
-        src.insert_children([pub])
-
-        dst = Destination()
-        path = Dir(self.TEST_DST_DIR)
-        dst.insert_children([path])
-        self.soft_node.insert_children([src, dst])
-
-        self.tr_node.action = "install"
-        self.tr_node.contents = ["SUNWzsh", "SUNWyge", "SUNWgrub"]
-        pkg_install_size = 0
-
-        try:
-            pkg_install_size = self.tr_svr4.get_size()
-            self.assertEquals(pkg_install_size, 512)
-        except Exception as err:
-            self.fail(str(err))
-
-    def test_get_size_no_pkgs_fails(self):
-        '''The get_size fails when no packages are specified
-        '''
-        src = Source()
-        pub = Publisher()
-        origin = Origin(self.TEST_SRC_DIR)
-        pub.insert_children([origin])
-        src.insert_children([pub])
-
-        dst = Destination()
-        path = Dir(self.TEST_DST_DIR)
-        dst.insert_children([path])
-        self.soft_node.insert_children([src, dst])
-        self.tr_node.action = "install"
-        self.tr_node.contents = []
-        pkg_install_size = 0
-
-        self.assertRaises(ValueError, self.tr_svr4.get_size)
 
 
 class TestTransferSVR4AttrFunctions(unittest.TestCase):
     '''Tests for the TransferSVR4Attr class'''
-    TEST_SRC_DIR = "/var/tmp"
-    TEST_DST_DIR = "/tmp"
+    TEST_SRC_DIR = ROOT + "/var/tmp"
+    TEST_DST_DIR = ROOT + "/tmp"
 
     def setUp(self):
         logging.setLoggerClass(InstallLogger)
