@@ -42,24 +42,8 @@ from solaris_install.data_object import DataObject
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install import Popen, CalledProcessError
 from solaris_install.engine import InstallEngine, RollbackError
-from solaris_install.getconsole import get_console, SERIAL_CONSOLE
 from solaris_install.ict.apply_sysconfig import APPLY_SYSCONFIG_DICT, \
     APPLY_SYSCONFIG_PROFILE_KEY
-
-#
-# Determine whether LC_MESSAGES environment variable needs to be set
-# or not.  This must be done before the gettext.translation() call so the
-# correct localized messages are used.
-#
-console_type = get_console()
-
-#
-# If running from a serial console, translation will be enabled.
-# If running on a physical console, translation will
-# be disabled by setting LC_MESSAGES to C
-#
-if console_type != SERIAL_CONSOLE:
-    os.environ["LC_MESSAGES"] = "C"
 
 _ = gettext.translation("sysconfig", "/usr/share/locale",
                         fallback=True).ugettext
@@ -701,7 +685,8 @@ def parse_unconfig_args(parser, args):
             print _("It will not have a name or know about other systems"
                     " or networks.")
 
-        confirm = raw_input(_("Do you want to continue (y/[n])? "))
+        msg = _("Do you want to continue (y/[n])? ")
+        confirm = raw_input(msg.encode(get_encoding()))
         if confirm.lower() != "y":
             sys.exit(SU_OK)
 
@@ -872,8 +857,9 @@ def parse_unconfig_args(parser, args):
             if terminal_device != CONSOLE:
                 print _("Since you are currently not logged on console,\n"
                          "you may not be able to navigate SCI tool.")
-                confirm = raw_input(_("Would you like to proceed with"
-                                      " re-configuration (y/[n])? "))
+                msg = _("Would you like to proceed with re-configuration "
+                        "(y/[n])? ")
+                confirm = raw_input(msg.encode(get_encoding()))
                 if confirm.lower() != "y":
                     sys.exit(SU_OK)
 
