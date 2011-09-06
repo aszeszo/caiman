@@ -318,7 +318,7 @@ class TestIPSFunctions(unittest.TestCase):
 
     def test_image_type(self):
         '''Test that image_type functionality succeeds'''
-        self.tr_ips = TransferIPS("IPS transfer", "zonename")
+        self.tr_ips = TransferIPS("IPS transfer", {"zonename": "zonename"})
         self.ips_image.delete_children()
         ips_im_type = ImType("partial", zone=True)
         self.ips_image = Image(self.IPS_IMG_DIR, "create")
