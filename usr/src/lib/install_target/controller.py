@@ -615,8 +615,20 @@ class TargetController(object):
                         # No useable slices. Clear the slices and add a
                         # root slice
                         partition.delete_children(class_type=Slice)
-                        new_slice = partition.add_slice("0", start,
-                            slice_size, Size.sector_units, force=True)
+
+                        # there should be only 1 gap in the partition,
+                        # create 1 single slice in the gap
+                        gaps = partition.get_gaps()
+
+                        # there should be 1 gap only
+                        if len(gaps) != 1:
+                            raise BadDiskError("There should only be 1 gap" 
+                                " in partition %s, but %d gaps were found." % 
+                                (str(partition.name), len(gaps)))
+
+                        new_slice = partition.add_slice("0",
+                            gaps[0].start_sector, gaps[0].size.sectors,
+                            Size.sector_units, force=True)
                         break
                 else:
                     return

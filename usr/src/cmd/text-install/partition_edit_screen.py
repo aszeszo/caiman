@@ -196,9 +196,22 @@ class PartEditScreen(BaseScreen):
                         part.delete_slice(ex_slice)
 
                 pool_name = part.in_zpool
-                slice0 = part.add_slice(0, part.start_sector, \
-                    part.size.sectors, Size.sector_units, in_zpool=pool_name, \
-                    in_vdev=DEFAULT_VDEV_NAME)
+               
+                # there should be only 1 gap in the partition, create 1 single
+                # slice in the gap
+                gaps = part.get_gaps()
+ 
+                # there should be 1 gap only
+                if len(gaps) != 1:
+                    err_msg = "There should only be 1 gap in partition" \
+                              " %s, but %d gaps were found." % \
+                              (str(part.name), len(gaps))
+                    LOGGER.error(err_msg)
+                    raise ValueError(err_msg)
+                 
+                slice0 = part.add_slice(0, gaps[0].start_sector,
+                    gaps[0].size.sectors, Size.sector_units,
+                    in_zpool=pool_name, in_vdev=DEFAULT_VDEV_NAME)
                 slice0.tag = V_ROOT
                 LOGGER.debug(str(part))
 
