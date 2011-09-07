@@ -74,6 +74,7 @@ class NameService(BaseScreen):
 
     MSG_HOST_NAME = _("Enter either a host name or an IP address.")
     MSG_IP_FMT = _("An IP address must be of the form xxx.xxx.xxx.xxx")
+    MSG_NO_LEADING_ZEROS = _("IP address segments may not have leading zeros.")
  
     def __init__(self, main_win, screen=None):
         global LOGGER
@@ -776,19 +777,23 @@ def validate_host_or_ip(host_name):
     # attempt validation as a numeric IP address
     try:
         IPAddress.convert_address(host_name)
-    except ValueError:
+    except ValueError as err:
+        if err[0] == IPAddress.MSG_NO_LEADING_ZEROS:
+            raise UIMessage(NameService.MSG_NO_LEADING_ZEROS)
         raise UIMessage(NameService.MSG_HOST_NAME)
 
 
 def validate_ip(ip_address):
-    '''Wrap a call to IPAddress.check_address and raise a UIMessage with
+    '''Wrap a call to IPAddress.convert_address and raise a UIMessage with
     appropriate message text
     '''
     if not ip_address:
         return
     try:
         IPAddress.convert_address(ip_address)
-    except ValueError:
+    except ValueError as err:
+        if err[0] == IPAddress.MSG_NO_LEADING_ZEROS:
+            raise UIMessage(NameService.MSG_NO_LEADING_ZEROS)
         raise UIMessage(NameService.MSG_IP_FMT)
 
 
@@ -824,7 +829,9 @@ def incremental_validate_ip(edit_field):
         return True
     try:
         IPAddress.incremental_check(ip_address)
-    except ValueError:
+    except ValueError as err:
+        if err[0] == IPAddress.MSG_NO_LEADING_ZEROS:
+            raise UIMessage(NameService.MSG_NO_LEADING_ZEROS)
         raise UIMessage(NameService.MSG_IP_FMT)
     return True
 
@@ -847,7 +854,9 @@ def incremental_validate_host(edit_field):
     # attempt validation as a numeric IP address
     try:
         IPAddress.incremental_check(host_name)
-    except ValueError:
+    except ValueError as err:
+        if err[0] == IPAddress.MSG_NO_LEADING_ZEROS:
+            raise UIMessage(NameService.MSG_NO_LEADING_ZEROS)
         raise UIMessage(NameService.MSG_HOST_NAME)
     return True
 

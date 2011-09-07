@@ -38,6 +38,7 @@ class IPAddress(object):
     '''
     
     DEFAULT = "0.0.0.0"
+    MSG_NO_LEADING_ZEROS = "No leading zeros"
     
     def __init__(self, address=None, netmask=None):
         self._address = None
@@ -144,6 +145,9 @@ class IPAddress(object):
         for segment in ip:
             if not segment:
                 continue
+            if len(segment) > 1 and segment[0] == '0':
+                raise ValueError(IPAddress.MSG_NO_LEADING_ZEROS)
+
             # only numbers are allowed
             if re.search(r"^[0-9]*$", segment) is None:
                 raise ValueError("Only numbers and '.' (period) are allowed")

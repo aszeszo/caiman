@@ -155,7 +155,7 @@ class TestIPAddress(unittest.TestCase):
     def test_incremental_non_int_segment(self):
         '''IPAddress.incremental_check() rejects non-integer values'''
         try:
-            segments = IPAddress.incremental_check("1.0x2.3.4")
+            segments = IPAddress.incremental_check("1.x2.3.4")
         except ValueError as err:
             # Not using 'assertRaises' as we need to examine the ValueError
             self.assertEquals("Only numbers and '.' (period) are allowed",
@@ -178,6 +178,14 @@ class TestIPAddress(unittest.TestCase):
             # Not using 'assertRaises' as we need to examine the ValueError
             self.assertEquals("Values should be between 0 and 255",
                               err.args[0])
+
+    def test_incremental_segment_leading_zeros(self):
+        '''IPAddress.incremental_check() for leading zeros'''
+        try:
+            segments = IPAddress.incremental_check("1.2.3.055")
+        except ValueError as err:
+            # Not using 'assertRaises' as we need to examine the ValueError
+            self.assertEquals(IPAddress.MSG_NO_LEADING_ZEROS, err.args[0])
 
 
 if __name__ == '__main__':

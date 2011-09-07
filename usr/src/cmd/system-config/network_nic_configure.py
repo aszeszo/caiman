@@ -72,7 +72,10 @@ class NICConfigure(BaseScreen):
     
     ITEM_OFFSET = 2
     EDIT_FIELD_LEN = 16
-    
+
+    MSG_NO_LEADING_ZEROS = \
+                    _("%s may not have leading zeros in address segments.")
+
     def __init__(self, main_win):
         global LOGGER
         if LOGGER is None:
@@ -94,7 +97,7 @@ class NICConfigure(BaseScreen):
         self.netmask_field = None
         self.gateway_field = None
         self.nic = None
-    
+
     def _show(self):
         '''Create the editable fields for IP address, netmask, router,
         dns address and dns domain
@@ -149,7 +152,7 @@ class NICConfigure(BaseScreen):
                                              self.nic.gateway)
         self.main_win.do_update()
         self.center_win.activate_object()
-    
+
     def make_field(self, label, description, y_loc, max_y, max_x,
                    description_start, default_val, is_ip=True,
                    selectable=True):
@@ -161,7 +164,7 @@ class NICConfigure(BaseScreen):
         list_item = ListItem(self.list_area, text=label, data_obj=label,
                              window=self.center_win, add_obj=selectable)
         if is_ip:
-            validate = incremental_validate_IP
+            validate = incremental_validate_ip
         else:
             validate = None
         edit_field = EditField(self.edit_area, window=list_item,
@@ -171,7 +174,7 @@ class NICConfigure(BaseScreen):
         self.center_win.add_paragraph(description, y_loc, description_start,
                                       max_y=(y_loc + max_y), max_x=max_x)
         return edit_field
-    
+
     def validate(self):
         '''Verify the syntactical validity of the IP Address fields'''
         ip_fields = [self.ip_field,
@@ -188,7 +191,10 @@ class NICConfigure(BaseScreen):
             try:
                 netmask = self.netmask_field.get_text()
                 IPAddress.convert_address(netmask, check_netmask=True)
-            except ValueError:
+            except ValueError as err:
+                if err[0] == IPAddress.MSG_NO_LEADING_ZEROS:
+                    raise UIMessage(NICConfigure.MSG_NO_LEADING_ZEROS %
+                                    self.netmask_field.data_obj)
                 raise UIMessage(_("'%s' is not a valid netmask") % netmask)
 
     def on_change_screen(self):
@@ -224,22 +230,26 @@ def validate_ip(edit_field):
         return True
     try:
         IPAddress.convert_address(ip_address)
-    except ValueError:
+    except ValueError as err:
+        if err[0] == IPAddress.MSG_NO_LEADING_ZEROS:
+            raise UIMessage(NICConfigure.MSG_NO_LEADING_ZEROS %
+                            edit_field.data_obj)
         raise UIMessage(_("%s must be of the form xxx.xxx.xxx.xxx") %
                         edit_field.data_obj)
     return True
 
 
-# pylint: disable-msg=C0103
-# IP is an abbreviation and appropriately capitalized here
-def incremental_validate_IP(edit_field):
+def incremental_validate_ip(edit_field):
     '''Incrementally validate the IP Address as the user enters it'''
     ip_address = edit_field.get_text()
     if not ip_address:
         return True
     try:
         IPAddress.incremental_check(ip_address)
-    except ValueError:
+    except ValueError as err:
+        if err[0] == IPAddress.MSG_NO_LEADING_ZEROS:
+            raise UIMessage(NICConfigure.MSG_NO_LEADING_ZEROS %
+                            edit_field.data_obj)
         raise UIMessage(_("%s must be of the form xxx.xxx.xxx.xxx") %
                         edit_field.data_obj)
     return True

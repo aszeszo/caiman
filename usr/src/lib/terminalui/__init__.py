@@ -165,6 +165,16 @@ i                   if not in an escape sequence
                         LOGGER.log(LOG_LEVEL_INPUT,
                             "Valid esc-sequence, converting to KEY_NPAGE")
                         return curses.KEY_NPAGE
+                    elif self._esc_seq[2:4] == '12':  # PuTTY
+                        self._esc_seq = None
+                        LOGGER.log(LOG_LEVEL_INPUT,
+                            "Valid esc-sequence, converting to KEY_F2")
+                        return curses.KEY_F2
+                    elif self._esc_seq[2:4] == '13':  # PuTTY
+                        self._esc_seq = None
+                        LOGGER.log(LOG_LEVEL_INPUT,
+                            "Valid esc-sequence, converting to KEY_F3")
+                        return curses.KEY_F3
                     elif self._esc_seq[2:4] == '17':
                         self._esc_seq = None
                         LOGGER.log(LOG_LEVEL_INPUT,
@@ -187,7 +197,8 @@ i                   if not in an escape sequence
                            chr(input_key), input_key, self._esc_seq)
                 self._esc_seq = None
                 LOGGER.log(LOG_LEVEL_INPUT,
-                            "Invalid esc-sequence, returning raw input")
+                           "Invalid esc-sequence, returning None")
+                return None
         elif input_key == KEY_ESC:
             LOGGER.log(LOG_LEVEL_INPUT, "Beginning esc-sequence")
             self._esc_seq = chr(KEY_ESC)  # start accumulating
