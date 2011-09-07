@@ -512,27 +512,12 @@ def apply_profiles(profile_list):
 def valid_group_check(groupings, sub_cmd, parser):
     '''Check to see if the grouping(s) specified are valid.'''
     if sub_cmd[0] == CREATE_PROFILE:
-        '''Check to see if the grouping(s) specified are valid.'''
-        cmd = [SVCCFG, "-s", "milestone/unconfig", "listprop",
-           "sysconfig/valid_groups"]
-        try:
-            p_ret = Popen.check_call(cmd, stdout=Popen.STORE,
-                                     stderr=Popen.PIPE,
-                                     check_result=(Popen.STDERR_EMPTY, 0))
-        except CalledProcessError as err:
-            print err.popen.stderr
-            print _("System is not properly configured. You are likely")
-            print _("trying to unconfigure or re-configure freshly")
-            print _("installed system which is not supported.")
-            sys.exit(SU_FATAL_ERR)
-
-        valid_groupings = p_ret.stdout.split('"')[1].split(' ')
 
         # Check that the grouping specified is valid.
         for grp in groupings:
-            if grp not in valid_groupings:
+            if grp not in SC_VALID_GROUPS:
                 err = "Grouping must be one of "
-                for grping in valid_groupings:
+                for grping in SC_VALID_GROUPS:
                     err += grping + " "
                 parser.error(err)
     else:
