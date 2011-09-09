@@ -766,8 +766,8 @@ class AIService(object):
         For an alias, do all activities needed if the basesvc
         has been updated:
             All:
-            o disable alias
             o update aliasof property in .config to newbasesvc_name
+            o disable alias
                x86 only:
                   o Copy over new base services's menu.lst to alias' menu.lst 
                   o reinstate alias service name in alias' menu.lst
@@ -801,17 +801,19 @@ class AIService(object):
                                              "aliasing. Please use a service "
                                              "with a newer image.\n") %
                                              newbasesvc_name))
+
+        # The service configuration needs to be updated before the
+        # service can successfully be disabled.
+        logging.debug("updating alias service props for %s", self.name)
+        props = {config.PROP_ALIAS_OF: newbasesvc_name}
+        config.set_service_props(self.name, props)
+        
         # disable the alias
         was_mounted = False
         if self.mounted():
             was_mounted = True
             self.disable(force=True) 
 
-        # update props first
-        logging.debug("updating alias service props for %s", self.name)
-        props = {config.PROP_ALIAS_OF: newbasesvc_name}
-        config.set_service_props(self.name, props)
-        
         if self.arch == 'i386':
             self_menulstpath = os.path.join(self.config_dir, MENULST)
             
