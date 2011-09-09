@@ -169,6 +169,8 @@
   <name>usr/lib/devfsadm/linkmod/SUNW_zfs_link.so</name>
   <name>usr/lib/devfsadm/devfsadmd</name>
   <name>usr/lib/iconv/alias</name>
+  <name>usr/lib/iconv/646%UTF-8.so</name>
+  <name>usr/lib/iconv/UTF-8%646.so</name>
   <name>usr/lib/libm.so.2</name>
   <name>usr/lib/libm.so</name>
   <name>usr/lib/libfstyp.so</name>
