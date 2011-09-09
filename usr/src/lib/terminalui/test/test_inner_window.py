@@ -143,7 +143,7 @@ class TestInnerWindow(unittest.TestCase):
         self.assertEquals(esc_seq('[17~'), curses.KEY_F6)
         self.assertEquals(esc_seq('2'), curses.KEY_F2)
         self.assertEquals(esc_seq('OH'), curses.KEY_HOME)
-        self.assertEquals(esc_seq('X'), ord('X'))  # invalid
+        self.assertEquals(esc_seq('X'), None)  # invalid
 
 
 if __name__ == '__main__':
