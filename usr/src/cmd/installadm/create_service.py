@@ -30,7 +30,9 @@ import errno
 import gettext
 import logging
 import os
+import pwd
 import shutil
+import stat
 import sys
 import tempfile
 
@@ -100,6 +102,28 @@ def check_imagepath(imagepath):
             else:
                 raise ValueError(_("\nTarget directory is not empty: %s\n") %
                                  imagepath)
+
+
+def set_ownership(imagepath):
+    ''' Set the ownership and permissions for the imagepath to
+        webserver uid/gid and 770 (rwxrwx---).
+
+        Raises SystemExit if the stat and fstat st_ino differ.
+    '''
+    webserver_uid = pwd.getpwnam('webservd').pw_uid
+    webserver_gid = pwd.getpwnam('webservd').pw_gid
+
+    image_stat = os.stat(imagepath)
+    fd = os.open(imagepath, os.O_RDONLY)
+    fd_stat = os.fstat(fd)
+    if fd_stat.st_ino == image_stat.st_ino:
+        os.fchown(fd, webserver_uid, webserver_gid)
+        os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | \
+                      stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP)
+    else:
+        raise SystemExit(_("The imagepath (%s) changed during "
+                           "ownership assignment") % imagepath)
+    os.close(fd)
 
 
 def get_usage():
@@ -532,6 +556,7 @@ def do_create_baseservice(options):
             options.imagepath = image.move(new_imagepath)
             logging.debug('image moved to %s', options.imagepath)
 
+    set_ownership(options.imagepath)
     print _("Image path: %s\n") % options.imagepath
     try:
         if options.dhcp_ip_start:
