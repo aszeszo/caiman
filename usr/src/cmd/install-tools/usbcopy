@@ -216,7 +216,7 @@ while [[ $i -le $icnt ]]; do
 
     echo -ne "R $i / $icnt  $pcnt \\r"
     imgsum=$(dd bs=$bs count=$bcnt conv=sync \
-	iseek=$s if=$img 2>/dev/null | md5sum)
+	iseek=$s if=$img 2>/dev/null | digest -a md5)
     [[ $? -ne 0 ]] && { echo Read from image failed. ; exit 1; }
 
     while [[ $((tries++)) -lt $maxt ]]; do
@@ -226,7 +226,7 @@ while [[ $i -le $icnt ]]; do
 	[[ $? -ne 0 ]] && { echo Write to device failed. ; exit 1; }
 
 	echo -ne "V $i / $icnt  $pcnt \\r"
-	devsum=$(dd bs=$bs count=$recs iseek=$s if=$s0cdev 2>/dev/null | md5sum)
+	devsum=$(dd bs=$bs count=$recs iseek=$s if=$s0cdev 2>/dev/null | digest -a md5)
 	[[ $? -ne 0 ]] && { echo Read from device failed. ; exit 1; }
 
 	[[ "$imgsum" = "$devsum" ]] && break;
