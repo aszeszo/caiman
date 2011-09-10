@@ -858,8 +858,11 @@ add_locale_entry_to_lang(lang_info_t *langp, char *locale_name, char *region,
 	locp->locale_desc = desc;
 	locp->def_locale = is_default;
 
-	locp->next = langp->locale_info;
-	langp->locale_info = locp;
+	tmp = langp->locale_info;
+	while (tmp->next != NULL) {
+		tmp = tmp->next;
+	}
+	tmp->next = locp;
 	langp->n_locales++;
 }
 
