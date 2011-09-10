@@ -22,6 +22,9 @@
  * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
+/*
+ * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
+ */
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -80,17 +83,12 @@ struct	chinese_values {
 	char	*lang_code;
 } chinese_values[] = {
 	{"zh", SIMPLIFIED_CHINESE, "sc"},
-	{"zh.GBK", SIMPLIFIED_CHINESE, "sc"},
-	{"zh.UTF-8", SIMPLIFIED_CHINESE, "sc"},
 	{"zh_CN", SIMPLIFIED_CHINESE, "sc"},
-	{"zh_CN.GB18030", SIMPLIFIED_CHINESE, "sc"},
-	{"zh_CN.UTF-8", SIMPLIFIED_CHINESE, "sc"},
 	{"zh_HK", TRADITIONAL_CHINESE, "tc"},
-	{"zh_HK.BIG5HK", TRADITIONAL_CHINESE, "tc"},
-	{"zh_HK.UTF-8", TRADITIONAL_CHINESE, "tc"},
+	{"zh_MO", TRADITIONAL_CHINESE, "tc"},
+	{"zh_SG", TRADITIONAL_CHINESE, "tc"},
 	{"zh_TW", TRADITIONAL_CHINESE, "tc"},
-	{"zh_TW.BIG5", TRADITIONAL_CHINESE, "tc"},
-	{"zh_TW.UTF-8", TRADITIONAL_CHINESE, "tc"}
+	{ NULL }
 };
 
 
@@ -104,7 +102,7 @@ static void	build_ll_list(char **list, int lang_total,
 		    lang_info_t **, int *total);
 static	char	*copy_up_to(char *start, char *t);
 static int	create_lang_entry(char *lang, char *locale, char *region,
-    lang_info_t **, boolean_t is_default);
+    lang_info_t **, boolean_t locale_app_locale, boolean_t locale_in_installer_lang);
 static void	end_of_comp(char **t, char **start);
 static char 	**get_actual_languages(char **list, int *);
 static lang_info_t *get_lang_entry(char *, lang_info_t *search_list);
@@ -112,6 +110,7 @@ static char 	*get_locale_component(char **t, char **start);
 static char 	*get_locale_description(char *lang, char *region);
 static int 	handle_chinese_language(char *region, char **lang);
 static boolean_t is_locale_in_installer_lang(char *locale_name);
+static boolean_t is_locale_app_locale(char *locale_name);
 static boolean_t is_valid_locale(char *locale);
 static int 	list_cmp(const void *p1, const void *p2);
 static int 	lang_init(char *path, char **list, int *total, int *init_var);
@@ -124,6 +123,7 @@ static void 	translate_lang_names(lang_info_t **list);
 static void 	sort_lang_list(char **unsorted_list, int total);
 static char 	*substitute_chinese_language(char *locale, char **code);
 static char 	*substitute_C_POSIX_language(char **code);
+static char 	*substitute_language(char *locale, char **code);
 static void 	update_init(FILE *fp, char *locale);
 static void 	update_env(char *locale);
 
@@ -637,13 +637,13 @@ lang_init(char *path, char **list, int *total, int *init_var)
  */
 static int
 create_lang_entry(char *lang, char *locale, char *region,
-    lang_info_t **return_list, boolean_t is_default)
+    lang_info_t **return_list, boolean_t locale_app_locale, boolean_t locale_in_installer_lang)
 {
 	lang_info_t	*tmp, *last, *new;
 	locale_info_t	*lp = NULL;
 	char		**trans_lang = NULL;
+	char		*sub = NULL;
 	char		*tmp_lang = NULL;
-	char		*tmp_locale = NULL;
 	char		*code = NULL;
 	char		*desc = NULL;
 	int		total;
@@ -653,18 +653,16 @@ create_lang_entry(char *lang, char *locale, char *region,
 	 * For Chinese we have to handle it specially. There is Traditional
 	 * Chinese or Simplified Chinese. Everything else is a locale.
 	 */
-	if (strncmp(lang, "zh", 2) == 0) {
-		tmp_lang = strdup(dgettext(TEXT_DOMAIN,
-		    substitute_chinese_language(lang, &code)));
-		if (locale == NULL)
-			tmp_locale = strdup(dgettext(TEXT_DOMAIN, lang));
+	sub = substitute_language(lang, &code);
+
+	if (sub != NULL) {
+		tmp_lang = strdup(sub);
+		if (tmp_lang == NULL)
+			goto error;
 	}
-	if (strncmp(lang, "C", 1) == 0) {
-		tmp_lang = strdup(dgettext(TEXT_DOMAIN,
-		    substitute_C_POSIX_language(&code)));
-		if (locale == NULL)
-			tmp_locale = strdup(dgettext(TEXT_DOMAIN, lang));
-	}
+
+	if (locale == NULL)
+		locale = dgettext(TEXT_DOMAIN, lang);
 
 	new = (lang_info_t *)malloc(sizeof (lang_info_t));
 	if (new == NULL)
@@ -694,9 +692,9 @@ create_lang_entry(char *lang, char *locale, char *region,
 		goto error;
 	}
 
-	new->def_lang = is_default;
+	new->def_lang = locale_in_installer_lang;
 
-	if (locale != NULL || tmp_locale != NULL) {
+	if (locale != NULL) {
 		lp = (locale_info_t *)malloc(sizeof (locale_info_t));
 		if (lp == NULL) {
 			om_set_error(OM_NO_SPACE);
@@ -704,11 +702,7 @@ create_lang_entry(char *lang, char *locale, char *region,
 		}
 		(void) memset(lp, 0, sizeof (locale_info_t));
 
-		if (tmp_locale) {
-			lp->locale_name = tmp_locale;
-		} else {
-			lp->locale_name = strdup(locale);
-		}
+		lp->locale_name = strdup(locale);
 		if (lp->locale_name == NULL) {
 			om_set_error(OM_NO_SPACE);
 			goto error;
@@ -717,7 +711,7 @@ create_lang_entry(char *lang, char *locale, char *region,
 		desc = get_locale_description(new->lang_name, region);
 		lp->locale_desc = desc;
 		new->locale_info = lp;
-		new->locale_info->def_locale = is_default;
+		new->locale_info->def_locale = locale_app_locale;
 		new->n_locales++;
 	}
 	if (list != NULL) {
@@ -743,12 +737,10 @@ create_lang_entry(char *lang, char *locale, char *region,
 		list = new;
 	}
 
-	free(code);
 	*(return_list) = list;
 	return (OM_SUCCESS);
 
 error:
-	free(code);
 	om_free_lang_info(new);
 	om_free_locale_info(lp);
 	return (OM_FAILURE);
@@ -776,7 +768,7 @@ static lang_info_t *
 get_lang_entry(char *lang_name, lang_info_t *search_list)
 {
 	lang_info_t 	*list = NULL;
-	char		*tmp_lang = NULL;
+	char		*sub = NULL;
 	char		*code = NULL;
 	boolean_t	found = B_FALSE;
 
@@ -786,10 +778,7 @@ get_lang_entry(char *lang_name, lang_info_t *search_list)
 	 * Chinese language names are stored differently.
 	 */
 
-	if (strncmp(lang_name, "zh", 2) == 0)  {
-		tmp_lang = strdup(dgettext(TEXT_DOMAIN,
-		    substitute_chinese_language(lang_name, &code)));
-	}
+	sub = substitute_language(lang_name, &code);
 
 	for (list = search_list; list != NULL; list = list->next) {
 		if (code) {
@@ -804,9 +793,6 @@ get_lang_entry(char *lang_name, lang_info_t *search_list)
 			}
 		}
 	}
-
-	free(tmp_lang);
-	free(code);
 
 	if (!found)
 		return (NULL);
@@ -874,7 +860,6 @@ add_locale_entry_to_lang(lang_info_t *langp, char *locale_name, char *region,
 
 	locp->next = langp->locale_info;
 	langp->locale_info = locp;
-	langp->def_lang = is_default;
 	langp->n_locales++;
 }
 
@@ -939,7 +924,8 @@ build_install_ll_list(char *nlspath, char **install_list, int lang_total,
 				}
 			}
 		} else if (strcmp(lang, "C") == 0 ||
-		    strcmp(lang, "POSIX") == 0) {
+		    strcmp(lang, "POSIX") == 0 ||
+		    strcmp(lang, "C/POSIX") == 0) {
 			free(lang);
 			lang = strdup("en");
 			is_default = B_TRUE;
@@ -953,7 +939,7 @@ build_install_ll_list(char *nlspath, char **install_list, int lang_total,
 			continue;
 		} else {
 			ret = create_lang_entry(install_list[i],
-			    install_list[i], region, return_list, is_default);
+			    install_list[i], region, return_list, is_default, is_default);
 			if (!ret)
 				num_entries++;
 		}
@@ -1081,7 +1067,8 @@ build_ll_list(char **list, int lang_total, lang_info_t **return_list,
 	lang_info_t	*lp = NULL;
 	char		*orig, *start = NULL;
 	char		*t = NULL;
-	boolean_t	is_default = B_FALSE;
+	boolean_t	locale_app_locale = B_FALSE;
+	boolean_t	locale_in_installer_lang = B_FALSE;
 
 	*total = 0;
 
@@ -1146,7 +1133,8 @@ build_ll_list(char **list, int lang_total, lang_info_t **return_list,
 				}
 			}
 		} else if (strcmp(lang, "C") == 0 ||
-		    strcmp(lang, "POSIX") == 0) {
+		    strcmp(lang, "POSIX") == 0 ||
+		    strcmp(lang, "C/POSIX") == 0) {
 			free(lang);
 			lang = strdup("en");
 			if (lang == NULL) {
@@ -1175,7 +1163,9 @@ build_ll_list(char **list, int lang_total, lang_info_t **return_list,
 		 * anything we are interested in, so skip.
 		 */
 		if (locale != NULL)  {
-			is_default = is_locale_in_installer_lang(locale);
+			locale_in_installer_lang = is_locale_in_installer_lang(locale);
+			locale_app_locale = is_locale_app_locale(locale);
+			
 			om_debug_print(OM_DBGLVL_INFO, "Adding locale: "
 			    "locale=%s,lang=%s,region=%s\n", locale,
 			    lang == NULL ? "#" : lang,
@@ -1183,10 +1173,10 @@ build_ll_list(char **list, int lang_total, lang_info_t **return_list,
 
 			if ((lp = get_lang_entry(lang, *return_list)) != NULL) {
 				add_locale_entry_to_lang(lp, locale, region,
-				    is_default);
+				    locale_app_locale);
 			} else {
 				ret = create_lang_entry(lang, locale, region,
-				    return_list, is_default);
+				    return_list, locale_app_locale, locale_in_installer_lang);
 				if (!ret) {
 					num_langs++;
 					om_debug_print(OM_DBGLVL_INFO,
@@ -1577,16 +1567,15 @@ add_lang_to_list(char ***list, char *locale, int *k, int j)
 	char	**lpp = *list;
 	char	**tmp_list;
 	char	*tmp = NULL;
+	char	*sub = NULL;
 	char	*code;
 
 	tmp_list = *list;
 
-	if (strncmp(locale, "zh", 2) == 0) {
-		tmp = strdup(dgettext(TEXT_DOMAIN,
-		    substitute_chinese_language(locale, &code)));
-	} else if (strcmp(locale, "C") == 0 || strcmp(locale, "POSIX") == 0 ||
-	    strcmp(locale, "C/POSIX") == 0) {
-		tmp = strdup(dgettext(TEXT_DOMAIN, "English"));
+	sub = substitute_language(locale, &code);
+
+	if (sub != NULL) {
+		tmp = strdup(sub);
 	} else {
 		tmp = strdup(dgettext(TEXT_DOMAIN,
 		    orchestrator_lang_list[j].lang_name));
@@ -1642,6 +1631,7 @@ is_valid_locale(char *locale)
 	}
 	return (B_FALSE);
 }
+
 static char *
 substitute_C_POSIX_language(char **code)
 {
@@ -1651,18 +1641,8 @@ substitute_C_POSIX_language(char **code)
 	 * locale is C and or POSIX. Set to English, set code
 	 * to 'en'.
 	 */
-	lang = strdup(dgettext(TEXT_DOMAIN, "English"));
-	if (lang == NULL) {
-		om_set_error(OM_NO_SPACE);
-		*code = NULL;
-		return (lang);
-	}
-	*code = strdup("en");
-	if (*code == NULL) {
-		free(lang);
-		lang = NULL;
-		om_set_error(OM_NO_SPACE);
-	}
+	lang = dgettext(TEXT_DOMAIN, "English");
+	*code = "en";
 	return (lang);
 }
 
@@ -1670,24 +1650,39 @@ static char *
 substitute_chinese_language(char *locale, char **code)
 {
 	int 		i;
+	int		len;
 	char		*sub = NULL;
 
-	*code = NULL;
-
-	for (i = 0; chinese_values[i].lang; i++) {
-		if (strcmp(locale, chinese_values[i].lang) == 0) {
-			sub = strdup(chinese_values[i].lang_name);
-			*code = strdup(chinese_values[i].lang_code);
-			if (sub == NULL || *code == NULL) {
-				free(sub);
-				om_set_error(OM_NO_SPACE);
-				return (NULL);
-			} else {
-				return (sub);
-			}
+	for (i = 0; chinese_values[i].lang != NULL; i++) {
+		len = strlen(chinese_values[i].lang);
+		if ((strncmp(locale,  chinese_values[i].lang, len) == 0) &&
+		    (locale[len] == '\0' || locale[len] == '.')) {
+			sub =
+			    dgettext(TEXT_DOMAIN, chinese_values[i].lang_name);
+			*code = chinese_values[i].lang_code;
+			return (sub);
 		}
 	}
+
+	om_set_error(OM_INVALID_LOCALE);
 	return (sub);
+}
+
+static char *
+substitute_language(char *locale, char **code)
+{
+	char *lang = NULL;
+
+	if (strncmp(locale, "zh", 2) == 0) {
+		lang = substitute_chinese_language(locale, code);
+		if (lang == NULL)
+			goto error;
+	} else if (strcmp(locale, "C") == 0 || strcmp(locale, "POSIX") == 0) {
+		lang = substitute_C_POSIX_language(code);
+	}
+
+error:
+	return (lang);
 }
 
 static void
@@ -1777,6 +1772,9 @@ copy_up_to(char *start, char *end)
 	return (sub);
 }
 
+/* This method checks to see if the locale passed in as an argument
+ * is in the same language as the application.
+ */
 static boolean_t
 is_locale_in_installer_lang(char *locale_name)
 {
@@ -1817,6 +1815,29 @@ is_locale_in_installer_lang(char *locale_name)
 
 	return (B_FALSE);
 }
+
+/*
+ * This method checks to see if the currently used locale is the same
+ * as the locale passed as an argument. We do this by comparing
+ * app_locale to locale_name.
+ */
+static boolean_t
+is_locale_app_locale(char *locale_name)
+{
+	if (app_locale == NULL) {
+		app_locale = strdup(setlocale(LC_MESSAGES, NULL));
+	}
+
+	if (app_locale != NULL) {
+		if (strcmp(locale_name, app_locale) == 0) {
+			/* locale name is same */
+			return (B_TRUE);
+		} 
+	}
+
+	return (B_FALSE);
+}
+
 void
 om_save_locale(char *locale, boolean_t install_only)
 {
