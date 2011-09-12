@@ -664,6 +664,29 @@ class TargetDiscovery(Checkpoint):
 
                 disk = Disk("disk")
                 disk.ctd = drive.aliases[0].name
+
+                # verify the drive is accessible via a low-level read() of a
+                # small amount of data
+                path = drive.attributes.opath.replace("s0", "s2")
+                try:
+                    fd = os.open(path, os.O_RDONLY | os.O_NDELAY)
+                except OSError:
+                    # we're not able to even open the drive so continue
+                    self.logger.debug("Unable to open  %s.  "
+                                      "Skipping label check." % disk.ctd)
+                    continue
+
+                # read one block.  If it fails, simply continue to the next
+                # drive
+                try:
+                    os.read(fd, 512)
+                except OSError:
+                    self.logger.debug("Unable to read 512 bytes from %s.  "
+                                      "Skipping label check." % disk.ctd)
+                    continue
+                finally:
+                    os.close(fd)
+
                 dma = drive.media.attributes
 
                 # If a disk is missing some basic attributes then it most
