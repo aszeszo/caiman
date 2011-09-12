@@ -49,7 +49,7 @@ from solaris_install.target.libadm.const import V_ROOT
 
 from terminalui.base_screen import UIMessage
 from terminalui.edit_field import EditField
-from terminalui.i18n import fit_text_truncate, textwidth
+from terminalui.i18n import fit_text_truncate, get_encoding, textwidth
 from terminalui.inner_window import InnerWindow, no_action
 from terminalui.list_item import ListItem
 from terminalui.scroll_window import ScrollWindow
@@ -792,6 +792,8 @@ def decimal_valid(edit_field, disk_win=None):
         if not text:
             text = "0"
 
+        # encode user input per locale for floating point conversion
+        text = text.encode(get_encoding())
         new_size = Size(str(locale.atof(text)) + Size.gb_units)
         max_size = edit_field.data_obj.get_max_size()
         
@@ -818,7 +820,9 @@ def on_exit_edit(edit_field, disk_win=None):
     text = edit_field.get_text()
     if not text.strip():
         text = "0"
-    edit_field.set_text("%.1f" % locale.atof(text))
+        enctext = text.encode(get_encoding())
+        # encode per locale for floating point conversion
+        edit_field.set_text("%.1f" % locale.atof(enctext))
 
     part_order = disk_win.ui_obj.get_parts_in_use().index(edit_field.data_obj)
     LOGGER.debug("Part being resized is at index: %s", part_order)
@@ -826,7 +830,9 @@ def on_exit_edit(edit_field, disk_win=None):
     new_size_text = text.strip()
 
     LOGGER.debug("Resizing text=%s", new_size_text)
-    new_size = Size(str(locale.atof(new_size_text)) + Size.gb_units)
+    # encode user input per locale for floating point conversion
+    enctext = new_size_text.encode(get_encoding())
+    new_size = Size(str(locale.atof(enctext)) + Size.gb_units)
     old_size = edit_field.data_obj.size
 
     new_size_byte = new_size.get(Size.byte_units)
