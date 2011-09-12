@@ -52,7 +52,7 @@ ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLJS2AI)/%)
 
 MSGFILES =  $(PYMODULES)
 
-all:		$(GENERATEDPYFILES) python
+all:		python
 
 clean:
 	rm -f $(PYCMODULES) $(GENERATEDPYFILES)
@@ -68,7 +68,7 @@ install: all .WAIT $(ROOTPYTHONVENDOR) \
 
 $(GENERATEDPYFILES):
 
-python:
+python:	$(GENERATEDPYFILES)
 	$(PYTHON) -m compileall -l $(@D)
 
 msgs:	$(MSG_DOMAIN).po

@@ -41,7 +41,7 @@ PYCMODS=	$(PYMODS:%.py=%.pyc)
 CLOBBERFILES = $(GENERATEDPYFILES) $(PYCMODS)
 CLEANFILES = $(CLOBBERFILES)
 
-all:		$(GENERATEDPYFILES) python
+all:	python
 
 install: all .WAIT \
 	$(ROOTPYTHONVENDOR) \
@@ -53,8 +53,7 @@ install_h:
 
 $(GENERATEDPYFILES):
 
-
-python:
+python:	$(GENERATEDPYFILES)
 	$(PYTHON) -m compileall -l $(@D)
 
 include ../Makefile.targ

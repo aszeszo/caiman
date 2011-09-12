@@ -198,6 +198,8 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
                     if not dry_run:
                         shutil.copy2(move_file, target)
 
+            shutil.rmtree(savedir)
+
         if not dry_run:
             try:
                 api_inst = api.ImageInterface(self.target_dir,
