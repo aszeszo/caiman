@@ -688,7 +688,7 @@ class SystemBootMenu(BootMenu):
         # Detect the gui-install client by checking for it's profile object
         # in the DOC
         gui_prof = self.doc.persistent.get_first_child(name="GUI Install")
-        
+
         # If the client is gui-install and the console device is a graphical
         # framebuffer, enable the BootLoader splash and happy face boot.
         # Note 'text' below indicates a framebuffer based console, not to
@@ -1066,6 +1066,12 @@ class ISOImageBootMenu(BootMenu):
                                  "outside of image root: %s" \
                                  % (src, self.pkg_img_path))
         if img_type == BootConfig.OUTPUT_TYPE_BIOS_ELTORITO:
+            # bios-eltorito-img name is randomised by pybootmgmt to avoid
+            # name collisions. Rename it to something less conspicuous.
+            dst = os.path.join(self.pkg_img_path,
+                               'boot',
+                               '.bios-eltorito-img')
+            os.rename(src, dst)
             # bios-eltorito-img needs to live in the persistent section
             # of the DOC to ensure pause/resume works correctly.
             #
@@ -1074,11 +1080,11 @@ class ISOImageBootMenu(BootMenu):
             if self.dc_pers_dict:
                 self.doc.persistent.delete_children(name=DC_PERS_LABEL)
 
-            # Strip out the pkg_img_path prefix from src. Otherwise
+            # Strip out the pkg_img_path prefix from dst. Otherwise
             # mkisofs will choke because it requires a relative rather
             # than an absolute path for the eltorito image argument
             self.dc_pers_dict["bios-eltorito-img"] = \
-                src.split(self.pkg_img_path + os.sep)[1]
+                dst.split(self.pkg_img_path + os.sep)[1]
             self.doc.persistent.insert_children(
                 DataObjectDict(DC_PERS_LABEL,
                 self.dc_pers_dict, generate_xml=True))
