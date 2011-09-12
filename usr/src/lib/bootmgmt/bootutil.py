@@ -31,7 +31,7 @@ import logging
 import os
 import platform
 
-from . import BootmgmtNotSupportedError
+from bootmgmt import BootmgmtNotSupportedError
 
 
 def get_current_arch_string():

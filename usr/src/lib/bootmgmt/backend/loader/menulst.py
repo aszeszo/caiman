@@ -34,9 +34,9 @@ import re
 import shutil
 import stat
 import tempfile
-from ... import BootmgmtConfigWriteError, BootmgmtArgumentError
-from ...bootloader import BootLoaderInstallError
-from ...bootconfig import BootConfig
+from bootmgmt import BootmgmtConfigWriteError, BootmgmtArgumentError
+from bootmgmt.bootloader import BootLoaderInstallError
+from bootmgmt.bootconfig import BootConfig
 
 
 class MenuLstError(Exception):

@@ -28,9 +28,9 @@ BootInstance autogenerator Solaris backend for pybootmgmt
 
 import libbe_py
 
-from ... import BootmgmtUnsupportedOperationError
-from ...bootconfig import BootConfig, SolarisDiskBootInstance
-from ...bootutil import LoggerMixin
+from bootmgmt import BootmgmtUnsupportedOperationError
+from bootmgmt.bootconfig import BootConfig, SolarisDiskBootInstance
+from bootmgmt.bootutil import LoggerMixin
 
 
 class SolarisBootInstanceAutogenerator(LoggerMixin):

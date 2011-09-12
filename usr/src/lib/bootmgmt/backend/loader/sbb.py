@@ -26,21 +26,24 @@
 Loader backend for the SPARC Boot Block (SBB)
 """
 
+import errno
 import grp
 import os
 import pwd
 import shutil
 import tempfile
-from ... import (BootmgmtError, BootmgmtUnsupportedPlatformError,
-                 BootmgmtConfigWriteError, BootmgmtNotSupportedError,
-                 BootmgmtUnsupportedOperationError, BootmgmtConfigReadError,
-                 BootmgmtInterfaceCodingError)
-from ...bootloader import BootLoader, BootLoaderInstallError
-from ...bootconfig import BootConfig, DiskBootConfig, SolarisDiskBootInstance
-from ...bootutil import get_current_arch_string
-from .menulst import MenuDotLst, MenuLstError, MenuLstMenuEntry, MenuLstCommand
-from .menulst import MenuLstBootLoaderMixIn
-from ...pysol import platform_name, machine_name
+from bootmgmt import (BootmgmtError, BootmgmtUnsupportedPlatformError,
+                      BootmgmtConfigWriteError, BootmgmtNotSupportedError,
+                      BootmgmtUnsupportedOperationError,
+                      BootmgmtConfigReadError, BootmgmtInterfaceCodingError)
+from bootmgmt.bootloader import BootLoader, BootLoaderInstallError
+from bootmgmt.bootconfig import (BootConfig, DiskBootConfig,
+                                 SolarisDiskBootInstance)
+from bootmgmt.bootutil import get_current_arch_string
+from bootmgmt.backend.loader.menulst import (MenuDotLst, MenuLstError,
+                                             MenuLstMenuEntry, MenuLstCommand,
+                                             MenuLstBootLoaderMixIn)
+from bootmgmt.pysol import platform_name, machine_name
 from solaris_install import Popen, CalledProcessError
 
 
@@ -292,6 +295,11 @@ class ZFSBootLoader(OBPBootLoader, MenuLstBootLoaderMixIn):
 
         if basepath is None:
             destination = boot_data_root_dir + bootlst
+            try:            
+                os.makedirs(os.path.dirname(destination), 0755)
+            except OSError as oserr:
+                if oserr.errno != errno.EEXIST:
+                    raise
         else:
             try:
                 tmpfile = tempfile.NamedTemporaryFile(dir=basepath,

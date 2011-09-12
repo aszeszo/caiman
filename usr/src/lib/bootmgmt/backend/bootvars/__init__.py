@@ -27,8 +27,8 @@ Boot variables backend support for pybootmgmt
 """
 
 import sys
-from ... import bootutil
-from ... import BootmgmtArgumentError
+from bootmgmt import bootutil
+from bootmgmt import BootmgmtArgumentError
 
 
 class BackendBootVarsFactory(object):

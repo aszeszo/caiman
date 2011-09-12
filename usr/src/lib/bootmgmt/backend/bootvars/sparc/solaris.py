@@ -27,7 +27,7 @@ SPARC Solaris Boot variables backend support for pybootmgmt
 """
 
 import sys
-from .... import bootinfo
+from bootmgmt import bootinfo
 
 
 class OBPBootVariables(bootinfo.BootVariables):

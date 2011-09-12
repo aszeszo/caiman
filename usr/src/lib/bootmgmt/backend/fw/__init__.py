@@ -26,9 +26,8 @@
 System firmware backend support for pybootmgmt
 """
 
-from ...bootutil import get_current_arch_string
-from ... import BootmgmtUnsupportedPlatformError
-from ... import pysol
+from bootmgmt.bootutil import get_current_arch_string
+from bootmgmt import BootmgmtUnsupportedPlatformError, pysol
 import sys
 
 
@@ -43,7 +42,7 @@ class BackendFWFactory(object):
             curarch = get_current_arch_string()
             # If this is a SPARC system, the appropriate class is obp
             if curarch == 'sparc':
-                from . import obp
+                from bootmgmt.backend.fw import obp
                 return obp.firmware_backend()('obp')
             elif curarch == 'x86':
             # If this is an x86 system and the efi-systype property exists,
@@ -57,7 +56,7 @@ class BackendFWFactory(object):
                     efisystype = None
 
                 if efisystype is None:
-                    from . import bios
+                    from bootmgmt.backend.fw import bios
                     return bios.firmware_backend()('bios')
                 else:
                     uefi_string = 'uefi' + efisystype

@@ -27,7 +27,7 @@ Various bootloader interfaces for pybootmgmt
 """
 
 import sys
-from ...bootutil import LoggerMixin
+from bootmgmt.bootutil import LoggerMixin
 
 boot_loader_backends = ['grub2', 'legacygrub', 'sbb']
 

@@ -26,7 +26,7 @@
 OpenBoot Firmware firmware backend for pybootmgmt
 """
 
-from ... import bootinfo
+from bootmgmt import bootinfo
 
 
 class OBPFirmware(bootinfo.SystemFirmware):

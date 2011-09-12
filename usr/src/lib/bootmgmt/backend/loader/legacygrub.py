@@ -33,21 +33,27 @@ import gettext
 import stat
 import re
 
-from .menulst import MenuDotLst, MenuLstError, MenuLstMenuEntry, MenuLstCommand
-from .menulst import MenuLstBootLoaderMixIn
-from ...bootloader import BootLoader, BootLoaderInstallError
-from ...bootconfig import BootConfig, DiskBootConfig, SolarisDiskBootInstance
-from ...bootconfig import ChainDiskBootInstance
-from ...bootutil import get_current_arch_string
-from ...pysol import (libzfs_init, libzfs_fini, zpool_open, zpool_close,
-                    zpool_get_physpath, zpool_set_prop, zpool_get_prop,
-                    ZPOOL_PROP_BOOTFS, libzfs_error_description)
-from ... import BootmgmtArgumentError
-from ... import BootmgmtUnsupportedOperationError, BootmgmtInterfaceCodingError
-from ... import BootmgmtIncompleteBootConfigError, BootmgmtConfigReadError
-from ... import BootmgmtConfigWriteError, BootmgmtMalformedPropertyValueError
-from ... import BootmgmtUnsupportedPlatformError, BootmgmtNotSupportedError
-from ... import BootmgmtUnsupportedPropertyError
+from bootmgmt.backend.loader.menulst import (MenuDotLst, MenuLstError,
+                                             MenuLstMenuEntry, MenuLstCommand,
+                                             MenuLstBootLoaderMixIn)
+from bootmgmt.bootloader import BootLoader, BootLoaderInstallError
+from bootmgmt.bootconfig import (BootConfig, DiskBootConfig, BootInstance,
+                                 SolarisDiskBootInstance)
+from bootmgmt.bootconfig import ChainDiskBootInstance
+from bootmgmt.bootutil import get_current_arch_string
+from bootmgmt.pysol import (libzfs_init, libzfs_fini, zpool_open, zpool_close,
+                            zpool_get_physpath, zpool_set_prop, zpool_get_prop,
+                            ZPOOL_PROP_BOOTFS, libzfs_error_description)
+from bootmgmt import (BootmgmtArgumentError,
+                      BootmgmtUnsupportedOperationError,
+                      BootmgmtInterfaceCodingError,
+                      BootmgmtIncompleteBootConfigError,
+                      BootmgmtConfigReadError,
+                      BootmgmtConfigWriteError,
+                      BootmgmtMalformedPropertyValueError,
+                      BootmgmtUnsupportedPlatformError,
+                      BootmgmtNotSupportedError,
+                      BootmgmtUnsupportedPropertyError)
 from solaris_install import Popen, CalledProcessError
 
 _ = gettext.translation('SUNW_OST_OSCMD', '/usr/lib/locale',
@@ -380,12 +386,19 @@ r"""# default menu entry to boot
                                 argdict['rpool'] = pool
                                 argdict['fstype'] = 'zfs'
                             else:
-                                raise BootmgmtUnsupportedOperationError(
-                                      'Unknown findroot() directive: %s' %
-                                      argstring)
+                                # This is either an erroneous or older use;
+                                # in that case, ignore it.
+                                self._debug('Unknown findroot() '
+                                            'directive: %s -- ignoring' %
+                                            argstring)
 
                 elif entity.find_command('chainloader') is not None:
                     for cmd in entity.commands():
+
+                        # Skip non-commands
+                        if not isinstance(cmd, MenuLstCommand):
+                            continue
+
                         if cmd.get_command() == 'title':
                             argdict['title'] = ' '.join(cmd.get_args())
                         elif (cmd.get_command() == 'root' or
@@ -398,6 +411,16 @@ r"""# default menu entry to boot
                         elif cmd.get_command() == 'chainloader':
                             argdict['chainload'] = ' '.join(cmd.get_args())
 
+                else: # OSes we don't know about
+                    for cmd in entity.commands():
+                        # Skip non-commands
+                        if not isinstance(cmd, MenuLstCommand):
+                            continue
+
+                        if cmd.get_command() == 'title':
+                            argdict['title'] = ' '.join(cmd.get_args())
+
+
                 if argdict.get('chainload', None) is not None:
                     inst = ChainDiskBootInstance(None, **argdict)
                 else:
@@ -408,8 +431,12 @@ r"""# default menu entry to boot
                         self._derive_bootfs(argdict)
                         bootfs_derived = True
 
-                    inst = SolarisDiskBootInstance(None, **argdict)
-                    inst._bootfs_derived = bootfs_derived
+                    if argdict.get('bootfs', None) is None:
+                        self._debug('Creating a regular boot instance: %s' % argdict)
+                        inst = BootInstance(None, **argdict)
+                    else:
+                        inst = SolarisDiskBootInstance(None, **argdict)
+                        inst._bootfs_derived = bootfs_derived
 
                 entity.boot_instance = inst
                 inst._menulst_entity = entity
@@ -623,9 +650,11 @@ r"""# default menu entry to boot
             else:
                 propdict['background'] = None
 
-            # Delete any reference to the serial console if it exists:
-            propdict['serial'] = None
-            propdict['terminal'] = None
+            # Delete any reference to the serial console if it exists,
+            # but only if we previously loaded a menu:
+            if self._menufile:
+                propdict['serial'] = None
+                propdict['terminal'] = None
 
         elif consprop == BootLoader.PROP_CONSOLE_SERIAL:
             params = self._serial_parameters()
@@ -758,7 +787,10 @@ r"""# default menu entry to boot
         else:
             self._debug('No entry generator (%s) for class %s' %
                         (method_name, instclsname))
-            return ''
+            if instance._menulst_entity is not None:
+                return None
+            else:
+                return ''
 
     def _generate_entry_generic(self, inst, kargs):
 

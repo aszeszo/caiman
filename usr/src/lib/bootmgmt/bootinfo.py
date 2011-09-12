@@ -28,8 +28,8 @@ Various classes that provide access to system- and boot-related information
 
 import logging
 
-from .pysol import devfs_bootdev_get_list
-from . import BootmgmtUnsupportedOperationError
+from bootmgmt.pysol import devfs_bootdev_get_list
+from bootmgmt import BootmgmtUnsupportedOperationError
 
 logger = logging.getLogger('bootmgmt')
 
@@ -39,7 +39,7 @@ class SystemFirmware(object):
 
     @staticmethod
     def get(firmware_name=None):
-        from .backend.fw import BackendFWFactory
+        from bootmgmt.backend.fw import BackendFWFactory
         return BackendFWFactory.get(firmware_name)
 
     def __init__(self, fw_name=None):
@@ -72,7 +72,7 @@ class BootVariables(object):
     def get(sysroot=None, arch=None, osname='solaris'):
         if sysroot is None:
             return None
-        from .backend.bootvars import BackendBootVarsFactory
+        from bootmgmt.backend.bootvars import BackendBootVarsFactory
         return BackendBootVarsFactory.get(sysroot, arch, osname)
 
     def __init__(self, sysroot=None):

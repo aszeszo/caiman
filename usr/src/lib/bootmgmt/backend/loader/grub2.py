@@ -26,7 +26,7 @@
 GRUB2 boot loader backend for pybootmgmt
 """
 
-from ...bootloader import BootLoader
+from bootmgmt.bootloader import BootLoader
 
 
 class GRUB2BootLoader(BootLoader):

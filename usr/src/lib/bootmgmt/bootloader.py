@@ -26,12 +26,12 @@
 Boot loader abstraction for pybootmgmt
 """
 
-from .backend.loader import BackendBootLoaderFactory
-from .bootinfo import SystemFirmware
-from .bootutil import LoggerMixin
-from . import BootmgmtError, BootmgmtNotSupportedError
-from . import BootmgmtUnsupportedPropertyError
-from . import BootmgmtUnsupportedOperationError
+from bootmgmt.backend.loader import BackendBootLoaderFactory
+from bootmgmt.bootinfo import SystemFirmware
+from bootmgmt.bootutil import LoggerMixin
+from bootmgmt import (BootmgmtError, BootmgmtNotSupportedError,
+                      BootmgmtUnsupportedPropertyError,
+                      BootmgmtUnsupportedOperationError)
 
 
 class BootLoader(LoggerMixin):

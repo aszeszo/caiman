@@ -31,9 +31,9 @@ import os
 import tempfile
 import shutil
 import sys
-from .... import bootinfo
-from .... import BootmgmtMalformedPropertyNameError, BootmgmtArgumentError
-from .... import BootmgmtReadError, BootmgmtWriteError
+from bootmgmt import bootinfo
+from bootmgmt import (BootmgmtMalformedPropertyNameError, BootmgmtArgumentError,
+                      BootmgmtReadError, BootmgmtWriteError)
 
 logger = logging.getLogger('bootmgmt')
 

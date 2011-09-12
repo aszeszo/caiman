@@ -37,13 +37,13 @@ import collections
 import gettext
 import unittest
 
-from . import (BootmgmtNotSupportedError, BootmgmtArgumentError,
-               BootmgmtMissingInfoError, BootmgmtError,
-               BootmgmtUnsupportedOperationError,
-               BootmgmtUnsupportedPlatformError)
-from . import bootinfo, bootloader
-from .bootutil import LoggerMixin, get_current_arch_string
-from .pysol import (libzfs_init, libzfs_fini, zpool_open, zpool_close,
+from bootmgmt import (BootmgmtNotSupportedError, BootmgmtArgumentError,
+                      BootmgmtMissingInfoError, BootmgmtError,
+                      BootmgmtUnsupportedOperationError,
+                      BootmgmtUnsupportedPlatformError)
+from bootmgmt import bootinfo, bootloader
+from bootmgmt.bootutil import LoggerMixin, get_current_arch_string
+from bootmgmt.pysol import (libzfs_init, libzfs_fini, zpool_open, zpool_close,
                     zpool_get_physpath, zpool_set_prop, zpool_get_prop,
                     ZPOOL_PROP_BOOTFS, libzfs_error_description)
 _ = gettext.translation("SUNW_OST_OSCMD", "/usr/lib/locale",
@@ -178,7 +178,7 @@ class BootConfig(LoggerMixin):
             self._autogenerate_config(**kwargs)
 
     def _autogenerate_config(self, **kwargs):
-        from .backend.autogen import BootInstanceAutogenFactory
+        from bootmgmt.backend.autogen import BootInstanceAutogenFactory
         inst_list = BootInstanceAutogenFactory.autogen(self)
         if len(inst_list) > 0:
             self.boot_instances += inst_list
@@ -377,6 +377,13 @@ class BootConfig(LoggerMixin):
                           | filesystem. [string]
         ----------------------------------------------------------------
         """
+        if not self.boot_loader:
+            raise BootmgmtError('A boot loader could not be established '
+                                'for this boot configuration (this is usually '
+                                'due to missing boot loader files). '
+                                'The system cannot be guaranteed to be '
+                                'bootable.')
+
         if temp_dir is None:
             if force is True or self.dirty is True:
                 for inst in self.boot_instances:
@@ -472,7 +479,8 @@ class DiskBootConfig(BootConfig):
 
     def _load_boot_config(self, **kwargs):
         """Loads the boot configuration"""
-        self.boot_loader.load_config()
+        if self.boot_loader:
+            self.boot_loader.load_config()
 
         fstype = getattr(self, 'boot_fstype', None)
         if (fstype is None or fstype != 'zfs' or
@@ -513,7 +521,8 @@ class DiskBootConfig(BootConfig):
 
     def _new_boot_config(self, **kwargs):
         """Initializes this instance with a new boot configuration"""
-        self.boot_loader.new_config()
+        if self.boot_loader:
+            self.boot_loader.new_config()
 
     def _set_default_bootfs(self):
 

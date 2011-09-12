@@ -26,7 +26,7 @@
 UEFI firmware backend for pybootmgmt (only 64-bit UEFI is supported)
 """
 
-from ... import bootinfo
+from bootmgmt import bootinfo
 
 
 class UEFI64Firmware(bootinfo.SystemFirmware):
