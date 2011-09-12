@@ -772,8 +772,10 @@ def parse_unconfig_args(parser, args):
                         sys.exit(SU_FATAL_ERR)
 
                     # Place profile in the temporary site profile area.
+                    orig_umask = os.umask(0377) 
                     shutil.copyfile(profile_file,
                                     os.path.join(custom_profile_dir, pfile))
+                    os.umask(orig_umask) 
                     profile_dir_is_empty = False
 
             # If no profile was found in given directory, abort.
@@ -788,8 +790,10 @@ def parse_unconfig_args(parser, args):
                 sys.exit(SU_FATAL_ERR)
 
             # Place profile in the temporary site profile area.
+            orig_umask = os.umask(0377)
             shutil.copyfile(options.profile, os.path.join(custom_profile_dir,
                             os.path.basename(options.profile)))
+            os.umask(orig_umask) 
 
     #
     # if there is a request to re-configure system in interactive way

@@ -28,6 +28,7 @@ Display a summary of the user's selections
 
 import curses
 import logging
+import os 
 
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.engine import InstallEngine
@@ -104,7 +105,13 @@ class SummaryScreen(BaseScreen):
     def on_continue(self):
         '''Have the InstallEngine generate the manifest'''
         eng = InstallEngine.get_instance()
+
+        # Set the umask read-only by user (root)
+        # Execute the checkpoint and reset to the original
+        # umask.
+        orig_umask = os.umask(0377) 
         (status, failed_cps) = eng.execute_checkpoints()
+        os.umask(orig_umask) 
 
         if status != InstallEngine.EXEC_SUCCESS:
             print _("Error when generating SC profile\n")
