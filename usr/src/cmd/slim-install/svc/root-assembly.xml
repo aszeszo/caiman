@@ -111,7 +111,7 @@
 	<!--
 	  net instance is used for all boots from network
 	-->
-	<instance name='net' enabled='false'>
+	<instance name='net' enabled='true'>
 
 	<exec_method
 		type='method'

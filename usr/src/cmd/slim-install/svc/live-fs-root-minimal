@@ -33,6 +33,10 @@ LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 . /lib/svc/share/smf_include.sh
 . /lib/svc/share/fs_include.sh
 
+# FMRI's for services we manipulate here
+MEDIA_ASSEMBLY=svc:/system/filesystem/root-assembly:media
+NET_ASSEMBLY=svc:/system/filesystem/root-assembly:net
+
 #
 # Remount root RW
 #
@@ -61,34 +65,36 @@ ls -lR /devices/* > /dev/null
 
 # 
 # Depending upon how we are booted, make sure that either the 'media' instance
-# or the 'net' instance of the filesystem/root-assembly service is enabled.
+# or the 'net' instance of the filesystem/root-assembly service is disabled.
 #
-# Disabling 'media' instance has to be synchronous, otherwise there is
-# a space for race condition - 'media' service could enter online state
-# for a while - after filesystem/root-minimal finishes its job
-# and before request for 'disable' is processed by smf(5) framework.
+# Disabling of either instance has to be synchronous to ensure that the
+# instance is not allowed to try to start since there is no guarantee that
+# the disable would be processed before they attempt to start otherwise.
 #
 if [ $ISA_INFO = "sparc" ]; then
 	# check if the wanboot device exists
 	BOOTFS_DISK="/devices/ramdisk-bootfs:a"
 	if [ -b "$BOOTFS_DISK" ]; then
-		# booting off of the net
-		/usr/sbin/svcadm enable svc:/system/filesystem/root-assembly:net
-		/usr/sbin/svcadm disable -s \
-		    svc:/system/filesystem/root-assembly:media
+		# Booting from net
+		/usr/sbin/svcadm disable -s $MEDIA_ASSEMBLY
         else
-        	# enable automatic network configuration for media booted
+		# Booting from media
+		/usr/sbin/svcadm disable -s $NET_ASSEMBLY
+
+        	# Enable automatic network configuration for media booted
                 # environments
                 /usr/sbin/svccfg apply /etc/svc/profile/network_nwam.xml
 	fi
 else
 	MEDIA=`/sbin/devprop -s install_media`
 	if [ ! -z "$MEDIA" ]; then
-		/usr/sbin/svcadm enable svc:/system/filesystem/root-assembly:net
-		/usr/sbin/svcadm disable -s \
-		    svc:/system/filesystem/root-assembly:media
+		# Booting from net
+		/usr/sbin/svcadm disable -s $MEDIA_ASSEMBLY
         else
-        	# enable automatic network configuration for media booted
+		# Booting from media
+		/usr/sbin/svcadm disable -s $NET_ASSEMBLY
+
+        	# Enable automatic network configuration for media booted
                 # environments
                 /usr/sbin/svccfg apply /etc/svc/profile/network_nwam.xml
 	fi
