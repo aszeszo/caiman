@@ -31,10 +31,27 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 
 import unittest
 import osol_install.auto_install.create_service as create_service
+import osol_install.auto_install.installadm_common as com
 
 
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options.''' 
+
+    @classmethod
+    def setUpClass(cls):
+        '''Class-level set up
+           We want to sub out the is_multihomed() function from
+           installadm_common because it calls into the installadm-common.sh
+           script which is part of the installadm pkg and that pkg may not
+           be installed on the system running the unit tests. 
+        '''
+        cls.com_ismultihomed = com.is_multihomed
+        com.is_multihomed = lambda: False
+
+    @classmethod
+    def tearDownClass(cls):
+        '''Class-level teardown'''
+        com.is_multihomed = cls.com_ismultihomed
 
     def test_parse_one_arg(self):
         '''Ensure one args caught'''
@@ -62,11 +79,30 @@ class ParseOptions(unittest.TestCase):
         myargs = ["-t", "aliasof_name", "-i", "10.100.100.100"]
         self.assertRaises(SystemExit, create_service.parse_options, myargs)
 
-    def test_parse_no_src_or_alias(self):
-        '''Ensure missing source and missing alias caught'''
+    def test_alias_has_name(self):
+        '''Ensure if creating alias, name is provided'''
 
-        myargs = ["-c", "5", "-i", "10.100.100.100"]
+        myargs = ["-t", "myalias"]
         self.assertRaises(SystemExit, create_service.parse_options, myargs)
+
+    def test_no_default_arch(self):
+        '''Ensure default arch can't be created as service'''
+
+        myargs = ["-n", "default-i386"]
+        self.assertRaises(SystemExit, create_service.parse_options, myargs)
+        myargs = ["-n", "default-sparc"]
+        self.assertRaises(SystemExit, create_service.parse_options, myargs)
+
+    def test_publisher_syntax(self):
+        '''Ensure publisher string is of form 'publisher=uri' '''
+
+        myargs = ["-p", "solarishttp://www.example.com:10000"]
+        self.assertRaises(SystemExit, create_service.parse_options, myargs)
+
+        myargs = ["-p", "solaris=http://www.example.com:10000"]
+        options = create_service.parse_options(myargs)
+        self.assertEquals(options.publisher[0], "solaris")
+        self.assertEquals(options.publisher[1], "http://www.example.com:10000")
 
     def test_parse_no_errors(self):
         '''Ensure successful command parsing'''
@@ -76,6 +112,11 @@ class ParseOptions(unittest.TestCase):
         self.assertEquals(options.svcname, "myservice")
         self.assertEquals(options.srcimage, "/tmp/myiso.iso")
 
+        # Make sure passing no options is ok
+        myargs = list()
+        options = create_service.parse_options(myargs)
+        self.assertEquals(options.srcimage,
+                          "pkg:/install-image/solaris-auto-install")
 
 
 if __name__ == '__main__':
