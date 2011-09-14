@@ -25,22 +25,48 @@
 import os
 import sys
 from solaris_install.getconsole import get_console, SERIAL_CONSOLE
-from solaris_install.sysconfig import main
+from solaris_install import Popen, CalledProcessError
+
+TTY = "/usr/bin/tty"
+DEV_CONSOLE = "/dev/console"
+DEV_VT = "/dev/vt/"
 
 #
 # Determine whether LC_MESSAGES environment variable needs to be set
 # or not.  This must be done before the gettext.translation() call so the
 # correct localized messages are used.
 #
-console_type = get_console()
 
 #
-# If running from a serial console, translation will be enabled.
-# If running on a physical console, translation will
-# be disabled by setting LC_MESSAGES to C
+# First determine if sysconfig has been launched on console.
+# Take virtual consoles into account.
 #
-if console_type != SERIAL_CONSOLE:
+cmd = [TTY]
+try:
+    p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.PIPE,
+                         check_result=(Popen.STDERR_EMPTY, 0))
+except CalledProcessError as err:
+    # if tty fails, assume we are not on console.
+    is_on_console = False
+else:
+    terminal_device = p.stdout.strip()
+    if terminal_device == DEV_CONSOLE or terminal_device.startswith(DEV_VT):
+        is_on_console = True
+    else:
+        is_on_console = False
+
+#
+# If running from a serial console or remotely (not on console),
+# translation will be enabled.
+# Otherwise, translation will be disabled by setting LC_MESSAGES to C.
+#
+if is_on_console and get_console() != SERIAL_CONSOLE:
     os.environ["LC_MESSAGES"] = "C"
 
-sys.exit(main())
+#
+# sysconfig module has to be imported after LC_MESSAGES
+# was set, since i18n service is initialized during import.
+#
+from solaris_install.sysconfig import main
 
+sys.exit(main())

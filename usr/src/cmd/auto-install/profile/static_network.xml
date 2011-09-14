@@ -75,7 +75,7 @@ Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
     </service>
 
     <service name='system/environment' version='1'>
-      <instance name='default' enabled='true'>
+      <instance name='init' enabled='true'>
         <property_group name='environment'>
           <propval name='LANG' value='en_US.UTF-8'/>
         </property_group>
