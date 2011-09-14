@@ -105,6 +105,15 @@ ROOT.BIN= \
 	/usr/share/gui-install/help/C \
 	/usr/share/gui-install/installmessages \
 	/usr/share/gui-install/installmessages/C \
+	/usr/share/gui-install/installmessages/de_DE.UTF-8 \
+	/usr/share/gui-install/installmessages/es_ES.UTF-8 \
+	/usr/share/gui-install/installmessages/fr_FR.UTF-8 \
+	/usr/share/gui-install/installmessages/it_IT.UTF-8 \
+	/usr/share/gui-install/installmessages/ja_JP.UTF-8 \
+	/usr/share/gui-install/installmessages/ko_KR.UTF-8 \
+	/usr/share/gui-install/installmessages/pt_BR.UTF-8 \
+	/usr/share/gui-install/installmessages/zh_CN.UTF-8 \
+	/usr/share/gui-install/installmessages/zh_TW.UTF-8 \
 	/usr/share/install \
 	/usr/share/lib \
 	/usr/share/lib/xml \

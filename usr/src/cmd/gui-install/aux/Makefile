@@ -39,7 +39,17 @@ HELPFILES= \
 	UPGRADE_REVIEW_PANEL.txt \
 	WELCOME_PANEL.txt
 
-SUBDIRS=	C
+SUBDIRS=	C \
+	de_DE.UTF-8 \
+	es_ES.UTF-8 \
+	fr_FR.UTF-8 \
+	it_IT.UTF-8 \
+	ja_JP.UTF-8 \
+	ko_KR.UTF-8 \
+	pt_BR.UTF-8 \
+	zh_CN.UTF-8 \
+	zh_TW.UTF-8
+
 
 SCHEMAFILES= solaris-gui-install.schemas
 
