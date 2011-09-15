@@ -931,14 +931,11 @@ class AutoInstall(object):
                 "solaris_install.auto_install.checkpoints.ai_configuration",
                 "AIConfiguration", args=None, kwargs=None)
 
-            # Temporarily ensure /var in_be dataset is only created on
-            # Global Zone installs.
-            if self.options.alt_zpool_dataset is None:
-                # Register VarSharedDataset
-                self.logger.debug("Adding VarSharedDataset Checkpoint")
-                self.engine.register_checkpoint("var-shared-dataset",
-                    "solaris_install.target.varshared",
-                    "VarSharedDataset", args=None, kwargs=None)
+            # Register VarSharedDataset
+            self.logger.debug("Adding VarSharedDataset Checkpoint")
+            self.engine.register_checkpoint("var-shared-dataset",
+                "solaris_install.target.varshared",
+                "VarSharedDataset", args=None, kwargs=None)
 
             # Register TargetInstantiation
             if self.options.alt_zpool_dataset is None:
