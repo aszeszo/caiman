@@ -244,7 +244,6 @@ class UserScreen(BaseScreen):
                 self.userpasswordinfolabel.set_markup(self.saved_msg)
                 self.atk_passwordinfolabel.set_description(self.saved_msg)
                 self.userpasswordinfolabel.show_all()
-                user_password.grab_focus()
         elif widget == check_password:
             # validate that the passwords are the same
             original_password = user_password.get_text()
