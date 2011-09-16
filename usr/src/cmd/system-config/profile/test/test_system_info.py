@@ -99,3 +99,7 @@ class TestSysInfoToXML(unittest.TestCase):
             if "<propval" in compare_with_line:
                 continue
             self.assertEqual(xml_line, compare_with_line)
+
+
+if __name__ == '__main__':
+    unittest.main()

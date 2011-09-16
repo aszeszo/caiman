@@ -220,9 +220,6 @@ class SystemInfo(data_object.DataObject):
         Use following algorithm:
          - If connected to SPARC via keyboard/monitor, use "sun"
          - If connected to X86 via keyboard/monitor, use "sun-color"
-         - If connected to X86 and unable to determine whether we are using
-           physical or serial console, use "sun-color"
-         - If running on serial console, use "vt100"
          - Otherwise, use "vt100"'''
 
         term_type = "vt100"
@@ -232,8 +229,7 @@ class SystemInfo(data_object.DataObject):
         LOGGER().info("console type: %s", console_type)
 
         if platform.processor() == "i386":
-            if console_type != SERIAL_CONSOLE:
-                # not on physical console or unable to determine console type
+            if console_type == PHYSICAL_CONSOLE:
                 term_type = "sun-color"
         else:
             # SPARC
