@@ -82,6 +82,9 @@ $(ROOTUSRLIB)/%: $$(PNAME)/$(ARCH)/%
 $(ROOTUSRLIB)/%: %
 	$(INS.file)
 
+$(ROOTUSRLIBBOOT):
+	$(INS.dir)
+
 $(ROOTUSRLIBMSGS):
 	$(INS.dir)
 

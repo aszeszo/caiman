@@ -934,7 +934,7 @@ r"""# default menu entry to boot
         """Menu-entry generator for ChainDiskBootInstance instances.  This is a
         VERY simple use of the rootnoverify and chainloader Legacy GRUB
         commands.  Chainloading is only supported to a specific, numbered
-        drive and physical sector offset/count."""
+        drive, partition specification, and physical sector offset/count."""
 
         if inst.chaininfo is None:
             raise BootmgmtIncompleteBootConfigError('chaininfo property is '
@@ -944,31 +944,58 @@ r"""# default menu entry to boot
                                         'tuple')
         if type(inst.chaininfo[0]) is not int:
             raise BootmgmtArgumentError('chaininfo[0] must be an int')
-        if len(inst.chaininfo) > 1 and type(inst.chaininfo[1]) is not int:
-            raise BootmgmtArgumentError('chaininfo[1] must be an int')
+        if (len(inst.chaininfo) > 1 and
+            type(inst.chaininfo[1]) is not int and
+            type(inst.chaininfo[1]) is not tuple):
+            raise BootmgmtArgumentError('chaininfo[1] must be an int or tuple')
+        if (len(inst.chaininfo) > 1 and type(inst.chaininfo[1]) is tuple and
+            len(inst.chaininfo[1]) > 2):
+            raise BootmgmtArgumentError('chaininfo[1] must not have > 2 items')
 
         diskstr = '(hd' + str(inst.chaininfo[0])
 
         if len(inst.chaininfo) > 1:
-            diskstr += ',' + str(inst.chaininfo[1])
+            if type(inst.chaininfo[1]) is tuple:
+                for tuple_item in inst.chaininfo[1]:
+                    diskstr += ',' + str(tuple_item)
+            else:
+                diskstr += ',' + str(inst.chaininfo[1])
 
         diskstr += ')'
 
-        rootnoverify_cmd = 'rootnoverify ' + diskstr + '\n'
+        # if the user had a root command, use that, otherwise,
+        # use rootnoverify
+        if inst._menulst_entity and inst._menulst_entity.find_command('root'):
+            root_cmd = 'root ' + diskstr
+        else:
+            root_cmd = 'rootnoverify ' + diskstr 
+
+        active_cmd = None
+        if inst.forceactive:
+            if inst._menulst_entity:
+                inst._menulst_entity.update_command('makeactive', [''], create=True)
+            else:
+                active_cmd = 'makeactive'
+        else:
+            if inst._menulst_entity: # Delete the command, if any
+                inst._menulst_entity.update_command('makeactive', None)
+
         chainloader_cmd = 'chainloader '
         if int(inst.chainstart) != 0:
             chainloader_cmd += str(int(inst.chainstart))
-        chainloader_cmd += '+' + str(int(inst.chaincount)) + '\n'
+        chainloader_cmd += '+' + str(int(inst.chaincount))
 
         if inst._menulst_entity is not None:
-            for nextcmd in (rootnoverify_cmd, chainloader_cmd):
+            for nextcmd in (root_cmd, chainloader_cmd):
                 cmd_args = nextcmd.split(' ', 1)
                 inst._menulst_entity.update_command(cmd_args[0],
                                                     cmd_args[1].strip(),
                                                     create=True)
             return None      
 
-        ostr = rootnoverify_cmd + chainloader_cmd
+        ostr = root_cmd + '\n' + chainloader_cmd
+        if active_cmd:
+            ostr += '\n' + active_cmd
         return ostr
 
     # Property-related methods

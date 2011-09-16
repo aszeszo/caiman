@@ -763,9 +763,10 @@ class BootInstance(LoggerMixin):
 class ChainDiskBootInstance(BootInstance):
     """A boot instance of a chainloaded operating system"""
 
-    _attributes = {'chaininfo': None,
-                   'chainstart': '0',
-                   'chaincount': '1'}
+    _attributes = {'chaininfo'  : None,
+                   'chainstart' : '0',
+                   'chaincount' : '1',
+                   'forceactive': False}
 
     def __init__(self, rootpath=None, **kwargs):
         """rootpath is not supported, so should remain `None'"""
@@ -886,7 +887,7 @@ class SolarisDiskBootInstance(SolarisBootInstance):
 
     def init_from_rootpath(self, rootpath):
         # Invoke the parent's init_from_rootpath first
-        super(SolarisBootInstance, self).init_from_rootpath(rootpath)
+        super(SolarisDiskBootInstance, self).init_from_rootpath(rootpath)
 
         # self.title is guaranteed to have been initialized to something
         if not self.title is None:
@@ -915,7 +916,7 @@ class SolarisODDBootInstance(SolarisBootInstance):
 
     def init_from_rootpath(self, rootpath):
         # Invoke the parent's init_from_rootpath first
-        super(SolarisBootInstance, self).init_from_rootpath(rootpath)
+        super(SolarisODDBootInstance, self).init_from_rootpath(rootpath)
 
         # self.title is guaranteed to have been initialized to something
         if not self.title is None:
