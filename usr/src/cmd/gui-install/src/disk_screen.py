@@ -635,48 +635,56 @@ class DiskScreen(BaseScreen):
               partition for this install
 
             Actions taken:
-            1. Re-instate slice 0, if needed.
-                When the Disk was selected by the TargetController, it
-                will have had slice 0 added to the Solaris partition.
-                However, any resizing or other modifications done by the
-                user will have caused all slices under that partition to
-                be deleted.  If this is the case, we must now reinstate
-                slice 0 before continuing.
+            1. Create slice 0.
+                At this stage the slices on the Solaris2 partition may be
+                in a number of states:
+                - discovered slices from a previous install may still be
+                  present if the user has not made any adjustments to the
+                  partition (although they may not match our requirements)
+                - slices added by TargetController may be present
+                - there may be no slices if the user has made any adjustments
+                  to the type or size of the partition (as these operations
+                  involve removing any child slices)
+                The application does not allow the user any control over
+                slice configuration, and we need to ensure a consistent state
+                before proceeding, so we remove any existing slices found
+                on the Solaris partition and create slice 0.
 
             2. Activate the partition, if needed.
                 Ensure that the bootid attribute of the partition is
                 ACTIVE
         '''
 
-        # Re-instate slice 0
-        slices = partition.get_children(class_type=Slice)
-        if not slices:
-            LOGGER.info("Reinstating slice 0 on Solaris2 partition.")
+        # Create slice 0
+        LOGGER.info("Creating slice 0 on Solaris2 partition.")
+        partition.delete_children(class_type=Slice)
 
-            # Use partition gaps to find
-            gaps = partition.get_gaps()
+        # Use partition gaps to find space for slice 0
+        gaps = partition.get_gaps()
 
-            if len(gaps) == 1:
-                new_slice = partition.add_slice("0",
-                    gaps[0].start_sector,
-                    gaps[0].size.sectors,
-                    Size.sector_units,
-                    in_zpool=ROOT_POOL,
-                    in_vdev="vdev")
-                new_slice.tag = V_ROOT
-                LOGGER.info("New Slice 0: %s" % new_slice)
-            else:
-                LOGGER.error("Internal Error: Solaris2 partition "
-                    "should have exactly 1 gap.")
-                LOGGER.error("Gaps found: %s" % gaps)
-                LOGGER.error("Attempting to continue anyway.")
+        if len(gaps) == 1:
+            new_slice = partition.add_slice("0",
+                gaps[0].start_sector,
+                gaps[0].size.sectors,
+                Size.sector_units,
+                in_zpool=ROOT_POOL,
+                in_vdev="vdev")
+            new_slice.tag = V_ROOT
+            LOGGER.info("New Slice 0: %s" % new_slice)
+        else:
+            LOGGER.error("Internal Error: Solaris2 partition "
+                "should have exactly 1 gap.")
+            LOGGER.error("Gaps found: %s" % gaps)
+            modal_dialog(_("Validation failed."), "%s\n\n%s" % \
+                (_("See log file for details."), DEFAULT_LOG_LOCATION))
+            self._raise_error("Internal Error: invalid gaps in Partition.")
 
-            # If we are setting in_zpool and in_vdev on the slice,
-            # we must ensure they are unset on the Disk
-            disk = partition.parent
-            if disk is not None:
-                disk.in_zpool = None
-                disk.in_vdev = None
+        # If we are setting in_zpool and in_vdev on the slice,
+        # we must ensure they are unset on the Disk
+        disk = partition.parent
+        if disk is not None:
+            disk.in_zpool = None
+            disk.in_vdev = None
 
         # Activate the partition (primary partition's only)
         if partition.is_primary:
