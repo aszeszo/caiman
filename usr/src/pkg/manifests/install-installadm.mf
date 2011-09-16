@@ -219,4 +219,5 @@ depend fmri=database/sqlite-3 type=require
 depend fmri=service/network/dhcp/isc-dhcp type=require
 depend fmri=service/network/dns/mdns type=require
 depend fmri=service/network/tftp type=require
+depend fmri=system/install/locale type=require
 depend fmri=web/server/apache-22 type=require

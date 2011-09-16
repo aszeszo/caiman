@@ -153,3 +153,4 @@ file path=usr/share/sysconfig/help/C/users.txt group=sys
 file path=usr/share/sysconfig/help/C/welcome.txt group=sys
 file path=usr/share/sysconfig/xslt/doc2sc_profile.xslt group=sys
 license cr_Sun license=cr_Sun
+depend fmri=system/install/locale type=require

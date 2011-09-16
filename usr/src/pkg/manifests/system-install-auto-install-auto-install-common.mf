@@ -184,3 +184,4 @@ link \
     target=../../../../../bin/ai_get_manifest
 link path=usr/share/auto_install/default.xml target=manifest/default.xml
 user username=aiuser ftpuser=false gcos-field="AI User" group=nobody uid=60003
+depend fmri=system/install/locale type=require
