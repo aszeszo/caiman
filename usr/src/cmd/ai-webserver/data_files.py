@@ -179,8 +179,7 @@ def verifyCriteriaDict(schema, criteria_dict, db, table=AIdb.MANIFESTS_TABLE):
                         StringIO.StringIO(lxml.etree.tostring(root)))
     if errors:
         raise ValueError(_("Error: Criteria failed validation:\n\t%s") %
-                           root.message)
-
+                           errors.message)
     try:
         verifyXML.prepValuesAndRanges(root, db, table)
     except ValueError, err:
@@ -564,8 +563,8 @@ class DataFiles(object):
         if image_path:
             self.image_path = image_path
             # set the AI schema once image_path is set
-            self.set_AI_schema(
-                manifest_file if not self.manifest_is_script else None)
+            if not self.manifest_is_script:
+                self.set_AI_schema(manifest_file)
 
         # Holds database object for criteria database
         self._db = None
@@ -578,18 +577,19 @@ class DataFiles(object):
         # Holds DOM for criteria manifest
         self.criteria_root = None
 
-        # Determine if we're operating with the newer AI DTD,
-        # or with the older AI rng schema
-        try:
-            lxml.etree.DTD(self.AI_schema)
-            self.is_dtd = True
-        except lxml.etree.DTDParseError:
+        if not self.manifest_is_script:
+            # Determine if we are operating with the newer AI DTD,
+            # or with the older AI rng schema
             try:
-                lxml.etree.RelaxNG(file=self.AI_schema)
-                self.is_dtd = False
-            except lxml.etree.RelaxNGParseError:
-                raise ValueError(_("Error: Unable to determine AI manifest "
-                                   "validation type.\n"))
+                lxml.etree.DTD(self.AI_schema)
+                self.is_dtd = True
+            except lxml.etree.DTDParseError:
+                try:
+                    lxml.etree.RelaxNG(file=self.AI_schema)
+                    self.is_dtd = False
+                except lxml.etree.RelaxNGParseError:
+                    raise ValueError(_("Error: Unable to determine AI "
+                                       "manifest validation type.\n"))
 
         # Bypass XML verification if script passed in instead of a manifest.
         if self.manifest_is_script:
