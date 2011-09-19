@@ -214,11 +214,11 @@ for disk in /dev/rdsk/*p0 ; do
 		else
 			gdisk=0
 		fi
-		# presence of /.liveusb indicates install from USB disk
+		# presence of /.cdrom/.liveusb indicates install from USB disk
 		# for USB installation the GRUB map will list the USB disk
 		# as the first device, which is very likely not the normal order
 		# reset the normal order by decrementing the disk index
-		if [[ -e "/.liveusb" ]] && (( gdisk > 0 )); then
+		if [[ -e "/.cdrom/.liveusb" ]] && (( gdisk > 0 )); then
 			# identify windows partitions and decrement
 			# disk index for USB installations
 			case $id in
