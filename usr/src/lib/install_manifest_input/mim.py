@@ -404,7 +404,7 @@ class ManifestInput(object):
           path: Xpath-like expression of element to change or
               attribute to change/set.  (see header of this file for syntax)
 
-          value: Value to set.
+          value: Value to set. "" is allowed.
 
         Returns:
           rpath: Xpath-like expression of retrieved element.
@@ -418,9 +418,9 @@ class ManifestInput(object):
           MimMatchError - Error:  Path matches no elements
           Errors raised by etree.getpath()
         '''
-        # Explicitly test for a None value as etree accepts it and we don't.
-        # Test other values for consistency.
-        if path is None or value is None:
+        # Explicitly test for a None value as etree accepts it and we do not.
+        # "" value is OK.  A None or "" path is not accepted.
+        if not path or value is None:
             raise milib.MimInvalidError(milib.ERR_ARG_INVALID)
 
         if not self.tree:
@@ -562,7 +562,7 @@ class ManifestInput(object):
           path: Xpath-like expression of element or attribute to retrieve.
               (see header of this file for syntax)
 
-          value: Value to set.
+          value: Value to set. "" is allowed.
 
         Returns:
           rpath: Xpath-like expression of retrieved element.
@@ -577,9 +577,9 @@ class ManifestInput(object):
           MimMatchError - No matching parent path exists
           Errors raised by etree.getpath()
         '''
-        # Explicitly test for a None value as etree accepts it and we don't.
-        # Test other values for consistency.
-        if path is None or value is None:
+        # Explicitly test for a None value as etree accepts it and we do not.
+        # "" value is OK.  A None or "" path is not accepted.
+        if not path or value is None:
             raise milib.MimInvalidError(milib.ERR_ARG_INVALID)
 
         xpath, final_val, attr = ManifestInput._path_preprocess(path,
@@ -615,7 +615,8 @@ class ManifestInput(object):
         # Split branches into the left set which can contain non-simple
         # branches (and possibly simple branches too), and the right set which
         # may contain only simple branches.  The left set is delimited by the
-        # last non-simple branch of the full path.
+        # last non-simple branch of the full path.  The right set will contain
+        # at least one branch, since the final branch cannot have a value.
 
         right_set = []
         while left_set and IDENT_ONLY_RE.match(left_set[-1]):
@@ -642,8 +643,24 @@ class ManifestInput(object):
                 raise milib.MimMatchError(milib.ERR_NO_PARENT_PATH)
             curr_elem = nonsimple_targets[0]
         else:
-            curr_elem = self.tree.getroot()
-            right_set = right_set[1:]
+            # Simple path.
+            if midstart:
+                # Simple, non-absolute path specified.
+                # Figure out where to hook it into the rest of the tree.
+                curr_elem = self.tree.getroot()
+                old_right_set = right_set
+
+                # Find a unique path to the first element specified.
+                # Strip off the root element from the built path.
+                right_set = self.schema_data.find_parent_path(
+                    curr_elem.tag, old_right_set[0].strip())[1:]
+
+                # Append the rest of the specified path (if any) to new list
+                right_set.extend(old_right_set[1:])
+            else:
+                # Simple, absolute path specified.
+                curr_elem = self.tree.getroot()
+                right_set = right_set[1:]
 
         # Phase two of the search: search branch by branch, checking whether
         # duplicate elements with the desired tag name are allowed, and

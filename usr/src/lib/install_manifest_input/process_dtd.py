@@ -780,3 +780,56 @@ class SchemaData(object):
         else:
             raise milib.MimDTDInternalError(milib.ERR_INVALID_STATE %
                                       {"mmode": search_state.mode})
+
+    def find_parent_path(self, root, element_arg):
+        '''Public method to get path for an element's parent
+
+        Args:
+          root: Root of the tree built from the DTD.  Assumed to be correct.
+
+          element_arg: Element to find the path to.
+
+        Returns:
+          List of branches making up path to the element.
+          (Returns empty list if element_arg is the tree root).
+
+        Raises:
+          MimInvalidError - Argument is missing or invalid
+          - No parent element found with tagname to match a path branch
+          - element_arg has slashes
+          MimInvalidError -
+              Ambiguity error: Parent path matches more than one element
+          - Cannot find a unique parent path.
+        '''
+        if '/' in element_arg:
+            raise milib.MimInvalidError(milib.ERR_ARG_INVALID)
+        branch = element_arg
+        path_list = list()
+        path_list.append(branch)
+
+        # Loop backwards toward the root.
+        while branch != root:
+
+            # Look for a parent with an element with branch as tagname.
+            # One is found when find_element_info returns a non-None child list
+            # Append that parent to the (reverse) path list being built.
+            # Err out if a second possible parent is found.
+            found_parent = None
+            for parent_tag in self.table.keys():
+                (children, dummy) = self.find_element_info(parent_tag, branch)
+                if children is not None:
+                    if found_parent:
+                        # Multiple possible parents.
+                        raise milib.MimInvalidError(
+                            milib.ERR_AMBIG_PARENT_PATH)
+                    else:
+                        path_list.append(parent_tag)
+                        found_parent = parent_tag
+            if not found_parent:
+                raise milib.MimInvalidError(milib.ERR_ARG_INVALID)
+
+            # Loop to look for the found parent's parent.
+            branch = found_parent
+
+        path_list.reverse()
+        return path_list
