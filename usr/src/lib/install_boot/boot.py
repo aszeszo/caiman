@@ -1192,10 +1192,12 @@ class LiveCDISOImageBootMenu(ISOImageBootMenu):
         # create lists of boot titles and kernel args to use
         lcd_titles = [self.boot_title,
                       self.boot_title + " VESA driver",
-                      self.boot_title + " text console"]
+                      self.boot_title + " text console",
+                      self.boot_title + " Enable SSH"]
         lcd_kargs = [None,
                      "-B livemode=vesa",
-                     "-B livemode=text"]
+                     "-B livemode=text",
+                     "-B livessh=enable"]
         for i, title in enumerate(lcd_titles):
             instance = SolarisODDBootInstance(self.pkg_img_path)
             instance.title = title

@@ -592,7 +592,6 @@ class ISOBootMenuTestCase(BootMenuTestCaseBase):
                        group,
                        420)]]
         self.boot_menu._handle_boot_config_list(boot_files, dry_run=False)
-        os.unlink(src_blt)
 
         # Test BIOS eltorito image type with a bad src directory
         bad_blt_dir = tempfile.mkdtemp(dir=TMP_TEST_DIR, prefix="bad_blt_")
@@ -695,10 +694,12 @@ class LiveCDISOBootMenuTestCase(ISOBootMenuTestCase):
         self.boot_title = self.boot_menu.boot_title
         lcd_titles = [self.boot_title,
                       self.boot_title + " VESA driver",
-                      self.boot_title + " text console"]
+                      self.boot_title + " text console",
+                      self.boot_title + " Enable SSH"]
         lcd_kargs = [None,
                      "-B livemode=vesa",
-                     "-B livemode=text"]
+                     "-B livemode=text",
+                     "-B livessh=enable"]
         self._test_build_default_entries(lcd_titles, lcd_kargs)
 
 
