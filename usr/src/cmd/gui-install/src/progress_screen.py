@@ -356,6 +356,7 @@ class ProgressScreen(BaseScreen):
                 self.logger.error("Checkpoint [%s] logged error: [%s]" % \
                     (failed_cp, err))
             self.success = False
+            self.install_complete = True
         else:
             eng = InstallEngine.get_instance()
             doc = eng.data_object_cache
