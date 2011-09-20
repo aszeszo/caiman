@@ -168,6 +168,13 @@ class PrePkgImgMod(Checkpoint):
             shutil.copy2(etc_inet_hosts, os.path.join(self.save_path,
                                                       "etc/inet/hosts"))
 
+    def save_menu_lst(self):
+        """ class method to save the original /boot/grub/menu.lst file
+        """
+        
+        save_list = ["boot/grub/menu.lst"]
+        self.save_files_directories(save_list)
+
     def save_files_directories(self, save_list=None):
         """ class method for saving key files and directories for restoration
         after installation. Missing target directories are created.
@@ -307,6 +314,9 @@ class PrePkgImgMod(Checkpoint):
         # set root's password
         self.set_password()
 
+        # save /boot/grub/menu.lst
+        self.save_menu_lst()
+
         # preload smf manifests
         self.configure_smf()
 
@@ -407,6 +417,9 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # set root's password
         self.set_password()
+
+        # save /boot/grub/menu.lst
+        self.save_menu_lst()
 
         # preload smf manifests
         self.configure_smf()
@@ -630,6 +643,9 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # set root's password
         self.set_password()
+
+        # save /boot/grub/menu.lst
+        self.save_menu_lst()
 
         # preload smf manifests
         self.configure_smf()
