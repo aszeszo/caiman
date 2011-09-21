@@ -277,7 +277,7 @@ class XMLSysidcfgData(object):
         #   <instance enabled="true" name="default"/>
         # </service>
         # <service name='network/dns/client' version='1' type='service'>
-        #    <property_group name='install_props' type='application'>
+        #    <property_group name='config' type='application'>
         #       <property name='nameserver' type='net_address'>
         #           <net_address_list>
         #               <value_node value='10.0.0.1'/>
@@ -312,7 +312,7 @@ class XMLSysidcfgData(object):
             self.__create_service_node(self._service_bundle,
                                            "network/dns/client")
         prop_grp = self.__create_propgrp_node(self._name_service,
-                                              "install_props",
+                                              "config",
                                               TYPE_APPLICATION)
 
         prop = self.__create_prop_node(prop_grp, "nameserver",
@@ -369,7 +369,8 @@ class XMLSysidcfgData(object):
         self.__create_propval_node(prop_grp, "default", TYPE_ASTRING, default)
         self.__create_propval_node(prop_grp, "host", TYPE_ASTRING, host)
         self.__create_propval_node(prop_grp, "printer", TYPE_ASTRING, printer)
-        self.__create_propval_node(prop_grp, "netgrp", TYPE_ASTRING, netgroup)
+        self.__create_propval_node(prop_grp, "netgroup",
+                                   TYPE_ASTRING, netgroup)
         self.__create_instance_node(name_service)
 
         name_service_cache = \
@@ -401,16 +402,7 @@ class XMLSysidcfgData(object):
         #
         # name_service=NIS {domain_name=domain-name
         #                    name_server=hostname(ip-address)}
-
-        # The xml structures here will need to change
-        # They are losely based on the xml for DNS since the
-        # required structures for this is currently not available
-        # or known
-
-        # The below commented out code has been tested to ensure that
-        # it properly parses the arguments for NIS from the sysidcfg
-        # file.  When NIS support becomes available this code should be
-        # uncommented and expanded up
+        #
         #
         # Convert to:
         #
@@ -439,10 +431,10 @@ class XMLSysidcfgData(object):
         #               value="mydomain.com"/>
         #      <!-- Note: use property with net_address_list and
         #                 value_node as below -->
-        #      <property type="net_address" name="ypservers">
-        #        <net_address_list>
+        #      <property type="host" name="host">
+        #        <host_list>
         #          <value_node value="10.0.0.10"/>
-        #        </net_address_list>
+        #        </host_list>
         #      </property>
         #    </property_group>
         #    <!-- configure default instance separate from property_group -->
@@ -468,8 +460,9 @@ class XMLSysidcfgData(object):
             return
 
         self.__adjust_nis(default="files nis",
-                          printer="usr files nis",
-                          netgroup="nis")
+                          printer="user files nis",
+                          netgroup="nis",
+                          host="files nis")
         self.__configure_dns_client(enabled="false")
         self._name_service = self.__create_service_node(self._service_bundle,
                                                         "network/nis/domain")
@@ -478,13 +471,12 @@ class XMLSysidcfgData(object):
                                               TYPE_APPLICATION)
         self.__create_propval_node(prop_grp, "domainname",
                                    TYPE_HOSTNAME, domain_name)
-
         ypservers = self.__create_prop_node(prop_grp,
-                                            "ypservers", TYPE_NET_ADDRESS)
-        net_addr_list = etree.SubElement(ypservers,
-                                         common.ELEMENT_NET_ADDRESS_LIST)
-        self.__create_address_list(net_addr_list, name_server,
+                                            "ypservers", "host")
+        host_list = etree.SubElement(ypservers, common.ELEMENT_HOST_LIST)
+        self.__create_address_list(host_list, name_server,
                                    _("name server"))
+
         self.__create_instance_node(self._name_service)
 
         nis_client = self.__create_service_node(self._service_bundle,
@@ -496,8 +488,8 @@ class XMLSysidcfgData(object):
     def __convert_name_service_nisplus(self, keyword, payload):
         """Convert the NIS+ name service specified in the sysidcfg statement
            to the proper xml output for the Solaris configuration file for the
-           auto installer.  NIS+ is no longer supported once NIS is supported
-           the NIS+ entry will be converted to NIS
+           auto installer.  NIS+ is not longer supported in Solaris 11.  As
+           such we convert all NIS+ entries to NIS
 
         """
         # sysidcfg form:
@@ -531,8 +523,7 @@ class XMLSysidcfgData(object):
     def __convert_name_service_ldap(self, keyword, payload):
         """Convert the LDAP name service specified in the sysidcfg statement
            to the proper xml output for the Solaris configuration file for the
-           auto installer. Currently LDAP is not supported via the auto
-           installer
+           auto installer. 
 
         """
         # sysidcfg form:
@@ -583,6 +574,7 @@ class XMLSysidcfgData(object):
         #      <propval type="astring" name="default" value="files ldap"/>
         #      <propval type="astring" name="printer" value="user files ldap"/>
         #      <propval type="astring" name="netgroup" value="ldap"/>
+        #      <propval type="astring" name="host" value="files ldap"
         #    </property_group>
         #    <instance enabled="true" name="default"/>
         # </service>
@@ -624,7 +616,8 @@ class XMLSysidcfgData(object):
 
         self.__adjust_nis(default="files ldap",
                           printer="usr files ldap",
-                          netgroup="ldap")
+                          netgroup="ldap",
+                          host="files ldap")
         self.__configure_dns_client(enabled="false")
 
         ldap_client = self.__create_service_node(self._service_bundle,
@@ -650,7 +643,7 @@ class XMLSysidcfgData(object):
             self.__create_propval_node(cred_prop_grp, "bind_dn",
                                        TYPE_ASTRING, proxy_bind_dn)
         if proxy_password is not None:
-            self.__create_propval_node(cred_prop_grp, "bind_password",
+            self.__create_propval_node(cred_prop_grp, "bind_passwd",
                                        TYPE_ASTRING, proxy_password)
         self.__create_instance_node(ldap_client)
 
@@ -1126,7 +1119,7 @@ class XMLSysidcfgData(object):
         #
         # convert to:
         #
-        # <service name="system/config" version="1" type="service">
+        # <service name="system/config-user" version="1" type="service">
         #   <instance name="default" enabled="true">
         #       <property_group name="root_account" type="application">
         #           <propval name="password" type="astring"
@@ -1144,7 +1137,7 @@ class XMLSysidcfgData(object):
             return
 
         self._root_passwd = \
-            self.__create_service("system/config",
+            self.__create_service("system/config-user",
                                   "root_account", TYPE_APPLICATION,
                                   "password", values[0])
 
@@ -1287,9 +1280,11 @@ class XMLSysidcfgData(object):
         # convert to:
         #
         # <service name="system/console-login" version="1" type="service">
-        #   <property_group name="ttymon" type="application">
+        #   <instance enabled="true" name="default">
+        #     <property_group name="ttymon" type="application">
         #       <propval name="terminal_type" type="astring" value="vt100"/>
-        #   </property_group>
+        #     </property_group>
+        #   </instance>
         # </service>
 
         if self._terminal is not None:
@@ -1304,7 +1299,9 @@ class XMLSysidcfgData(object):
         self._terminal = \
             self.__create_service_node(self._service_bundle,
                                            "system/console-login")
-        prop_group = self.__create_propgrp_node(self._terminal,
+
+        instance = self.__create_instance_node(parent=self._terminal)
+        prop_group = self.__create_propgrp_node(instance,
                                                 "ttymon",
                                                 TYPE_APPLICATION)
 

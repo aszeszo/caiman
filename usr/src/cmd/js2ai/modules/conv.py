@@ -397,6 +397,7 @@ class XMLProfileData(object):
         self._root_pool_create_via_keyword = None
         self._root_pool_name = DEFAULT_POOL_NAME
         self._arch = common.ARCH_GENERIC
+        self._ai_instance.set(common.ATTRIBUTE_NAME, self.profile_name)
         self.__process_profile()
 
     def __gen_err(self, lvl, message):
@@ -1523,7 +1524,8 @@ class XMLProfileData(object):
             self._rootdisk = self._root_device
             self._rootdisk_set_by_keyword = keyword
 
-        self.__create_root_pool(keyword, DEFAULT_POOL_NAME)
+        zpool = self.__create_root_pool(keyword, DEFAULT_POOL_NAME)
+        self.__create_vdev(zpool)
         self.__add_device(device, size, self._root_pool_name)
 
     def __create_filesys_swap(self, device, size):
