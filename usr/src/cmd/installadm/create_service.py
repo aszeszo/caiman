@@ -30,7 +30,6 @@ import errno
 import gettext
 import logging
 import os
-import pwd
 import shutil
 import stat
 import sys
@@ -104,25 +103,23 @@ def check_imagepath(imagepath):
                                  imagepath)
 
 
-def set_ownership(imagepath):
-    ''' Set the ownership and permissions for the imagepath to
-        webserver uid/gid and 770 (rwxrwx---).
+def set_permissions(imagepath):
+    ''' Set the permissions for the imagepath to 755 (rwxr-xr-x).
+        Read, Execute other permissions are necessary for the
+        webserver and tftpd to be able to read the imagepath.
 
         Raises SystemExit if the stat and fstat st_ino differ.
     '''
-    webserver_uid = pwd.getpwnam('webservd').pw_uid
-    webserver_gid = pwd.getpwnam('webservd').pw_gid
-
     image_stat = os.stat(imagepath)
     fd = os.open(imagepath, os.O_RDONLY)
     fd_stat = os.fstat(fd)
     if fd_stat.st_ino == image_stat.st_ino:
-        os.fchown(fd, webserver_uid, webserver_gid)
         os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | \
-                      stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP)
+                      stat.S_IRGRP | stat.S_IXGRP | \
+                      stat.S_IROTH | stat.S_IXOTH)
     else:
         raise SystemExit(_("The imagepath (%s) changed during "
-                           "ownership assignment") % imagepath)
+                           "permission assignment") % imagepath)
     os.close(fd)
 
 
@@ -556,7 +553,7 @@ def do_create_baseservice(options):
             options.imagepath = image.move(new_imagepath)
             logging.debug('image moved to %s', options.imagepath)
 
-    set_ownership(options.imagepath)
+    set_permissions(options.imagepath)
     print _("Image path: %s\n") % options.imagepath
     try:
         if options.dhcp_ip_start:
