@@ -360,6 +360,26 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # Save it here for later update in DOC by the execute method.
         self.dc_pers_dict[pkg] = version
 
+    def get_license(self):
+        """ class method to get license and save to a file
+
+        The OTN license from the osnet-incorporation pkg is obtained and
+        saved to a file for later use by the ai_publish_pkg checkpoint.
+
+        """
+        self.logger.debug("obtaining OTN license for AI image package")
+        cmd = [cli.PKG, "-R", self.pkg_img_path, "info", "--license",
+               "osnet-incorporation"]
+        pkg_info = run(cmd)
+
+        # if the tmp_dir doesn't exist create it
+        if not os.path.exists(self.tmp_dir):
+            os.makedirs(self.tmp_dir)
+
+        lic_path = os.path.join(self.tmp_dir, "lic_OTN")
+        with open(lic_path, 'w') as otn_license:
+            otn_license.write(pkg_info.stdout)
+
     def add_versions(self, version_filename):
         """ class method to populate the .image_info file with the versions
         of the image.
@@ -456,6 +476,7 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
             self.doc.persistent.delete_children(name=DC_PERS_LABEL)
 
         self.get_pkg_version("auto-install")
+        self.get_license()
         self.modify_etc_system()
 
         # write out the .image_info file

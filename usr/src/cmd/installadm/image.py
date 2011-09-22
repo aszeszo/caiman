@@ -309,6 +309,15 @@ class InstalladmPkgImage(InstalladmImage):
             pkgs = [fmri_or_p5i]
         
         self.pkg_image.plan_install(pkgs)
+
+        # accept licenses
+        plan = self.pkg_image.describe()
+        for pfmri, src, dest, accepted, displayed in plan.get_licenses():
+            if not dest.must_accept:
+                continue
+            self.pkg_image.set_plan_license_status(pfmri, dest.license,
+                                                   accepted=True)
+
         self.pkg_image.prepare()
         self.pkg_image.execute_plan()
         self.pkg_image.reset()

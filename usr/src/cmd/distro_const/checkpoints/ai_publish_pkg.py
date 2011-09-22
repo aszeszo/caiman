@@ -140,6 +140,7 @@ class AIPublishPackages(Checkpoint):
         generate = run(cmd)
         manifest = [generate.stdout]
 
+        manifest.append('license lic_OTN license=lic_OTN must-accept=true\n')
         manifest.append('set name=pkg.summary '
                         'value="Automated Installation boot image"\n')
         manifest.append("set name=org.opensolaris.consolidation "
@@ -157,7 +158,7 @@ class AIPublishPackages(Checkpoint):
 
         self.logger.info("Publishing %s", self.pkg_name)
         cmd = [cli.PKGSEND, "-s", self.pkg_repo, "publish", "-d",
-               self.pkg_img_path]
+               self.pkg_img_path, "-d", self.tmp_dir]
         pkgsend = Popen(cmd, stdin=Popen.PIPE, stdout=Popen.PIPE,
                         stderr=Popen.PIPE)
         stdout, stderr = pkgsend.communicate(manifest)
