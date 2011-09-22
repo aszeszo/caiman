@@ -187,4 +187,11 @@ elif is_textinstall; then
 	/usr/sbin/set_lang </dev/console >/dev/console 2>&1
 fi
 
+# Remove the SMF repository backup as it is not required in installation and
+# just chews up ramdisk space.  RFE 6896186 would remove the need to do this.
+# Removing the SMF repository backup was attempted once in the
+# filesystem/root-minimal service already.  Doing it here again in case
+# the file is created after the filesystem/root-minimal service is done.
+/usr/bin/rm -f /etc/svc/repository-boot*
+
 exit $SMF_EXIT_OK
