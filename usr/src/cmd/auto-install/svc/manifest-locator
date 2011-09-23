@@ -30,6 +30,7 @@ ARCH=$(/sbin/uname -p)
 # Installation configuration
 INSTALL_CONF=/tmp/install.conf
 SYSTEM_CONF=/etc/netboot/system.conf
+WANBOOT_CONF=/etc/netboot/wanboot.conf
 
 PRTCONF=/usr/sbin/prtconf
 SED=/usr/bin/sed
@@ -127,12 +128,31 @@ do_service_discovery()
 	#
 	if [[ "$AI_SERVICE_ADDRESS" == ~(E)'^\$serverIP:' ]]; then
 		if [ "${ARCH}" = "sparc" ]; then
-			# SPARC clients can pull the IP address from the DHCP bootfile
-			IPADDR=$($DHCPINFO $BOOTFILE | $CUT -d'/' -f3 | $CUT -d':' -f1)
+
+			# SPARC clients extract the address of the AI server
+			# from the root_server option in wanboot.conf, which
+			# is in the following format:
+			#
+			#    root_server=http://<ai_server>:<port>/<path_to_wanboot-cgi>
+			#
+			# NOTE: the <ai_server> portion might be an IP address
+			# or a hostname.  For the cases where it is a hostname,
+			# the local /etc/hosts file would have already been
+			# augmented with an entry to resolve that hostname.
+			IPADDR=$($GREP "^root_server" $WANBOOT_CONF | \
+				$CUT -d'=' -f2 | $CUT -d'/' -f3 | \
+				$CUT -d':' -f1)
 		else
 			# PXE clients must query the DHCP server for the address
 			IPADDR=$($DHCPINFO $BOOTSERVER)
 		fi
+
+		if [ -z "$IPADDR" ]; then
+			print "Could not determine address of AI server" | \
+				$TEE_LOGTOCONSOLE
+			return 1
+		fi
+
 		AI_SERVICE_ADDRESS="${IPADDR}${AI_SERVICE_ADDRESS/\$serverIP/}"
 	fi
 
