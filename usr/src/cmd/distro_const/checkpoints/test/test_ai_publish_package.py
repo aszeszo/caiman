@@ -73,6 +73,8 @@ class TestCreateRepository(unittest.TestCase):
         self.app.pkg_name = "image/distro_name@5.11-0.149"
         self.app._service_name = "test-service"
         self.app.ai_pkg_version = "5.11-0.100"
+        with open(os.path.join(self.app.tmp_dir, 'lic_OTN'), "w"):
+            pass
 
         # create the repository
         self.app.create_repository()
@@ -101,6 +103,8 @@ class TestCreateRepository(unittest.TestCase):
         self.app.tmp_dir = tempfile.mkdtemp(dir="/var/tmp", prefix="app_")
         self.app.media_dir = tempfile.mkdtemp(dir="/var/tmp", prefix="app_")
         self.app.ai_pkg_version = "5.11-0.100"
+        with open(os.path.join(self.app.tmp_dir, 'lic_OTN'), "w"):
+            pass
 
         # create the repository
         self.app.create_repository()
