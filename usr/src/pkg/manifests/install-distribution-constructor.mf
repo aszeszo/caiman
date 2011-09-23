@@ -23,56 +23,38 @@
 #
 
 set name=pkg.fmri value=pkg:/install/distribution-constructor@$(PKGVERS)
+set name=pkg.summary value="distro_const utility"
 set name=pkg.description \
     value="Distribution Constructor libraries, commands and data files"
-set name=pkg.summary value="distro_const utility"
 set name=info.classification \
     value="org.opensolaris.category.2008:Applications/System Utilities"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
-dir path=etc group=sys
-dir path=etc/security group=sys
-dir path=etc/security/exec_attr.d group=sys
-dir path=etc/security/prof_attr.d group=sys
-dir path=usr group=sys
-dir path=usr/bin
-dir path=usr/lib
-dir path=usr/lib/python2.6
-dir path=usr/lib/python2.6/vendor-packages
-dir path=usr/lib/python2.6/vendor-packages/solaris_install
-dir path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const
-dir \
-    path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints
-dir \
-    path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles
-dir \
-    path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/xslt
-dir path=usr/share group=sys
-dir path=usr/share/distro_const
-dir path=usr/share/distro_const/profile
-dir path=usr/share/distro_const/sort
-dir path=usr/share/man
-dir path=usr/share/man/ja_JP.UTF-8
-dir path=usr/share/man/ja_JP.UTF-8/man1m
-dir path=usr/share/man/ja_JP.UTF-8/man4
-dir path=usr/share/man/man1m
-dir path=usr/share/man/man4
-dir path=usr/share/man/zh_CN.UTF-8
-dir path=usr/share/man/zh_CN.UTF-8/man1m
-dir path=usr/share/man/zh_CN.UTF-8/man4
+dir  path=etc group=sys
+dir  path=etc/security group=sys
+dir  path=etc/security/exec_attr.d group=sys
 file path=etc/security/exec_attr.d/distribution-constructor group=sys
+dir  path=etc/security/prof_attr.d group=sys
 file path=etc/security/prof_attr.d/distribution-constructor group=sys
+dir  path=usr group=sys
+dir  path=usr/bin
 file path=usr/bin/distro_const mode=0555
 file path=usr/bin/proc_slist mode=0555
 file path=usr/bin/proc_tracedata mode=0555
 $(i386_ONLY)file path=usr/bin/usbcopy mode=0555
 $(i386_ONLY)file path=usr/bin/usbgen mode=0555
+dir  path=usr/lib
+dir  path=usr/lib/python2.6
+dir  path=usr/lib/python2.6/vendor-packages
+dir  path=usr/lib/python2.6/vendor-packages/solaris_install
+dir  path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/__init__.py \
     mode=0444
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/__init__.pyc \
     mode=0444
+dir  path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/__init__.py \
     mode=0444
@@ -115,6 +97,7 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/custom_script.pyc \
     mode=0444
+dir  path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles/rtc_config.default \
     mode=0444
@@ -130,6 +113,7 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/pre_pkg_img_mod.pyc \
     mode=0444
+dir  path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/xslt
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/xslt/doc2_media_transfer.xslt \
     mode=0444
@@ -151,6 +135,8 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/execution_checkpoint.pyc \
     mode=0444
+dir  path=usr/share group=sys
+dir  path=usr/share/distro_const
 file path=usr/share/distro_const/boot_archive_contents_sparc.xml group=sys \
     mode=0444
 file path=usr/share/distro_const/boot_archive_contents_x86.xml group=sys \
@@ -161,31 +147,44 @@ file path=usr/share/distro_const/dc_livecd.xml group=sys mode=0444
 file path=usr/share/distro_const/dc_text_sparc.xml group=sys mode=0444
 file path=usr/share/distro_const/dc_text_x86.xml group=sys mode=0444
 file path=usr/share/distro_const/lang_facets.xml group=sys mode=0444
+dir  path=usr/share/distro_const/profile
 file path=usr/share/distro_const/profile/ai.xml group=sys mode=0444
 file path=usr/share/distro_const/profile/generic.xml group=sys mode=0444
 file path=usr/share/distro_const/profile/livecd.xml group=sys mode=0444
 file path=usr/share/distro_const/profile/text.xml group=sys mode=0444
-file path=usr/share/distro_const/sort/livecd.sort group=sys mode=0444
-file path=usr/share/distro_const/sort/text_x86.sort group=sys mode=0444
+dir  path=usr/share/distro_const/sort
+$(i386_ONLY)file path=usr/share/distro_const/sort/livecd.sort group=sys \
+    mode=0444
+$(i386_ONLY)file path=usr/share/distro_const/sort/text_x86.sort group=sys \
+    mode=0444
+dir  path=usr/share/man
+dir  path=usr/share/man/ja_JP.UTF-8
+dir  path=usr/share/man/ja_JP.UTF-8/man1m
 file path=usr/share/man/ja_JP.UTF-8/man1m/distro_const.1m mode=0444
+dir  path=usr/share/man/ja_JP.UTF-8/man4
 file path=usr/share/man/ja_JP.UTF-8/man4/dc_manifest.4 mode=0444
+dir  path=usr/share/man/man1m
 file path=usr/share/man/man1m/distro_const.1m mode=0444
+dir  path=usr/share/man/man4
 file path=usr/share/man/man4/dc_manifest.4 mode=0444
+dir  path=usr/share/man/zh_CN.UTF-8
+dir  path=usr/share/man/zh_CN.UTF-8/man1m
 file path=usr/share/man/zh_CN.UTF-8/man1m/distro_const.1m mode=0444
+dir  path=usr/share/man/zh_CN.UTF-8/man4
 file path=usr/share/man/zh_CN.UTF-8/man4/dc_manifest.4 mode=0444
 license cr_Sun license=cr_Sun
 
 # /usr/bin/gunzip
-depend fmri=compress/gzip type=require
+depend type=require fmri=compress/gzip
 # /usr/bin/7za
-depend fmri=compress/p7zip type=require
+depend type=require fmri=compress/p7zip
 # /usr/bin/mkisofs
-depend fmri=media/cdrtools type=require
+depend type=require fmri=media/cdrtools
 # /usr/bin/rmformat
-depend fmri=service/storage/media-volume-manager type=require
+depend type=require fmri=service/storage/media-volume-manager
 # /usr/bin/awk
-depend fmri=system/extended-system-utilities type=require
+depend type=require fmri=system/extended-system-utilities
 # /usr/sbin/zfs
-depend fmri=system/file-system/zfs type=require
+depend type=require fmri=system/file-system/zfs
 # /usr/xpg4/bin/grep
-depend fmri=system/xopen/xcu4 type=require
+depend type=require fmri=system/xopen/xcu4

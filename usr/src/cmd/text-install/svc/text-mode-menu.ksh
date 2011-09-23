@@ -34,8 +34,7 @@ trap "" TSTP INT TERM ABRT QUIT
 
 # Determine which shell program to use by grabbing this user's login-shell
 # from /etc/passwd
-ROOT_SHELL=$(/usr/bin/getent passwd $LOGNAME | \
-    /usr/xpg4/bin/awk -F : '{print $7}')
+ROOT_SHELL=$(/usr/bin/getent passwd $LOGNAME |/usr/bin/cut -d':' -f7)
 
 # On the off chance that $LOGNAME has no shell (default grabbed from passwd(4))
 if [[ -z "$ROOT_SHELL" ]]; then
