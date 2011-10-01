@@ -71,7 +71,8 @@
 # When the next development train is started this pattern will need to be
 # changed in order to match the tag used there.
 #
-TRUNKID :sh = hg tags | nawk '$1 ~ /^Build[0-9]*$/ {print substr($1, 6) + 1; exit}'
+# With S11 FCS, the TRUNKID is frozen at 175
+TRUNKID= 175
 
 #
 # The Solaris Update number. This will be set by the gatekeepers.
@@ -97,7 +98,7 @@ PLATNUM= 0
 # the development build) of the Solaris Update is being built.
 # This is set by the gatekeepers.
 #
-BUILDID= 0
+BUILDID= 1
 #
 # Each (nightly) build of the code that produces packages needs to
 # be uniquely identified so that packages produced by different
