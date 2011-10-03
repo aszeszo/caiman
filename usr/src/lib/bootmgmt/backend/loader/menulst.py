@@ -119,6 +119,22 @@ class MenuLstMenuEntry(object):
         self._cmdlist.append(MenuLstComment(comment))
 
     def add_command(self, mlcmd):
+        # Some commands require specific ordering
+        # findroot should be the first command after title.
+        # bootfs should follow findroot (if it exists)
+        if mlcmd.get_command() == 'findroot':
+            idx = self._find_command_index('title')
+            if idx != -1:
+                self._cmdlist.insert(idx + 1, mlcmd)
+                return
+        elif mlcmd.get_command() == 'bootfs':
+            idx = self._find_command_index('findroot')
+            if idx == -1:
+                idx = self._find_command_index('title')
+            if idx != -1:
+                self._cmdlist.insert(idx + 1, mlcmd)
+                return
+
         self._cmdlist.append(mlcmd)
 
     def delete_command(self, cmd):
@@ -134,6 +150,12 @@ class MenuLstMenuEntry(object):
             if isinstance(cmd, MenuLstCommand) and name == cmd.get_command():
                 return cmd
         return None
+
+    def _find_command_index(self, name):
+        for idx, cmd in enumerate(self._cmdlist):
+            if isinstance(cmd, MenuLstCommand) and name == cmd.get_command():
+                return idx
+        return -1
 
     def update_command(self, cmd, args, create=False):
         entity = self.find_command(cmd)
@@ -195,6 +217,7 @@ class MenuDotLst(object):
 
     def add_global(self, cmd_plus_args):
         "Add a command & args to the end of the global command section"
+        idx = 0
         # First, find the first menu entry and save that insertion point
         for idx, item in enumerate(self._entitylist):
             if isinstance(item, MenuLstMenuEntry):

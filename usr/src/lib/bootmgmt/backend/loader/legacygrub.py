@@ -312,29 +312,6 @@ r"""# default menu entry to boot
 
         return menu_lst_dir
 
-    @staticmethod
-    def _derive_bootfs(argdict):
-        # Derive the bootfs for the specified pool and
-        # add it to the argdict:
-        lzfsh = libzfs_init()
-        zph = zpool_open(lzfsh, argdict['rpool'])
-        if zph is None:
-            raise BootmgmtIncompleteBootConfigError(
-                  'Cannot open zpool %s specified in findroot '
-                  'directive!' % argdict['rpool'])
-  
-        pool_default_bootfs = zpool_get_prop(lzfsh, zph,
-                                             ZPOOL_PROP_BOOTFS)
-        zpool_close(zph)
-        libzfs_fini(lzfsh)
-
-        if pool_default_bootfs is not None:
-            argdict['bootfs'] = pool_default_bootfs
-        else:
-            raise BootmgmtIncompleteBootConfigError(
-                     'Could not determine default bootfs for zpool %s '
-                     'specified in findroot directive!' % argdict['rpool'])
-
     def _load_config_disk(self):
 
         menu_lst = (self._menu_lst_dir_disk() +
@@ -421,22 +398,14 @@ r"""# default menu entry to boot
                             argdict['title'] = ' '.join(cmd.get_args())
 
 
-                if argdict.get('chainload', None) is not None:
+                if 'chainload' in argdict:
                     inst = ChainDiskBootInstance(None, **argdict)
                 else:
-                    bootfs_derived = False
-                    if (argdict.get('rpool', None) is not None and
-                        argdict.get('fstype', None) == 'zfs' and
-                        argdict.get('bootfs', None) is None):
-                        self._derive_bootfs(argdict)
-                        bootfs_derived = True
-
-                    if argdict.get('bootfs', None) is None:
+                    if 'bootfs' not in argdict and 'rpool' not in argdict:
                         self._debug('Creating a regular boot instance: %s' % argdict)
                         inst = BootInstance(None, **argdict)
                     else:
                         inst = SolarisDiskBootInstance(None, **argdict)
-                        inst._bootfs_derived = bootfs_derived
 
                 entity.boot_instance = inst
                 inst._menulst_entity = entity
@@ -484,9 +453,6 @@ r"""# default menu entry to boot
             # file.
             if default_index < len(boot_instances):
                 boot_instances[default_index].default = True
-        elif len(boot_instances) > 0:
-            # Set the default to be the first one
-            boot_instances[0].default = True
 
         # Add the boot instances to the BootConfig instance:
         self._boot_config.add_boot_instance(boot_instances)
@@ -894,12 +860,35 @@ r"""# default menu entry to boot
         ostr = ''
         kargs = ''
         bootfs_cmd = 'bootfs'
+        findroot_cmd = 'findroot'
 
         if inst.fstype == 'zfs':
-            if inst.bootfs is None:
-                raise BootmgmtIncompleteBootConfigError('bootfs property '
-                      'is missing')
-            bootfs_cmd += ' ' + inst.bootfs
+            if inst.bootfs is None and inst.rpool is None:
+                raise BootmgmtIncompleteBootConfigError('bootfs '
+                      'and rpool properties are missing')
+            # bootfs takes priority over the rpool property
+            if inst.bootfs is not None:
+                bootfs_cmd += ' ' + inst.bootfs
+            elif inst.rpool is not None:
+                self._debug('No bootfs property - using rpool=%s' % inst.rpool)
+                # If there's a findroot command that's already part of the
+                # menu entry, use its partition hint
+                if inst._menulst_entity is not None:
+                    # findroot's arguments come in two forms:
+                    # SIGNATURE | (SIGNATURE,partition1[,slice])
+                    findroot_orig = inst._menulst_entity.find_command('findroot')
+                    if findroot_orig is not None:
+                        findroot_orig_args = ''.join(findroot_orig.get_args())
+                        if findroot_orig_args.startswith('('):
+                            findroot_components = findroot_orig_args.split(',')
+                            if len(findroot_components) >= 2:
+                                self._debug('reusing findroot hint: %s' % findroot_components[1:])
+                                findroot_cmd += ' (pool_' + inst.rpool
+                                findroot_cmd = ','.join([findroot_cmd] + findroot_components[1:])
+
+                if findroot_cmd == 'findroot':
+                    findroot_cmd += ' pool_' + inst.rpool
+
             if inst.kargs is None:
                 kargs = '-B $ZFS-BOOTFS'
             elif inst.kargs.find('$ZFS-BOOTFS') is -1:
@@ -911,20 +900,25 @@ r"""# default menu entry to boot
             kargs = inst.kargs
 
         if inst._menulst_entity is not None:
-            if getattr(inst, '_bootfs_derived', False) is False:
-                bootfs_cmd_args = bootfs_cmd.split(' ', 1)
-                if len(bootfs_cmd_args) == 1:  # This command must be deleted
-                    inst._menulst_entity.delete_command(bootfs_cmd_args)
+            for nextcmd in (bootfs_cmd, findroot_cmd):
+                cmd_args = nextcmd.split(' ', 1)
+                if len(cmd_args) == 1: # This comamnd must be deleted
+                    inst._menulst_entity.delete_command(cmd_args)
                 else:
-                    inst._menulst_entity.update_command(bootfs_cmd_args[0],
-                                                    bootfs_cmd_args[1].strip(),
-                                                    create=True)
-
+                    inst._menulst_entity.update_command(cmd_args[0],
+                                                        cmd_args[1].strip(),
+                                                        create=True)
             self._generate_entry_generic(inst, kargs)
             return None      
 
         ostr = self._generate_entry_generic(inst, kargs)
-        ostr = bootfs_cmd + '\n' + ostr
+        # Add the findroot/bootfs line(s) first
+        prepend_cmds = ''
+        if findroot_cmd != 'findroot':
+            prepend_cmds = findroot_cmd + '\n'
+        if bootfs_cmd != 'bootfs':
+            prepend_cmds += bootfs_cmd + '\n'
+        ostr = prepend_cmds + ostr
         return ostr
 
     def _generate_entry_SolarisODDBootInstance(self, inst):
@@ -1059,7 +1053,7 @@ r"""# default menu entry to boot
                       'device ' + devname + ': Return code ' +
                       str(cpe.returncode) + output)
         except OSError as ose:
-                raise BootLoaderInstallError('Error while trying to '
+            raise BootLoaderInstallError('Error while trying to '
                       'invoke installgrub for '
                       'device ' + devname + ': ' + str(ose))
 

@@ -512,7 +512,10 @@ class DiskBootConfig(BootConfig):
 
         default_instances = [inst for inst in self.boot_instances
                              if getattr(inst, 'bootfs', None) ==
-                                pool_default_bootfs]
+                             pool_default_bootfs]
+        if len(default_instances) == 0:
+            default_instances = [inst for inst in self.boot_instances
+			         if getattr(inst, 'rpool', None) == self.zfsrp]
 
         # If there is at least one boot instance with a bootfs that matches,
         # set the first as default
@@ -837,7 +840,14 @@ class SolarisBootInstance(BootInstance):
         """
 
         lzfsh = libzfs_init()
-        zph = zpool_open(lzfsh, self.bootfs.split('/')[0])
+        if getattr(self, 'bootfs', None) is not None:
+            zph = zpool_open(lzfsh, self.bootfs.split('/')[0])
+        elif getattr(self, 'rpool', None) is not None:
+            zph = zpool_open(lzfsh, self.rpool)
+        else:
+            libzfs_fini(lzfsh)
+            self._debug('bootfs AND rpool not set in instance')
+            return ''
         physpaths = zpool_get_physpath(lzfsh, zph)
         if self.bootfs is None:
             bootfs = zpool_get_prop(lzfsh, zph, ZPOOL_PROP_BOOTFS)
@@ -855,10 +865,12 @@ class SolarisDiskBootInstance(SolarisBootInstance):
        attributes supported are:
                - fstype [string] [required]: One of: [ 'ufs', 'zfs' ]
                - If fstype == 'zfs':
-                 * bootfs [string] [required]
+                 * bootfs [string] [overrides the value of 'rpool']
+                 * rpool [string]
     """
     _attributes = {'fstype': 'zfs',
-                   'bootfs': None}
+                   'bootfs': None,
+		   'rpool' : None}
 
     def __init__(self, rootpath, **kwargs):
         # If the child class added its own set of attributes, just append to
@@ -869,13 +881,16 @@ class SolarisDiskBootInstance(SolarisBootInstance):
         super(SolarisDiskBootInstance, self).__init__(rootpath, **kwargs)
 
         if self.fstype == 'zfs':
-            if not 'bootfs' in kwargs:
-                raise BootmgmtMissingInfoError('missing bootfs arg')
-            # Make sure bootfs appears to be well-formed
-            bootfs_spec = kwargs['bootfs'].split('/', 2)
-            if len(bootfs_spec) != 3 or bootfs_spec[1] != 'ROOT':
-                raise BootmgmtArgumentError('Invalid bootfs: %s' %
-                                            kwargs['bootfs'])
+            if not 'bootfs' in kwargs and not 'rpool' in kwargs:
+                raise BootmgmtMissingInfoError('missing bootfs or rpool arg')
+            if 'rpool' in kwargs:
+                self.rpool = kwargs['rpool']
+            if 'bootfs' in kwargs:
+                # Make sure bootfs appears to be well-formed
+                bootfs_spec = kwargs['bootfs'].split('/', 2)
+                if len(bootfs_spec) != 3 or bootfs_spec[1] != 'ROOT':
+                    raise BootmgmtArgumentError('Invalid bootfs: %s' %
+                                                kwargs['bootfs'])
 
         # If title is STILL None, try an alternate (the last component of the
         # bootfs):
