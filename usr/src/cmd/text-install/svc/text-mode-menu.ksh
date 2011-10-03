@@ -171,8 +171,7 @@ for ((;;)) ; do
 	# Display the menu.
 	clear
 	printf \
-	    "`gettext 'Welcome to the Oracle Solaris %s installation menu'`" \
-	    "`uname -v`"
+	    "`gettext 'Welcome to the Oracle Solaris installation menu'`"
 	printf " \n\n"
 	for i in "${!menu_items[@]}"; do
 		print "\t$((${i} + 1))  ${menu_items[$i].menu_str}"
