@@ -141,6 +141,9 @@
   <service name='network/inetd' version='1' type='restarter'>
     <instance name='default' enabled='true'/>
   </service>
+  <service name='network/inetd-upgrade' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
   <service name='system/dumpadm' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
