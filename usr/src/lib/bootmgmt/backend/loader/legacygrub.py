@@ -56,9 +56,6 @@ from bootmgmt import (BootmgmtArgumentError,
                       BootmgmtUnsupportedPropertyError)
 from solaris_install import Popen, CalledProcessError
 
-_ = gettext.translation('SUNW_OST_OSCMD', '/usr/lib/locale',
-    fallback=True).gettext
-
 
 class LegacyGRUBBootLoader(BootLoader, MenuLstBootLoaderMixIn):
     """Implementation of a Legacy GRUB (GRUB 0.97) BootLoader.  Handles parsing

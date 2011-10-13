@@ -30,8 +30,15 @@ import errno
 import platform
 import os
 
-_ = gettext.translation("SUNW_OST_OSLIB", "/usr/lib/locale",
-    fallback=True).gettext
+try:
+    _ = gettext.translation("SUNW_OST_OSLIB", "/usr/lib/locale",
+        fallback=True).gettext
+except:
+    try:
+        import solaris.misc
+        _ = solaris.misc.gettext
+    except:
+        _ = lambda x : x
 
 (LIBZFS_INIT_FAILURE,
  ) = range(1)

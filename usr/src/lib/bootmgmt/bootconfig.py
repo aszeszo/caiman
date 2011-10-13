@@ -46,8 +46,6 @@ from bootmgmt.bootutil import LoggerMixin, get_current_arch_string
 from bootmgmt.pysol import (libzfs_init, libzfs_fini, zpool_open, zpool_close,
                     zpool_get_physpath, zpool_set_prop, zpool_get_prop,
                     ZPOOL_PROP_BOOTFS, libzfs_error_description)
-_ = gettext.translation("SUNW_OST_OSCMD", "/usr/lib/locale",
-    fallback=True).gettext
 
 
 class BootConfig(LoggerMixin):
