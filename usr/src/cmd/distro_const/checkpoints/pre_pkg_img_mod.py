@@ -27,6 +27,7 @@
 """ pre_pkg_img_mod.py - Customizations to the package image area before
 boot archive construction begins.
 """
+import logging
 import os
 import platform
 import re
@@ -252,7 +253,6 @@ class PrePkgImgMod(Checkpoint):
             self.pkg_img_path, "usr/share/lib/xml/dtd/service_bundle.dtd.1")
         smf_env_vars["SVCCFG_MANIFEST_PREFIX"] = self.pkg_img_path
         smf_env_vars["SVCCFG_CHECKHASH"] = "1"
-        os.environ.update(smf_env_vars)
 
         # add all of the manifests in /var and /lib
         for manifest_dir in ["lib", "var"]:
@@ -260,7 +260,7 @@ class PrePkgImgMod(Checkpoint):
                                       "%s/svc/manifest" % manifest_dir)
             cmd = [cli.SVCCFG, "import", import_dir]
             try:
-                p = run(cmd)
+                p = run(cmd, env=smf_env_vars)
             except CalledProcessError:
                 raise RuntimeError("Error importing manifests from %s" % \
                                    import_dir)
@@ -269,28 +269,24 @@ class PrePkgImgMod(Checkpoint):
         for svc_profile_path in self.svc_profiles:
             self.logger.info("Applying SMF profile: %s" % svc_profile_path)
             cmd = [cli.SVCCFG, "apply", svc_profile_path]
-            run(cmd)
+            run(cmd, env=smf_env_vars)
 
         # set the hostname of the distribution
         if self.hostname is not None:
             cmd = [cli.SVCCFG, "-s", "system/identity:node", "setprop",
                    "config/nodename", "=", "astring:", '"%s"' % self.hostname]
-            run(cmd)
+            run(cmd, env=smf_env_vars)
         else:
             # retrieve the default hostname
             cmd = [cli.SVCCFG, "-s", "system/identity:node", "listprop",
                    "config/nodename"]
-            p = run(cmd)
+            p = run(cmd, env=smf_env_vars)
             self.hostname = p.stdout.strip().split()[2]
 
         # move the repo from /tmp to the proper place
         self.logger.debug("moving repo from /tmp into pkg_image directory")
         shutil.move(repo_name, os.path.join(self.pkg_img_path,
             "etc/svc/repository.db"))
-
-        # unset the SMF environment variables
-        for key in smf_env_vars:
-            del os.environ[key]
 
     def calculate_size(self):
         """ class method to populate the .image_info file with the size of the
@@ -574,18 +570,26 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         cmd = [cli.TOUCH, os.path.join(self.pkg_img_path, "dev/null")]
         run(cmd)
 
-        # use the repository in the proto area
-        os.environ.update({"SVCCFG_REPOSITORY":
-            os.path.join(self.pkg_img_path, "etc/svc/repository.db")})
+        # Set environment variables needed by svccfg.
+        smf_env_vars = dict()
+        smf_env_vars["SVCCFG_CONFIGD_PATH"] = os.path.join(
+            self.pkg_img_path, "lib/svc/bin/svc.configd")
+        smf_env_vars["SVCCFG_DTD"] = os.path.join(
+            self.pkg_img_path, "usr/share/lib/xml/dtd/service_bundle.dtd.1")
+        smf_env_vars["SVCCFG_MANIFEST_PREFIX"] = self.pkg_img_path
+        smf_env_vars["SVCCFG_CHECKHASH"] = "1"
+        smf_env_vars["SVCCFG_REPOSITORY"] = os.path.join(
+            self.pkg_img_path, "etc/svc/repository.db")
 
         # generate a list of services to refresh
         cmd = [cli.SVCCFG, "list", "*desktop-cache*"]
-        p = run(cmd, check_result=Popen.ANY)
+        p = run(cmd, stderr_loglevel=logging.ERROR, env=smf_env_vars)
         service_list = p.stdout.splitlines()
 
         # if no services were found, log a message
         if not service_list:
-            self.logger.debug("no services named *desktop-cache* were found")
+            self.logger.error("WARNING:  no services named *desktop-cache* "
+                              "were found")
 
         # since there is only a handful of methods to execute, there is
         # negligible overhead to spawning a process to execute the method.
@@ -596,7 +600,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
             # get the name of the refresh/exec script
             cmd = [cli.SVCCFG, "-s", service, "listprop", "refresh/exec"]
             try:
-                p = run(cmd)
+                p = run(cmd, env=smf_env_vars)
             except CalledProcessError:
                 self.logger.critical("service: " + service + " does " +
                                      "not have a start method")
@@ -624,9 +628,6 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
                 _none, status = os.wait()
                 if status != 0:
                     raise RuntimeError("%s failed" % " ".join(cmd))
-
-        # unset SVCCFG_REPOSITORY
-        del os.environ["SVCCFG_REPOSITORY"]
 
         # We disabled gnome-netstatus-applet for the liveCD but we want it
         # to be active when the default user logs in after installation.
