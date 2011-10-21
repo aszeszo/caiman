@@ -351,7 +351,7 @@ class UserScreen(BaseScreen):
                         'host': [_('Invalid Computer Name'),
                                      _('Enter a computer name.')],
                         'internal': [_('Internal Error'),
-                                     _('')],
+                                     ''],
                         'unknown': [_('Unknown'),
                                      _('Recheck entries.')]}
 
