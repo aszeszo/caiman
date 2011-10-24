@@ -387,12 +387,12 @@ class TestGenerateGnomeCaches(unittest.TestCase):
         self.pi_filelist = ["/etc/svc/", "/lib/svc/manifest/system/",
                             "/var/svc/manifest/system/", "/lib/", "/usr/lib/",
                             "/usr/sbin/", "/dev/", "/bin/", "/usr/bin/",
-                            "etc/gconf/schemas/"]
+                            "etc/gconf/schemas/", "/lib/svc/bin/"]
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
 
         # copy some binaries into the pkg_image path
         bins = ["/usr/sbin/svccfg", "/usr/bin/bash", "/usr/bin/echo",
-                "/usr/bin/fc-cache"]
+                "/usr/bin/fc-cache", "/lib/svc/bin/svc.configd"]
         for entry in bins:
             shutil.copy2(entry, os.path.join(self.ppim.pkg_img_path,
                                              entry.lstrip("/")))
