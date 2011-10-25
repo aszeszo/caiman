@@ -27,9 +27,9 @@
 """ physical.py -- library containing class definitions for physical DOC
 objects, including Partition, Slice and Disk.
 """
+import copy
 import gettext
 import locale
-import logging
 import os
 import platform
 import tempfile
@@ -40,7 +40,6 @@ from lxml import etree
 
 from solaris_install import Popen, run
 from solaris_install.data_object import DataObject, ParsingError
-from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target.libadm import const, cstruct, extvtoc
 from solaris_install.target.libdiskmgt import const as ldm_const
 from solaris_install.target.libdiskmgt import diskmgt
@@ -66,7 +65,51 @@ def partition_sort(a, b):
     return cmp(int(a.name), int(b.name))
 
 
+def fill_right(obj, desired_size, right_gap):
+    """ fill_right() - function to calculate how much space in the next gap is
+    needed to fulfil a change in size of an object (Slice or Partition)
+
+    obj - Slice or Partition object
+    desired_size - how much more space the object needs to grow by
+    right_gap - the gap immediately adjacent to the object to grow
+    """
+
+    if obj.start_sector + obj.size.sectors + desired_size <= \
+       right_gap.start_sector + right_gap.size.sectors:
+        return 0
+    else:
+        # consume the gap and return what's left
+        return desired_size - right_gap.size.sectors
+
+
+def fill_left(obj, desired_size, left_gap):
+    """ fill_left() - function to calculate how much space in the previous gap
+    is needed to fulfil a change in size of an object (Slice or Partition)
+
+    obj - Slice or Partition object
+    desired_size - how much more space the object needs to grow by
+    left_gap - the gap immediately preceeding the object to grow
+    """
+
+    if obj.start_sector - desired_size >= left_gap.start_sector:
+        return 0
+    else:
+        return desired_size - left_gap.size.sectors
+
+
+class InsufficientSpaceError(Exception):
+    """ User-defined Exception raised when attempting to change the size of a
+    Slice or Partition object
+    """
+
+    def __init__(self, available_size):
+        self.available_size = available_size
+
+
 class Partition(DataObject):
+    """ class definition for Partition objects
+    """
+
     ACTIVE = 0x80
     INACTIVE = 0
 
@@ -185,11 +228,66 @@ class Partition(DataObject):
         """
         self.delete_children(name=slc.name, class_type=Slice)
 
+    def resize_slice(self, slc, size, size_units=Size.gb_units):
+        """ resize_slice() - method to resize a Slice child.
+        """
+
+        # create a new_size object
+        new_size = Size(str(size) + str(size_units))
+
+        # check to see if the resized Slice is simply decreasing in size
+        if new_size <= slc.size:
+            # simply call Slice.resize
+            return slc.resize(size, size_units)
+
+        # find the previous and next gap
+        previous_gap = None
+        next_gap = None
+        available_size = copy.copy(slc.size)
+        end_sector = slc.start_sector + slc.size.sectors
+        for gap in self.get_gaps():
+            if abs(gap.start_sector + gap.size.sectors - slc.start_sector) <= \
+               self.parent.geometry.cylsize:
+                previous_gap = gap
+                available_size += previous_gap.size
+            if abs(slc.start_sector + slc.size.sectors - gap.start_sector) <= \
+               self.parent.geometry.cylsize:
+                next_gap = gap
+                available_size += next_gap.size
+                end_sector = next_gap.start_sector + next_gap.size.sectors
+
+        # try to fill in both sides of the Slice
+        remaining_space = new_size.sectors - slc.size.sectors
+
+        if next_gap is not None:
+            # try to consume space from the right first
+            remaining_space = fill_right(slc, remaining_space, next_gap)
+            if not remaining_space:
+                # the size of the Slice is increasing but not impacting the
+                # next object so call resize
+                return slc.resize(size, size_units)
+
+        # consume additional space from the left, if needed
+        if remaining_space and previous_gap is not None:
+            # continue to consume from the left
+            remaining_space = fill_left(slc, remaining_space, previous_gap)
+
+        if remaining_space:
+            # there's no room to increase this Slice
+            raise InsufficientSpaceError(available_size)
+
+        new_start_sector = end_sector - new_size.sectors
+        return slc.resize(size, size_units, start_sector=new_start_sector)
+
     def resize(self, size, size_units=Size.gb_units, start_sector=None):
         """ resize() - method to resize a Partition object.
 
         start_sector is optional.  If not provided, use the existing
         start_sector.
+
+        NOTE: the resulting new size is not checked to ensure the resized
+        Partition 'fits' within the current available space.  To ensure proper
+        'fit', use Disk.resize_partition()
         """
         if start_sector is None:
             start_sector = self.start_sector
@@ -379,6 +477,9 @@ class Partition(DataObject):
 
 
 class HoleyObject(DataObject):
+    """ class definition for HoleyObject
+    """
+
     def __init__(self, start_sector, size):
         super(HoleyObject, self).__init__("hole")
         self.start_sector = start_sector
@@ -402,6 +503,9 @@ class HoleyObject(DataObject):
 
 
 class Slice(DataObject):
+    """ class definition for Slice objects
+    """
+
     def __init__(self, name):
         super(Slice, self).__init__(name)
 
@@ -512,6 +616,10 @@ class Slice(DataObject):
 
         start_sector is optional.  If not provided, use the existing
         start_sector.
+        
+        NOTE: the resulting new size is not checked to ensure the resized
+        Slice 'fits' within the current available space.  To ensure proper
+        'fit', use Disk.resize_slice() or Partition.resize_slice()
         """
         if start_sector is None:
             start_sector = self.start_sector
@@ -710,11 +818,19 @@ class Disk(DataObject):
 
     @property
     def primary_partitions(self):
+        """ primary_partitions() - instance property to return all primary
+        partitions on this Disk
+        """
+
         partitions = self.get_children(class_type=Partition)
         return [part for part in partitions if part.is_primary]
 
     @property
     def logical_partitions(self):
+        """ logical_partitions() - instance property to return all logical
+        partitions on this Disk
+        """
+
         partitions = self.get_children(class_type=Partition)
         return [part for part in partitions if part.is_logical]
 
@@ -798,7 +914,7 @@ class Disk(DataObject):
                 dm_desc = diskmgt.descriptor_from_key(ldm_const.ALIAS, device)
                 dm_alias = diskmgt.DMAlias(dm_desc.value)
                 dm_drive = dm_alias.drive
-            except OSError as err:
+            except OSError:
                 pass
 
             if dm_drive is not None:
@@ -878,6 +994,67 @@ class Disk(DataObject):
         """
         self.delete_children(name=partition.name, class_type=Partition)
 
+    def resize_partition(self, partition, size, size_units=Size.gb_units):
+        """ resize_partition() - method to resize a Partition child.
+        """
+
+        # create a new_size object
+        new_size = Size(str(size) + str(size_units))
+
+        # check to see if the resized Partition is simply decreasing in size
+        if new_size <= partition.size:
+            # simply call Partition.resize
+            return partition.resize(size, size_units)
+
+        # find the previous and next gap
+        previous_gap = None
+        next_gap = None
+        available_size = copy.copy(partition.size)
+        end_sector = partition.start_sector + partition.size.sectors
+
+        if partition.is_primary:
+            gap_list = self.get_gaps()
+            adjacent_size = self.geometry.cylsize
+        else:
+            gap_list = self.get_logical_partition_gaps()
+            adjacent_size = LOGICAL_ADJUSTMENT + 1
+
+        for gap in gap_list:
+            if abs(gap.start_sector + gap.size.sectors - \
+                   partition.start_sector) <= adjacent_size:
+                previous_gap = gap
+                available_size += previous_gap.size
+            if abs(partition.start_sector + partition.size.sectors - \
+               gap.start_sector) <= adjacent_size:
+                next_gap = gap
+                available_size += next_gap.size
+                end_sector = next_gap.start_sector + next_gap.size.sectors
+
+        # try to fill in both sides of the Partition
+        remaining_space = new_size.sectors - partition.size.sectors
+
+        if next_gap is not None:
+            # try to consume space from the right first
+            remaining_space = fill_right(partition, remaining_space, next_gap)
+            if not remaining_space:
+                # the size of the Partition is increasing but not impacting the
+                # next object so call resize
+                return partition.resize(size, size_units)
+
+        # consume additional space from the left, if needed
+        if remaining_space and previous_gap is not None:
+            # continue to consume from the left
+            remaining_space = fill_left(partition, remaining_space,
+                                        previous_gap)
+
+        if remaining_space:
+            # there's no room to increase this Partition
+            raise InsufficientSpaceError(available_size)
+
+        new_start_sector = end_sector - new_size.sectors
+        return partition.resize(size, size_units,
+                                start_sector=new_start_sector)
+
     def add_slice(self, index, start_sector, size, size_units=Size.gb_units,
                   in_zpool=None, in_vdev=None, force=False):
         """ add_slice() - method to create a Slice object and add it as a child
@@ -900,6 +1077,57 @@ class Disk(DataObject):
         """ delete_slice() - method to delete a specific Slice object
         """
         self.delete_children(name=slc.name, class_type=Slice)
+
+    def resize_slice(self, slc, size, size_units=Size.gb_units):
+        """ resize_slice() - method to resize a Slice child.
+        """
+
+        # create a new_size object
+        new_size = Size(str(size) + str(size_units))
+
+        # check to see if the resized Slice is simply decreasing in size
+        if new_size <= slc.size:
+            # simply call Slice.resize
+            return slc.resize(size, size_units)
+
+        # find the previous and next gap
+        previous_gap = None
+        next_gap = None
+        available_size = copy.copy(slc.size)
+        end_sector = slc.start_sector + slc.size.sectors
+        for gap in self.get_gaps():
+            if abs(gap.start_sector + gap.size.sectors - slc.start_sector) <= \
+               self.geometry.cylsize:
+                previous_gap = gap
+                available_size += previous_gap.size
+            if abs(slc.start_sector + slc.size.sectors - gap.start_sector) <= \
+               self.geometry.cylsize:
+                next_gap = gap
+                available_size += next_gap.size
+                end_sector = next_gap.start_sector + next_gap.size.sectors
+
+        # try to fill in both sides of the Slice
+        remaining_space = new_size.sectors - slc.size.sectors
+
+        if next_gap is not None:
+            # try to consume space from the right first
+            remaining_space = fill_right(slc, remaining_space, next_gap)
+            if not remaining_space:
+                # the size of the Slice is increasing but not impacting the
+                # next object so call resize
+                return slc.resize(size, size_units)
+
+        # consume additional space from the left, if needed
+        if remaining_space and previous_gap is not None:
+            # continue to consume from the left
+            remaining_space = fill_left(slc, remaining_space, previous_gap)
+
+        if remaining_space:
+            # there's no room to increase this Slice
+            raise InsufficientSpaceError(available_size)
+
+        new_start_sector = end_sector - new_size.sectors
+        return slc.resize(size, size_units, start_sector=new_start_sector)
 
     def get_gaps(self):
         """ get_gaps() - method to return a list of Holey Objects
@@ -1123,6 +1351,10 @@ class Disk(DataObject):
                 run(cmd)
 
     def _create_ufs_swap(self, swap_slice_list, dry_run):
+        """ _create_ufs_swap() - method to create a new swap entry from a list
+        of slices
+        """
+
         disk_dev = "/dev/dsk/%s" % self.ctd
         self.logger.debug("Creating ufs swap slice(s)")
         for swap_slice in swap_slice_list:
@@ -1142,6 +1374,10 @@ class Disk(DataObject):
                 run(cmd)
 
     def _update_partition_table(self, part_list, dry_run):
+        """ _update_partition_table() - method to lay out the fdisk partitions
+        of the Disk
+        """
+
         # Need to destroy all zpools on the disk, unmount filesystems, and
         # release ufs swap.
         if not dry_run:
@@ -1181,6 +1417,9 @@ class Disk(DataObject):
         os.unlink(tmp_part_file)
 
     def _update_vtoc_struct(self, vtoc_struct, slice_list, nsecs):
+        """ _update_vtoc_struct() - method to update a vtoc_struct object with
+        values from Slice objects from the DOC
+        """
 
         # initialize a list of extpartition objects.  All slice attributes are
         # initialized to zero.
@@ -1373,6 +1612,9 @@ class Disk(DataObject):
 
 
 class DiskGeometry(object):
+    """ class definition for DiskGeometry objects
+    """
+
     def __init__(self, blocksize=512, cylsize=512):
         self.blocksize = blocksize
         self.cylsize = cylsize
@@ -1383,6 +1625,9 @@ class DiskGeometry(object):
 
 
 class DiskProp(object):
+    """ class definition for DiskProp objects
+    """
+
     def __init__(self):
         self.dev_type = None
         self.dev_vendor = None
@@ -1417,6 +1662,9 @@ class DiskProp(object):
 
 
 class DiskKeyword(object):
+    """ class definition for DiskKeyword objects
+    """
+
     def __init__(self):
         # this is the only key word so far. If others need to be added, this
         # class can be augmented
@@ -1424,6 +1672,9 @@ class DiskKeyword(object):
 
 
 class Iscsi(DataObject):
+    """ class definition for Iscsi objects
+    """
+
     def __init__(self, name):
         super(Iscsi, self).__init__(name)
 

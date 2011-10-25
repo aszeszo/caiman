@@ -40,7 +40,7 @@ from osol_install.liberrsvc import ES_DATA_EXCEPTION
 from solaris_install import Popen
 from solaris_install.target import Target
 from solaris_install.target.physical import Disk, DiskGeometry, DiskProp, \
-    Slice, Partition
+    InsufficientSpaceError, Partition, Slice
 from solaris_install.target.libadm.const import MAX_EXT_PARTS, V_NUMPAR
 from solaris_install.target.logical import BE, Logical, Vdev, Zpool
 from solaris_install.target.shadow.physical import LOGICAL_ADJUSTMENT, \
@@ -877,6 +877,139 @@ class TestPartition(unittest.TestCase):
         self.disk.add_partition(1, CYLSIZE, 2, Size.gb_units)
         self.assertFalse(errsvc._ERRORS)
 
+    def test_resize_child_partition_at_start(self):
+        # +-----------------+
+        # |            |////|
+        # |    p1      |/g1/|
+        # +-----------------+
+        original_p1 = self.disk.add_partition(1, CYLSIZE, 10, Size.gb_units)
+
+        # increase the size of p1 into gap 1
+        p1 = self.disk.resize_partition(original_p1, 25, Size.gb_units)
+        self.assertEqual(original_p1.start_sector, p1.start_sector)
+        self.assertEqual(p1.size.sectors,
+            Size("25gb").sectors / CYLSIZE * CYLSIZE)
+
+        # increase the size of p1 beyond the bounds of the disk
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            p1, 100, Size.gb_units)
+
+    def test_resize_child_partition_at_end(self):
+        # +-----------------+
+        # |////|            |
+        # |/g1/|     p1     |
+        # +-----------------+
+        start_sector = self.disk.disk_prop.dev_size.sectors - 10 * GBSECTOR
+        original_p1 = self.disk.add_partition(1, start_sector, 10,
+                                              Size.gb_units)
+
+        # increase the size of p1 into gap 1
+        p1 = self.disk.resize_partition(original_p1, 25, Size.gb_units)
+        self.assertEqual(p1.start_sector,
+            original_p1.start_sector - (15 * GBSECTOR) / CYLSIZE * CYLSIZE)
+        self.assertEqual(p1.size.sectors,
+            Size("25gb").sectors / CYLSIZE * CYLSIZE)
+
+        # increase the size of p1 beyond the bounds of the partition
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            p1, 100, Size.gb_units)
+
+    def test_resize_child_partition_only_right(self):
+        # +-----------------------+
+        # |            |     |////|
+        # |    p1      | p2  |/g1/|
+        # +-----------------------+
+        p1 = self.disk.add_partition(1, CYLSIZE, 10, Size.gb_units)
+        gaps = self.disk.get_gaps()
+        original_p2 = self.disk.add_partition(2, gaps[0].start_sector, 10,
+                                              Size.gb_units)
+
+        # increase the size of p2 into gap 1
+        p2 = self.disk.resize_partition(original_p2, 25, Size.gb_units)
+        self.assertEqual(p2.start_sector, original_p2.start_sector)
+        self.assertEqual(p2.size.sectors,
+            Size("25gb").sectors / CYLSIZE * CYLSIZE)
+
+        # increase the size of p2 beyond the bounds of the partition
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            p2, 100, Size.gb_units)
+
+    def test_resize_child_partition_only_left(self):
+        # +------------------------+
+        # |////|            |      |
+        # |/g1/|     p1     |  p2  |
+        # +------------------------+
+        start_sector = self.disk.disk_prop.dev_size.sectors - 10 * GBSECTOR
+        p2 = self.disk.add_partition(2, start_sector, 10, Size.gb_units)
+        original_p1 = self.disk.add_partition(1,
+            start_sector - (10 * GBSECTOR), 10, Size.gb_units)
+
+        # increase the size of p1 into gap 1
+        p1 = self.disk.resize_partition(original_p1, 25, Size.gb_units)
+        self.assertEqual(p1.start_sector,
+            original_p1.start_sector - CYLSIZE - \
+                (15 * GBSECTOR) / CYLSIZE * CYLSIZE)
+        self.assertEqual(p1.size.sectors,
+            Size("25gb").sectors / CYLSIZE * CYLSIZE)
+
+        # increase the size of p1 beyond the bounds of the partition
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            p1, 100, Size.gb_units)
+
+    def test_resize_child_partition_no_room(self):
+        # +------------------------+
+        # |    |            |      |
+        # | p1 |     p2     |  p3  |
+        # +------------------------+
+        p1 = self.disk.add_partition(1, CYLSIZE, 10, Size.gb_units)
+        gaps = self.disk.get_gaps()
+        original_p2 = self.disk.add_partition(2, gaps[0].start_sector, 10,
+                                              Size.gb_units)
+        gaps = self.disk.get_gaps()
+        p3 = self.disk.add_partition(3, gaps[0].start_sector, 10,
+                                     Size.gb_units)
+
+        # verify p2 can not be increased in size beyond the original 10gb
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            original_p2, 10.1, Size.gb_units)
+
+    def test_resize_child_partition_with_gaps_on_either_side(self):
+        # +----------------------------+
+        # |    |//////|    |//////|    |
+        # | p1 |//g1//| p2 |//g2//| p3 |
+        # +----------------------------+
+        p1 = self.disk.add_partition(1, CYLSIZE, 10, Size.gb_units)
+        original_p2 = self.disk.add_partition(2, 25 * GBSECTOR, 10,
+                                              Size.gb_units)
+        p3 = self.disk.add_partition(3, 40 * GBSECTOR, 10, Size.gb_units)
+
+        # increase the size of p2 into g2, but not to exceed it
+        p2 = self.disk.resize_partition(original_p2, 15, Size.gb_units)
+        self.assertEqual(original_p2.start_sector, p2.start_sector)
+        self.assertEqual(p2.size.sectors,
+            Size("15gb").sectors / CYLSIZE * CYLSIZE)
+
+        # destroy partition 2 and re-insert
+        self.disk.delete_children(class_type=Partition, name=2)
+        original_p2 = self.disk.add_partition(2, 25 * GBSECTOR, 10,
+                                              Size.gb_units)
+
+        # increase the size of p2 to consume all of g2 and part of g1
+        p2 = self.disk.resize_partition(original_p2, 20, Size.gb_units)
+        self.assertEqual(p2.start_sector,
+            original_p2.start_sector - (5 * GBSECTOR) / CYLSIZE * CYLSIZE)
+        self.assertEqual(p2.size.sectors,
+            Size("20gb").sectors / CYLSIZE * CYLSIZE)
+
+        # destroy partition 2 and re-insert
+        self.disk.delete_children(class_type=Partition, name=2)
+        original_p2 = self.disk.add_partition(2, 25 * GBSECTOR, 10,
+                                              Size.gb_units)
+
+        # increase the size of p2 beyond the bounds of the two gaps
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            original_p2, 30, Size.gb_units)
+
 
 class TestSliceInDisk(unittest.TestCase):
     def setUp(self):
@@ -1383,6 +1516,141 @@ class TestSliceInPartition(unittest.TestCase):
         self.partition.add_slice(0, CYLSIZE, 2, Size.gb_units)
         self.assertFalse(errsvc._ERRORS)
 
+    def test_resize_child_slice_at_start(self):
+        # +-----------------+
+        # |            |////|
+        # |    s1      |/g1/|
+        # +-----------------+
+        original_s1 = self.partition.add_slice(1, CYLSIZE, 10, Size.gb_units)
+
+        # increase the size of s1 into gap 1
+        s1 = self.partition.resize_slice(original_s1, 25, Size.gb_units)
+        self.assertEqual(original_s1.start_sector, s1.start_sector)
+        self.assertEqual(s1.size.sectors,
+            Size("25gb").sectors / CYLSIZE * CYLSIZE)
+
+        # increase the size of s1 beyond the bounds of the partition
+        self.assertRaises(InsufficientSpaceError, self.partition.resize_slice,
+            s1, 100, Size.gb_units)
+
+    def test_resize_child_slice_at_end(self):
+        # +-----------------+
+        # |////|            |
+        # |/g1/|     s1     |
+        # +-----------------+
+        start_sector = (self.partition.start_sector + \
+                        self.partition.size.sectors) - 10 * GBSECTOR
+        original_s1 = self.partition.add_slice(1, start_sector, 10,
+                                               Size.gb_units)
+
+        # increase the size of s1 into gap 1
+        s1 = self.partition.resize_slice(original_s1, 25, Size.gb_units)
+        self.assertEqual(s1.start_sector,
+            original_s1.start_sector - (15 * GBSECTOR) / CYLSIZE * CYLSIZE)
+        self.assertEqual(s1.size.sectors,
+            Size("25gb").sectors / CYLSIZE * CYLSIZE)
+
+        # increase the size of s1 beyond the bounds of the partition
+        self.assertRaises(InsufficientSpaceError, self.partition.resize_slice,
+            s1, 100, Size.gb_units)
+
+    def test_resize_child_slice_only_right(self):
+        # +-----------------------+
+        # |            |     |////|
+        # |    s1      | s2  |/g1/|
+        # +-----------------------+
+        s1 = self.partition.add_slice(1, CYLSIZE, 10, Size.gb_units)
+        gaps = self.partition.get_gaps()
+        original_s2 = self.partition.add_slice(2, gaps[0].start_sector, 10,
+                                               Size.gb_units)
+
+        # increase the size of s2 into gap 1
+        s2 = self.partition.resize_slice(original_s2, 25, Size.gb_units)
+        self.assertEqual(s2.start_sector, original_s2.start_sector)
+        self.assertEqual(s2.size.sectors,
+            Size("25gb").sectors / CYLSIZE * CYLSIZE)
+
+        # increase the size of s2 beyond the bounds of the partition
+        self.assertRaises(InsufficientSpaceError, self.partition.resize_slice,
+            s2, 100, Size.gb_units)
+
+    def test_resize_child_slice_only_left(self):
+        # +------------------------+
+        # |////|            |      |
+        # |/g1/|     s1     |  s2  |
+        # +------------------------+
+        start_sector = (self.partition.start_sector + \
+                        self.partition.size.sectors) - 10 * GBSECTOR
+        s2 = self.partition.add_slice(2, start_sector, 10, Size.gb_units)
+        original_s1 = self.partition.add_slice(1,
+            start_sector - (10 * GBSECTOR), 10, Size.gb_units)
+
+        # increase the size of s1 into gap 1
+        s1 = self.partition.resize_slice(original_s1, 25, Size.gb_units)
+        self.assertEqual(s1.start_sector,
+            original_s1.start_sector - CYLSIZE - \
+                (15 * GBSECTOR) / CYLSIZE * CYLSIZE)
+        self.assertEqual(s1.size.sectors,
+            Size("25gb").sectors / CYLSIZE * CYLSIZE)
+
+        # increase the size of s1 beyond the bounds of the partition
+        self.assertRaises(InsufficientSpaceError, self.partition.resize_slice,
+            s1, 100, Size.gb_units)
+
+    def test_resize_child_slice_no_room(self):
+        # +------------------------+
+        # |    |            |      |
+        # | s1 |     s2     |  s3  |
+        # +------------------------+
+        s1 = self.partition.add_slice(1, CYLSIZE, 10, Size.gb_units)
+        gaps = self.partition.get_gaps()
+        original_s2 = self.partition.add_slice(2, gaps[0].start_sector, 10,
+                                               Size.gb_units)
+        gaps = self.partition.get_gaps()
+        s3 = self.partition.add_slice(3, gaps[0].start_sector, 10,
+                                      Size.gb_units)
+
+        # verify s2 can not be increased in size beyond the original 10gb
+        self.assertRaises(InsufficientSpaceError, self.partition.resize_slice,
+            original_s2, 10.1, Size.gb_units)
+
+    def test_resize_child_slice_with_gaps_on_either_side(self):
+        # +----------------------------+
+        # |    |//////|    |//////|    |
+        # | s1 |//g1//| s2 |//g2//| s3 |
+        # +----------------------------+
+        s1 = self.partition.add_slice(1, CYLSIZE, 10, Size.gb_units)
+        original_s2 = self.partition.add_slice(2, 25 * GBSECTOR, 10,
+                                               Size.gb_units)
+        s3 = self.partition.add_slice(3, 40 * GBSECTOR, 10, Size.gb_units)
+
+        # increase the size of s2 into g2, but not to exceed it
+        s2 = self.partition.resize_slice(original_s2, 15, Size.gb_units)
+        self.assertEqual(original_s2.start_sector, s2.start_sector)
+        self.assertEqual(s2.size.sectors,
+            Size("15gb").sectors / CYLSIZE * CYLSIZE)
+
+        # destroy slice 2 and re-insert
+        self.partition.delete_children(class_type=Slice, name=2)
+        original_s2 = self.partition.add_slice(2, 25 * GBSECTOR, 10,
+                                               Size.gb_units)
+
+        # increase the size of s2 to consume all of g2 and part of g1
+        s2 = self.partition.resize_slice(original_s2, 20, Size.gb_units)
+        self.assertEqual(s2.start_sector,
+            original_s2.start_sector - (5 * GBSECTOR) / CYLSIZE * CYLSIZE)
+        self.assertEqual(s2.size.sectors,
+            Size("20gb").sectors / CYLSIZE * CYLSIZE)
+
+        # destroy slice 2 and re-insert
+        self.partition.delete_children(class_type=Slice, name=2)
+        original_s2 = self.partition.add_slice(2, 25 * GBSECTOR, 10,
+                                               Size.gb_units)
+
+        # increase the size of s2 beyond the bounds of the two gaps
+        self.assertRaises(InsufficientSpaceError, self.partition.resize_slice,
+            original_s2, 30, Size.gb_units)
+
 
 class TestLogicalPartition(unittest.TestCase):
 
@@ -1521,6 +1789,156 @@ class TestLogicalPartition(unittest.TestCase):
         error = errsvc._ERRORS[0]
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
             ShadowPhysical.LogicalPartitionOverlapError))
+
+    def test_resize_child_partition_at_start(self):
+        # +-----------------+
+        # |            |////|
+        # |    p5      |/g1/|
+        # +-----------------+
+        # add a 75 GB extended partition (type is 0xf or "15")
+        self.disk.add_partition(1, 0, 75, Size.gb_units,
+                                Partition.name_to_num("WIN95 Extended(LBA)"))
+        original_p5 = self.disk.add_partition(5, CYLSIZE, 10, Size.gb_units)
+
+        # increase the size of p5 into gap 1
+        p5 = self.disk.resize_partition(original_p5, 25, Size.gb_units)
+        self.assertEqual(original_p5.start_sector, p5.start_sector)
+        self.assertEqual(p5.size.sectors, Size("25gb").sectors)
+
+        # increase the size of p5 beyond the bounds of the disk
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            p5, 100, Size.gb_units)
+
+    def test_resize_child_partition_at_end(self):
+        # +-----------------+
+        # |////|            |
+        # |/g1/|     p5     |
+        # +-----------------+
+        # add a 75 GB extended partition (type is 0xf or "15")
+        p1 = self.disk.add_partition(1, 0, 75, Size.gb_units,
+            Partition.name_to_num("WIN95 Extended(LBA)"))
+        start_sector = p1.size.sectors - 10 * GBSECTOR
+        original_p5 = self.disk.add_partition(5, start_sector, 10,
+                                              Size.gb_units)
+
+        # increase the size of p5 into gap 1
+        p5 = self.disk.resize_partition(original_p5, 25, Size.gb_units)
+        self.assertEqual(p5.start_sector,
+            original_p5.start_sector - (15 * GBSECTOR) + CYLSIZE - 1)
+        self.assertEqual(p5.size.sectors, Size("25gb").sectors)
+
+        # increase the size of p5 beyond the bounds of the partition
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            p5, 100, Size.gb_units)
+
+    def test_resize_child_partition_only_right(self):
+        # +-----------------------+
+        # |            |     |////|
+        # |    p5      | p6  |/g1/|
+        # +-----------------------+
+        # add a 75 GB extended partition (type is 0xf or "15")
+        p1 = self.disk.add_partition(1, 0, 75, Size.gb_units,
+            Partition.name_to_num("WIN95 Extended(LBA)"))
+
+        p5 = self.disk.add_partition(5, CYLSIZE, 10, Size.gb_units)
+        gaps = self.disk.get_logical_partition_gaps()
+        original_p6 = self.disk.add_partition(6, gaps[0].start_sector, 10,
+                                              Size.gb_units)
+
+        # increase the size of p6 into gap 1
+        p6 = self.disk.resize_partition(original_p6, 25, Size.gb_units)
+        self.assertEqual(p6.start_sector, original_p6.start_sector)
+        self.assertEqual(p6.size.sectors, Size("25gb").sectors)
+
+        # increase the size of p6 beyond the bounds of the partition
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            p6, 100, Size.gb_units)
+
+    def test_resize_child_partition_only_left(self):
+        # +------------------------+
+        # |////|            |      |
+        # |/g1/|     p5     |  p6  |
+        # +------------------------+
+        # add a 75 GB extended partition (type is 0xf or "15")
+        p1 = self.disk.add_partition(1, 0, 75, Size.gb_units,
+            Partition.name_to_num("WIN95 Extended(LBA)"))
+
+        start_sector = p1.size.sectors - 10 * GBSECTOR
+        original_p6 = self.disk.add_partition(6, start_sector, 10,
+                                              Size.gb_units)
+
+        original_p5 = self.disk.add_partition(5,
+            start_sector - (10 * GBSECTOR), 10, Size.gb_units)
+
+        # increase the size of p5 into gap 1
+        p5 = self.disk.resize_partition(original_p5, 25, Size.gb_units)
+        self.assertEqual(p5.start_sector,
+            original_p5.start_sector - (15 * GBSECTOR))
+        self.assertEqual(p5.size.sectors, Size("25gb").sectors)
+
+        # increase the size of p5 beyond the bounds of the partition
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            p5, 100, Size.gb_units)
+
+    def test_resize_child_partition_no_room(self):
+        # +------------------------+
+        # |    |            |      |
+        # | p5 |     p6     |  p7  |
+        # +------------------------+
+        # add a 75 GB extended partition (type is 0xf or "15")
+        p1 = self.disk.add_partition(1, 0, 75, Size.gb_units,
+            Partition.name_to_num("WIN95 Extended(LBA)"))
+
+        p5 = self.disk.add_partition(5, CYLSIZE, 10, Size.gb_units)
+        gaps = self.disk.get_logical_partition_gaps()
+        original_p6 = self.disk.add_partition(6, gaps[0].start_sector, 10,
+                                              Size.gb_units)
+        gaps = self.disk.get_logical_partition_gaps()
+        p7 = self.disk.add_partition(7, gaps[0].start_sector, 10,
+                                     Size.gb_units)
+
+        # verify p6 can not be increased in size beyond the original 10gb
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            original_p6, 10.1, Size.gb_units)
+
+    def test_resize_child_partition_with_gaps_on_either_side(self):
+        # +----------------------------+
+        # |    |//////|    |//////|    |
+        # | p5 |//g1//| p6 |//g2//| p7 |
+        # +----------------------------+
+        # add a 75 GB extended partition (type is 0xf or "15")
+        p1 = self.disk.add_partition(1, 0, 75, Size.gb_units,
+            Partition.name_to_num("WIN95 Extended(LBA)"))
+
+        p5 = self.disk.add_partition(5, CYLSIZE, 10, Size.gb_units)
+        original_p6 = self.disk.add_partition(6, 25 * GBSECTOR, 10,
+                                              Size.gb_units)
+        p7 = self.disk.add_partition(7, 40 * GBSECTOR, 10, Size.gb_units)
+
+        # increase the size of p6 into g2, but not to exceed it
+        p6 = self.disk.resize_partition(original_p6, 11, Size.gb_units)
+        self.assertEqual(original_p6.start_sector, p6.start_sector)
+        self.assertEqual(p6.size.sectors, Size("11gb").sectors)
+
+        # destroy partition 2 and re-insert
+        self.disk.delete_children(class_type=Partition, name=6)
+        original_p6 = self.disk.add_partition(6, 25 * GBSECTOR, 10,
+                                              Size.gb_units)
+
+        # increase the size of p6 to consume all of g2 and part of g1
+        p6 = self.disk.resize_partition(original_p6, 20, Size.gb_units)
+        self.assertEqual(p6.start_sector,
+            original_p6.start_sector - (5 * GBSECTOR) - 1)
+        self.assertEqual(p6.size.sectors, Size("20gb").sectors)
+
+        # destroy partition 6 and re-insert
+        self.disk.delete_children(class_type=Partition, name=6)
+        original_p6 = self.disk.add_partition(6, 25 * GBSECTOR, 10,
+                                              Size.gb_units)
+
+        # increase the size of p6 beyond the bounds of the two gaps
+        self.assertRaises(InsufficientSpaceError, self.disk.resize_partition,
+            original_p6, 35, Size.gb_units)
 
 
 class TestFinalValidation(unittest.TestCase):
