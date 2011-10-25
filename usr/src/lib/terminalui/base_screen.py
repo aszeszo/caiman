@@ -147,7 +147,8 @@ class BaseScreen(object):
             self.main_win.do_update()
             return self.validate_loop()
         except QuitException:
-            return None
+            # User prematurely quit the application. Let caller handle that.
+            raise
         except SkipException:
             return self.main_win.screen_list.get_next(self, skipped=True)
         finally:

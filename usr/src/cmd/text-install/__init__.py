@@ -105,7 +105,7 @@ from solaris_install.transfer.media_transfer import TRANSFER_ROOT, \
 import terminalui
 from terminalui import LOG_LEVEL_INPUT, LOG_NAME_INPUT
 from terminalui.action import Action
-from terminalui.base_screen import BaseScreen
+from terminalui.base_screen import BaseScreen, QuitException
 from terminalui.help_screen import HelpScreen
 from terminalui.i18n import get_encoding, set_wrap_on_whitespace
 from terminalui.main_window import MainWindow
@@ -403,6 +403,7 @@ def main():
             screen_list.screen_list = win_list
             screen = screen_list.get_next()
             ctrl_c = None
+            errcode = 0
             while screen is not None:
                 LOGGER.debug("Displaying screen: %s", type(screen))
                 screen = screen.show()
@@ -413,7 +414,8 @@ def main():
                     # display issues make it impossible for the user to
                     # quit gracefully
                     ctrl_c = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            errcode = 0
+    except QuitException:
+        LOGGER.info("User quit the installer.")
     except RebootException:
         reboot(platform.processor() == "i386")
     except SystemExit:

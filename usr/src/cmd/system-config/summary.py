@@ -102,22 +102,6 @@ class SummaryScreen(BaseScreen):
 
         self.center_win.activate_object(scroll_region)
 
-    def on_continue(self):
-        '''Have the InstallEngine generate the manifest'''
-        eng = InstallEngine.get_instance()
-
-        # Set the umask read-only by user (root)
-        # Execute the checkpoint and reset to the original
-        # umask.
-        orig_umask = os.umask(0377) 
-        (status, failed_cps) = eng.execute_checkpoints()
-        os.umask(orig_umask) 
-
-        if status != InstallEngine.EXEC_SUCCESS:
-            print _("Error when generating SC profile\n")
-        else:
-            print _("SC profile successfully generated\n")
-
     def build_summary(self):
         '''Build a textual summary from solaris_install.sysconfig profile'''
 

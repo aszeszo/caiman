@@ -134,7 +134,7 @@ from solaris_install.sysconfig.welcome import WelcomeScreen
 import terminalui
 from terminalui import LOG_LEVEL_INPUT, LOG_NAME_INPUT
 from terminalui.action import Action
-from terminalui.base_screen import BaseScreen
+from terminalui.base_screen import BaseScreen, QuitException
 from terminalui.help_screen import HelpScreen
 from terminalui.i18n import get_encoding, set_wrap_on_whitespace
 from terminalui.main_window import MainWindow
@@ -486,7 +486,7 @@ def profile_is_valid(profile_name):
 
     # Validate file syntactically.
     try:
-        Popen.check_call(["svccfg", "apply", "-n", profile_name])
+        Popen.check_call([SVCCFG, "apply", "-n", profile_name])
     except CalledProcessError:
         print _("Custom site profile %s is invalid or has"
                  "invalid permissions." % profile_name)
@@ -554,6 +554,15 @@ def parse_create_profile_args(parser, args):
     else:
         raise IOError(2, "Invalid --log-level parameter", log_level.lower())
 
+    #
+    # Most of filesystems (modulo tmpfs(7FS) ones) are read-only
+    # in ROZR non-global zone booted in read-only mode. In such case,
+    # redirect log file to writable directory.
+    #
+    if _in_rozr_zone():
+        log_file_basename = os.path.basename(options.logname)
+        options.logname = os.path.join(VOLATILE_PATH, log_file_basename)
+
     return (options, sub_cmd)
 
 
@@ -568,7 +577,26 @@ def do_create_profile(options):
         doc = InstallEngine.get_instance().doc.persistent
         doc.insert_children(doc_options)
 
-        _show_screens(options)
+        # Navigate user through the set of configuration screens. Generate
+        # resulting profile only if user went through the complete set of
+        # sysconfig screens.
+        if _show_screens(options):
+            # First set the umask read-only by user (root).
+            # Then let the ManifestWriter generate resulting SC profile.
+            # Finally, reset umask to the original value.
+            orig_umask = os.umask(0377)
+            eng = InstallEngine.get_instance()
+            (status, failed_cps) = eng.execute_checkpoints()
+            os.umask(orig_umask)
+
+            # If ManifestWriter failed to create SC profile, inform user
+            # and exit with error.
+            if status != InstallEngine.EXEC_SUCCESS:
+                print _("Failed to generate SC profile.")
+                _exit(options.logname, errcode=1)
+            else:
+                print _("SC profile successfully generated.")
+
         _exit(options.logname, errcode=0)
     except SystemExit:
         raise
@@ -630,28 +658,29 @@ def parse_unconfig_args(parser, args):
 
     options.alt_root = os.getenv(ALT_ROOT_ENV_VAR)
 
-    #
-    # unconfiguration/reconfiguration is not permitted in ROZR non-global
-    # zone unless such zone is booted in writable mode.
-    #
-    rozr_test_binary = '/sbin/sh'
+    # If operating on alternate root, verify given path.
     if options.alt_root:
         if not os.access(options.alt_root, os.W_OK):
             print _("Root filesystem provided for the non-global zone"
                     " does not exist")
             sys.exit(SU_FATAL_ERR)
 
-        rozr_test_binary = options.alt_root + rozr_test_binary
+    #
+    # unconfiguration/reconfiguration is not permitted in ROZR non-global
+    # zone unless such zone is booted in writable mode.
+    # When operating in alternate root mode, skip that check, since in that
+    # case ROZR zone would be manipulated from global zone. That along with
+    # previous check guarantees writable access.
+    #
+    if not options.alt_root and _in_rozr_zone():
+        print _("Root filesystem mounted read-only, '%s' operation"
+                 " not permitted." % sub_cmd[0])
+        print _("The likely cause is that sysconfig(1m) was invoked"
+                 " in ROZR non-global zone.")
+        print _("In that case, see mwac(5) and zonecfg(1m) man pages"
+                 " for additional information.")
 
-    if not os.access(rozr_test_binary, os.W_OK):
-            print _("Root filesystem mounted read-only, '%s' operation"
-                     " not permitted." % sub_cmd[0])
-            print _("The likely cause is that sysconfig(1m) was invoked"
-                    " in ROZR non-global zone.")
-            print _("In that case, see mwac(5) and zonecfg(1m) man pages"
-                     " for additional information.")
-
-            sys.exit(SU_FATAL_ERR)
+        sys.exit(SU_FATAL_ERR)
 
     # At this time, it is believed that there is no point in allowing
     # the prompt to be displayed in the alternate root case. Since there is no
@@ -855,6 +884,14 @@ def parse_unconfig_args(parser, args):
     return (options, sub_cmd)
 
 
+def _in_rozr_zone():
+    '''Return True if immutable (aka ROZR) zone booted in read only
+    mode is detected. Otherwise return False.'''
+
+    rozr_test_binary = '/sbin/sh'
+    return (not os.access(rozr_test_binary, os.W_OK))
+
+
 def _parse_options(arguments):
     ''' Parses sysconfig subcommands'''
 
@@ -969,6 +1006,9 @@ def _make_screen_list(main_win):
 
 
 def _show_screens(options):
+    '''Navigate user through the set of configuration screens.
+    Return True if user went through the complete set of screens,
+    otherwise return False.'''
     with terminalui as initscr:
         win_size_y, win_size_x = initscr.getmaxyx()
         if win_size_y < 24 or win_size_x < 80:
@@ -996,20 +1036,27 @@ def _show_screens(options):
         screen = screen_list.get_next()
 
         signal.signal(signal.SIGINT, signal.SIG_IGN)
-        while screen is not None:
-            eng = InstallEngine.get_instance()
-            sc_prof = eng.doc.persistent.get_first_child(name="sysconfig")
-            LOGGER.debug("Sysconfig profile:\n%s", sc_prof)
-            LOGGER.debug("Displaying screen: %s", type(screen))
-            screen = screen.show()
+
+        try:
+            while screen is not None:
+                eng = InstallEngine.get_instance()
+                sc_prof = eng.doc.persistent.get_first_child(name="sysconfig")
+                LOGGER.debug("Sysconfig profile:\n%s", sc_prof)
+                LOGGER.debug("Displaying screen: %s", type(screen))
+                screen = screen.show()
+        except QuitException:
+            LOGGER.info("User quit the application prematurely.")
+            return False
+        else:
+            return True
 
 
 def _prepare_engine(options):
     '''Initialize the InstallEngine'''
-    InstallEngine(loglevel=options.log_level, debug=options.debug)
+    InstallEngine(default_log=options.logname, loglevel=options.log_level,
+                  debug=options.debug)
 
     logger = logging.getLogger(INSTALL_LOGGER_NAME)
-    logger.addHandler(FileHandler(options.logname, mode='w'))
 
     # Don't set the global LOGGER until we're certain that logging
     # is up and running, so the main() except clause can figure out

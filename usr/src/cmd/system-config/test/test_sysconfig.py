@@ -31,6 +31,7 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 
 
 import logging
+import os
 import unittest
 
 import solaris_install.sysconfig as sysconfig
@@ -45,7 +46,13 @@ class TestSysconfig(unittest.TestCase):
     def test_parse_options_no_flags(self):
         '''parse_options() returns proper default options'''
         (options, sub_cmd) = sysconfig._parse_options(["create-profile"])
-        self.assertEqual(options.logname, sysconfig.DEFAULT_LOG_LOCATION)
+        if sysconfig._in_rozr_zone():
+            self.assertEqual(options.logname,
+            os.path.join("/system/volatile",
+                         os.path.basename(sysconfig.DEFAULT_LOG_LOCATION)))
+        else:
+            self.assertEqual(options.logname, sysconfig.DEFAULT_LOG_LOCATION)
+
         self.assertEqual(options.log_level,
                          getattr(logging, sysconfig.DEFAULT_LOG_LEVEL.upper()))
         self.assertFalse(options.force_bw)
@@ -56,7 +63,11 @@ class TestSysconfig(unittest.TestCase):
         (options, sub_cmd) = sysconfig._parse_options(["create-profile", "-l",
                                                        "/foo/log.txt", "-b",
                                                        "-o", "/foo/sc.xml"])
-        self.assertEqual(options.logname, "/foo/log.txt")
+        if sysconfig._in_rozr_zone():
+            self.assertEqual(options.logname, "/system/volatile/log.txt")
+        else:
+            self.assertEqual(options.logname, "/foo/log.txt")
+
         self.assertEqual(options.profile, "/foo/sc.xml")
         self.assertTrue(options.force_bw)
     
