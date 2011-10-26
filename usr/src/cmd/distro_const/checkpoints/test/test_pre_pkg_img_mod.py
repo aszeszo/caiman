@@ -454,3 +454,5 @@ class TestGenerateGnomeCaches(unittest.TestCase):
         # verify that /refresh exists in the pkg_image dir
         self.assert_(os.path.isfile(os.path.join(self.ppim.pkg_img_path,
                                                  "refresh")))
+
+        del os.environ["SVCCFG_REPOSITORY"]
