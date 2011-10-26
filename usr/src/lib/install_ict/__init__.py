@@ -28,7 +28,7 @@
 
 __all__ = ["apply_sysconfig", "boot_archive", "cleanup_cpio_install",
            "common", "create_snapshot", "device_config", "initialize_smf",
-	   "ips", "setup_swap", "transfer_files", "update_dumpadm"]
+           "ips", "setup_swap", "transfer_files", "update_dumpadm"]
 
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint

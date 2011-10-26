@@ -86,4 +86,3 @@ class UpdateDumpAdm(ICT.ICTBaseClass):
                 os.makedirs(os.path.dirname(dumpadmfile_dest))
             
             shutil.copyfile(self.dumpadmfile, dumpadmfile_dest)
-

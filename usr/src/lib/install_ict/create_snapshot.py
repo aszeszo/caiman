@@ -27,7 +27,6 @@
 import solaris_install.ict as ICT
 from solaris_install import ApplicationData
 from solaris_install.target.instantiation_zone import ALT_POOL_DATASET
-from solaris_install.target.logical import Options
 from solaris_install.target.libbe.be import be_create_snapshot
 
 

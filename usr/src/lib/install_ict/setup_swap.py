@@ -24,12 +24,9 @@
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-import grp
 import os
-import shutil
 import solaris_install.ict as ICT
 
-from solaris_install import Popen
 from solaris_install.target.physical import Disk, Slice, Partition
 from solaris_install.target.logical import Zvol
 
@@ -75,7 +72,7 @@ class SetupSwap(ICT.ICTBaseClass):
                     str(swap_slice))
                 continue
             
-            swap_path = "/dev/dsk/%s" %(slice_ctd)
+            swap_path = "/dev/dsk/%s" % (slice_ctd)
             self.logger.debug("Found swap slice %s", swap_path)
             swap_devices.append(swap_path)
 

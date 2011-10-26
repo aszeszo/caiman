@@ -26,15 +26,8 @@
 
 import os
 import shutil
-import sys
 
 import solaris_install.ict as ICT
-
-from solaris_install.data_object import ObjectNotFoundError
-from solaris_install.data_object.data_dict import DataObjectDict
-from solaris_install.transfer.info import Args
-from solaris_install.transfer.info import CPIOSpec
-from solaris_install.transfer.info import Software
 
 
 class TransferFiles(ICT.ICTBaseClass):

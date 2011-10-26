@@ -26,7 +26,6 @@
 
 import os
 import shutil
-import sys
 
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
@@ -123,7 +122,7 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
             # be removed.
             try:
                 pkg_rm_node = soft_node.get_children(class_type=IPSSpec)[0]
-            except IndexError, err:
+            except IndexError:
                 # No IPS packages have been specified
                 pass
 
@@ -131,7 +130,7 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
             try:
                 file_rm_node = soft_node.get_children(class_type=CPIOSpec)[0]
                 self.cleanup_list.extend(file_rm_node.contents)
-            except IndexError, err:
+            except IndexError:
                 # No additional CPIO contents have been specified
                 pass
 
