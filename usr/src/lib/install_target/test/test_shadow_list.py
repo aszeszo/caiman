@@ -41,7 +41,7 @@ from solaris_install import Popen
 from solaris_install.target import Target
 from solaris_install.target.physical import Disk, DiskGeometry, DiskProp, \
     InsufficientSpaceError, Partition, Slice
-from solaris_install.target.libadm.const import MAX_EXT_PARTS, V_NUMPAR
+from solaris_install.target.libadm.const import MAX_EXT_PARTS, V_NUMPAR, V_USR
 from solaris_install.target.logical import BE, Logical, Vdev, Zpool
 from solaris_install.target.shadow.physical import LOGICAL_ADJUSTMENT, \
     ShadowPhysical
@@ -1516,6 +1516,41 @@ class TestSliceInPartition(unittest.TestCase):
         self.partition.add_slice(0, CYLSIZE, 2, Size.gb_units)
         self.assertFalse(errsvc._ERRORS)
 
+    def test_create_entire_partition_slice(self):
+        # create a few slices before calling create_entire_partition_slice() to
+        # ensure all existing slices are removed
+        self.partition.add_slice(0, CYLSIZE, 1, Size.gb_units)
+        self.partition.add_slice(1, 5 * CYLSIZE, 1, Size.gb_units)
+        self.partition.add_slice(2, 10 * CYLSIZE, 1, Size.gb_units)
+        self.assertEqual(len(self.partition._children), 3)
+
+        # test default values
+        s = self.partition.create_entire_partition_slice()
+
+        # verify there's only one child now.
+        self.assertEqual(len(self.partition._children), 1)
+
+        # verify default values
+        self.assertEqual(s.size.sectors, self.partition.size.sectors - CYLSIZE)
+        self.assertEqual(s.start_sector, self.partition.start_sector)
+        self.assertEqual(s.name, "0")
+
+        # test optional kwargs
+        name = "5"
+        in_zpool = "rpool"
+        in_vdev = "vdev"
+        tag = V_USR
+        force = True
+        s = self.partition.create_entire_partition_slice(name, in_zpool,
+                                                         in_vdev, tag, force)
+
+        # verify optional kwargs
+        self.assertEqual(s.name, name)
+        self.assertEqual(s.in_zpool, in_zpool)
+        self.assertEqual(s.in_vdev, in_vdev)
+        self.assertEqual(s.tag, V_USR)
+        self.assertTrue(s.force)
+
     def test_resize_child_slice_at_start(self):
         # +-----------------+
         # |            |////|
@@ -1542,7 +1577,6 @@ class TestSliceInPartition(unittest.TestCase):
                         self.partition.size.sectors) - 10 * GBSECTOR
         original_s1 = self.partition.add_slice(1, start_sector, 10,
                                                Size.gb_units)
-
         # increase the size of s1 into gap 1
         s1 = self.partition.resize_slice(original_s1, 25, Size.gb_units)
         self.assertEqual(s1.start_sector,

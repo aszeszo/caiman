@@ -189,34 +189,13 @@ class PartEditScreen(BaseScreen):
                 # All the logic from here to the part.bootid line
                 # can be removed when GPT partitions is supported.
                 #
+                part.create_entire_partition_slice(in_zpool=part.in_zpool,
+                    in_vdev=DEFAULT_VDEV_NAME, tag=V_ROOT)
 
-                existing_slices = part.get_children(class_type=Slice)
-                if existing_slices:
-                    for ex_slice in existing_slices:
-                        part.delete_slice(ex_slice)
-
-                pool_name = part.in_zpool
-               
-                # there should be only 1 gap in the partition, create 1 single
-                # slice in the gap
-                gaps = part.get_gaps()
- 
-                # there should be 1 gap only
-                if len(gaps) != 1:
-                    err_msg = "There should only be 1 gap in partition" \
-                              " %s, but %d gaps were found." % \
-                              (str(part.name), len(gaps))
-                    LOGGER.error(err_msg)
-                    raise ValueError(err_msg)
-                 
-                slice0 = part.add_slice(0, gaps[0].start_sector,
-                    gaps[0].size.sectors, Size.sector_units,
-                    in_zpool=pool_name, in_vdev=DEFAULT_VDEV_NAME)
-                slice0.tag = V_ROOT
-                LOGGER.debug(str(part))
-
-                part.in_zpool = None
                 part.bootid = Partition.ACTIVE
+                part.in_zpool = None
+               
+                LOGGER.debug(str(part))
 
                 # Make sure in_zpool is not set on the Disk, target controller
                 # puts it there in some cases

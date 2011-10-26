@@ -385,6 +385,37 @@ class Partition(DataObject):
 
         return holes
 
+    def create_entire_partition_slice(self, name="0", in_zpool=None,
+                                      in_vdev=None, tag=None, force=False):
+        """ create_entire_partition_slice - method to clear out all existing
+        slices and create a single slice equal to the size of the partition.
+
+        name, in_zpool, in_vdev, tag - optional arguments to pass directly to
+        add_slice() or apply to the created Slice object
+        """
+
+        # delete all existing children
+        self.delete_children(class_type=Slice)
+        gaps = self.get_gaps()
+
+        # set the args and kwargs for add_slice()
+        args = [name, gaps[0].start_sector, gaps[0].size.sectors]
+        kwargs = {"size_units": Size.sector_units, "force": force}
+
+        # set optional attributes
+        if in_zpool is not None:
+            kwargs["in_zpool"] = in_zpool
+
+        if in_vdev is not None:
+            kwargs["in_vdev"] = in_vdev
+
+        new_slice = self.add_slice(*args, **kwargs)
+
+        if tag is not None:
+            new_slice.tag = tag
+
+        return new_slice
+
     @classmethod
     def name_to_num(cls, part_name):
         """ name_to_num - given a partition name, lookup
