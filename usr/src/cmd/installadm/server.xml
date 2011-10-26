@@ -101,6 +101,11 @@
 				type="integer"
 				value="5555"/>
 
+			<propval
+				name="default_imagepath_basedir"
+				type="astring"
+				value="/export/auto_install"/>
+
 		</property_group>
 
 	</instance>
@@ -164,6 +169,19 @@
 				<loctext xml:lang='C'>
 					Property which defines the default port
 					for the webserver connection.
+				</loctext>
+			</description>
+		</prop_pattern>
+
+		<prop_pattern
+			name="default_imagepath_basedir"
+			type="astring"
+			required="true">
+
+			<description>
+				<loctext xml:lang='C'>
+					Property which defines the default 
+					base directory for images.
 				</loctext>
 			</description>
 		</prop_pattern>

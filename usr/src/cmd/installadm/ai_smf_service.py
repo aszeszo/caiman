@@ -37,7 +37,7 @@ import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as libaiscf
 
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
-from solaris_install import Popen
+from solaris_install import Popen, CalledProcessError
 
 _ = com._
 
@@ -310,3 +310,16 @@ def service_enable_attempt():
     else:
         raise ServicesError(
             _('Error: unexpected state for install server: %s') % orig_state)
+
+
+def get_imagedir():
+    ''' get value of default image basedir from AI SMF service '''
+
+    getprop = [SVCPROP, '-p', com.BASEDIR_PROP, com.SRVINST]
+    try:
+        svcprop_popen = Popen.check_call(getprop, stdout=Popen.STORE,
+                                         stderr=Popen.DEVNULL)
+        imagedir = svcprop_popen.stdout.strip()
+    except CalledProcessError:
+        imagedir = com.IMAGE_DIR_PATH
+    return imagedir

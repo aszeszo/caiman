@@ -51,13 +51,14 @@ from solaris_install import Popen, CalledProcessError
 
 
 BASE_DEF_SVC_NAME = "solarisx"
+BASE_IMAGE_DIR = aismf.get_imagedir()
 
 
 def check_ip_address(option, opt_str, value, parser):
     '''Check IP address as an OptionParser callback
     Postcondition: sets value to proper option if check passes
     Raises: OptionValueError if IP address is malformed
-    
+
     '''
     segments = value.split(".")
     if len(segments) != 4:
@@ -306,7 +307,7 @@ def default_path_ok(svc_name, specified_path=None):
     if specified_path:
         return True
 
-    def_imagepath = os.path.join(com.IMAGE_DIR_PATH, svc_name)
+    def_imagepath = os.path.join(BASE_IMAGE_DIR, svc_name)
     if os.path.exists(def_imagepath):
         return False
     return True
@@ -447,7 +448,7 @@ def do_create_baseservice(options):
     if is_iso(options.srcimage):
         have_iso = True
         # get default service name, if needed
-        logging.debug("Creating ISO based service" )
+        logging.debug("Creating ISO based service")
     else:
         have_iso = False
         logging.debug("Creating pkg(5) based service")
@@ -463,14 +464,13 @@ def do_create_baseservice(options):
     # If imagepath not specified, verify that default image path is
     # ok with user
     if not options.imagepath:
-        defaultdir = com.IMAGE_DIR_PATH
         if options.svcname:
-            imagepath = os.path.join(defaultdir, options.svcname)
+            imagepath = os.path.join(BASE_IMAGE_DIR, options.svcname)
             prompt = (_("OK to use default image path: %s? [y/N]: " %
                       imagepath))
         else:
             prompt = (_("OK to use subdir of %s to store image? [y/N]: " %
-                      defaultdir))
+                      BASE_IMAGE_DIR))
         try:
             if not options.noprompt:
                 if not com.ask_yes_or_no(prompt):
@@ -483,19 +483,23 @@ def do_create_baseservice(options):
         # Otherwise, put the image into a temp directory and move
         # it to correct location when we know it later
         if options.svcname:
-            options.imagepath = os.path.join(com.IMAGE_DIR_PATH,
-                                             options.svcname)
+            options.imagepath = os.path.join(BASE_IMAGE_DIR, options.svcname)
             try:
                 check_imagepath(options.imagepath)
             except ValueError as error:
                 raise SystemExit(error)
         else:
             try:
-                os.makedirs(com.IMAGE_DIR_PATH)
+                os.makedirs(BASE_IMAGE_DIR)
             except OSError as err:
                 if err.errno != errno.EEXIST:
                     raise
-            tempdir = tempfile.mkdtemp(dir=com.IMAGE_DIR_PATH)
+                if not os.path.isdir(BASE_IMAGE_DIR):
+                    raise SystemExit(cw(_('\nThe default image base directory, '
+                        '%s, is not a directory. Check the SMF setting for '
+                        'property %s in servce %s.') %
+                        (BASE_IMAGE_DIR, com.BASEDIR_PROP, com.SRVINST)))
+            tempdir = tempfile.mkdtemp(dir=BASE_IMAGE_DIR)
             options.imagepath = tempdir
         logging.debug('Using default image path: %s', options.imagepath)
 
@@ -542,7 +546,7 @@ def do_create_baseservice(options):
     # If image was created in temporary location, move to correct
     # location now that we know the svcname.
     if tempdir is not None:
-        new_imagepath = os.path.join(com.IMAGE_DIR_PATH, options.svcname)
+        new_imagepath = os.path.join(BASE_IMAGE_DIR, options.svcname)
         try:
             check_imagepath(new_imagepath)
         except ValueError as error:

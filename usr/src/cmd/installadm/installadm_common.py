@@ -37,7 +37,7 @@ from textwrap import fill, dedent
 
 from osol_install.libaimdns import getifaddrs, getboolean_property, \
     getstrings_property
-from solaris_install import Popen, CalledProcessError
+from solaris_install import Popen 
 
 
 _ = gettext.translation('AI', '/usr/share/locale', fallback=True).gettext
@@ -64,6 +64,7 @@ SRVINST = 'svc:/system/install/server:default'
 EXCLPROP = 'all_services/exclude_networks'
 NETSPROP = 'all_services/networks'
 PORTPROP = 'all_services/port'
+BASEDIR_PROP = 'all_services/default_imagepath_basedir'
 
 # File used to verify that image is ai netimage
 AI_NETIMAGE_REQUIRED_FILE = "solaris.zlib"
