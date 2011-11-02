@@ -55,30 +55,32 @@ for the slim_source gate. In order to run the tests you should:
 		The tests themselves are run from the source files,
 		so changes to tests do not require a re-build.
 
-3) Use the "bldenv" command to set-up the build and test environment:
-	/opt/onbld/bin/bldenv -d ../../developer.sh
+3) Use the "bldenv" command to set-up the build and test environment. 
+   slim_test should be run with sudo:
+
+	sudo /opt/onbld/bin/bldenv -d ../../developer.sh
 
 There are two different scripts for execution of tests:
-  - slim_test
+  - slim_test 
   - slim_regression_test.py (see below for an explanation of this script)
 
 The slim_test script:
 
 The "slim_test" command is a thin wrapper around the "nosetests" command,
 and accepts the same arguments. To see a full list of available arguments, run:
-	./slim_test -h
+	sudo ./slim_test -h
 
 Run the following command to execute all the currently known tests:
-	./slim_test -c tests.nose
+	sudo ./slim_test -c tests.nose
 
 To run an individual test:
-        ./slim_test -c tests.nose TEST_NUM [TEST_NUM]...
+        sudo ./slim_test -c tests.nose TEST_NUM [TEST_NUM]...
         
 Where TEST_NUM is the number of the test you'd like to run, and may be
 specified multiple times to run more than one test. Test numbers are
 indicated during a full run. To query the test numbers without executing the
 tests, run:
-        ./slim_test -c tests.nose --collect-only
+        sudo ./slim_test -c tests.nose --collect-only
 
 Note: To reset the numbering, delete the "usr/src/.noseids" file
 
@@ -86,28 +88,28 @@ To run all tests within a specific file or package, omit the "-c tests.nose"
 portion, and supply the path to the file or package, relative to the usr/src
 directory of the workspace. For example, the following command runs only
 the liberrsvc_pymod tests:
-	./slim_test lib/liberrsvc_pymod/test 
+	sudo ./slim_test lib/liberrsvc_pymod/test 
 
 To run all tests in a specific file:
-	./slim_test lib/liberrsvc_pymod/test/test_liberrsvc.py
+	sudo ./slim_test lib/liberrsvc_pymod/test/test_liberrsvc.py
 
 To run a specific class of tests in that file:
-	./slim_test lib/liberrsvc_pymod/test/test_liberrsvc.py:error_service
+	sudo ./slim_test lib/liberrsvc_pymod/test/test_liberrsvc.py:error_service
 
 To run a particular test in that class:
-	./slim_test lib/liberrsvc_pymod/test/test_liberrsvc.py:error_service.test_create_error_info
+	sudo ./slim_test lib/liberrsvc_pymod/test/test_liberrsvc.py:error_service.test_create_error_info
 
 To report code coverage metrics along with test results, add a "--with-cover"
 flag:
-	./slim_test -c tests.nose --with-cover
+	sudo ./slim_test -c tests.nose --with-cover
 
 To add a set of tests to the suite, update the tests.nose file. See that
 file for more details.
 
-To run the nosexunit test, you will need to do this:
+To run the nosexunit test, it should be run with sudo:
 
-source ${WORKSPACE}/developer.sh
-${WORKSPACE}/usr/src/tools/tests/slim_test \
+sudo source ${WORKSPACE}/developer.sh
+sudo ${WORKSPACE}/usr/src/tools/tests/slim_test \
     -c ${WORKSPACE}/usr/src/tools/tests/tests.nose --with-nosexunit \
     --source-folder=${ROOT}/usr/lib/python2.6/vendor-packages --enable-audit \
     --audit-config=${WORKSPACE}/usr/src/tools/env/install.pylintrc

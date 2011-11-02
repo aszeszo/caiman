@@ -32,20 +32,28 @@ To setup a machine for building this source repository:
 NOTE: The following steps require the user to have sufficient privileges,
 via pfexec or sudo, to install software on the build system.
  1. Get the SunStudio compilers.  There are two choices:
- 	a) Mount/symlink or rsync cache the /ws/onnv-tools autofs.  This is
+ 	a) Mount/symlink or rsync cache the /ws/on11update-tools autofs.  This is
  	   highly recommended for Oracle internal developers.  The compilers
- 	   are found at /ws/onnv-tools/SUNWspro/sunstudio12.1 (which is a
+ 	   are found at /ws/on11update-tools/SUNWspro/sunstudio12.1 (which is a
  	   symlink to the specific patched version used).
  	b) Via the Image Packaging System (IPS). To install, run the command
  	   "pkg install developer/sunstudio12u1".  This package may not
- 	   be identical to the onnv-tools version, so is not preferred.
+ 	   be identical to the on11update-tools version, so is not preferred.
 	    
 	    Alternatively, the package "pkg:/developer/solaris-studio-express"
 	    may be used. However, Solaris Studio 12 update 1 is the currently
 	    supported build environment.
 
- 2. Get the OS/Net Build Tools via the Image Packaging System (IPS). To install
-    run the command "pkg install developer/build/onbld".
+ 2. Get the OS/Net Build Tools.  There are two choices:
+ 	a) Mount/symlink or rsync cache the /ws/on11update-tools autofs.  This is
+ 	   highly recommended for Oracle internal developers.  The onbld tools
+ 	   are found at /ws/on11update-tools/onbld/
+
+        b) Via the Image Packaging System (IPS).  The repo for on-onbuild is here:
+           http://ipkg.us.oracle.com/internal/solaris11/on/onbld
+
+           To install, run the 
+           command "pkg install pkg://on-onbuild/developer/build/onbld".
 
  3. Install required IPS packages:
 
@@ -72,7 +80,7 @@ To setup the repository to be built:
       installed compilers. Likely locations are:
 	 /opt/SUNWspro (default)
 	 /opt
-	 /ws/onnv-tools
+	 /ws/on11update-tools
 
      In some circumstances overriding the SPRO_VROOT variable may be useful,
      as well as symlinks from /opt to your compiler location.
@@ -81,7 +89,7 @@ To build this repository use the following steps:
 -------------------------------------------------
  1. cd usr/src in the repository
 
- 2. To build, run: /opt/onbld/bin/nightly developer.sh
+ 2. To build, run: /opt/onbld/bin/nightly developer.sh 
     This updates the source from the Mercurial repository.
  
     If you do not wish to do a Mercurial pull as part of the nightly run,
