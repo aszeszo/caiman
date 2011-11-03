@@ -153,11 +153,11 @@ class TargetSelection(Checkpoint):
                 return discovered_disk
 
             # Attempt to match disk_prop.  Only match disk properties if all
-            # ctd/volid/devpath/devid/receptacle are None, then attempt to
+            # ctd/volid/devpath/devid/receptacle/wwn are None, then attempt to
             # match on boot disk or one of the disk properties if specified
             if disk.ctd is None and disk.volid is None and \
                disk.devpath is None and disk.devid is None and \
-               disk.receptacle is None:
+               disk.receptacle is None and disk.wwn is None:
 
                 # Attempt to match disk_prop. Any of the properties
                 # dev_type/dev_vendor/dev_size must been specified
@@ -884,17 +884,28 @@ class TargetSelection(Checkpoint):
 
     def __add_disks_to_map(self, disks):
         '''
-            Given a list of disks, add them to the intermal disk map.
-            Throwing exception if disk has already been added.
+            Given a single disk, or list of disks, add them to the internal
+            disk map, raising an exception if disk or any of its active ctd
+            aliases have already been added.
         '''
+        # convert disks to a list if it's not one already
+        if not isinstance(disks, list):
+            disks = [disks]
+
         for disk in disks:
             if disk.ctd in self._disk_map:
-                # Seems that the disk is specified more than once in
-                # the manifest!
+                # Seems that the disk is specified more than once in the
+                # manifest!
                 raise SelectionError(
                     "Disk '%s' matches already used disk '%s'." %
                     (self.__pretty_print_disk(disk), disk.ctd))
             self._disk_map[disk.ctd] = disk
+
+            # also add all active ctd aliases for this disk to make sure we
+            # don't try to do two different operations (on two different ctd
+            # strings) which are actually the same disk.
+            for active_ctd in disk.active_ctds:
+                self._disk_map[active_ctd] = disk
 
     def __get_discovered_be(self, zpool):
         '''
@@ -1651,7 +1662,7 @@ class TargetSelection(Checkpoint):
                         disk.ctd = device_ctd
                         devkey = zpool.name + ":" + device + ":" + \
                                  device_ctd
-                        zpool_map[devkey] = discovered_disk
+                        zpool_map[devkey] = disk
         return zpool_map
 
     def __validate_disks(self, desired):
@@ -2591,7 +2602,7 @@ class TargetSelection(Checkpoint):
             # Seems that the disk is specified more than once in the manifest!
             raise SelectionError(
                 "Disk '%s' matches already used disk '%s'." %
-                (self.__pretty_print_disk(disk), discovered_disk.name))
+                (self.__pretty_print_disk(disk), discovered_disk.ctd))
 
         # Check that in_zpool and in_vdev values from manifest are valid
         self.__check_valid_zpool_vdev(disk)
@@ -2608,7 +2619,7 @@ class TargetSelection(Checkpoint):
             # Traditional whole_disk scenario where we apply default layout
             # Only copy the disk, not it's children.
             disk_copy = copy.copy(discovered_disk)
-            self._disk_map[disk_copy.ctd] = disk_copy
+            self.__add_disks_to_map(disk_copy)
             self.logger.debug("Using Whole Disk")
             if disk.in_zpool is None and disk.in_vdev is None:
                 self.logger.debug("Zpool/Vdev not specified")
@@ -2655,7 +2666,7 @@ class TargetSelection(Checkpoint):
             # merging of partitions and slices from manifest with existing
             # layouts is only done if not wiping the disk.
             disk_copy = copy.copy(discovered_disk)
-            self._disk_map[disk_copy.ctd] = disk_copy
+            self.__add_disks_to_map(disk_copy)
 
             # Get partitions and slices from manifest version of Disk
             partitions = disk.get_children(class_type=Partition)
@@ -3282,15 +3293,7 @@ class TargetSelection(Checkpoint):
                         (self.be_mountpoint))
                     be.mountpoint = self.be_mountpoint
 
-                # Update disk map
-                for disk in selected_disks:
-                    if disk.ctd in self._disk_map:
-                        # Seems that the disk is specified more than once in
-                        # the manifest!
-                        raise SelectionError(
-                            "Disk '%s' matches already used disk '%s'." %
-                            (self.__pretty_print_disk(disk), disk.ctd))
-                    self._disk_map[disk.ctd] = disk
+                self.__add_disks_to_map(selected_disks)
 
                 # As TC has configured the logical section we also need
                 # to ensure swap and dump zvols exist if required.

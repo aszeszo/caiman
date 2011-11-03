@@ -231,6 +231,18 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
               <size val="5.5Gb" start_sector="21973248"/>
             </partition>
         </disk>
+        <disk whole_disk="false">
+          <disk_name name="206000c0ff0080c4" name_type="wwn"/>
+          <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
+          dev_size="625141760secs"/>
+          <partition action="preserve" name="1" part_type="191">
+            <size val="276976665secs" start_sector="512"/>
+            <slice name="1" action="preserve" force="false" is_swap="false"
+               in_zpool="rpool" in_vdev="rpool-none">
+              <size val="1060290secs" start_sector="512"/>
+            </slice>
+          </partition>
+        </disk>
         <logical noswap="true" nodump="true">
           <zpool name="export" action="preserve" is_root="false"
            mountpoint="/export">
@@ -358,6 +370,15 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         for disk in self.disks:
             if disk.label is None:
                 disk.label = "VTOC"
+
+            # to test a different identification types (devid, wwn, etc.), set
+            # a ctd string for any disk without one.  Target Discovery will
+            # always set as many attributes (ctd, volid, devpath, devid,
+            # receptacle, wwn) as libdiskmgt returns but the XML only allows a
+            # single identification type.
+            if disk.ctd is None:
+                disk.ctd = "c89t0d0"
+
 
     def tearDown(self):
         if self.engine is not None:
@@ -3379,6 +3400,46 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         '''
 
         self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_wwn(self):
+        ''' Test success if user specifies wwn as the disk_name'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="True">
+                <disk_name name="206000c0ff0080c4" name_type="wwn"/>
+              </disk>
+              <logical noswap="true" nodump="true"/>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+        expected_xml = '''\
+        <target name="desired">
+        ..<disk whole_disk="false">
+        ....<disk_name name="c89t0d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="625141760secs"/>
+        ....<partition action="create" name="1" part_type="191">
+        ......<size val="625141248secs" start_sector="512"/>
+        ......<slice name="0" action="create" force="true" is_swap="false" \
+        in_zpool="rpool" in_vdev="vdev">
+        ........<size val="625139712secs" start_sector="512"/>
+        ......</slice>
+        ....</partition>
+        ..</disk>
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
 
 if __name__ == '__main__':
     unittest.main()

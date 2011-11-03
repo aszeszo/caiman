@@ -29,7 +29,6 @@ devices on the given system.  The Data Object Cache is populated with the
 information.
 """
 
-import logging
 import optparse
 import os
 import platform
@@ -44,7 +43,6 @@ from solaris_install import CalledProcessError, Popen, run
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
-from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target import CRO_LABEL, Target
 from solaris_install.target.libbe import be
 from solaris_install.target.libdevinfo import devinfo
@@ -140,7 +138,34 @@ class TargetDiscovery(Checkpoint):
         drive_media = drive.media
 
         # set attributes for the disk
-        new_disk.ctd = drive.aliases[0].name
+        new_disk.wwn = getattr(drive.aliases[0].attributes, "wwn", None)
+
+        existing_wwns = [d.wwn for d in \
+                         self.root.get_descendants(class_type=Disk) \
+                         if d.wwn is not None]
+
+        if new_disk.wwn is not None and new_disk.wwn in existing_wwns:
+            # this wwn has already been discovered, so skip further discovery
+            return None
+
+        for alias in drive.aliases:
+            # check to see if the wwn changes between drive aliases
+            if getattr(alias.attributes, "wwn", None) != new_disk.wwn:
+                self.logger.warning("disk '%s' has different wwn for the "
+                                    "aliases" % new_disk.ctd)
+                return None
+            if self.verify_disk_read(alias.name):
+                new_disk.active_ctds.append(alias.name)
+            else:
+                new_disk.passive_ctds.append(alias.name)
+
+        # set the new_disk ctd string
+        if new_disk.wwn is None:
+            # use the only alias name
+            new_disk.ctd = drive.aliases[0].name
+        else:
+            # use the first active ctd
+            new_disk.ctd = new_disk.active_ctds[0]
         new_disk.devid = drive.name
         new_disk.iscdrom = drive.cdrom
         new_disk.opath = drive_attributes.opath
@@ -271,6 +296,36 @@ class TargetDiscovery(Checkpoint):
                     new_disk.insert_children(new_slice)
 
             return new_disk
+
+    def verify_disk_read(self, ctd):
+        """
+        verify_disk_read() - method to verify a low-level read from the raw ctd
+        path.
+        """
+
+        raw = "/dev/rdsk/%s" % ctd
+        raw2 = raw + "s2"
+        # Depending on the label used, we need to check both the raw device and
+        # slice 2 to see if the disk can be read.
+        for raw_disk in [raw, raw2]:
+            fd = None
+            try:
+                try:
+                    fd = os.open(raw_disk, os.O_RDONLY | os.O_NDELAY)
+                    try:
+                        _none = os.read(fd, 512)
+                    except OSError:
+                        # the read() call failed
+                        continue
+                    else:
+                        return True
+                except OSError:
+                    # the open() call failed
+                    continue
+            finally:
+                if fd is not None:
+                    os.close(fd)
+        return False
 
     def set_geometry(self, dma, new_disk):
         """ set_geometry() - method to set the geometry of the Disk DOC object
@@ -665,27 +720,11 @@ class TargetDiscovery(Checkpoint):
                 disk = Disk("disk")
                 disk.ctd = drive.aliases[0].name
 
-                # verify the drive is accessible via a low-level read() of a
-                # small amount of data
-                path = drive.attributes.opath.replace("s0", "s2")
-                try:
-                    fd = os.open(path, os.O_RDONLY | os.O_NDELAY)
-                except OSError:
-                    # we're not able to even open the drive so continue
-                    self.logger.debug("Unable to open  %s.  "
-                                      "Skipping label check." % disk.ctd)
+                # verify the drive can be read.  If not, continue to the next
+                # drive.
+                if not self.verify_disk_read(disk.ctd):
+                    self.logger.debug("Skipping label check for %s" % disk.ctd)
                     continue
-
-                # read one block.  If it fails, simply continue to the next
-                # drive
-                try:
-                    os.read(fd, 512)
-                except OSError:
-                    self.logger.debug("Unable to read 512 bytes from %s.  "
-                                      "Skipping label check." % disk.ctd)
-                    continue
-                finally:
-                    os.close(fd)
 
                 dma = drive.media.attributes
 
@@ -827,12 +866,12 @@ class TargetDiscovery(Checkpoint):
             #        ISID: 4000002a0000
             #        Connections: 1
             #        LUN: 1
-            #             Vendor:  SUN     
-            #             Product: COMSTAR         
+            #             Vendor:  SUN
+            #             Product: COMSTAR
             #             OS Device Name: <ctd>
             #        LUN: 0
-            #             Vendor:  SUN     
-            #             Product: COMSTAR         
+            #             Vendor:  SUN
+            #             Product: COMSTAR
             #             OS Device Name: <ctd>
             #
             # The LUN number and ctd strings are the only values we're
@@ -1109,7 +1148,7 @@ if __name__ == "__main__":
     def print_libdiskmgt():
         """ prints drive information from the --libdiskmgt argument
         """
-        
+
         def indent_str(level, string):
             """ function to print an indented string
             """

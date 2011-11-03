@@ -58,7 +58,7 @@
 
 <!ELEMENT disk_name EMPTY>
 <!ATTLIST disk_name name CDATA #REQUIRED>
-<!ATTLIST disk_name name_type (ctd|volid|devpath|devid|receptacle) "ctd">
+<!ATTLIST disk_name name_type (ctd|volid|devpath|devid|receptacle|wwn) "ctd">
 
 <!ELEMENT disk_prop EMPTY>
 <!ATTLIST disk_prop dev_type CDATA #IMPLIED>

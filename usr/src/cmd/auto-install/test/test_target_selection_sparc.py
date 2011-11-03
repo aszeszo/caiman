@@ -42,7 +42,7 @@ from solaris_install.target import Target, logical
 from solaris_install.target.physical import Disk, Slice
 
 
-class  TestTargetSelectionTestCase(unittest.TestCase):
+class TestTargetSelectionTestCase(unittest.TestCase):
     DISCOVERED_TARGETS_XML = '''
     <root>
       <target name="discovered">
@@ -73,6 +73,21 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         </disk>
         <disk whole_disk="false">
           <disk_name name="c99t1d0" name_type="ctd"/>
+          <disk_prop dev_type="scsi" dev_vendor="HITACHI"
+           dev_size="143349312secs"/>
+          <slice name="0" action="preserve" force="false" is_swap="false">
+            <size val="41945472secs" start_sector="0"/>
+          </slice>
+          <slice name="1" action="preserve" force="false" is_swap="false">
+            <size val="4202688secs" start_sector="41945472"/>
+          </slice>
+          <slice name="2" action="preserve" force="false" tag="5"
+           is_swap="false">
+            <size val="143349312secs" start_sector="0"/>
+          </slice>
+        </disk>
+        <disk whole_disk="false">
+          <disk_name name="206000c0ff0080c4" name_type="wwn"/>
           <disk_prop dev_type="scsi" dev_vendor="HITACHI"
            dev_size="143349312secs"/>
           <slice name="0" action="preserve" force="false" is_swap="false">
@@ -197,13 +212,21 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         for s in slices:
             s.tag = 5
 
-        # As we are not really discovering disks, label  will be set to "None"
+        # As we are not really discovering disks, label will be set to "None"
         # Ensure they set to VTOC
         discovered = self.doc.persistent.get_first_child(Target.DISCOVERED)
         self.disks = discovered.get_descendants(class_type=Disk)
         for disk in self.disks:
             if disk.label is None:
                 disk.label = "VTOC"
+
+            # to test a different identification types (devid, wwn, etc.), set
+            # a ctd string for any disk without one.  Target Discovery will
+            # always set as many attributes (ctd, volid, devpath, devid,
+            # receptacle, wwn) as libdiskmgt returns but the XML only allows a
+            # single identification type.
+            if disk.ctd is None:
+                disk.ctd = "c89t0d0"
 
     def tearDown(self):
         if self.engine is not None:
@@ -1444,6 +1467,44 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         '''
 
         self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_wwn(self):
+        ''' Test success if user specifies wwn as the disk_name'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="True">
+                <disk_name name="206000c0ff0080c4" name_type="wwn"/>
+              </disk>
+              <logical noswap="true" nodump="true"/>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<disk whole_disk="false">
+        ....<disk_name name="c89t0d0" name_type="ctd"/>
+        ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
+        dev_size="143349312secs"/>
+        ....<slice name="0" action="create" force="true" is_swap="false" \
+        in_zpool="rpool" in_vdev="vdev">
+        ......<size val="143348736secs" start_sector="512"/>
+        ....</slice>
+        ..</disk>
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
 
 if __name__ == '__main__':
     unittest.main()

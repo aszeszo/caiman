@@ -703,6 +703,7 @@ class Disk(DataObject):
         self.devid = None
         self.receptacle = None
         self.opath = None
+        self.wwn = None
 
         # is the Disk a cdrom drive?
         self.iscdrom = False
@@ -727,6 +728,10 @@ class Disk(DataObject):
 
         # write cache
         self.write_cache = False
+
+        # active and passive aliases
+        self.active_ctds = list()
+        self.passive_ctds = list()
 
         # shadow lists
         self._children = ShadowPhysical(self)
@@ -759,6 +764,11 @@ class Disk(DataObject):
             disk_name = etree.SubElement(disk, "disk_name")
             disk_name.set("name", self.receptacle)
             disk_name.set("name_type", "receptacle")
+        elif self.wwn is not None:
+            disk_name = etree.SubElement(disk, "disk_name")
+            disk_name.set("name", self.wwn)
+            disk_name.set("name_type", "wwn")
+
         if self.disk_prop is not None:
             disk_prop = etree.SubElement(disk, "disk_prop")
             if self.disk_prop.dev_type is not None:
@@ -817,6 +827,8 @@ class Disk(DataObject):
                 disk.devid = disk_name.get("name")
             elif name_type == "receptacle":
                 disk.receptacle = disk_name.get("name")
+            elif name_type == "wwn":
+                disk.wwn = disk_name.get("name")
             else:
                 raise ParsingError("No Disk identification provided")
 
@@ -966,6 +978,9 @@ class Disk(DataObject):
             device = self.devpath
         elif self.devid is not None:
             device = self.devid
+        elif self.wwn is not None:
+            device = self.wwn
+
         if self.is_boot_disk():
             bootdev = yes_label
         else:
@@ -1330,8 +1345,8 @@ class Disk(DataObject):
 
     def __repr__(self):
         s = "Disk: "
-        s += "ctd=%s; volid=%s; devpath=%s; devid=%s" \
-            % (self.ctd, self.volid, self.devpath, self.devid)
+        s += "ctd=%s; volid=%s; devpath=%s; devid=%s; wwn=%s" \
+            % (self.ctd, self.volid, self.devpath, self.devid, self.wwn)
 
         if self.disk_prop is not None:
             if self.disk_prop.dev_type is not None:
@@ -1350,6 +1365,10 @@ class Disk(DataObject):
             s += "; in_vdev=%s" % self.in_vdev
         s += "; whole_disk=%s" % self.whole_disk
         s += "; write_cache=%s" % self.write_cache
+        if self.active_ctds:
+            s += "; active ctd aliases=%s" % ", ".join(self.active_ctds)
+        if self.passive_ctds:
+            s += "; passive ctd aliases=%s" % ", ".join(self.passive_ctds)
 
         return s
 
@@ -1619,6 +1638,11 @@ class Disk(DataObject):
         if self.opath is not None and other.opath is not None:
             if self.opath == other.opath:
                 return True
+        if self.wwn is not None and other.wwn is not None:
+            if self.wwn == other.wwn:
+                return True
+        if other.ctd in self.active_ctds:
+            return True
         if self.receptacle is not None and other.receptacle is not None:
             if self.receptacle == other.receptacle:
                 return True
