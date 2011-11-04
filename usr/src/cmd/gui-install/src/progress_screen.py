@@ -65,8 +65,8 @@ from solaris_install.transfer.info import Software, IPSSpec
 # location of image files
 IMAGE_DIR = GLADE_DIR + '/installmessages/'
 
-# Image callback timeout
-IMAGES_TIMEOUT = 4000
+# Image callback timeout, every 30 seconds
+IMAGES_TIMEOUT = 30000
 
 # Installation callback timeout
 INSTALLATION_TIMEOUT = 200
