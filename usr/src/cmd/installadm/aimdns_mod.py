@@ -60,7 +60,7 @@ class AImDNS(object):
 
     # mDNS record resolved variable, used as a stack to indicate that the
     # service has been found, private
-    _resolved = list() 
+    _resolved = list()
 
     def __init__(self, servicename=None, domain='local', comment=None):
         '''Method: __init__, class private
@@ -383,7 +383,7 @@ class AImDNS(object):
                 print(cw(_('warning: Installation service "%s" is not enabled '
                            % name)))
                 return None
-            
+
             smf_port = config.get_service_port(name)
             if not smf_port:
                 try:
@@ -441,6 +441,16 @@ class AImDNS(object):
                                            port=port,
                                            callBack=self._register_callback,
                                            txtRecord=text)
+
+            # DNSServiceUpdateRecord will update the default record if
+            # RecordRef is None. Time-to-live (ttl) for the record is being
+            # set to 10 seconds.  This value allows enough time for the
+            # record to be looked up and it is short enough that when the
+            # service is deleted then the mdns daemon will remove it from
+            # the cache after this value expires but prior to another service
+            # with the same name being created.
+            pyb.DNSServiceUpdateRecord(sdRef=sdref, RecordRef=None,
+                                       rdata=text, ttl=10)
 
             # save the registered service reference
             list_sdrefs.append(sdref)

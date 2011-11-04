@@ -23,8 +23,9 @@
 #
 '''Manual Testcase for aimdns
 
-These tests are deemed manual due to the 120 second TTL DNS timeout.
-This is deemed too excessive for automatic tests.
+These tests are deemed manual due to the 10 second TTL DNS timeout
+setup for registration of a service.  This is deemed too excessive
+for automatic tests.
 
 To run these tests, see the instructions in usr/src/tools/tests/README.
 Remember that since the proto area is used for the PYTHONPATH, the gate
@@ -44,55 +45,46 @@ from nose.plugins.skip import SkipTest
 from solaris_install import CalledProcessError, Popen
 
 
+class Register(threading.Thread):
+    '''Class to register a mDNS record in a thread
+    '''
+
+    def __init__(self, mdns_obj, servicename, port, comments):
+        '''Call register on the provided mdns_obj
+        '''
+        threading.Thread.__init__(self)
+        self.mdns = mdns_obj
+        self.servicename = servicename
+        self.port = port
+        self.comments = comments
+
+    def run(self):
+        '''Method to actually register the mDNS record
+        '''
+        self.mdns.register(servicename=self.servicename,
+                           port=self.port, comments=self.comments)
+
+    def __del__(self):
+        '''Method to clear all registrations
+        '''
+        # del(mdns) does not work for the test as it is not called
+        # immediately thus the service is still registered
+        self.mdns.__del__()
+
+
 class RegisterAPI(unittest.TestCase):
     '''Class: RegisterAPI - used to test the AImDNS class
     '''
     bogussvc = "self-registration-test-svc"
-
-    class Register(threading.Thread):
-        '''Class to register a mDNS record in a thread
-        '''
-
-        def __init__(self, mdns_obj, servicename, port, comments):
-            '''
-            Call register on the provided mdns_obj
-            '''
-            threading.Thread.__init__(self)
-            self.mdns = mdns_obj
-            self.servicename = servicename
-            self.port = port
-            self.comments = comments
-
-        def run(self):
-            '''Method to actually register the mDNS record
-            '''
-            self.mdns.register(servicename=self.servicename,
-                               port=self.port, comments=self.comments)
-
-        def __del__(self):
-            '''Method to clear all registrations
-            '''
-            # del(mdns) does not work for the test as it is not called
-            # immediately thus the service is still registered
-            self.mdns.__del__()
 
     def test_register(self):
         '''Test the AImDNS().register() method
         '''
         mdns = aimdns.AImDNS()
         mdns.timeout = 2
-        reg = self.Register(mdns, self.bogussvc,
-                            port=9999, comments="bar=foo")
+        reg = Register(mdns, self.bogussvc, port=9999, comments="bar=foo")
         reg.start()
         time.sleep(2)
-
-        # manual output to stdout for debugging
-        # dns_sd = "/bin/dns-sd"
-        # proc = subprocess.Popen([dns_sd, "-B", common.REGTYPE, mdns.domain],
-        #                            stdout=None,
-        #                            stderr=subprocess.STDOUT)
-        # time.sleep(2)
-        # proc.terminate()
 
         # ensure service exists
         mdns2 = aimdns.AImDNS()
@@ -109,13 +101,11 @@ class RegisterAPI(unittest.TestCase):
 
         mdns2.reset()
         # negative test -- ensure service nolonger exists
-        # Default TTL (Time-To-Live) for DNS records is 120 seconds
-        # To change the 120 second TTL, would require a re-architecture of the
-        # aimdns' records. Instead of doing a default DNSServceRegister we
-        # would need to create a DNS connection, create a record and then
-        # register it with a shorter TTL value. The default value which can not
-        # be modified is 120 seconds.
-        time.sleep(120)
+        # Default TTL (Time-To-Live) for DNS records is 120 seconds.
+        # aimdns_mod.py resets the TTL to 10 seconds via an
+        # DNSServiceUpdateRecord() call.  Therefore, pause for 10
+        # seconds to allow the mdns daemon cache to clear.
+        time.sleep(10)
         assert mdns2.find(servicename=self.bogussvc) == False, \
                "Still finding unique service: %s!" % self.bogussvc
 
@@ -123,32 +113,20 @@ class RegisterAPI(unittest.TestCase):
 class FindAPI(unittest.TestCase):
     '''Class: FindAPI - class to test the find method of the AImDNS class
     '''
-    bogussvc = "not_likely_to_exist_service"
+    bogussvc = "bogus_service"
+    bogus_find_svc = "bogus_find_service"
 
     class BogusService(object):
         '''Class to start and teardown a bogus service.
         '''
-        dns_sd = "/bin/dns-sd"
-
         def __init__(self, name, svc_type, domain):
             '''
-            Start a dns-sd process advertising a service with name, type with
-            svc_type in the domain provided
+            Use the AImDNS class to create a fake mdns service.
             '''
-            self.proc = subprocess.Popen([self.dns_sd, "-R", name,
-                                          svc_type, domain, "9999",
-                                          "foo=bar"],
-                                         stdout=subprocess.PIPE,
-                                         stderr=subprocess.STDOUT)
-
-        def __del__(self):
-            '''
-            Kill process on object deletion -- remember to hold object in a
-            variable or this will get called right after creation
-            '''
-            self.proc.terminate()
-            # wait for dns-sd to die
-            time.sleep(0.5)
+            mdns = aimdns.AImDNS()
+            mdns.timeout = 2
+            reg = Register(mdns, name, port=9999, comments="bar=foo")
+            reg.start()
 
     def test_find(self):
         '''Test AImDNS().find() returns True when service is found and False
@@ -157,14 +135,15 @@ class FindAPI(unittest.TestCase):
         mdns = aimdns.AImDNS()
         mdns.timeout = 2
         # negative test
-        assert mdns.find(servicename=self.bogussvc) == False, \
+        assert mdns.find(servicename=self.bogus_find_svc) == False, \
                "Found bogus service: %s!" % self.bogussvc
 
         # start-up service for a positive test
         # pylint: disable-msg=W0212
-        bogosvc = self.BogusService(self.bogussvc, common.REGTYPE, mdns.domain)
+        bogosvc = self.BogusService(self.bogus_find_svc, common.REGTYPE,
+                                    mdns.domain)
         # pylint: enable-msg=W0212
-        assert mdns.find(self.bogussvc) == True, \
+        assert mdns.find(self.bogus_find_svc) == True, \
                "Failed to find unique service: %s!" % self.bogussvc
         del(bogosvc)
 
@@ -175,22 +154,20 @@ class FindAPI(unittest.TestCase):
         mdns.timeout = 2
         # start up a service to test browse
         # pylint: disable-msg=W0212
-        bogosvc = self.BogusService(self.bogussvc, common.REGTYPE, mdns.domain)
+        bogosvc = self.BogusService(self.bogussvc, common.REGTYPE,
+                                    mdns.domain)
         # pylint: enable-msg=W0212
         assert mdns.browse() == True, "Did not find any services!"
         del(bogosvc)
-        # Default TTL (Time-To-Live) for DNS records is 120 seconds
-        # To change the 120 second TTL, would require a re-architecture of the
-        # aimdns' records. Instead of doing a default DNSServceRegister we
-        # would need to create a DNS connection, create a record and then
-        # register it with a shorter TTL value. The default value which can not
-        # be modified is 120 seconds.
-        time.sleep(120)
+        # Default TTL (Time-To-Live) for DNS records is 120 seconds.
+        # aimdns_mod.py resets the TTL to 10 seconds via an
+        # DNSServiceUpdateRecord() call.  Therefore, pause for 10
+        # seconds to allow the mdns daemon cache to clear.
+        time.sleep(10)
 
     def test_interfaces(self):
         '''Verify a unique service shows up for all interfaces listed
-        (since dns-sd publishes on all iterfaces) when doing an
-        AImDNS().browse()
+        when doing an AImDNS().browse()
         '''
         def _in_network(inter_ipv4, networks):
             '''Ensures that the interface's address is in networks
