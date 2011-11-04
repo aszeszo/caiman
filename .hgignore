@@ -94,4 +94,16 @@ pkgdefs.*/pkginfo$
 ^usr/src/tools/xgetsh/xgetsh$
 ^usr/src/cmd/aimanifest/aimanifest
 ^usr/src/cmd/installadm/installadm-convert
+^usr/src/cmd/auto-install/manifest/
+^usr/src/cmd/auto-install/svc/auto-installer
+^usr/src/cmd/auto-install/test/.*.xml
+^usr/src/cmd/distro_const/checkpoints/xslt/doc2_media_transfer.xslt
+^usr/src/cmd/distro_const/manifest/.*.xml
+^usr/src/cmd/js2ai/modules/default_xml.py
+^usr/src/lib/bootmgmt/backend/autogen/bootmgmt-helper-chain
+^usr/src/lib/install_common/__init__.py
+^usr/src/lib/install_manifest/dtd/.*.dtd
+^usr/src/lib/install_manifest/dtd/.*dtd.1
+^usr/src/simplelog
+^usr/src/stream.log
 
