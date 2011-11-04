@@ -1083,7 +1083,8 @@ def perform_validation(filename, verbose):
     profile_data = ProfileData(profile_name)
     profile_data.conversion_report = \
         ConversionReport(process_errs=None, conversion_errs=None,
-                         unsupported_items=None, validation_errs=0)
+                         unsupported_items=None, validation_errs=0,
+			 warnings=None)
     processed_data.add_defined_profile(profile_data)
     validate(profile_name, manifest_path, manifest_filename, dtd_filename,
              profile_data.conversion_report, verbose)

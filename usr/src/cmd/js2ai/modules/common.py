@@ -390,12 +390,12 @@ class ConversionReport(object):
     """
 
     def __init__(self, process_errs=0, conversion_errs=0, unsupported_items=0,
-                 validation_errs=0):
+                 validation_errs=0, warnings=0):
         self._process_errs = process_errs
         self._conversion_errs = conversion_errs
         self._unsupported_items = unsupported_items
         self._validation_errs = validation_errs
-        self._warnings = 0
+        self._warnings = warnings
         self._log_lvl_convert_to_method = {
             LVL_PROCESS: self.add_process_error,
             LVL_UNSUPPORTED: self.add_unsupported_item,
