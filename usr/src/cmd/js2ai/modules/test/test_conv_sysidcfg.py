@@ -33,9 +33,39 @@ from subprocess import call
 from solaris_install.js2ai.common import ConversionReport
 from solaris_install.js2ai.common import KeyValues
 from solaris_install.js2ai.common import pretty_print as pretty_print
-from solaris_install.js2ai.common import SYSIDCFG_FILENAME
+from solaris_install.js2ai.common import fetch_xpath_node
+from solaris_install.js2ai.common import SYSIDCFG_FILENAME, ATTRIBUTE_VALUE
+from solaris_install.js2ai.conv_sysidcfg import DEFAULT_FIXED, AUTOMATIC
 from solaris_install.js2ai.conv_sysidcfg import XMLSysidcfgData
-from test_js2ai import failure_report
+from test_js2ai import failure_report, fetch_log
+
+
+def get_network_setting(xml_data):
+    """Retrieves the active_np setting value from xml tree"""
+    network_value = fetch_xpath_node(xml_data.tree,
+                                     "/service_bundle[@type='profile']"
+                                     "/service[@name='network/physical']"
+                                     "/instance[@name='default']"
+                                     "/property_group[@name='netcfg']"
+                                     "/propval[@name='active_ncp']")
+    ncp = network_value.get(ATTRIBUTE_VALUE)
+    return ncp
+
+
+def get_network_interface(xml_data, ipv4=True):
+    """Retrieves the network interface setting value from xml tree"""
+    if ipv4:
+        grp_name = "install_ipv4_interface"
+    else:
+        grp_name = "install_ipv6_interface"
+    network_node = fetch_xpath_node(xml_data.tree,
+                                     "/service_bundle[@type='profile']"
+                                     "/service[@name='network/install']"
+                                     "/instance[@name='default']"
+                                     "/property_group[@name='%s']"
+                                     "/propval[@name='name']" % grp_name)
+    interface = network_node.get(ATTRIBUTE_VALUE).split("/")
+    return interface[0]
 
 
 class Test_Sysidcfg_Valid(unittest.TestCase):
@@ -84,7 +114,27 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(retcode, 0, "Validation of xml failed:\n\n" +
         self.get_xml_contents(filename))
 
+    def validate_network_automatic(self, xml_data):
+        """Validates that network interface is set to Automatic"""
+        self.assertEquals(get_network_setting(xml_data), AUTOMATIC,
+                          "expected setting of %s got %s\n\n%s\n\n%s" %
+                          (AUTOMATIC, DEFAULT_FIXED,
+                          etree.tostring(xml_data.tree, pretty_print=True),
+                          fetch_log(self.log_file)))
+
+    def validate_network_defaultfixed(self, xml_data):
+        """Validates that network interface is set to DefaultFixed"""
+        self.assertEquals(get_network_setting(xml_data), DEFAULT_FIXED,
+                          "expected setting of %s got %s\n\n%s\n\n%s" %
+                          (DEFAULT_FIXED, AUTOMATIC,
+                           etree.tostring(xml_data.tree, pretty_print=True),
+                           fetch_log(self.log_file)))
+
     def default_dict_setup(self):
+        """Setups up a dictorion with base settings that will prevent
+           warning messages from being generated
+
+        """
         data = dict()
         payload = dict()
         payload["hostname"] = "host1"
@@ -94,10 +144,10 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         data[key_value.line_num] = key_value
         return data
 
-    def test_sysidcfg_name_service_none(self):
+    def test_sysidcfg_name_service_none1(self):
         """Tests sysidcfg name_service=None"""
         data = self.default_dict_setup()
-        key_value = KeyValues("name_service", ["None", None], 3)
+        key_value = KeyValues("name_service", ["None"], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLSysidcfgData(data, report)
@@ -105,6 +155,19 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
+        # default_dict_setup will add
+        # network_interface = NONE {hostname=xxx}
+        self.validate_network_defaultfixed(xml_data)
+
+    def test_sysidcfg_name_service_none2(self):
+        """Tests sysidcfg name_service=None results in network = Automatic"""
+        data = dict()
+        key_value = KeyValues("name_service", ["None"], 3)
+        data[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLSysidcfgData(data, report)
+        self.validate_xml_output(xml_data)
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_name_service_DNS(self):
         """Tests sysidcfg name_service=DNS {args}"""
@@ -123,6 +186,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_name_service_NIS(self):
         """Tests sysidcfg name_service=NIS {args..}"""
@@ -137,6 +201,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           failure_report(report, self.log_file))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_name_service_LDAP(self):
         """Tests sysidcfg name_service=LDAP {args..}"""
@@ -155,6 +220,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           failure_report(report, self.log_file))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_name_service_LDAP_wo_opt_arg(self):
         """Tests sysidcfg name_service=LDAP without opt args"""
@@ -166,9 +232,10 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         key_value = KeyValues("name_service", ["LDAP", payload], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), False,
                           failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_primary_no_args(self):
         """Tests sysidcfg network_interface=PRIMARY"""
@@ -188,10 +255,11 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.validation_errors, 0,
                           failure_report(report, self.log_file))
-        # Warning for missing hostname
-        self.assertEquals(report.warnings, 1,
+        # Warning for missing hostname and for PRIMARY may not be same
+        self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
         self.validate_xml_output(xml_data)
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_network_interface_primary_dhcp(self):
         """Tests sysidcfg network_interface=PRIMARY {dhcp}"""
@@ -212,10 +280,97 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.validation_errors, 0,
                           failure_report(report, self.log_file))
-        # Warning for missing hostname
+        # Warning for missing hostname and for PRIMARY may not be same
+        self.assertEquals(report.warnings, 2,
+                          failure_report(report, self.log_file))
+        self.validate_xml_output(xml_data)
+        self.validate_network_automatic(xml_data)
+
+    def test_sysidcfg_network_interface_more_than_one_ipv6(self):
+        """Tests sysidcfg network interface eri0 with no errors
+
+           network_interface=eri1 {protocol_ipv6=yes hostname=host1}
+           network_interface=eri2 {primary protocol_ipv6=yes hostname=host2}
+        """
+        data = self.default_dict_setup()
+        payload = dict()
+        payload["hostname"] = "host1"
+        payload["protocol_ipv6"] = "yes"
+        key_value = KeyValues("network_interface", ["eri1", payload], 1)
+        data[key_value.line_num] = key_value
+        payload = dict()
+        payload["primary"] = ""
+        payload["hostname"] = "host2"
+        payload["protocol_ipv6"] = "yes"
+        key_value = KeyValues("network_interface", ["eri2", payload], 5)
+        data[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLSysidcfgData(data, report)
+        self.assertEquals(report.has_errors(), True,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.process_errors, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.conversion_errors, 0,
+                          failure_report(report, self.log_file))
+        # error for network interface eril
+        self.assertEquals(report.unsupported_items, 1,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.validation_errors, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.warnings, 0,
+                          failure_report(report, self.log_file))
+        self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
+        self.assertEquals(get_network_interface(xml_data, False), "eri2")
+
+    def test_sysidcfg_network_interface_more_than_one_ipv4(self):
+        """Tests sysidcfg network interface eri0 with no errors
+
+           network_interface=eri0 {hostname=host0 ....}
+           network_interface=eri1 {hostname=host1 ....}
+           network_interface=eri2 {primary hostname=host2 ....}
+        """
+        data = dict()
+        payload = dict()
+        payload["hostname"] = "host0"
+        payload["ip_address"] = "192.168.2.6"
+        payload["netmask"] = "255.255.255.0"
+        payload["default_route"] = "192.168.2.1"
+        key_value = KeyValues("network_interface", ["eri0", payload], 1)
+        data[key_value.line_num] = key_value
+        payload = dict()
+        payload["hostname"] = "host1"
+        payload["ip_address"] = "192.168.2.7"
+        payload["netmask"] = "255.255.255.0"
+        payload["default_route"] = "192.168.2.1"
+        key_value = KeyValues("network_interface", ["eri1", payload], 2)
+        data[key_value.line_num] = key_value
+        payload = dict()
+        payload["primary"] = ""
+        payload["hostname"] = "host2"
+        payload["ip_address"] = "192.168.2.8"
+        payload["netmask"] = "255.255.255.0"
+        payload["default_route"] = "192.168.2.1"
+        key_value = KeyValues("network_interface", ["eri2", payload], 3)
+        data[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLSysidcfgData(data, report)
+        self.assertEquals(report.has_errors(), True,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.process_errors, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.conversion_errors, 0,
+                          failure_report(report, self.log_file))
+        # error for network interface eril
+        self.assertEquals(report.unsupported_items, 2,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.validation_errors, 0,
+                          failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 1,
                           failure_report(report, self.log_file))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
+        self.assertEquals(get_network_interface(xml_data), "eri2")
 
     def test_sysidcfg_network_interface_PRIMARY_dhcp_ipv6(self):
         """Tests sysidcfg network_interface PRIMARY  dhcp ipv6=yes"""
@@ -228,9 +383,10 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         data[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLSysidcfgData(data, report)
-        self.assertEquals(report.has_errors(), False,
+        self.assertEquals(report.has_errors(), True,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_network_interface_value_dhcp(self):
         """Tests sysidcfg network_interface=eri0 {dhcp hostname=host1}"""
@@ -245,6 +401,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_value_dhcp_ipv6(self):
         """Tests sysidcfg dhcp ipv6=yes
@@ -264,6 +421,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_value_dhcp_ipv6_no(self):
         """Tests sysidcfg dhcp ipv6=no
@@ -281,6 +439,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_value_wargs(self):
         """Tests sysidcfg network interface eri0 with no errors
@@ -305,6 +464,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_value_ipv6(self):
         """Tests sysidcfg network interface eri0 with no errors
@@ -322,6 +482,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_none(self):
         """Tests sysidcfg network_interface=NONE"""
@@ -345,6 +506,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.warnings, 1,
                           failure_report(report, self.log_file))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_none_whost(self):
         """Tests sysidcfg network_interface=NONE {hostname=host1}"""
@@ -358,8 +520,9 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
+        self.validate_network_defaultfixed(xml_data)
 
-    def test_sysidcfg_keyboard(self):
+    def test_sysidcfg_keyboard1(self):
         """Tests keyboard=French"""
         data = self.default_dict_setup()
         data[3] = KeyValues("keyboard", ["French"], 3)
@@ -368,6 +531,18 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           self.sysidcfg_failure_report(xml_data, report))
         self.validate_xml_output(xml_data)
+        # default_dict_setup will add
+        # network_interface = NONE {hostname=xxx}
+        self.validate_network_defaultfixed(xml_data)
+
+    def test_sysidcfg_keyboard2(self):
+        """Tests keyboard=English only to make sure network DefaultFixed"""
+        data = dict()
+        data[3] = KeyValues("keyboard", ["French"], 3)
+        report = ConversionReport()
+        xml_data = XMLSysidcfgData(data, report)
+        self.validate_xml_output(xml_data)
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_root_pswd(self):
         """Tests root_password=encrypted_password"""
@@ -389,6 +564,7 @@ class Test_Sysidcfg_Valid(unittest.TestCase):
         self.assertEquals(report.warnings, 1,
                           failure_report(report, self.log_file))
         self.validate_xml_output(xml_data)
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_security_policy_none(self):
         """Tests for no error if security_policy=None"""
@@ -465,6 +641,22 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         # Delete everything when we are done
         shutil.rmtree(self.working_dir)
 
+    def validate_network_automatic(self, xml_data):
+        """Validates that network interface is set to Automatic"""
+        self.assertEquals(get_network_setting(xml_data), AUTOMATIC,
+                          "expected setting of %s got %s\n\n%s\n\n%s" %
+                          (AUTOMATIC, DEFAULT_FIXED,
+                          etree.tostring(xml_data.tree, pretty_print=True),
+                          fetch_log(self.log_file)))
+
+    def validate_network_defaultfixed(self, xml_data):
+        """Validates that network interface is set to DefaultFixed"""
+        self.assertEquals(get_network_setting(xml_data), DEFAULT_FIXED,
+                          "expected setting of %s got %s\n\n%s\n\n%s" %
+                          (DEFAULT_FIXED, AUTOMATIC,
+                           etree.tostring(xml_data.tree, pretty_print=True),
+                           fetch_log(self.log_file)))
+
     def test_sysidcfg_name_service_invalid(self):
         """Tests sysidcfg name_service=xyz {args..}"""
         data = dict()
@@ -474,7 +666,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["xyz", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -487,6 +679,8 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        #  name service entry doesn't get added so default becomes automated
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_name_service_DNS_incomplete(self):
         """Tests sysidcfg name_service=DNS {args}"""
@@ -500,7 +694,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", payload], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -513,6 +707,8 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        #  name service entry doesn't get added so default becomes automated
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_name_service_none_wargs(self):
         """Tests sysidcfg name_service=None {extra_arg}"""
@@ -522,7 +718,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["None", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -535,6 +731,8 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        # name_service line gets ignored
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_name_service_DNS_bad_ip(self):
         """Tests sysidcfg name_service=DNS {args}"""
@@ -546,7 +744,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -559,6 +757,8 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        #  name service gets added bad ip is not outputed
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_name_service_DNS_extra_args(self):
         """Tests sysidcfg name_service=DNS {args}"""
@@ -572,7 +772,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 2,
@@ -583,8 +783,10 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.validation_errors, 0,
                           failure_report(report, self.log_file))
-        self.assertEquals(report.warnings, 2,
+        self.assertEquals(report.warnings, 3,
                           failure_report(report, self.log_file))
+        # name service added extra args ignored
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_name_service_LDAP(self):
         """Tests sysidcfg name_service=LDAP {args..}"""
@@ -595,82 +797,11 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         payload["profile_server"] = "ip_address"
         payload["proxy_dn"] = "proxy_bind_dn"
         payload["proxy_password"] = "password"
-        payload["hostname"] = "host"
         payload["extra_arg"] = "anything"
         key_value = KeyValues("name_service", ["LDAP", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
-        self.assertEquals(report.has_errors(), True,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.process_errors, 2,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.conversion_errors, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.unsupported_items, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.validation_errors, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.warnings, 2,
-                          failure_report(report, self.log_file))
-
-    def test_sysidcfg_name_service_NISplus(self):
-        """Tests sysidcfg name_service=NIS+ {args..}"""
-        data = dict()
-        payload = dict()
-        payload["domain_name"] = "domain_name"
-        payload["name_server"] = "host(129.91.159.000)"
-        key_value = KeyValues("name_service", ["NIS+", payload], 1)
-        data[key_value.line_num] = key_value
-        report = ConversionReport()
-        XMLSysidcfgData(data, report)
-        self.assertEquals(report.has_errors(), True,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.process_errors, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.conversion_errors, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.unsupported_items, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.validation_errors, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.warnings, 3,
-                          failure_report(report, self.log_file))
-
-    def test_sysidcfg_network_interface_PRIMARY_dhcp_ipv6_no(self):
-        """Tests sysidcfg network_interface=PRIMARY {dhcp protocol_ipv6=no}"""
-        data = dict()
-        payload = dict()
-        payload["dhcp"] = ""
-        payload["protocol_ipv6"] = "no"
-        key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
-        data[key_value.line_num] = key_value
-        report = ConversionReport()
-        XMLSysidcfgData(data, report)
-        self.assertEquals(report.has_errors(), True,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.process_errors, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.conversion_errors, 1,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.unsupported_items, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.validation_errors, 0,
-                          failure_report(report, self.log_file))
-        self.assertEquals(report.warnings, 2,
-                          failure_report(report, self.log_file))
-
-    def test_sysidcfg_network_interface_PRIMARY_dhcp_ipv6_extra_arg(self):
-        """Tests sysidcfg network_interface=PRIMARY ipv6 with extra args"""
-        data = dict()
-        payload = dict()
-        payload["dhcp"] = ""
-        payload["protocol_ipv6"] = "yes"
-        payload["default_router"] = "129.91.159.9"
-        key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
-        data[key_value.line_num] = key_value
-        report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -683,6 +814,81 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        # name_service line is rejected
+        self.validate_network_automatic(xml_data)
+
+    def test_sysidcfg_name_service_NISplus(self):
+        """Tests sysidcfg name_service=NIS+ {args..}"""
+        data = dict()
+        payload = dict()
+        payload["domain_name"] = "domain_name"
+        payload["name_server"] = "host(129.91.159.000)"
+        key_value = KeyValues("name_service", ["NIS+", payload], 1)
+        data[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLSysidcfgData(data, report)
+        self.assertEquals(report.has_errors(), True,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.process_errors, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.conversion_errors, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.unsupported_items, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.validation_errors, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.warnings, 4,
+                          failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
+
+    def test_sysidcfg_network_interface_PRIMARY_dhcp_ipv6_no(self):
+        """Tests sysidcfg network_interface=PRIMARY {dhcp protocol_ipv6=no}"""
+        data = dict()
+        payload = dict()
+        payload["dhcp"] = ""
+        payload["protocol_ipv6"] = "no"
+        key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
+        data[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLSysidcfgData(data, report)
+        self.assertEquals(report.has_errors(), True,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.process_errors, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.conversion_errors, 1,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.unsupported_items, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.validation_errors, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.warnings, 3,
+                          failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
+
+    def test_sysidcfg_network_interface_PRIMARY_dhcp_ipv6_extra_arg(self):
+        """Tests sysidcfg network_interface=PRIMARY ipv6 with extra args"""
+        data = dict()
+        payload = dict()
+        payload["dhcp"] = ""
+        payload["protocol_ipv6"] = "yes"
+        payload["default_router"] = "129.91.159.9"
+        key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
+        data[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLSysidcfgData(data, report)
+        self.assertEquals(report.has_errors(), True,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.process_errors, 1,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.conversion_errors, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.unsupported_items, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.validation_errors, 0,
+                          failure_report(report, self.log_file))
+        self.assertEquals(report.warnings, 3,
+                          failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_network_interface_PRIMARY_wargs(self):
         """Tests sysidcfg network_interface=PRIMARY {valid args}"""
@@ -695,7 +901,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["PRIMARY", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -708,6 +914,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_value_primary_wargs(self):
         """Tests sysidcfg with error for primary
@@ -729,19 +936,20 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
                           failure_report(report, self.log_file))
         self.assertEquals(report.conversion_errors, 0,
                           failure_report(report, self.log_file))
-        self.assertEquals(report.unsupported_items, 1,
+        self.assertEquals(report.unsupported_items, 0,
                           failure_report(report, self.log_file))
         self.assertEquals(report.validation_errors, 0,
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 1,
                           failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_value_dhcp_wextra_arg(self):
         """Tests sysidcfg network_interface=eri0 {dhcp doit=yes}"""
@@ -752,7 +960,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -765,6 +973,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_value_no_args(self):
         """Tests sysidcfg network_interface=eri0"""
@@ -773,7 +982,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -786,6 +995,8 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        # network_interface isn't valid sets to automated
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_network_interface_value_no_args2(self):
         """Tests sysidcfg network_interface=eri0"""
@@ -793,7 +1004,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", None], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -806,6 +1017,8 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        # network_interface isn't valid sets to automated
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_network_interface_value_missing_ipaddr(self):
         """Tests sysidcfg with error for missing ip_address
@@ -824,7 +1037,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -837,6 +1050,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 1,
                           failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_value_invalid_default_route(self):
         """Tests sysidcfg with error for missing ip_address
@@ -857,7 +1071,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["eri1", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -870,6 +1084,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 1,
                           failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_none_extra_interface(self):
         """Tests network_interface=NONE and extra illegal interface"""
@@ -879,7 +1094,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value2 = KeyValues("network_interface", ["eri1", None], 2)
         data[key_value2.line_num] = key_value2
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -892,6 +1107,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_none_invalidhost(self):
         """Tests sysidcfg network_interface=NONE {hostname=123$$host1}"""
@@ -901,7 +1117,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("network_interface", ["NONE", payload], 1)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -914,6 +1130,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_network_interface_primary_extra_interface(self):
         """Tests network_interface=PRIMARY and extra illegal interface"""
@@ -921,7 +1138,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("network_interface", ["PRIMARY", None], 1)
         data[2] = KeyValues("network_interface", ["eri2", None], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -932,8 +1149,9 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.validation_errors, 0,
                           failure_report(report, self.log_file))
-        self.assertEquals(report.warnings, 2,
+        self.assertEquals(report.warnings, 3,
                           failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_network_interface_value_extra_interface(self):
         """Tests network_interface=eg0 {params} and extra illegal interface"""
@@ -947,7 +1165,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("network_interface", ["eri1", payload], 1)
         data[2] = KeyValues("network_interface", ["eri2", payload], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -960,6 +1178,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 1,
                           failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_name_service_DNS_simple(self):
         """Tests sysidcfg name_service=DNS """
@@ -967,7 +1186,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", None], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -980,6 +1199,8 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        # name_service incomplete rejected, goes to automatic
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_name_service_DNS_bad_ip(self):
         """Tests sysidcfg name_service=DNS {args}"""
@@ -994,7 +1215,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         key_value = KeyValues("name_service", ["DNS", payload], 3)
         data[key_value.line_num] = key_value
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -1005,8 +1226,9 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.validation_errors, 0,
                           failure_report(report, self.log_file))
-        self.assertEquals(report.warnings, 2,
+        self.assertEquals(report.warnings, 3,
                           failure_report(report, self.log_file))
+        self.validate_network_defaultfixed(xml_data)
 
     def test_sysidcfg_keyboard_w2nd_keyborad_defined(self):
         """Tests failure for 2nd keyboard defined"""
@@ -1014,7 +1236,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("keyboard", ["French"], 1)
         data[2] = KeyValues("keyboard", ["German"], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1027,13 +1249,14 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_keyboard_extra_arg(self):
         """Tests keyboard for too many args"""
         data = dict()
         data[1] = KeyValues("keyboard", ["French", "extra_arg"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1046,13 +1269,14 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_nfs_domain(self):
         """Tests for non support of nfs_domain keyword"""
         data = dict()
         data[1] = KeyValues("nfs_domain", ["dynamic"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -1065,6 +1289,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_root_pswd_2nd_defined(self):
         """Tests failure for 2nd root password defined"""
@@ -1072,7 +1297,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("root_password", ["encrypted_password"], 1)
         data[2] = KeyValues("root_password", ["encrypted_password"], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1085,6 +1310,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 1,
                           failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_root_pswd_too_many_args(self):
         """Tests root_password for too many args"""
@@ -1092,7 +1318,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("root_password",
                             ["encrypted_password", "extra_arg"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1105,13 +1331,14 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_security_policy_kerberos(self):
         """Tests for non support of security_policy kerberos"""
         data = dict()
         data[1] = KeyValues("security_policy", ["kerberos"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -1124,13 +1351,14 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_security_policy_invalid(self):
         """Tests for no error if security_policy invalid policy"""
         data = dict()
         data[1] = KeyValues("security_policy", ["my_policy"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1143,13 +1371,14 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_service_profile_open(self):
         """Tests service_profile=open"""
         data = dict()
         data[1] = KeyValues("service_profile", ["open"], 1)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 0,
@@ -1162,6 +1391,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_service_profile_duplicate(self):
         """Tests failure for 2nd service_profile defined"""
@@ -1169,7 +1399,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
         data[1] = KeyValues("service_profile", ["limited_net"], 1)
         data[2] = KeyValues("service_profile", ["open"], 2)
         report = ConversionReport()
-        XMLSysidcfgData(data, report)
+        xml_data = XMLSysidcfgData(data, report)
         self.assertEquals(report.has_errors(), True,
                           failure_report(report, self.log_file))
         self.assertEquals(report.process_errors, 1,
@@ -1182,6 +1412,7 @@ class Test_Sysidcfg_Invalid(unittest.TestCase):
                           failure_report(report, self.log_file))
         self.assertEquals(report.warnings, 2,
                           failure_report(report, self.log_file))
+        self.validate_network_automatic(xml_data)
 
     def test_sysidcfg_service_profile_too_many_args(self):
         """Tests service_profile for too many args"""

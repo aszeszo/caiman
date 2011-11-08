@@ -2805,6 +2805,27 @@ class Test_Rules(unittest.TestCase):
         except ValueError:
             pass
 
+    def test_karch_entry3(self):
+        """ Test that unsupport karchs generate errors"""
+        def_rule = js2ai.DefinedRule(None, None, None)
+        def_rule.add_key_values("karch", ["sun4c"], 1)
+        def_rule.add_key_values("karch", ["sun4d"], 1)
+        def_rule.add_key_values("karch", ["sun4m"], 1)
+        def_rule.add_key_values("karch", ["sun4u"], 1)
+        report = ConversionReport()
+        XMLRuleData(def_rule, report)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.rule_failure_report(report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.rule_failure_report(report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.rule_failure_report(report))
+        self.assertEquals(report.unsupported_items, 3,
+                          self.rule_failure_report(report))
+        self.assertEquals(report.warnings, 1,
+                          self.rule_failure_report(report))
+
     def test_memsize_entry1(self):
         """ Test that given a memsize we process it correctly"""
         def_rule = js2ai.DefinedRule(None, None, None)
@@ -2855,6 +2876,27 @@ class Test_Rules(unittest.TestCase):
             pass
         else:
             self.fail("Expected ValueError")
+
+    def test_rule_error_each_line(self):
+        """Test to ensure we generate a unsupported error for each rule line"""
+        def_rule = js2ai.DefinedRule(None, None, None)
+        def_rule.add_key_values("hostname", ["sun1"], 1)
+        def_rule.add_key_values("hostname", ["sun2"], 1)
+        def_rule.add_key_values("hostname", ["sun3"], 1)
+        def_rule.add_key_values("hostname", ["sun4"], 1)
+        report = ConversionReport()
+        XMLRuleData(def_rule, report)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.rule_failure_report(report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.rule_failure_report(report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.rule_failure_report(report))
+        self.assertEquals(report.unsupported_items, 4,
+                          self.rule_failure_report(report))
+        self.assertEquals(report.warnings, 0,
+                          self.rule_failure_report(report))
 
 
 class Test_Rule_unsupported_keywords(unittest.TestCase):

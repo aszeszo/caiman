@@ -1192,7 +1192,7 @@ class TestCommandArgs7(unittest.TestCase):
         filename = os.path.join(self.working_dir, js2ai.RULES_FILENAME)
         with open(filename, 'w') as fhandle:
             fhandle.write("# Comment 1 - the lazy brown fox\n")
-            fhandle.write("network 924.222.43.0 && karch sun4c     -"
+            fhandle.write("network 924.222.43.0 && karch sun4v     -"
                 "   host_class     -\n")
             fhandle.write("# The following rule matches any system:\n\n")
             fhandle.write("arch i386   -   any_machine  -\n")
@@ -1247,7 +1247,7 @@ class TestCommandArgs8(unittest.TestCase):
         # Create the rules file
         filename = os.path.join(self.working_dir, js2ai.RULES_FILENAME)
         with open(filename, 'w') as fhandle:
-            fhandle.write("network 924.222.43.0 && karch sun4c     - "
+            fhandle.write("network 924.222.43.0 && karch sun4v     - "
                 "host_class     -\n")
             fhandle.write("arch i386   -   any_machine  -\n")
             fhandle.write("arch sparc &&\\\n")
@@ -1294,6 +1294,72 @@ class TestCommandArgs8(unittest.TestCase):
             self.assertEquals(err.code, js2ai.EXIT_ERROR,
                               exit_code_report(err.code,
                                                js2ai.EXIT_ERROR,
+                                               js2ai.logfile_name))
+        except Exception, err:
+            self.fail(exception_report(err, js2ai.logfile_name))
+
+
+class TestCommandBadProfile(unittest.TestCase):
+    """Test main method via command line args"""
+    working_dir = None
+
+    def setUp(self):
+        """Test setup"""
+        # Create a directory to work in
+        self.working_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up after test run"""
+        # Delete everything when we are done
+        shutil.rmtree(self.working_dir)
+
+    def test_p_option_nonexistent_profile(self):
+        """Tests calling js2ai with -p option option set against a file whose
+        path ends in /
+
+        """
+        path = self.working_dir + "/"
+        sys.argv = ["js2ai", "-d", self.working_dir, "-p", path]
+        try:
+            js2ai.main()
+        except SystemExit, err:
+            self.assertEquals(type(err), type(SystemExit()))
+            self.assertEquals(err.code, js2ai.EXIT_IO_ERROR,
+                              exit_code_report(err.code,
+                                               js2ai.EXIT_IO_ERROR,
+                                               js2ai.logfile_name))
+        except Exception, err:
+            self.fail(exception_report(err, js2ai.logfile_name))
+
+
+class TestCommandValidateBadFile(unittest.TestCase):
+    """Test main method via command line args"""
+    working_dir = None
+
+    def setUp(self):
+        """Test setup"""
+        # Create a directory to work in
+        self.working_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up after test run"""
+        # Delete everything when we are done
+        shutil.rmtree(self.working_dir)
+
+    def test_V_option_nonexistent_profile(self):
+        """Tests calling js2ai with -V option set against xml file whose
+        path ends in /
+
+        """
+        path = self.working_dir + "/"
+        sys.argv = ["js2ai", "-V", path]
+        try:
+            js2ai.main()
+        except SystemExit, err:
+            self.assertEquals(type(err), type(SystemExit()))
+            self.assertEquals(err.code, js2ai.EXIT_IO_ERROR,
+                              exit_code_report(err.code,
+                                               js2ai.EXIT_IO_ERROR,
                                                js2ai.logfile_name))
         except Exception, err:
             self.fail(exception_report(err, js2ai.logfile_name))

@@ -897,12 +897,13 @@ def convert_rules_and_profiles(rules_profile, dest_dir, xml_default_data,
                 # Delete the previous run's AI_${profile} directory
                 ai_path = fetch_ai_profile_dir(dest_dir, profile)
                 remove(ai_path)
-                convert_rule(defined_rule, rule_num, profile, rule_conv_report,
-                             dest_dir, verbose)
                 convert_profile(profiles[profile], dest_dir, xml_default_data,
                                 local, skip_validation, verbose)
                 # Save the processed profile name in the list of profiles
                 profile_names = profile_names + " " + profile
+
+            convert_rule(defined_rule, rule_num, profile, rule_conv_report,
+                         dest_dir, verbose)
 
 
 def convert_sysidcfg(sysidcfg, dest_dir, skip_validation, verbose):
@@ -1053,6 +1054,8 @@ def process_sysidcfg(source_dir, dest_dir, skip_validation, verbose):
 
     """
 
+    sc_profile = os.path.join(dest_dir, SC_PROFILE_FILENAME)
+    remove(sc_profile)
     sysidcfg = read_sysidcfg(source_dir, verbose)
 
     convert_sysidcfg(sysidcfg, dest_dir, skip_validation, verbose)
@@ -1278,6 +1281,11 @@ def parse_args(parser, options, args):
         if options.rule or options.profile or \
             options.sysidcfg or options.default_xml:
             parser.error(_("-V option must not be used with any other option"))
+        if not os.path.isfile(options.validate):
+            err(_("%s does not exist or is not a regular file\n") \
+                  % options.validate)
+            return EXIT_IO_ERROR
+
     elif not options.rule and not options.profile and \
         not options.sysidcfg:
         parser.error(_("required options -r, -p, or -s must be specified"))
@@ -1306,21 +1314,32 @@ def parse_args(parser, options, args):
     elif options.default_xml.lower() == "none":
         options.default_xml = None
     elif not os.path.isfile(options.default_xml):
-        err(_("no such file found: %s\n") % options.default_xml)
+        err(_("%s does not exist or is not a regular file\n") \
+              % options.default_xml)
         return EXIT_IO_ERROR
 
     # Check and handle the condition where user specified -p with a path to
     # the profile
     if options.profile:
-        profile = os.path.basename(options.profile)
-        if options.profile != profile:
-            options.source = os.path.dirname(options.profile)
-            options.profile = profile
+        dir = os.path.dirname(options.profile)
+        #
+        # options.source will be "." if -d <jumpstart_dir> was not specified
+        #
+        options.source = os.path.join(options.source, dir)
+        options.profile = os.path.basename(options.profile)
+        filename = os.path.join(options.source, options.profile)
+        if not options.profile:
+            err(_("no filename specified\n"))
+            return EXIT_IO_ERROR
+        if not os.path.isfile(filename):
+            err(_("%s does not exist or is not a regular file\n") % filename)
+            return EXIT_IO_ERROR
     return EXIT_SUCCESS
 
 
 def process(options):
     """Invoke operation requested by the user via the command line"""
+    processed_data = None
     if options.sysidcfg:
         sysidcfg_data = process_sysidcfg(options.source,
                                          options.destination,

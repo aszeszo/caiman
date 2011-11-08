@@ -194,11 +194,17 @@ class XMLRuleData(object):
         if len(values) != 1:
             self.__invalid_syntax(keyword)
             return
-        if values[0] == "sun4u":
+        if values[0] in ["sun4c", "sun4d", "sun4m"]:
             self.__gen_err(LVL_UNSUPPORTED,
                            _("Solaris 11 does not support the specified "
                              "arch '%(arch)s'") % {"arch": values[0]})
             return
+        if values[0] == "sun4u":
+            self.__gen_err(LVL_WARNING,
+                           _("only a limited set of sun4u hardware is "
+                             "supported by Solaris 11.  Consult the Solaris "
+                             "11 documentation to ensure that the hardware "
+                             "you wish to install on is supported"))
         self.__convert_common(keyword, values)
 
     def __convert_common(self, keyword, values):
@@ -311,7 +317,7 @@ class XMLRuleData(object):
         "hostaddress": __convert_common,
         "hostname": __unsupported_keyword,
         "installed": __unsupported_keyword,
-        "karch": __convert_common,
+        "karch": __convert_arch,
         "memsize": __convert_memsize,
         "model": __convert_common,
         "network": __convert_network,

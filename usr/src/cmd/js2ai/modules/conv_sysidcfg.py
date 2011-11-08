@@ -22,7 +22,11 @@
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 """Class used to convert Solaris 10 sysidcfg to the new format used by
-new Solaris installer
+new Solaris installer.
+
+For complete details on Solaris 10 sysidcfg keywords see Solaris 10
+Installation Guide: Network-Based Installations subsection entitled "Syntax
+Rules for the sysidcfg File"
 
 """
 import common
@@ -34,9 +38,9 @@ from common import fetch_xpath_node as fetch_xpath_node
 from common import LOG_KEY_FILE, LOG_KEY_LINE_NUM
 from common import LVL_CONVERSION, LVL_PROCESS
 from common import LVL_UNSUPPORTED, LVL_WARNING
+from common import SYSIDCFG_FILENAME
 from ip_address import IPAddress
 from lxml import etree
-from solaris_install.js2ai.common import SYSIDCFG_FILENAME
 from StringIO import StringIO
 
 TYPE_APPLICATION = "application"
@@ -48,6 +52,11 @@ TYPE_NET_ADDRESS = "net_address"
 TYPE_NET_ADDRESS_V4 = "net_address_v4"
 TYPE_SERVICE = "service"
 TYPE_SYSTEM = "system"
+
+PRIMARY_INTERFACE = "primary"
+DEFAULT_FIXED = "DefaultFixed"
+AUTOMATIC = "Automatic"
+NAME_SERVICE_NONE = "None"
 
 MAXHOSTNAMELEN = 255
 
@@ -518,12 +527,12 @@ class XMLSysidcfgData(object):
 
         # Need to set the _name_service to some value so our duplicate
         # keyword check will work if first occurrance is None
-        self._name_service = "None"
+        self._name_service = NAME_SERVICE_NONE
 
     def __convert_name_service_ldap(self, keyword, payload):
         """Convert the LDAP name service specified in the sysidcfg statement
            to the proper xml output for the Solaris configuration file for the
-           auto installer. 
+           auto installer.
 
         """
         # sysidcfg form:
@@ -692,7 +701,6 @@ class XMLSysidcfgData(object):
                            _("unsupported name service specified: "
                              "%(service)s") % {"service": values[0]})
         else:
-
             # The user specified to overide current default name service
             # Remove any existing ones from the xml tree we are working
             # against
@@ -720,7 +728,7 @@ class XMLSysidcfgData(object):
         # one selects 'None' on Network screen.
         #
 
-        self.__create_net_interface(auto_netcfg=False)
+        self.__create_net_interface(False)
 
         # Are there any more keys left in the dictionary that we need to flag
         self.__check_payload("network_interface=NONE", payload)
@@ -738,18 +746,52 @@ class XMLSysidcfgData(object):
            the appropriate equivalent Solaris xml configuration
 
         """
-        # Solaris installer:
         #
-        # The only support we can provide in Solaris for PRIMARY is
-        # via automated network configuration and DHCP.  Not a perfect
-        # match but it's the best fit
+        # Jumpstart syntax
         #
-        self.__create_net_interface(auto_netcfg=True)
-
+        # network_interface=PRIMARY
+        #          {dhcp protocol_ipv6=yes-or-no}
+        #
+        # network_interface=PRIMARY or value
+        #         {hostname=host_name
+        #          default_route=ip_address
+        #          ip_address=ip_address
+        #          netmask=netmask
+        #          protocol_ipv6=yes_or_no}
+        #
+        # PRMARY: Instructs the Solaris 10 installation program to configure
+        # the first up, non-loopback interface that is found on the S10 system.
+        # The order is the same as the order that is displayed with the
+        # ifconfig command. If no interfaces are up, then the first
+        # non-loopback interface is used. If no non-loopback interfaces are
+        # found, then the system is non networked value
+        #
+        # The solaris 11 installer provides no way to specify an equivalent to
+        # PRIMARY. For S11 the only format that would translate into an
+        # equivalent action is:
+        #
+        # network_interface = PRIMARY { hostname=xxx dhcp
+        #                               protocol_ipv6=yes }
+        #
+        # which translates to an Automatic Network configuration.
+        # If the primary key is used in the other form set the network
+        # to DefaultFixed and inform the user of the action that must
+        # be taken to correct the problem.
+        #
+        netcfg = False
         # Do we have a payload to configure
         if payload is None or len(payload) == 0:
-            # Nothing left to do
-            pass
+            if self._name_service is None:
+                # Auto Config Network
+                netcfg = True
+            else:
+                # DefaultFixed
+                self.__gen_err(LVL_WARNING,
+                               _("DefaultFixed network configuration enabled. "
+                                 "Network is unconfigured. Use the "
+                                 "network_interface keyword properties to "
+                                 "define the network that should be "
+                                 "converted."))
         else:
             dhcp = payload.pop("dhcp", None)
             ipv6 = payload.pop("protocol_ipv6", None)
@@ -761,15 +803,9 @@ class XMLSysidcfgData(object):
                     pass
                 else:
                     self.__gen_err(LVL_CONVERSION,
-                                   _("when the PRIMARY interface is "
-                                     "specified, by default the system will "
-                                     "be configured for both IPv4 and IPv6 "
-                                     "via automatic network configuration. "
-                                     "Disabling IPv6 is not supported.  If "
-                                     "you wish to ensure that only IPv4 is "
-                                     "configured it will be necessary to "
-                                     "replace  the PRIMARY option with the "
-                                     "interface you wish to configure."))
+                                   _("when dhcp is enabled, disabling "
+                                     "the IPv6 interface is not supported.  "
+                                     "Ignoring protocol_ipv6=no setting"))
 
                 if len(payload) != 0:
                     self.__gen_err(LVL_PROCESS,
@@ -777,6 +813,8 @@ class XMLSysidcfgData(object):
                                      "you are using the dhcp option, the "
                                      "only other option you can specify is "
                                      "protocol_ipv6."))
+                # Auto Config Network
+                netcfg = True
             else:  # dhcp is None
 
                 # Although we don't use the next values remove them from the
@@ -788,18 +826,22 @@ class XMLSysidcfgData(object):
                 payload.pop("netmask", None)
                 payload.pop("default_route", None)
 
+                # DefaultFixed
                 self.__gen_err(LVL_CONVERSION,
-                               _("when the PRIMARY interface is specified, "
-                                 "by default the system will be configured "
-                                 "for both IPv4 and IPv6 via automatic "
-                                 "network configuration. The options "
-                                 "specified will be ignored. If you wish to "
-                                 "configure the interface with the specified "
-                                 "options replace PRIMARY with the name of "
-                                 "the interface that should be configured."))
+                               _("DefaultFixed network configuration enabled. "
+                                 "Unable to complete network configuration, "
+                                 "replace interface PRIMARY with the actual "
+                                 "interface you wish to configure."))
 
                 # Are there any more keys left in the dict that we need to flag
                 self.__check_payload("network_interface=PRIMARY", payload)
+
+        self.__create_net_interface(netcfg)
+        if netcfg:
+            self.__gen_err(LVL_WARNING,
+                           _("The PRIMARY network interface chosen by "
+                             "Solaris 11 may differ from the one that "
+                             "Solaris 10 would choose."))
 
         # If there are any other interfaces defined flag them as errors
         for network in self._defined_net_interfaces:
@@ -818,21 +860,20 @@ class XMLSysidcfgData(object):
         if payload is None or len(payload) == 0:
             return
 
-        primary = payload.pop("primary", None)
-        if primary is not None:
-            self.__gen_err(LVL_UNSUPPORTED,
-                           _("defining an interface as primary is not "
-                             "supported, ignorning setting"))
+        payload.pop(PRIMARY_INTERFACE, None)
+        # Ignore primary setting
+        if len(payload) == 0:
+            return
 
         ip_address = payload.pop("ip_address", None)
         if ip_address is not None:
             if not self.__is_valid_ip(ip_address, _("ip address")):
-                return
+                ip_address = None
 
         netmask = payload.pop("netmask", None)
         if netmask is not None:
             if not self.__is_valid_ip(netmask, _("netmask")):
-                return
+                netmask = None
 
         default_route = payload.pop("default_route", None)
         if default_route is not None and default_route.lower() != "none":
@@ -854,19 +895,8 @@ class XMLSysidcfgData(object):
             self.__gen_err(LVL_CONVERSION,
                            _("unable to complete configuration of IPv4 "
                              "interface for '%(interface)s', values must be "
-                             "specified for  both ip_address and netmask. "
-                             "Configuring system for automatic network "
-                             "configuration") % {"interface": interface})
-
-            # Since we only support a single interface at this time, we want
-            # to make the system usable.  To ensure that we will use
-            # the automated network configuration we clear _default_network
-            # since it may have been set in the creation of a IPv6 network.
-            # This is the key we use to determine whether or not to do an
-            # automated network or default network configuration
-            #
-            self._default_network = None
-            return
+                             "specified for both ip_address and netmask.") %
+                             {"interface": interface})
 
         # output form example:
         #
@@ -903,6 +933,9 @@ class XMLSysidcfgData(object):
         if default_route is not None and default_route.lower() != "none":
             self.__create_propval_node(ipv4_network, "default_route",
                                         TYPE_NET_ADDRESS_V4, default_route)
+
+        # Are there any more keys left in the dict that we need to flag
+        self.__check_payload("network_interface", payload)
 
     def __config_net_interface_dhcp(self, interface, payload):
         """Configures the specified interface as dhcp for ipv4 and ipv6 (if
@@ -954,10 +987,6 @@ class XMLSysidcfgData(object):
         self.__create_propval_node(ipv4_network, "address_type",
                                     TYPE_ASTRING, "dhcp")
 
-        # if ipv6 was specified add it
-        ipv6 = payload.pop("protocol_ipv6", "no")
-        if ipv6.lower() == "yes":
-            self.__config_net_physical_ipv6(interface)
         if len(payload) != 0:
             self.__gen_err(LVL_PROCESS,
                            _("unexpected option(s) specified. If you are "
@@ -966,7 +995,7 @@ class XMLSysidcfgData(object):
             return
 
         # Create default network
-        self.__create_net_interface(auto_netcfg=False)
+        self.__create_net_interface(False)
 
     def __config_net_physical_ipv6(self, interface):
         """Configures the IPv6 interface for the interface specified by the
@@ -1012,26 +1041,66 @@ class XMLSysidcfgData(object):
         """Converts the network_interface keyword/values from the sysidcfg into
            the new xml format
 
+           Solaris Jumpstart Form
+
+           network_interface = ${interface} { settings }
+
+           where ${interface} is the interface to configure or the word PRIMARY
+
         """
         if len(self._defined_net_interfaces) == 0:
-            # User didn't define any network interfaces.  Make sure the
-            # default_xml object has a defined network interface.  If not
-            # create one via automated network configuration
-            svc_network_physical = \
-                fetch_xpath_node(self._service_bundle,
-                                 "./service[@name='network/physical']")
-            if svc_network_physical is None:
-                # Create Auto Configuration Network
-                self.__create_net_interface(auto_netcfg=True)
+            # If no network interfaces have been specified in the sysidcfg
+            # check to see if a name_service was specified.   If a name
+            # service other than NONE has been specified S11 requires that the
+            # network be specified a DefaultFixed.  If a name service has
+            # been specified configure the network as DefaultFixed.
+            if self._name_service is None \
+                or self._name_service == NAME_SERVICE_NONE:
+                # Auto Config Network
+                self.__create_net_interface(True)
+                return
+
+            # DefaultFixed
+            self.__create_net_interface(False)
+            self.__gen_err(LVL_WARNING,
+                           _("DefaultFixed network configuration enabled. "
+                             "Network properties have not been defined. Use "
+                             "the network_interface keyword to define "
+                             "the network that should be converted."))
             return
 
-        # The user specified one or more network
-        # This means we want to override all network information
-        # in the default_xml object.
-        self.__remove_selected_children(self._service_bundle,
-                                        "/network/install")
+        index = 0
+        if len(self._defined_net_interfaces) > 1:
+            # Find the primary interface definition if it exists
+            # This is the network interface that we will want to configure
+            # Should be first interface but it's not enforced by Jumpstart
+            #
+            # Primary can occur in two places in jumpstart sysidcfg config
+            #
+            # network_inteface = PRIMARY { xxx } or
+            # network_interface = ${interface} { primary xxx }
+            #
+            # Since S11 only allows us to configure one interface we use
+            # the primary interface as the network interface that we convert.
+            found = False
+            for network in self._defined_net_interfaces:
+                self._extra_log_params[LOG_KEY_LINE_NUM] = \
+                    network[NETWORK_KEY_LINE_NUM]
+                if network[NETWORK_KEY_INTERFACE].lower() == PRIMARY_INTERFACE:
+                    found = True
+                    break
+                payload = network[NETWORK_KEY_PAYLOAD]
+                if payload is not None and PRIMARY_INTERFACE in payload:
+                    found = True
+                    break
+                index = index + 1
+            if not found:
+                # If no primary interface is configured, configure the network
+                # based on the definition for the 1st network_interface defined
+                # in the sysidcfg file
+                index = 0
 
-        network = self._defined_net_interfaces.pop(0)
+        network = self._defined_net_interfaces.pop(index)
         self._extra_log_params[LOG_KEY_LINE_NUM] = \
             network[NETWORK_KEY_LINE_NUM]
         interface = network[NETWORK_KEY_INTERFACE].lower()
@@ -1041,34 +1110,43 @@ class XMLSysidcfgData(object):
             if hostname is not None:
                 self.__convert_hostname(hostname)
         if interface == "none":
+            # network_interface = NONE
             self.__config_net_interface_none(payload)
             return
-        elif interface == "primary":
+        elif interface == PRIMARY_INTERFACE:
+            # network_interface = PRIMARY { xxx }
             self.__config_net_interface_primary(payload)
             return
+        # network interface = ${interface} { xxx }
         if payload is None or len(payload) == 0:
-            self.__gen_err(LVL_UNSUPPORTED,
-                           _("unsupported network configuration no parameters"
-                             "for interface %(interface)s specified. "
-                             "Configuring network for auto configuration") %
-                             {"interface": interface})
+            if self._name_service is None \
+                or self._name_service == NAME_SERVICE_NONE:
+                self.__gen_err(LVL_UNSUPPORTED,
+                               _("unsupported network configuration no "
+                                 "parameters for interface %(interface)s "
+                                 "specified. Configuring network for auto "
+                                 "configuration") % {"interface": interface})
+                self.__create_net_interface(True)
+            else:
+                self.__gen_err(LVL_WARNING,
+                               _("DefaultFixed network configuration enabled. "
+                                 "Network configuration for interface "
+                                 "%(interface)s is incomplete no ipv4 or "
+                                 "ipv6 interface has been specified.") %
+                                 {"interface": interface})
 
-            # Create Auto configuration network
-            self.__create_net_interface(auto_netcfg=True)
-            return
-        else:
-            dhcp = payload.pop("dhcp", None)
-            if dhcp is not None:
-                self.__config_net_interface_dhcp(interface, payload)
+                # DefaultNetwork
+                self.__create_net_interface(False)
                 return
+        else:
             ipv6 = payload.pop("protocol_ipv6", "no")
             if ipv6.lower() == "yes":
                 self.__config_net_physical_ipv6(interface)
-
-            self.__config_net_physical_ipv4(interface, payload)
-
-            # Are there any more keys left in the dict that we need to flag
-            self.__check_payload("network_interface", payload)
+            dhcp = payload.pop("dhcp", None)
+            if dhcp is not None:
+                self.__config_net_interface_dhcp(interface, payload)
+            else:
+                self.__config_net_physical_ipv4(interface, payload)
 
         # Currently the installer only supports a single NIC interface
         # so we need to flag any additional ones as unsupported
@@ -1086,10 +1164,10 @@ class XMLSysidcfgData(object):
             # Nothing is configured, which means the users choices errored out
             # Since we always want a network configured, we configure for
             # auto config
-            self.__create_net_interface(auto_netcfg=True)
+            self.__create_net_interface(True)
         else:
             # Configure for default network
-            self.__create_net_interface(auto_netcfg=False)
+            self.__create_net_interface(False)
 
     def __convert_nfs4_domain(self, keyword, values):
         """Converts the nfs4_domain keyword/values from the sysidcfg into
@@ -1124,6 +1202,7 @@ class XMLSysidcfgData(object):
         #       <property_group name="root_account" type="application">
         #           <propval name="password" type="astring"
         #                    value="9Nd/cwBcNWFZg"/>
+        #           <propval name="type" type="astring" value="normal"/>
         #       </property_group>
         #   </instance>
         # </service>
@@ -1136,10 +1215,13 @@ class XMLSysidcfgData(object):
             self.__invalid_syntax(keyword)
             return
 
-        self._root_passwd = \
-            self.__create_service("system/config-user",
-                                  "root_account", TYPE_APPLICATION,
-                                  "password", values[0])
+        self._root_passwd = self.__create_service_node(self._service_bundle,
+                                                    "system/config-user")
+        instance = self.__create_instance_node(self._root_passwd, "default")
+        grp = self.__create_propgrp_node(instance, "root_account",
+                                         TYPE_APPLICATION)
+        self.__create_propval_node(grp, "password", TYPE_ASTRING, values[0])
+        self.__create_propval_node(grp, "type", TYPE_ASTRING, "normal")
 
     def __convert_security_policy(self, keyword, values):
         """Converts the security_policy keyword/values from the sysidcfg into
@@ -1289,7 +1371,7 @@ class XMLSysidcfgData(object):
 
         if self._terminal is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(values)
+            self.__duplicate_keyword(keyword, values)
             return
 
         if len(values) != 1:
@@ -1427,9 +1509,9 @@ class XMLSysidcfgData(object):
                                                       "netcfg", "application")
 
         if auto_netcfg:
-            propval_node_value = "Automatic"
+            propval_node_value = AUTOMATIC
         else:
-            propval_node_value = "DefaultFixed"
+            propval_node_value = DEFAULT_FIXED
 
         self.__create_propval_node(network_prop_grp, "active_ncp", "astring",
                                    propval_node_value)
@@ -1730,11 +1812,11 @@ class XMLSysidcfgData(object):
 
         # Perform some simple check to unsure we warn user about potentially
         # unexpected conditions
-        if self._hostname is None:
+        if self._tree is not None and self._hostname is None:
             self.__gen_err(LVL_WARNING,
                            _("no hostname specified, Automated Installer "
                              "will configure with default hostname."))
-        if self._root_passwd is None:
+        if self._tree is not None and self._root_passwd is None:
             self.__gen_err(LVL_WARNING,
                            _("no root password specified, Automated Installer "
                              "will configure with default root password."))
