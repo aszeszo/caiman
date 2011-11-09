@@ -80,19 +80,9 @@ def parse_options(cmd_options=None):
     return (svcname, newsvcname)
 
 
-def register_service(newsvcname):
-    ''' Register the new service name'''
-
-    # If status is on, call enable_install_service to register
-    # the service with the new name. If it is off, when the renamed
-    # service is enabled at some point, it will be registered then.
-    if config.is_enabled(newsvcname):
-        config.enable_install_service(newsvcname)
-
-
 def do_rename_service(cmd_options=None):
     '''Rename a service.
-    
+
     Note: Errors that occur during the various rename stages
     are printed, but the other stages will continue, with the hopes
     of leaving the final product as close to functional as possible
@@ -114,7 +104,7 @@ def do_rename_service(cmd_options=None):
         raise SystemExit(_("\nService or alias already exists: %s\n") %
                            newsvcname)
 
-    # Don't allow renaming to/from the 'default-<arch>' aliases 
+    # Don't allow renaming to/from the 'default-<arch>' aliases
     if svcname in DEFAULT_ARCH:
         raise SystemExit(_('\nYou may not rename the "%s" service.\n') %
                            svcname)
@@ -136,7 +126,7 @@ def do_rename_service(cmd_options=None):
             oldservice.disable(force=True)
     except (MountError, ImageError) as err:
         raise SystemExit(err)
-    
+
     # remove old mountpoint
     try:
         os.rmdir(oldservice.mountpoint)
@@ -150,35 +140,24 @@ def do_rename_service(cmd_options=None):
         clientctrl.remove_client(clientid)
 
     oldservice.rename(newsvcname)
-    
+
     # Update aliases whose base service has been renamed
     aliases = config.get_aliased_services(svcname)
     failures = list()
     for alias in aliases:
-        alias_svc = AIService(alias)
-        try:
-            alias_svc.update_basesvc(newsvcname)
-        except (OSError, config.ServiceCfgError) as err:
-            print >> sys.stderr, (_("\nFailed to update dependent alias: "
-                                    "%s\n") % alias_svc.name)
-            print >> sys.stderr, err
-            failures.append(err)
-        except MountError as err:
-            print >> sys.stderr, (_("\nFailed to enable dependent alias: "
-                                    "%s\n") % alias_svc.name)
-            print >> sys.stderr, err
-            failures.append(err)
-    
-    # Mount the new service if the old service was mounted
+        props = {config.PROP_ALIAS_OF: newsvcname}
+        config.set_service_props(alias, props)
+
+    # Mount the renamed service if it was mounted
     newservice = AIService(newsvcname)
     if was_mounted:
         try:
-            logging.debug("mounting %s", newsvcname)
+            logging.debug("enabling %s", newsvcname)
             newservice.enable()
         except (MountError, ImageError) as err:
             failures.append(err)
             print >> sys.stderr, err
-    
+
     # Re-add clients whose base service has been renamed
     arch = newservice.arch
     for clientid in clients.keys():
@@ -190,13 +169,6 @@ def do_rename_service(cmd_options=None):
         create_client.create_new_client(arch, newservice, client,
                                         bootargs=bootargs)
 
-    # register the service with the new name
-    try:
-        register_service(newsvcname)
-    except config.ServiceCfgError as err:
-        print >> sys.stderr, err
-        failures.append(err)
-    
     if failures:
         return 1
     else:

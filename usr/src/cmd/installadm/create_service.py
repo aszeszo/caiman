@@ -76,14 +76,14 @@ def check_ip_address(option, opt_str, value, parser):
 
 def check_imagepath(imagepath):
     '''
-    Check if image path exists.  If it exists, check whether it has 
+    Check if image path exists.  If it exists, check whether it has
     a valid net image. An empty dir is ok.
 
     Raises: ValueError if a problem exists with imagepath
 
     '''
     # imagepath must be a full path
-    if not os.path.isabs(imagepath):   
+    if not os.path.isabs(imagepath):
         raise ValueError(_("\nA full pathname is required for the "
                            "image path.\n"))
 
@@ -156,7 +156,7 @@ def parse_options(cmd_options=None):
         publisher
         srcimage
         svcname
-        imagepath 
+        imagepath
     
     '''
     logging.log(com.XDEBUG, '**** START installadm.create_service.'
@@ -216,10 +216,10 @@ def parse_options(cmd_options=None):
         if config.is_service(options.svcname):
             parser.error(_('\nService already exists: %s\n') % options.svcname)
     
-    # If creating an alias, only allow additional options -n, -b, 
+    # If creating an alias, only allow additional options -n, -b,
     # and -y
     if options.aliasof:
-        if (options.dhcp_ip_start or options.dhcp_ip_count or 
+        if (options.dhcp_ip_start or options.dhcp_ip_count or
             options.imagepath or options.srcimage):
             parser.error(_('\nOnly options -n|--service, -b|--boot-args, '
                            'and -y|--noprompt\nmay be specified with '
@@ -245,7 +245,7 @@ def parse_options(cmd_options=None):
                               'hosts with multiple network interfaces (-i and '
                               '-c options are disallowed).\n')))
         
-        # Confirm options -i and -c are both provided 
+        # Confirm options -i and -c are both provided
         if options.dhcp_ip_count is None:
             parser.error(_('\nIf -i option is provided, -c option must '
                            'also be provided\n'))
@@ -319,7 +319,7 @@ def get_default_service_name(image_path=None, image=None, iso=False):
     Input:   specified_path - imagepath, if specified by user
              image - image object created from image
              iso - boolean, True if service is iso based, False otherwise
-    Returns: default name for service. 
+    Returns: default name for service.
              For iso-based services, the default name is based
              on the SERVICE_NAME from the .image_info file if available,
              otherwise is BASE_DEF_SVC_NAME_<num>
@@ -328,7 +328,7 @@ def get_default_service_name(image_path=None, image=None, iso=False):
 
     '''
     if image:
-        # Try to generate a name based on the metadata. If that 
+        # Try to generate a name based on the metadata. If that
         # name exists, append a number until a unique name is found.
         count = 0
         if iso:
@@ -347,7 +347,7 @@ def get_default_service_name(image_path=None, image=None, iso=False):
         basename = BASE_DEF_SVC_NAME
         svc_name = basename + "_" + str(count)
     
-    while (config.is_service(svc_name) or 
+    while (config.is_service(svc_name) or
         not default_path_ok(svc_name, image_path)):
         count += 1
         svc_name = basename + "_" + str(count)
@@ -373,12 +373,14 @@ def do_alias_service(options):
         if ((image.arch == 'sparc' and 'sparc' not in options.svcname) or
             (image.arch == 'i386' and 'i386' not in options.svcname)):
             raise SystemExit(cw(_("\nError: %s can not be an alias of a "
-                                  "service with a different architecture.\n") % 
+                                  "service with a different architecture.\n") %
                                   options.svcname))
-            
+ 
     logging.debug("Creating alias of service %s", options.aliasof)
 
-    print _("\nCreating alias %s\n") % options.svcname
+    print _("\nCreating %(arch)s alias: %(name)s\n") % \
+            {'arch': 'SPARC' if image.arch == 'sparc' else 'x86',
+             'name': options.svcname}
 
     logging.debug("Creating AIService aliasname %s base svc=%s, bootargs=%s",
                   options.svcname, options.aliasof, options.bootargs)
@@ -495,10 +497,12 @@ def do_create_baseservice(options):
                 if err.errno != errno.EEXIST:
                     raise
                 if not os.path.isdir(BASE_IMAGE_DIR):
-                    raise SystemExit(cw(_('\nThe default image base directory, '
-                        '%s, is not a directory. Check the SMF setting for '
-                        'property %s in servce %s.') %
-                        (BASE_IMAGE_DIR, com.BASEDIR_PROP, com.SRVINST)))
+                    raise SystemExit(cw(_('\nThe default image base '
+                        'directory, %(dir)s, is not a directory. Check the '
+                        'SMF setting for property %(prop)s in servce '
+                        '%(svc)s.') %
+                        {'dir': BASE_IMAGE_DIR, 'prop': com.BASEDIR_PROP,
+                         'svc': com.SRVINST}))
             tempdir = tempfile.mkdtemp(dir=BASE_IMAGE_DIR)
             options.imagepath = tempdir
         logging.debug('Using default image path: %s', options.imagepath)
@@ -513,9 +517,9 @@ def do_create_baseservice(options):
     else:
         try:
             image = InstalladmPkgImage.image_create(options.srcimage,
-                                                    options.imagepath,
-                                                    arch=options.arch,
-                                                    publisher=options.publisher)
+                options.imagepath,
+                arch=options.arch,
+                publisher=options.publisher)
         except (ImageError,
                 pkg.client.api_errors.ApiException) as err:
             if isinstance(err, pkg.client.api_errors.VersionException):
@@ -523,7 +527,8 @@ def do_create_baseservice(options):
                     + str(err.received_version) +
                     ", is incompatible with the expected version, "
                     + str(err.expected_version) + "."))
-            elif isinstance(err, pkg.client.api_errors.CatalogRefreshException):
+            elif isinstance(err,
+                            pkg.client.api_errors.CatalogRefreshException):
                 for pub, error in err.failed:
                     print >> sys.stderr, "   "
                     print >> sys.stderr, str(error)
@@ -541,7 +546,9 @@ def do_create_baseservice(options):
         options.svcname = get_default_service_name(specified_path,
                                                    image=image, iso=have_iso)
 
-    print _("\nCreating service: %s\n") % options.svcname
+    print _("\nCreating %(arch)s service: %(name)s\n") % \
+            {'arch': 'SPARC' if image.arch == 'sparc' else 'x86',
+             'name': options.svcname}
 
     # If image was created in temporary location, move to correct
     # location now that we know the svcname.
@@ -581,7 +588,7 @@ def do_create_baseservice(options):
         raise SystemExit(err)
     except aismf.ServicesError as svc_err:
         # Don't print the error now.  It will either get printed out
-        # upon exit or when services are enabled after creating the 
+        # upon exit or when services are enabled after creating the
         # alias
         got_services_error = True
 
@@ -598,7 +605,7 @@ def do_create_baseservice(options):
             raise SystemExit(err)
         except UnsupportedAliasError as err:
             if got_services_error:
-                # Print the services error string before printing the 
+                # Print the services error string before printing the
                 # unsupported alias error
                 print svc_err, '\n'
 
