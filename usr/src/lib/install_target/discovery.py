@@ -154,10 +154,12 @@ class TargetDiscovery(Checkpoint):
                 self.logger.warning("disk '%s' has different wwn for the "
                                     "aliases" % new_disk.ctd)
                 return None
-            if self.verify_disk_read(alias.name):
-                new_disk.active_ctds.append(alias.name)
-            else:
-                new_disk.passive_ctds.append(alias.name)
+            if drive_media is not None:
+                if self.verify_disk_read(alias.name,
+                                         drive_media.attributes.blocksize):
+                    new_disk.active_ctds.append(alias.name)
+                else:
+                    new_disk.passive_ctds.append(alias.name)
 
         # set the new_disk ctd string
         if new_disk.wwn is None:
@@ -297,7 +299,7 @@ class TargetDiscovery(Checkpoint):
 
             return new_disk
 
-    def verify_disk_read(self, ctd):
+    def verify_disk_read(self, ctd, blocksize):
         """
         verify_disk_read() - method to verify a low-level read from the raw ctd
         path.
@@ -313,7 +315,7 @@ class TargetDiscovery(Checkpoint):
                 try:
                     fd = os.open(raw_disk, os.O_RDONLY | os.O_NDELAY)
                     try:
-                        _none = os.read(fd, 512)
+                        _none = os.read(fd, blocksize)
                     except OSError:
                         # the read() call failed
                         continue
@@ -340,7 +342,8 @@ class TargetDiscovery(Checkpoint):
         # None
         if dma.ncylinders is None:
             new_disk.disk_prop.dev_size = Size(str(dma.naccessible) +
-                                               Size.sector_units)
+                                               Size.sector_units,
+                                               dma.blocksize)
 
             # set only the blocksize (not the cylinder size)
             new_geometry = DiskGeometry(dma.blocksize, None)
@@ -360,7 +363,8 @@ class TargetDiscovery(Checkpoint):
             nsect = dma.nsectors
 
             new_disk.disk_prop.dev_size = Size(str(ncyl * nhead * nsect) +
-                                               Size.sector_units)
+                                               Size.sector_units,
+                                               dma.blocksize)
             new_geometry = DiskGeometry(dma.blocksize, nhead * nsect)
             new_geometry.ncyl = ncyl
             new_geometry.nheads = nhead
@@ -707,7 +711,7 @@ class TargetDiscovery(Checkpoint):
                     preserve_disks.append(ai_disk.ctd)
 
         # Since libdiskmgt has no mechanism to update it's internal view of the
-        # disk layout once its scanned /dev,  fork a process and allow
+        # disk layout once its scanned /dev, fork a process and allow
         # libdiskmgt to instantiate the drives first.  Then in the context of
         # the main process, when libdiskmgt gathers drive information, the
         # drive list will be up to date.
@@ -722,7 +726,8 @@ class TargetDiscovery(Checkpoint):
 
                 # verify the drive can be read.  If not, continue to the next
                 # drive.
-                if not self.verify_disk_read(disk.ctd):
+                if not self.verify_disk_read(disk.ctd,
+                                             drive.media.attributes.blocksize):
                     self.logger.debug("Skipping label check for %s" % disk.ctd)
                     continue
 

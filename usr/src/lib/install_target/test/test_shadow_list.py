@@ -53,6 +53,7 @@ from solaris_install.target.vdevs import _get_vdev_mapping
 
 GBSECTOR = long(1024 * 1024 * 1024 / 512)  # 1 GB of sectors
 BLOCKSIZE = 512
+BLOCKSIZE_4K = 4096
 CYLSIZE = 16065
 
 
@@ -2204,7 +2205,6 @@ class TestInUse(unittest.TestCase):
 
 
 class TestSize(unittest.TestCase):
-
     def test_add_size(self):
         size1 = Size("1024mb")
         size2 = Size("1024mb")
@@ -2216,3 +2216,53 @@ class TestSize(unittest.TestCase):
         size1 = Size("4096mb")
         size2 = Size("2048mb")
         self.assertEqual(size1 - size2, Size("2gb"))
+
+    def test_4k_blocksize(self):
+        # verify a Size object with the default blocksize (512b) is 8 times
+        # smaller than a Size object with a 4k blocksize
+        sectors = 244190646  # roughly 1TB of sectors on a 4k native disk
+        size1 = Size(str(sectors) + Size.sector_units)
+        size2 = Size(str(sectors) + Size.sector_units, BLOCKSIZE_4K)
+        self.assertEqual(size1.byte_value * 8, size2.byte_value)
+
+
+class Test4KBlocksize(unittest.TestCase):
+    def setUp(self):
+        self.disk = Disk("test disk")
+        self.disk.ctd = "c12345t0d0"
+        self.disk.geometry = DiskGeometry(BLOCKSIZE_4K, CYLSIZE)
+        self.disk.label = "VTOC"
+
+        # 100GB disk
+        self.disk.disk_prop = DiskProp()
+        self.disk.disk_prop.dev_size = Size(
+            str(GBSECTOR * 100) + Size.sector_units)
+        self.disk.disk_prop.blocksize = BLOCKSIZE_4K
+
+        # reset the errsvc
+        errsvc.clear_error_list()
+
+    def tearDown(self):
+        self.disk.delete_children()
+        self.disk.delete()
+
+        # reset the errsvc
+        errsvc.clear_error_list()
+
+    def test_add_single_partition(self):
+        # add a simple 10Gb partition
+        p = self.disk.add_partition(1, CYLSIZE, 10, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+
+        # verify the start_sector and size are consistent
+        self.assertEqual(p.start_sector, CYLSIZE)
+        self.assertEqual(p.size.sectors, (10 * GBSECTOR / CYLSIZE * CYLSIZE))
+
+    def test_add_single_slice(self):
+        # add a simple 10Gb slice
+        s = self.disk.add_slice(0, CYLSIZE, 10, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+
+        # verify the start_sector and size are consistent
+        self.assertEqual(s.start_sector, CYLSIZE)
+        self.assertEqual(s.size.sectors, (10 * GBSECTOR / CYLSIZE * CYLSIZE))
