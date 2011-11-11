@@ -98,7 +98,6 @@ PLATNUM= 0
 # the development build) of the Solaris Update is being built.
 # This is set by the gatekeepers.
 #
-BUILDID= 3
 #
 # Each (nightly) build of the code that produces packages needs to
 # be uniquely identified so that packages produced by different
@@ -112,3 +111,4 @@ BUILDID= 3
 #
 OPENCS  :sh = (hg tip --template '{rev}\n')
 NIGHTLYID		= $(OPENCS)
+BUILDID= 4
