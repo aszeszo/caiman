@@ -26,7 +26,6 @@ the xml format used by the Solaris installer
 
 """
 
-import common
 import gettext
 import itertools
 import os.path
@@ -38,13 +37,14 @@ import pkg.client.api_errors as apx
 import pkg.client.progress as progress
 import os
 
-from common import _
-from common import fetch_xpath_node
-from common import generate_error
-from common import LOG_KEY_FILE, LOG_KEY_LINE_NUM
-from common import LVL_CONVERSION, LVL_PROCESS
-from common import LVL_UNSUPPORTED, LVL_WARNING
-from common import RULES_FILENAME
+from solaris_install.js2ai import common
+from solaris_install.js2ai.common import _
+from solaris_install.js2ai.common import fetch_xpath_node
+from solaris_install.js2ai.common import generate_error
+from solaris_install.js2ai.common import LOG_KEY_FILE, LOG_KEY_LINE_NUM
+from solaris_install.js2ai.common import LVL_CONVERSION, LVL_PROCESS
+from solaris_install.js2ai.common import LVL_UNSUPPORTED, LVL_WARNING
+from solaris_install.js2ai.common import RULES_FILENAME
 from default_xml import DEFAULT_XML_EMPTY
 from lxml import etree
 from StringIO import StringIO
@@ -261,7 +261,7 @@ class XMLRuleData(object):
                                          common.ELEMENT_AI_CRITERIA)
         criteria_name.set(common.ATTRIBUTE_NAME, "ipv4")
         try:
-            addr_a, addr_b, addr_c, remainder = values[0].split(".", 3)
+            addr_a, addr_b, addr_c, _remainder = values[0].split(".", 3)
         except ValueError:
             self.__invalid_syntax(keyword)
             self._root.remove(criteria_name)
@@ -430,7 +430,7 @@ class XMLProfileData(object):
                 device = match_pattern.group(1)
         return device
 
-    def __duplicate_keyword(self, keyword, values):
+    def __duplicate_keyword(self, keyword):
         """Log a duplicate keyword error and add a process error to report"""
         self.__gen_err(LVL_PROCESS,
                        _("invalid entry, duplicate keyword encountered: "
@@ -514,7 +514,7 @@ class XMLProfileData(object):
             # associated with each slice must be unique
             unique = []
             for disk_slice in devices:
-                disk, slice_num = disk_slice.split("s")
+                disk, _slice_num = disk_slice.split("s")
                 if disk in unique:
                     self.__gen_err(LVL_CONVERSION,
                                    _("invalid syntax: duplicate device "
@@ -1041,7 +1041,8 @@ class XMLProfileData(object):
         if search_values is not None:
             try:
                 for raw_value in search_values:
-                    query_num, pub, (value, return_type, pkg_info) = raw_value
+                    _query_num, _pub, \
+                        (_value, _return_type, pkg_info) = raw_value
                     pfmri = pkg_info[0]
                     pkg_name = pfmri.get_name()
                     # We ignore SUNWcs and SUNWcsd since these are system
@@ -1352,7 +1353,7 @@ class XMLProfileData(object):
             pool_name += "_swap"
         if mirror_name != "mirror":
             try:
-                mirror, pool_name = values[0].split(":")
+                _mirror, pool_name = values[0].split(":")
             except ValueError:
                 self.__invalid_syntax(keyword)
                 return
@@ -1915,7 +1916,7 @@ class XMLProfileData(object):
         #                       update
         #
         if self._boot_device is not None:
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
         length = len(values)
         if length > 2 or length == 0:
@@ -1991,7 +1992,7 @@ class XMLProfileData(object):
         """
         # root_device <slice>
         if self._root_device is not None:
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
         if len(values) != 1:
             self.__invalid_syntax(keyword)
@@ -2025,7 +2026,7 @@ class XMLProfileData(object):
         """
         # partitioning <type> where type is default, existing or explicit
         if self._partitioning is not None:
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
         if len(values) != 1:
             self.__invalid_syntax(keyword)
@@ -2279,7 +2280,7 @@ class XMLProfileData(object):
             elif keyword == "pool":
                 del self.prof_dict[key]
                 if pool_obj is not None:
-                    self.__duplicate_keyword(keyword, values)
+                    self.__duplicate_keyword(keyword)
                 else:
                     pool_obj = key_value_obj
             elif keyword == "partitioning":

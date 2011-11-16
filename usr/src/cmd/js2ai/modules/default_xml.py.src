@@ -29,8 +29,8 @@ used by the installer
 
 import sys
 
-from common import _
-from common import fetch_xpath_node
+from solaris_install.js2ai.common import _
+from solaris_install.js2ai.common import fetch_xpath_node
 from lxml import etree
 from StringIO import StringIO
 

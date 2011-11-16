@@ -31,30 +31,33 @@ import re
 import sys
 import traceback
 
-from common import _
-from common import ConversionReport
-from common import KeyValues
-from common import generate_error
-from common import err
-from common import pretty_print
-from common import ProfileData
-from common import ARCH_X86, ARCH_SPARC
-from common import DEFAULT_AI_DTD_FILENAME, DEFAULT_AI_FILENAME
-from common import DEFAULT_SC_PROFILE_DTD_FILENAME
-from common import ERR_VAL_MODID
-from common import LOG_KEY_FILE, LOG_KEY_LINE_NUM
-from common import LOGGER
-from common import LVL_CONVERSION, LVL_PROCESS
-from common import LVL_UNSUPPORTED, LVL_VALIDATION, LVL_WARNING
-from common import RULES_FILENAME, SYSIDCFG_FILENAME, SC_PROFILE_FILENAME
-from common import fetch_xpath_node
-from common import remove
-from common import write_xml_data
-from common import validate
-from conv import XMLProfileData
-from conv import XMLRuleData
-from conv_sysidcfg import XMLSysidcfgData
-from default_xml import XMLDefaultData
+from solaris_install.js2ai.common import _
+from solaris_install.js2ai.common import ConversionReport
+from solaris_install.js2ai.common import KeyValues
+from solaris_install.js2ai.common import generate_error
+from solaris_install.js2ai.common import err
+from solaris_install.js2ai.common import pretty_print
+from solaris_install.js2ai.common import ProfileData
+from solaris_install.js2ai.common import ARCH_X86, ARCH_SPARC
+from solaris_install.js2ai.common import DEFAULT_AI_DTD_FILENAME
+from solaris_install.js2ai.common import DEFAULT_AI_FILENAME
+from solaris_install.js2ai.common import DEFAULT_SC_PROFILE_DTD_FILENAME
+from solaris_install.js2ai.common import ERR_VAL_MODID
+from solaris_install.js2ai.common import LOG_KEY_FILE, LOG_KEY_LINE_NUM
+from solaris_install.js2ai.common import LOGGER
+from solaris_install.js2ai.common import LVL_CONVERSION, LVL_PROCESS
+from solaris_install.js2ai.common import LVL_UNSUPPORTED, LVL_VALIDATION
+from solaris_install.js2ai.common import LVL_WARNING
+from solaris_install.js2ai.common import RULES_FILENAME, SC_PROFILE_FILENAME
+from solaris_install.js2ai.common import SYSIDCFG_FILENAME
+from solaris_install.js2ai.common import fetch_xpath_node
+from solaris_install.js2ai.common import remove
+from solaris_install.js2ai.common import write_xml_data
+from solaris_install.js2ai.common import validate
+from solaris_install.js2ai.conv import XMLProfileData
+from solaris_install.js2ai.conv import XMLRuleData
+from solaris_install.js2ai.conv_sysidcfg import XMLSysidcfgData
+from solaris_install.js2ai.default_xml import XMLDefaultData
 from optparse import OptionParser, SUPPRESS_HELP
 from lxml import etree
 from StringIO import StringIO
@@ -276,9 +279,9 @@ def logger_setup(log_directory):
     #
     # profile1: line 10: WARNING: error message
 
-    format = _("%(file)s:line %(line_num)d:%(levelname)s: %(message)s")
+    format_str = _("%(file)s:line %(line_num)d:%(levelname)s: %(message)s")
     # add formatter to ch
-    logfile_handler.setFormatter(logging.Formatter(format))
+    logfile_handler.setFormatter(logging.Formatter(format_str))
     # add ch to logger
     LOGGER.addHandler(logfile_handler)
 
@@ -286,8 +289,8 @@ def logger_setup(log_directory):
 def logger_key(log_line):
     """Generate the key to use for sorting log files"""
     try:
-        filename, line_num_info, line = log_line.split(": ", 2)
-        line, line_num = line_num_info.split(" ", 1)
+        filename, line_num_info, _line = log_line.split(": ", 2)
+        _line, line_num = line_num_info.split(" ", 1)
         return "%s %4s" % (filename, line_num)
     except ValueError:
         return log_line
@@ -578,7 +581,7 @@ def read_sysidcfg(src_dir, verbose):
             key_value, the_rest = line.split("{", 1)
             try:
                 # extra payload present.  Do we have it all
-                payload, the_end = the_rest.split("}", 1)
+                payload, _the_end = the_rest.split("}", 1)
                 payload_dict = dict()
                 values = VALUE_PATTERN.findall(payload)
                 for data in values:
@@ -1081,13 +1084,13 @@ def perform_validation(filename, verbose):
         dtd_filename = DEFAULT_AI_DTD_FILENAME
 
     manifest_path, manifest_filename = os.path.split(filename)
-    profile_name, remainder = manifest_filename.rsplit(".", 1)
+    profile_name, _remainder = manifest_filename.rsplit(".", 1)
     processed_data = ProcessedData(None)
     profile_data = ProfileData(profile_name)
     profile_data.conversion_report = \
         ConversionReport(process_errs=None, conversion_errs=None,
                          unsupported_items=None, validation_errs=0,
-			 warnings=None)
+                         warnings=None)
     processed_data.add_defined_profile(profile_data)
     validate(profile_name, manifest_path, manifest_filename, dtd_filename,
              profile_data.conversion_report, verbose)
@@ -1263,7 +1266,7 @@ def build_option_list():
     return parser
 
 
-def parse_args(parser, options, args):
+def parse_args(parser, options):
     """Parse the command line arguments looking for argument errors"""
     # Verify that directory user created exists.  If not exit
     if not os.path.isdir(options.source):
@@ -1321,11 +1324,11 @@ def parse_args(parser, options, args):
     # Check and handle the condition where user specified -p with a path to
     # the profile
     if options.profile:
-        dir = os.path.dirname(options.profile)
+        dirname = os.path.dirname(options.profile)
         #
         # options.source will be "." if -d <jumpstart_dir> was not specified
         #
-        options.source = os.path.join(options.source, dir)
+        options.source = os.path.join(options.source, dirname)
         options.profile = os.path.basename(options.profile)
         filename = os.path.join(options.source, options.profile)
         if not options.profile:
@@ -1393,8 +1396,8 @@ def main():
         parser.print_help()
         sys.exit(EXIT_SUCCESS)
 
-    (options, args) = parser.parse_args()
-    exit_code = parse_args(parser, options, args)
+    (options, _args) = parser.parse_args()
+    exit_code = parse_args(parser, options)
     if exit_code != EXIT_SUCCESS:
         sys.exit(exit_code)
 

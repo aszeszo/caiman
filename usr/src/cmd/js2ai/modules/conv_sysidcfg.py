@@ -29,17 +29,17 @@ Installation Guide: Network-Based Installations subsection entitled "Syntax
 Rules for the sysidcfg File"
 
 """
-import common
 import re
 
-from common import _
-from common import generate_error
-from common import fetch_xpath_node as fetch_xpath_node
-from common import LOG_KEY_FILE, LOG_KEY_LINE_NUM
-from common import LVL_CONVERSION, LVL_PROCESS
-from common import LVL_UNSUPPORTED, LVL_WARNING
-from common import SYSIDCFG_FILENAME
-from ip_address import IPAddress
+from solaris_install.js2ai import common
+from solaris_install.js2ai.common import _
+from solaris_install.js2ai.common import generate_error
+from solaris_install.js2ai.common import fetch_xpath_node as fetch_xpath_node
+from solaris_install.js2ai.common import LOG_KEY_FILE, LOG_KEY_LINE_NUM
+from solaris_install.js2ai.common import LVL_CONVERSION, LVL_PROCESS
+from solaris_install.js2ai.common import LVL_UNSUPPORTED, LVL_WARNING
+from solaris_install.js2ai.common import SYSIDCFG_FILENAME
+from solaris_install.js2ai.ip_address import IPAddress
 from lxml import etree
 from StringIO import StringIO
 
@@ -192,7 +192,7 @@ class XMLSysidcfgData(object):
 
         if self._keyboard_layout is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
         if len(values) != 1:
             self.__invalid_syntax(keyword)
@@ -684,7 +684,7 @@ class XMLSysidcfgData(object):
         """
         if self._name_service is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
 
         name_service = values[0].upper()
@@ -1208,7 +1208,7 @@ class XMLSysidcfgData(object):
         # </service>
         if self._root_passwd is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
 
         if len(values) != 1:
@@ -1284,7 +1284,7 @@ class XMLSysidcfgData(object):
         #
         if self._service_profile is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
 
         if len(values) != 1:
@@ -1329,7 +1329,7 @@ class XMLSysidcfgData(object):
         #
         if self._system_locale is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
 
         if len(values) != 1:
@@ -1371,7 +1371,7 @@ class XMLSysidcfgData(object):
 
         if self._terminal is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
 
         if len(values) != 1:
@@ -1403,7 +1403,7 @@ class XMLSysidcfgData(object):
 
         if self._timeserver is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
 
         if len(values) != 1:
@@ -1437,7 +1437,7 @@ class XMLSysidcfgData(object):
 
         if self._timezone is not None:
             # Generate duplicate keyword
-            self.__duplicate_keyword(keyword, values)
+            self.__duplicate_keyword(keyword)
             return
         if len(values) != 1:
             self.__invalid_syntax(keyword)
@@ -1608,7 +1608,7 @@ class XMLSysidcfgData(object):
         node.set(common.ATTRIBUTE_VALUE, value)
         return node
 
-    def __duplicate_keyword(self, keyword, values):
+    def __duplicate_keyword(self, keyword):
         """Generate a duplicate keyword error"""
         self.__gen_err(LVL_PROCESS,
                        _("invalid entry, duplicate keyword encountered: "

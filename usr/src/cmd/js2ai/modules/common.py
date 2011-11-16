@@ -262,7 +262,7 @@ def validate(profile_name, manifest_path, manifest_filename, dtd_filename,
 
     except ManifestError, err_msg:
         is_valid = False
-        log_name, ending = manifest_filename.rsplit(".", 1)
+        log_name, _ending = manifest_filename.rsplit(".", 1)
         log_name += "_validation" + ".log"
         log_file = os.path.join(manifest_path, log_name)
         err_lines = str(err_msg).split(" : ")
