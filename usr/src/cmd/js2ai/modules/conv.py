@@ -45,7 +45,7 @@ from solaris_install.js2ai.common import LOG_KEY_FILE, LOG_KEY_LINE_NUM
 from solaris_install.js2ai.common import LVL_CONVERSION, LVL_PROCESS
 from solaris_install.js2ai.common import LVL_UNSUPPORTED, LVL_WARNING
 from solaris_install.js2ai.common import RULES_FILENAME
-from default_xml import DEFAULT_XML_EMPTY
+from solaris_install.js2ai.default_xml import DEFAULT_XML_EMPTY
 from lxml import etree
 from StringIO import StringIO
 
