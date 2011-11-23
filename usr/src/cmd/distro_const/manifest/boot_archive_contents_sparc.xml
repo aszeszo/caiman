@@ -211,6 +211,7 @@
         <!-- libraries, plugins and maps needed by /usr/sbin/dlmgmtd -->
         <name>usr/lib/fm/libdiskstatus.so.1</name>
         <name>usr/lib/fm/libfmd_agent.so.1</name>
+        <name>usr/lib/fm/libfmd_zfs.so.1</name>
         <name>usr/lib/fm/libldom.so.1</name>
         <name>usr/lib/fm/libmdesc.so.1</name>
         <name>usr/lib/fm/libtopo.so.1</name>

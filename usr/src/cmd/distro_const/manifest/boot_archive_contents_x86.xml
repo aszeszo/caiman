@@ -205,6 +205,7 @@
   <name>usr/lib/fm/libtopo.so.1</name>
   <name>usr/lib/fm/amd64/libtopo.so.1</name>
   <name>usr/lib/fm/libfmd_agent.so.1</name>
+  <name>usr/lib/fm/libfmd_zfs.so.1</name>
   <name>usr/lib/libipmi.so.1</name>
   <name>usr/lib/amd64/libipmi.so.1</name>
   <name>usr/lib/libcurl.so.3</name>
