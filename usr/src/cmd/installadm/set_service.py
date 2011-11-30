@@ -28,6 +28,7 @@ import logging
 import os
 import sys
 
+import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.service as svc
 import osol_install.auto_install.service_config as config
 
@@ -37,7 +38,7 @@ from osol_install.auto_install.installadm_common import _, \
     validate_service_name, cli_wrap as cw
 
 
-SERVICE_PROPS = [config.PROP_DEFAULT_MANIFEST, 'aliasof']
+SERVICE_PROPS = [config.PROP_DEFAULT_MANIFEST, 'aliasof', 'imagepath']
 
 
 def get_usage():
@@ -48,7 +49,8 @@ def get_usage():
         'set-service\t-o|--option <prop>=<value> <svcname>\n'
         '\t\tprop=value can be:\n'
         '\t\t\taliasof=<existing_service>\n'
-        '\t\t\tdefault-manifest=<manifest/script name>')
+        '\t\t\tdefault-manifest=<manifest/script name>\n'
+        '\t\t\timagepath=<newpath>')
     return(usage)
 
 
@@ -136,9 +138,6 @@ def set_aliasof(options):
         raise SystemExit(_('\nError: Service does not exist: %s\n') %
                          basesvcname)
 
-    if not config.is_service(aliasname):
-        raise SystemExit(_('\nError: Alias does not exist: %s\n') % aliasname)
-
     if aliasname == basesvcname:
         raise SystemExit(_('\nError: Alias name same as service name: %s\n') %
                          aliasname)
@@ -154,7 +153,7 @@ def set_aliasof(options):
         raise SystemExit(_("\nError: Architectures of service and alias "
                            "are different.\n"))
 
-    if aliassvc.is_aliasof(basesvcname): 
+    if aliassvc.is_aliasof(basesvcname):
         raise SystemExit(_("\nError: %s is already an alias of %s\n") %
                          (aliasname, basesvcname))
 
@@ -182,6 +181,36 @@ def set_aliasof(options):
         raise SystemExit(err)
 
 
+def set_imagepath(options):
+    '''Change the location of a service's image'''
+
+    logging.debug("set %s imagepath to %s",
+                  options.svcname, options.value)
+    new_imagepath = options.value.strip()
+
+    service = svc.AIService(options.svcname)
+    if service.is_alias():
+        raise SystemExit(cw(_('\nError: Can not change the imagepath of an '
+                           'alias.')))
+
+    if not os.path.isabs(new_imagepath):
+        raise SystemExit(_("\nError: A full pathname is required for the "
+                           "imagepath.\n"))
+
+    if os.path.exists(new_imagepath):
+        raise SystemExit(_("\nError: The imagepath already exists: %s\n") %
+                         new_imagepath)
+
+    if os.path.islink(new_imagepath):
+        raise SystemExit(_("\nError: The imagepath may not be a symlink.\n"))
+
+    new_imagepath = new_imagepath.rstrip('/')
+    try:
+        service.relocate_imagedir(new_imagepath)
+    except (svc.MountError, aismf.ServicesError) as error:
+        raise SystemExit(error)
+
+
 def do_set_service(cmd_options=None):
     '''
     Set a property of a service
@@ -201,10 +230,16 @@ def do_set_service(cmd_options=None):
 
     logging.debug("options %s", options)
 
+    if not config.is_service(options.svcname):
+        raise SystemExit(_('\nError: Service does not exist: %s\n') %
+                         options.svcname)
+
     if options.prop == "default-manifest":
         do_set_service_default_manifest(options)
     elif options.prop == "aliasof":
         return set_aliasof(options)
+    elif options.prop == "imagepath":
+        return set_imagepath(options)
     # Future set-service options can go here in an "else" clause...
 
 

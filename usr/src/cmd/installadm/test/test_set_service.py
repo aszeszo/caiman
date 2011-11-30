@@ -48,6 +48,9 @@ class ParseOptions(unittest.TestCase):
         myargs = ["gobbledegook=nonsense", "servicename"]
         self.assertRaises(SystemExit, set_service.parse_options, myargs)
 
+        myargs = ["-o", "badoption=value", "servicename"]
+        self.assertRaises(SystemExit, set_service.parse_options, myargs)
+
         myargs = ["-o", "gob=ble=deg=ook", "servicename"]
         self.assertRaises(SystemExit, set_service.parse_options, myargs)
 
@@ -65,9 +68,21 @@ class ParseOptions(unittest.TestCase):
         '''Test proper processing.'''
         myargs = ["-o", "default-manifest=/tmp/dummy.xml", "servicename"]
         options = set_service.parse_options(myargs)
-        self.assertEquals(options.prop, "default-manifest")
-        self.assertEquals(options.value, "/tmp/dummy.xml")
-        self.assertEquals(options.svcname, "servicename")
+        self.assertEqual(options.prop, "default-manifest")
+        self.assertEqual(options.value, "/tmp/dummy.xml")
+        self.assertEqual(options.svcname, "servicename")
+
+        myargs = ["-o", "aliasof=myservice", "myalias"]
+        options = set_service.parse_options(myargs)
+        self.assertEqual(options.prop, "aliasof")
+        self.assertEqual(options.value, "myservice")
+        self.assertEqual(options.svcname, "myalias")
+
+        myargs = ["-o", "imagepath=/newpath/images/mypath", "servicename"]
+        options = set_service.parse_options(myargs)
+        self.assertEqual(options.prop, "imagepath")
+        self.assertEqual(options.value, "/newpath/images/mypath")
+        self.assertEqual(options.svcname, "servicename")
 
     def test_parse_options_missing(self):
         '''Ensure options which are missing, are caught'''

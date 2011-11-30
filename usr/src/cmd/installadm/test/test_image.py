@@ -39,12 +39,12 @@ from osol_install.auto_install.image import InstalladmImage, ImageError
 
 
 class TestInstalladmImage(unittest.TestCase):
-    '''Tests for InstalladmImage''' 
+    '''Tests for InstalladmImage'''
 
     @classmethod
     def setUpClass(cls):
         '''Class-level set up'''
-        cls.webserver_docroot = com.WEBSERVER_DOCROOT 
+        cls.webserver_docroot = com.WEBSERVER_DOCROOT
         com.WEBSERVER_DOCROOT = tempfile.mkdtemp(dir="/tmp")
 
     @classmethod
@@ -103,12 +103,27 @@ class TestInstalladmImage(unittest.TestCase):
         '''test image move'''
         test_path = self.tempdirname
         myimage = InstalladmImage(test_path)
+
+        # create old symlink normally created by _prep_ai_webserver
+        old_link = os.path.join(com.WEBSERVER_DOCROOT, test_path.lstrip("/"))
+        old_link_parent = os.path.dirname(old_link)
+        os.makedirs(old_link_parent)
+        os.symlink(test_path, old_link)
+        self.assertTrue(os.path.exists(old_link))
+
+        # call the move function
         newtempdirname = tempfile.mkdtemp(dir="/tmp")
         newpath = myimage.move(newtempdirname)
+
+        # Ensure image is moved and webserver symlinks are updated
         self.assertEqual(newpath, newtempdirname)
         self.assertEqual(myimage.path, newtempdirname)
-        os.rmdir(newtempdirname)
-        
+        self.assertFalse(os.path.exists(old_link))
+        new_link = os.path.join(com.WEBSERVER_DOCROOT,
+                                newtempdirname.lstrip("/"))
+        self.assertTrue(os.path.islink(new_link))
+        shutil.rmtree(newtempdirname)
+
     def test_verify(self):
         '''test image verify'''
         tmpfile = tempfile.mktemp()
@@ -124,7 +139,7 @@ class TestInstalladmImage(unittest.TestCase):
 
         open(os.path.join(test_path, 'solaris.zlib'), 'w')
         myimage = InstalladmImage(test_path)
-        
+
     def test_version(self):
         '''test image version property'''
         test_path = self.tempdirname
@@ -159,10 +174,10 @@ class TestInstalladmImage(unittest.TestCase):
         with open(image_info, 'w') as info:
             info.write('IMAGE_VERSION=4.0')
         self.assertEqual(myimage.version, 3.0)
-        
+
 
 class TestIsIso(unittest.TestCase):
-    '''Tests for is_iso''' 
+    '''Tests for is_iso'''
 
     def test_is_iso(self):
         '''test is_iso'''

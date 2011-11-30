@@ -50,6 +50,7 @@ Image version history:
 import errno
 import logging
 import os
+import shutil
 
 import pkg.client.api
 import pkg.client.imageconfig
@@ -72,7 +73,7 @@ class ImageError(StandardError):
 
 class InstalladmImage(object):
     '''Represents an AI client image on the installadm server'''
-    
+
     NO_ZLIB = _("\nError:\tThe image at %(path)s is not a valid autoinstall "
                 "image.\n")
 
@@ -125,13 +126,21 @@ class InstalladmImage(object):
                 if valid:
                     image_info[key.lower()] = value
         return image_info
-    
+
     def move(self, new_path):
-        '''Move image area to new location and update webserver symlinks
+        '''Move image area to new location and update webserver symlinks.
+           To rename self._path, caller should ensure new_path does not exist.
            Return new image path
         '''
         self._remove_ai_webserver_symlink()
-        os.rename(self._path, new_path)
+        try:
+            os.makedirs(os.path.dirname(new_path))
+        except OSError as err:
+            if err.errno != errno.EEXIST:
+                raise
+        # Use shutil.move rather than os.rename to allow move across
+        # filesystems.
+        shutil.move(self._path, new_path)
         self._path = new_path
         self._prep_ai_webserver()
         return self._path
@@ -171,6 +180,16 @@ class InstalladmImage(object):
                             self.path.lstrip("/"))
         if os.path.islink(dest) or os.path.exists(dest):
             os.remove(dest)
+
+        # remove empty parent directories up until com.WEBSERVER_DOCROOT
+        parent = os.path.dirname(dest)
+        while parent != com.WEBSERVER_DOCROOT:
+            try:
+                os.rmdir(parent)
+                parent = os.path.dirname(parent)
+            except OSError:
+                # break if directory is non-empty
+                break
 
     def _prep_ai_webserver(self):
         '''Enable the AI webserver to access the image path'''
@@ -222,7 +241,7 @@ class InstalladmPkgImage(InstalladmImage):
             order = list()
             for pub in root_img.get_publishers(duplicate=True):
                 if pub.disabled:
-                    logging.debug("skipping disabled publisher '%s'", 
+                    logging.debug("skipping disabled publisher '%s'",
                                   pub.prefix)
                     continue
                 publishers[pub.prefix] = pub
@@ -271,7 +290,7 @@ class InstalladmPkgImage(InstalladmImage):
             # installadm is non-interactive, so we don't need to track
             # the "cancel_state" like, for example, packagemanager
             cancel_state_callable = None
-            self._pkgimg = pkg.client.api.ImageInterface( 
+            self._pkgimg = pkg.client.api.ImageInterface(
                                 self.path,
                                 PKG5_API_VERSION,
                                 tracker,

@@ -559,19 +559,21 @@ class AIService(object):
         
         logging.debug("rename from %s to %s", self.config_dir, newsvcdir)
         os.rename(self.config_dir, newsvcdir)
-    
+
     def _update_name_in_service_props(self, newsvcname):
-        ''' Modify service_name and boot_file props with new name
-        
-            Input:
-                   svcname - service name
-                   newsvcname - new service name
-        
-        '''
+        '''Set service_name property to newsvcname'''
+
         props = config.get_service_props(self.name)
         props[config.PROP_SERVICE_NAME] = newsvcname
         config.set_service_props(self.name, props)
-    
+
+    def _update_path_in_service_props(self, new_path):
+        '''Set image_path property to new_path '''
+
+        props = config.get_service_props(self.name)
+        props[config.PROP_IMAGE_PATH] = new_path
+        config.set_service_props(self.name, props)
+
     @property
     def name(self):
         '''Service name'''
@@ -627,7 +629,7 @@ class AIService(object):
             http_port = libaimdns.getinteger_property(com.SRVINST,
                                                       com.PORTPROP)
             # Always use $serverIP keyword as setup-dhcp will
-            # substitute in the correct IP addresses. 
+            # substitute in the correct IP addresses.
             dhcpbfile = 'http://%s:%u/%s' % ("$serverIP", http_port,
                                              com.WANBOOTCGI)
         else:
@@ -659,7 +661,7 @@ class AIService(object):
             raise MountError(from_path, to_mountpoint, err.popen.stderr)
     
     def mount(self):
-        '''Perform service lofs mounts 
+        '''Perform service lofs mounts
         
         For all services,
           /etc/netboot/<svcname> is an lofs mount of <targetdir> (or
@@ -667,7 +669,7 @@ class AIService(object):
         In addition:
           For sparc:
             /etc/netboot/<svcname>/system.conf is an lofs mount of
-                AI_SERVICE_DIR_PATH/<svcname>/system.conf 
+                AI_SERVICE_DIR_PATH/<svcname>/system.conf
           For x86:
             /etc/netboot/<svcname>/menu.lst is an lofs mount of
                 AI_SERVICE_DIR_PATH/<svcname>/menu.lst
@@ -761,6 +763,23 @@ class AIService(object):
             return True
         return False
 
+    def update_wanboot_imagepath(self, oldpath, newpath):
+        ''' Update the imagepath in service's wanboot.conf
+
+         Input:
+            oldpath - imagepath to replace
+            newpath - new imagepath
+
+        '''
+        logging.debug('update_wanboot_imagepath, %s to %s', oldpath, newpath)
+        wanbootpath = os.path.join(self.image.path, WANBOOTCONF)
+        for line in fileinput.input(wanbootpath, inplace=1):
+            newline = line
+            parts = newline.partition(oldpath)
+            if parts[1]:
+                newline = parts[0] + newpath + parts[2]
+            sys.stdout.write(newline)
+
     def update_basesvc(self, newbasesvc_name):
         '''
         For an alias, do all activities needed if the basesvc
@@ -769,7 +788,7 @@ class AIService(object):
             o update aliasof property in .config to newbasesvc_name
             o disable alias
                x86 only:
-                  o Copy over new base services's menu.lst to alias' menu.lst 
+                  o Copy over new base services's menu.lst to alias' menu.lst
                   o reinstate alias service name in alias' menu.lst
                   o Replace base service bootargs with alias' bootargs in
                     alias' menu.lst
@@ -778,7 +797,7 @@ class AIService(object):
                     o reinstate dependent alias name in dependent alias'
                       menu.lst
                     o If bootargs were specified for dependent alias,
-                      replace alias bootargs with dependent alias bootargs 
+                      replace alias bootargs with dependent alias bootargs
                   o For each client of alias:
                     o Copy over alias' revised menu.lst to menu.lst.<clientid>
                     o reinstate alias service_name in menu.lst.<clientid>
@@ -812,7 +831,7 @@ class AIService(object):
         was_mounted = False
         if self.mounted():
             was_mounted = True
-            self.disable(force=True) 
+            self.disable(force=True)
 
         if self.arch == 'i386':
             self_menulstpath = os.path.join(self.config_dir, MENULST)
@@ -842,7 +861,7 @@ class AIService(object):
                 sub_alias_was_mounted = False
                 if aliassvc.mounted():
                     sub_alias_was_mounted = True
-                    aliassvc.disable(force=True) 
+                    aliassvc.disable(force=True)
 
                 sub_alias_menulst = os.path.join(aliassvc.config_dir, MENULST)
                 logging.debug("update_basesvc: copying new menu.lst from %s "
@@ -1245,14 +1264,78 @@ class AIService(object):
         props = config.get_service_props(self.name)
         return props[config.PROP_DEFAULT_MANIFEST]
 
+    def relocate_imagedir(self, new_path):
+        '''Change the location of a service's image:
+             o disable the service and all dependent aliases
+             o update wanboot.conf for the service (sparc)
+             o update menu.lst files of service and its clients and
+               aliases (x86)
+             o update service .config file
+             o move the image and update webserver symlink
+             o enable service and dependent aliases
+        '''
+        was_mounted = False
+        if self.mounted():
+            was_mounted = True
+            self.disable(force=True)
+
+        # get list of all aliases
+        all_aliases = config.get_aliased_services(self.name, recurse=True)
+
+        # Determine which aliases are enabled and disable them,
+        # saving list of enabled aliases for later.
+        enabled_aliases = list()
+        for alias in all_aliases:
+            aliassvc = AIService(alias)
+            if aliassvc.mounted():
+                enabled_aliases.append(alias)
+                aliassvc.disable(force=True)
+
+        # For x86, update menu.lst files (of service, clients, and aliases)
+        # with the new imagepath.
+        # For sparc, update wanboot.conf with the new imagepath.
+        # There is nothing to do for sparc aliases or clients because they
+        # reference the service's wanboot.conf file.
+        if self.arch == 'i386':
+            self_menulstpath = os.path.join(self.config_dir, MENULST)
+            grub.update_imagepath(self_menulstpath, self.image.path, new_path)
+
+            all_clients = config.get_clients(self.name).keys()
+            for alias in all_aliases:
+                all_clients.extend(config.get_clients(alias).keys())
+
+            for clientid in all_clients:
+                client_menulstpath = get_client_menulst(clientid)
+                grub.update_imagepath(client_menulstpath, self.image.path,
+                                      new_path)
+            for alias in all_aliases:
+                aliassvc = AIService(alias)
+                alias_menulstpath = os.path.join(aliassvc.config_dir, MENULST)
+                grub.update_imagepath(alias_menulstpath, aliassvc.image.path,
+                                      new_path)
+        elif self.arch == 'sparc':
+            self.update_wanboot_imagepath(self.image.path, new_path)
+
+        # update image_path in .config file
+        self._update_path_in_service_props(new_path)
+
+        # relocate image and update webserver symlinks
+        self.image.move(new_path)
+
+        # enable service and aliases
+        if was_mounted:
+            self.enable()
+        for alias in enabled_aliases:
+            AIService(alias).enable()
+
 
 def get_a_free_tcp_port(hostname):
-    ''' get next free tcp port 
+    ''' get next free tcp port
         
         Looks for next free tcp port number, starting from 46501
         
         Input:   hostname
-        Returns: next free tcp port number if one found or 
+        Returns: next free tcp port number if one found or
                  None if no free port found
              
     '''
@@ -1275,7 +1358,7 @@ def get_a_free_tcp_port(hostname):
             mysock.bind((hostname, port))
         except socket.error:
             continue
-        else: 
+        else:
             logging.debug("found free tcp port: %s" % port)
             mysock.close()
             break
@@ -1331,7 +1414,7 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
 
         try:
             print cw(_("Adding IP range to local DHCP configuration"))
-            server.add_address_range(ip_start, ip_count, bootserver) 
+            server.add_address_range(ip_start, ip_count, bootserver)
         except dhcp.DHCPServerError as err:
             print >> sys.stderr, cw(_("\nUnable to add IP range: %s\n" % err))
             print >> sys.stderr, _incomplete_msg
@@ -1414,7 +1497,7 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
         print _("\t%-20s : %s\n" % ("Boot file", bfile))
 
         if len(valid_nets) > 1 and arch == 'i386':
-            print cw(_("\nNote: determined more than one IP address " 
+            print cw(_("\nNote: determined more than one IP address "
                        "configured for use with AI. Please ensure the above "
                        "'Boot server IP' is correct.\n"))
 

@@ -38,10 +38,10 @@ MENULST = 'menu.lst'
 
 def update_bootargs(menulstpath, oldbootargs, bootargs):
     '''Update bootargs in menu.lst
-    
+
      Input:
         menulstpath - path to menu.lst file to update
-        oldbootargs - bootargs to replace 
+        oldbootargs - bootargs to replace
         bootargs - replacement bootargs
 
     '''
@@ -76,7 +76,7 @@ def update_svcname(menulstpath, newsvcname, mountdir):
     logging.log(XDEBUG, 'in update_menulst %s %s %s',
                 menulstpath, newsvcname, mountdir)
     install_svc = 'install_service='
-    kernel_str = '\tkernel$ /' 
+    kernel_str = '\tkernel$ /'
     module_str = '\tmodule$ /'
     for line in fileinput.input(menulstpath, inplace=1):
         newline = line
@@ -97,10 +97,51 @@ def update_svcname(menulstpath, newsvcname, mountdir):
         sys.stdout.write(newline)
 
 
+def update_imagepath(menulstpath, oldpath, newpath):
+    ''' Update the imagepath in menu.lst
+
+     Input:
+        menulstpath - path to menu.lst file to update
+        oldpath - imagepath to replace
+        newpath - new imagepath
+
+    '''
+    logging.log(XDEBUG, 'in update_imagepath %s %s %s',
+                menulstpath, oldpath, newpath)
+    install_media = 'install_media='
+    for line in fileinput.input(menulstpath, inplace=1):
+        newline = line
+        parts = newline.partition(install_media)
+        # Example line (spaces added for readability):
+        #   kernel$ /mysvc/platform/i86pc/kernel/$ISADIR/unix -B
+        #      install_media=http://$serverIP:5555//export/auto_install/myimg,
+        #      install_service=mysvc,install_svc_address=$serverIP:5555
+        if parts[1]:
+            # The line contains 'install_media='.
+            # parts[2] is:
+            #   http://$serverIP:5555//export/auto_install/myimg,
+            #      install_service=mysvc,install_svc_address=$serverIP:5555
+            ending_parts = parts[2].partition(',')
+            media_str = ending_parts[0]
+            #   http://$serverIP:5555//export/auto_install/myimg
+
+            rest_of_string = ending_parts[1] + ending_parts[2]
+            #   ,install_service=mysvc,install_svc_address=$serverIP:5555
+
+            new_media_str = media_str.replace(oldpath, newpath, 1)
+            #   http://$serverIP:5555//foo/newpath
+
+            newline = parts[0] + install_media + new_media_str + rest_of_string
+            #   kernel$ /mysvc/platform/i86pc/kernel/$ISADIR/unix -B
+            #      install_media=http://$serverIP:5555//foo/newpath,
+            #      install_service=mysvc,install_svc_address=$serverIP:5555
+        sys.stdout.write(newline)
+
+
 def setup_grub(svc_name, image_path, image_info, srv_address, menu_path,
                bootargs):
     '''Configure GRUB for this AIService instance.
-    
+
     Input:
         svc_name - service name
         image_path - image path for service
@@ -108,16 +149,16 @@ def setup_grub(svc_name, image_path, image_info, srv_address, menu_path,
         srv_address - address from service.py
         menu_path - where to put menu.lst file
         bootargs - string of user specified bootargs or '' if none
-    
+
     '''
     # Move the install media's grub menu out of the way so we do not boot it.
     media_grub = os.path.join(image_path, "boot/grub", MENULST)
     if os.path.exists(media_grub):
         os.remove(media_grub)
-    
+
     # Create a new menu.lst for the AI client to use during boot
     with open(os.path.join(menu_path, MENULST), "w") as menu:
-        # First setup the the global environment variables 
+        # First setup the the global environment variables
         menu.write("default=0\n")
         menu.write("timeout=30\n")
 
@@ -136,14 +177,13 @@ def setup_grub(svc_name, image_path, image_info, srv_address, menu_path,
                     srv_address))
         menu.write("\tmodule$ /%s/platform/i86pc/$ISADIR/boot_archive\n\n" %
                    svc_name)
-        
+
         # Finally, add the 'install' entry
         menu.write("title %s Automated Install\n" %
                    image_info.get("grub_title", "Solaris " + svc_name))
         menu.write("\tkernel$ /%s/platform/i86pc/kernel/$ISADIR/unix -B "
                    "%sinstall=true,install_media=http://%s/%s,"
-                   "install_service=%s,install_svc_address=%s,"
-                   "livemode=text\n" %
+                   "install_service=%s,install_svc_address=%s\n" %
                    (svc_name, bootargs, srv_address, image_path, svc_name,
                     srv_address))
         menu.write("\tmodule$ /%s/platform/i86pc/$ISADIR/boot_archive\n" %
