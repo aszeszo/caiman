@@ -37,7 +37,7 @@ from textwrap import fill, dedent
 
 from osol_install.libaimdns import getifaddrs, getboolean_property, \
     getstrings_property
-from solaris_install import Popen 
+from solaris_install import Popen
 
 
 _ = gettext.translation('AI', '/usr/share/locale', fallback=True).gettext
@@ -774,7 +774,8 @@ def validate_service_name(svcname):
     ''' Validate service name
 
     Verify that characters in a service name are limited to
-    alphanumerics, hyphen and underscore.
+    alphanumerics, hyphen and underscore, and that the first
+    character is not a hyphen.
 
     Args:
         svcname - Name of service
@@ -784,12 +785,16 @@ def validate_service_name(svcname):
     '''
     error = cli_wrap(_('\nError:  The service name must contain only '
                        'alphanumeric chars, "_" and "-" and be shorter than '
-                       '64 characters in length.\n'))
+                       '64 characters in length. The first character may not '
+                       'be a "-".\n'))
 
     if not svcname:
         raise ValueError(error)
 
     if len(svcname) > MAX_SERVICE_NAME_LEN:
+        raise ValueError(error)
+
+    if svcname.startswith('-'):
         raise ValueError(error)
 
     # Accept alphanumeric chars, '-', and '_'. By removing '-' and
