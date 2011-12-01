@@ -653,7 +653,22 @@ def do_create_service(cmd_options=None):
     cmd = [com.CHECK_SETUP_SCRIPT,
            options.dhcp_ip_start if options.dhcp_ip_start else '']
     logging.debug('Calling %s', cmd)
-    if Popen(cmd).wait():
+    # CHECK_SETUP_SCRIPT does math processing that needs to run in "C" locale
+    # to avoid problems with alternative # radix point representations
+    # (e.g. ',' instead of '.' in cs_CZ.*-locales).
+    # Because ksh script uses built-in math we need to set locale here and we
+    # can't set it in script itself
+    modified_env = os.environ.copy()
+    lc_all = modified_env.get('LC_ALL', '')
+    if lc_all != '':
+        modified_env['LC_MONETARY'] = lc_all
+        modified_env['LC_MESSAGES'] = lc_all
+        modified_env['LC_COLLATE'] = lc_all
+        modified_env['LC_TIME'] = lc_all
+        modified_env['LC_CTYPE'] = lc_all
+        del modified_env['LC_ALL']
+    modified_env['LC_NUMERIC'] = 'C'
+    if Popen(cmd, env=modified_env).wait():
         raise SystemExit(1)
     
     # convert options.bootargs to a string
