@@ -340,8 +340,8 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
         profile - file path of profile
         image_dir - path of service image, used to locate service_bundle
         verbose - boolean, True if verbosity desired, False otherwise
-
-    Return: True if the profile is valid, False otherwise
+    
+    Return: profile in string format if it is valid, None otherwise.
 
     '''
     if verbose:
@@ -353,10 +353,11 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
     except IOError as strerror:
         print >> sys.stderr, _("Error opening profile %s:  %s") % \
                 (profile_name, strerror)
-        return False
+        return 
 
     errmsg = ''
     validated_xml = ''
+    tmpl_profile = None
     try:
         # do any templating
         tmpl_profile = sc.perform_templating(raw_profile, validate_only=False)
@@ -394,10 +395,10 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
         print >> sys.stderr, errmsg  # print error message
         for eline in err:  # print supplemental text from exception
             print >> sys.stderr, '\t' + eline
-        return False
+        return 
     if validated_xml and verbose:
         print >> sys.stderr, " Passed"
-    return True
+    return tmpl_profile
 
 
 # The criteria class is a list object with an overloaded get_item method

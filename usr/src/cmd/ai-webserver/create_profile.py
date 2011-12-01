@@ -27,8 +27,7 @@ import gettext
 import os.path
 import sys
 import tempfile
-
-import lxml.etree
+import shutil
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.common_profile as sc
@@ -39,12 +38,15 @@ import osol_install.auto_install.service_config as config
 from optparse import OptionParser
 from stat import S_IRWXU
 
-from osol_install.auto_install.installadm_common import _, \
-    validate_service_name
+from osol_install.auto_install.installadm_common import _
 from osol_install.auto_install.service import AIService
 
+# Modes of operation.
+DO_CREATE = True
+DO_UPDATE = False
 
-def get_usage():
+
+def get_create_usage():
     '''
     Return usage for create-profile.
     '''
@@ -55,18 +57,37 @@ def get_usage():
              "\t\t[-C|--criteria-file <criteria_file>]")
 
 
-def parse_options(cmd_options=None):
+def get_update_usage():
+    '''
+    Return usage for update-profile.
+    '''
+    return _("update-profile -n|--service <svcname> "
+             "-f|--file <profile_file> \n"
+             "\t\t[-p|--profile <profile_name>]")
+
+
+def parse_options(do_create, cmd_options=None):
     """ Parse and validate options
-    Args: cmd_options - command line handled by OptionParser
+    Args:  - do_create (True) or do_update (False) 
+           - cmd_options - command line handled by OptionParser
+
     Returns: options
     """
-    parser = OptionParser(usage='\n' + get_usage())
 
-    parser.add_option("-C", "--criteria-file", dest="criteria_file",
-                      default='', help=_("Name of criteria XML file."))
-    parser.add_option("-c", "--criteria", dest="criteria_c", action="append",
-                      default=list(), metavar="CRITERIA",
-                      help=_("Criteria: <-c criteria=value|range> ..."))
+    if do_create:
+        usage = '\n' + get_create_usage()
+    else:
+        usage = '\n' + get_update_usage()
+
+    parser = OptionParser(usage=usage)
+
+    if do_create:
+        parser.add_option("-C", "--criteria-file", dest="criteria_file",
+                          default='', help=_("Name of criteria XML file."))
+        parser.add_option("-c", "--criteria", dest="criteria_c",
+                          action="append", default=list(), metavar="CRITERIA",
+                          help=_("Criteria: <-c criteria=value|range> ..."))
+
     parser.add_option("-f", "--file", dest="profile_file", action="append",
                       default=list(), help=_("Path to profile file"))
     parser.add_option("-p", "--profile", dest="profile_name",
@@ -78,6 +99,13 @@ def parse_options(cmd_options=None):
 
     if len(args):
         parser.error(_("Unexpected arguments: %s" % args))
+
+    if not do_create:
+        options.criteria_file = None
+        options.criteria_c = None
+        if len(options.profile_file) > 1:
+            parser.error(_("Provide only one file name (-f)."))
+
     if not options.service_name:
         parser.error(_("Service name is required (-n <service name>)."))
     if not options.profile_file:
@@ -173,7 +201,7 @@ def do_create_profile(cmd_options=None):
     Effect: add profiles to database per command line
     Raises SystemExit if condition cannot be handled
     '''
-    options = parse_options(cmd_options)
+    options = parse_options(DO_CREATE, cmd_options)
 
     # get AI service image path and database name
     service = AIService(options.service_name)
@@ -229,14 +257,6 @@ def do_create_profile(cmd_options=None):
             print >> sys.stderr, _("File %s does not exist") % profile_file
             has_errors = True
             continue
-        try:
-            with open(profile_file, 'r') as pfp:
-                raw_profile = pfp.read()
-        except IOError as (errno, strerror):
-            print >> sys.stderr, _("I/O error (%s) opening profile %s: %s") % \
-                (errno, profile_file, strerror)
-            has_errors = True
-            continue
 
         # define all criteria in local environment for imminent validation
         for crit in AIdb.getCriteria(queue, table=AIdb.PROFILES_TABLE,
@@ -286,51 +306,16 @@ def do_create_profile(cmd_options=None):
                 if len(val) == 1:
                     os.environ["AI_" + crit.upper()] = val[0]
 
-        tmpl_profile = raw_profile  # assume templating succeeded
-        try:
-            # resolve immediately (static)
-            # substitute any criteria on command line
-            tmpl_profile = sc.perform_templating(raw_profile, False)
-            # validate profile according to any DTD
-            profile_string = \
-                    sc.validate_profile_string(tmpl_profile, image_dir,
-                                               dtd_validation=True,
-                                               warn_if_dtd_missing=True)
-            if profile_string is None:
-                has_errors = True
-                continue
-            full_profile_path = copy_profile_internally(tmpl_profile)
-            if not full_profile_path:  # some failure handling file
-                has_errors = True
-                continue
-        except KeyError:  # user specified bad template variable (not criteria)
-            value = sys.exc_info()[1]  # take value from exception
-            found = False
-            # check if missing variable in error is supported
-            for tmplvar in sc.TEMPLATE_VARIABLES:
-                if "'" + tmplvar + "'" == str(value):  # values in sgl quotes
-                    found = True  # valid template variable, but not in env
-                    break
-            if found:
-                print >> sys.stderr, \
-                    _("Error: template variable %s in profile %s was not "
-                      "found among criteria or in the user's environment.") % \
-                    (value, profile_name)
-            else:
-                print >> sys.stderr, \
-                    _("Error: template variable %s in profile %s is not a "
-                      "valid template variable.  Valid template variables: ") \
-                    % (value, profile_name) + '\n\t' + \
-                    ', '.join(sc.TEMPLATE_VARIABLES)
+        # validates the profile and report errors if found
+        tmpl_profile = df.validate_file(profile_name, profile_file, image_dir,
+                                        verbose=False)
+        if not tmpl_profile:
             has_errors = True
             continue
-        # profile has XML/DTD syntax problem
-        except lxml.etree.XMLSyntaxError, err:
-            print tmpl_profile  # dump profile in error to stdout
-            print >> sys.stderr, _('XML syntax error in profile %s:') % \
-                    profile_name
-            for eline in err:
-                print >> sys.stderr, '\t' + eline
+
+        # create file from template string and report failures
+        full_profile_path = copy_profile_internally(tmpl_profile)
+        if not full_profile_path:
             has_errors = True
             continue
 
@@ -342,6 +327,114 @@ def do_create_profile(cmd_options=None):
     # exit with status if any errors in any profiles
     if has_errors:
         sys.exit(1)
+
+
+def do_update_profile(cmd_options=None):
+    ''' Updates exisiting profile
+    Arg: cmd_options - command line options
+    Effect: update existing profile 
+    Raises SystemExit if condition cannot be handled
+    '''
+
+    options = parse_options(DO_UPDATE, cmd_options)
+
+    # verify the file 
+    profile_file = options.profile_file[0]
+    if not os.path.exists(profile_file):
+        raise SystemExit(_("Error:\tFile does not exist: %s\n") % profile_file)
+
+    # get profile name
+    if not options.profile_name:
+        profile_name = os.path.basename(profile_file)
+    else:
+        profile_name = options.profile_name
+
+    # get AI service image path and database name
+    service = AIService(options.service_name)
+    dbname = service.database_path
+    image_dir = service.image.path
+
+    # open database
+    dbn = AIdb.DB(dbname, commit=True)
+    dbn.verifyDBStructure()
+    queue = dbn.getQueue()
+
+    # Handle old DB versions which did not store a profile.
+    if not AIdb.tableExists(queue, AIdb.PROFILES_TABLE):	
+        raise SystemExit(_("Error:\tService %s does not support profiles") %
+                         options.service_name)
+
+    # check for the existence of profile
+    missing_profile_error = _("Error:\tService {service} has no profile "
+                              "named {profile}.")
+    if not sc.is_name_in_table(profile_name, queue, AIdb.PROFILES_TABLE):
+        raise SystemExit(missing_profile_error.format(
+                         service=options.service_name, profile=profile_name))
+
+    crit_dict = AIdb.getProfileCriteria(profile_name, queue, humanOutput=True,
+                 onlyUsed=True)
+
+    # if there is criteria set for profile export the value in environment
+    if crit_dict:
+        for crit in crit_dict.keys():
+            is_range_crit = crit.startswith('MIN') or crit.startswith('MAX')
+            val = crit_dict[crit]
+            if crit.startswith('MAX'):
+                critname = crit[3:] 
+
+                # if the corresponding MIN value not set in db continue
+                if "MIN" + critname not in crit_dict:
+                    continue
+                min_value = crit_dict["MIN" + critname]
+                if not min_value:
+                    continue
+
+                # if the MIN value is equal to MAX, define the variable
+                # in environment
+                if val and val == min_value:
+                    fmt_value = AIdb.formatValue(critname, min_value)
+                    os.environ["AI_" + critname.upper()] = fmt_value
+                    if critname == "mac":
+                        cid = fmt_value.replace(":", "")
+                        os.environ["AI_CID"] = "01" + cid.upper()
+            if not is_range_crit and val:
+                os.environ["AI_" + crit.upper()] = val
+
+    # validates the profile and report the errors if found 
+    tmpl_profile = df.validate_file(profile_name, profile_file, image_dir,
+                                    verbose=False)
+    if not tmpl_profile:
+        raise SystemExit(1)
+
+    # create file from template string and report failures
+    tmp_profile_path = copy_profile_internally(tmpl_profile)
+    if not tmp_profile_path:
+        raise SystemExit(1) 
+
+    # get the path of profile in db
+    q_str = "SELECT file FROM " + AIdb.PROFILES_TABLE + " WHERE name=" \
+                + AIdb.format_value('name', profile_name)
+    query = AIdb.DBrequest(q_str)
+    queue.put(query)
+    query.waitAns()
+    response = query.getResponse()
+    # database error
+    if response is None:
+        raise SystemExit(missing_profile_error.format(
+                         service=options.service_name, profile=profile_name))
+
+    db_profile_path = response[0][0]
+
+    # replace the file 
+    try:
+        shutil.copyfile(tmp_profile_path, db_profile_path)
+    except IOError as err:
+        raise SystemExit(_("Error:\t writing profile %s: %s") %
+                         (profile_name, err))
+    finally:
+        os.unlink(tmp_profile_path)
+
+    print >> sys.stderr, _("Profile updated successfully.")
 
 
 if __name__ == '__main__':
