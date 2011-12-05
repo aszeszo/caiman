@@ -23,8 +23,6 @@
 
 [nosetests]
 
-# NOTE: The tests in installadm/smf_test add and remove SMF property 
-#       groups on the host system
 
 # The single line below tells nose where to pick up installadm tests from. 
 # It should be a comma-separated list of directories. To add a set of tests 
@@ -33,4 +31,4 @@
 # related code, and the files in that directory should begine with "test_". 
 # Files containing in-line doc-tests should be added explicitly.
 
-tests=cmd/ai-webserver/test/,cmd/installadm/test/,cmd/installadm/smf_test/,cmd/installadm/installadm_common.py
+tests=cmd/ai-webserver/test/,cmd/installadm/test/,cmd/installadm/installadm_common.py
