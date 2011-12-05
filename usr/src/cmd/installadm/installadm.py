@@ -366,8 +366,6 @@ def main():
             sys.stderr.write(_("%s:\n"
                                "\tUnhandled error encountered:\n") % sub_cmd)
             traceback.print_exc(file=sys.stderr)
-            sys.stderr.write(_("\tPlease report this as a bug at "
-                               "http://defect.opensolaris.org\n"))
             return 1
 
 

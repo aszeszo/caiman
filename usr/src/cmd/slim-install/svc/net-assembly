@@ -163,17 +163,41 @@ if [ "$ISA_INFO" = "sparc" ]; then
 	MEDIA="$ai_server$ai_image_dir"
 	
 	#
-	# Check if the install flag is present in the bootargs.
-	# If it is present then it will be an AI install,
-	# so set TEXT_FLAG to "false"
+	# Check bootargs:
+	#  install: If the install flag is present in the bootargs, then
+	#           it will be an AI install. Set TEXT_FLAG to "false".
+	#  livessh: If bootargs contain livessh or livessh=enable, set
+	#               LIVESSH_ENABLE="enable".
+	#           If bootargs contain livessh=<anything_but_enable>,
+	#               set LIVESSH_ENABLE="disable"
 	#
+	LIVESSH_ENABLE=""
 	set -- `$PRTCONF -vp | $GREP "bootargs" | $CUT -f 2 -d\'`
 	while (( $# > 0 )) ; do
 		case $1 in
 
 		install)
 			TEXT_FLAG="false"
-			break
+			shift
+			;;
+		livessh*)
+			LIVESSH_ENABLE="disable"
+			if [ "$1" = "livessh" ]; then
+				LIVESSH_ENABLE="enable"
+			else
+				case $(print $1 | $CUT -f 1 -d=) in
+
+				livessh)
+					value=$(print $1 | $CUT -f 2 -d=)
+					if [ "$value" = "enable" ]; then
+						LIVESSH_ENABLE="enable"
+					fi
+					;;
+				*)
+					;;
+				esac
+			fi
+			shift
 			;;
 		*)
 			shift
@@ -316,17 +340,21 @@ echo "Done mounting image" > /dev/msglog
 # If requested, enable remote access via ssh
 #
 if [ $ISA_INFO = "sparc" ] ; then
-	conf_file=$SYSTEM_CONF
-	if [ -f $INSTALL_CONF_SPEC ]; then
-		conf_file=$INSTALL_CONF_SPEC
+	# For SPARC, only check the setting in the conf file if
+	# livessh was not specified as a bootarg.
+	if [ -z "$LIVESSH_ENABLE" ] ; then
+		conf_file=$SYSTEM_CONF
+		if [ -f $INSTALL_CONF_SPEC ]; then
+			conf_file=$INSTALL_CONF_SPEC
+		fi
+		LIVESSH_ENABLE=$($GREP "^livessh" $conf_file | \
+		    $CUT -d'=' -f2)
 	fi
-	AI_ENABLE_SSH=$($GREP "^livessh" $conf_file | \
-	    $CUT -d'=' -f2)
 else
-	AI_ENABLE_SSH=`/sbin/devprop -s livessh`
+	LIVESSH_ENABLE=`/sbin/devprop -s livessh`
 fi
 
-if [ "$AI_ENABLE_SSH" = "enable" ]; then
+if [ "$LIVESSH_ENABLE" = "enable" ]; then
 	# generate ssh keys
 	/lib/svc/method/sshd -c
 
