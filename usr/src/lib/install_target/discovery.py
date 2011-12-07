@@ -137,6 +137,11 @@ class TargetDiscovery(Checkpoint):
         drive_attributes = drive.attributes
         drive_media = drive.media
 
+        # if a drive is offline or down return None
+        if drive_attributes.status == "DOWN":
+            self.logger.debug("disk '%s' is offline" % new_disk.name)
+            return None
+
         # set attributes for the disk
         new_disk.wwn = getattr(drive.aliases[0].attributes, "wwn", None)
 
@@ -171,11 +176,6 @@ class TargetDiscovery(Checkpoint):
         new_disk.devid = drive.name
         new_disk.iscdrom = drive.cdrom
         new_disk.opath = drive_attributes.opath
-
-        # if a drive is offline or down return None
-        if drive_attributes.status == "DOWN":
-            self.logger.debug("disk '%s' is offline" % new_disk.ctd)
-            return None
 
         # set the devpath
         if os.path.islink(drive_attributes.opath):
