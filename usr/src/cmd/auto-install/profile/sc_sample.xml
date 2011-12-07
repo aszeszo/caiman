@@ -1,4 +1,4 @@
-<?xml version='1.0'?>
+<?xml version="1.0"?>
 <!--
 CDDL HEADER START
 
@@ -45,7 +45,7 @@ See installadm(1M) for usage of 'create-profile' subcommand.
           <propval name="password" value="9Nd/cwBcNWFZg"/>
           <propval name="description" value="default_user"/>
           <propval name="shell" value="/usr/bin/bash"/>
-          <propval name="gid" value='10'/>
+          <propval name="gid" value="10"/>
           <propval name="type" value="normal"/>
           <propval name="roles" value="root"/>
           <propval name="profiles" value="System Administrator"/>
@@ -66,41 +66,41 @@ See installadm(1M) for usage of 'create-profile' subcommand.
     </service>
 
     <service name="system/console-login" version="1">
-      <instance name='default' enabled='true'>
+      <instance name="default" enabled="true">
         <property_group name="ttymon">
           <propval name="terminal_type" value="sun"/>
         </property_group>
       </instance>
     </service>
 
-    <service name='system/keymap' version='1'>
-      <instance name='default' enabled='true'>
-        <property_group name='keymap'>
-          <propval name='layout' value='US-English'/>
+    <service name="system/keymap" version="1">
+      <instance name="default" enabled="true">
+        <property_group name="keymap">
+          <propval name="layout" value="US-English"/>
         </property_group>
       </instance>
     </service>
 
-    <service name='system/timezone' version='1'>
-      <instance name='default' enabled='true'>
-        <property_group name='timezone'>
-          <propval name='localtime' value='UTC'/>
+    <service name="system/timezone" version="1">
+      <instance name="default" enabled="true">
+        <property_group name="timezone">
+          <propval name="localtime" value="UTC"/>
         </property_group>
       </instance>
     </service>
 
-    <service name='system/environment' version='1'>
-      <instance name='init' enabled='true'>
-        <property_group name='environment'>
-          <propval name='LANG' value='en_US.UTF-8'/>
+    <service name="system/environment" version="1">
+      <instance name="init" enabled="true">
+        <property_group name="environment">
+          <propval name="LANG" value="en_US.UTF-8"/>
         </property_group>
       </instance>
     </service>
 
     <service name="network/physical" version="1">
       <instance name="default" enabled="true">
-          <property_group name='netcfg' type='application'>
-              <propval name='active_ncp' type='astring' value='Automatic'/>
+          <property_group name="netcfg" type="application">
+              <propval name="active_ncp" type="astring" value="Automatic"/>
           </property_group>
       </instance>
     </service>

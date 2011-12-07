@@ -63,7 +63,11 @@ class NICSelect(BaseScreen):
         
         super(NICSelect, self).__init__(main_win)
         self.list_area = WindowArea(1, 0, 0, NICSelect.LIST_OFFSET)
-        self.ether_nics = NetworkInfo.find_links()
+
+        # find_links() returns tuple containing
+        #  * dictionary of configurable NICs
+        #  * number of NICs mandated from global zone.
+        self.ether_nics = NetworkInfo.find_links()[0]
         self.nic = None
     
     def _show(self):
@@ -75,14 +79,13 @@ class NICSelect(BaseScreen):
         if self.nic.type != NetworkInfo.MANUAL:
             raise SkipException
         if len(self.ether_nics) == 1:
-            self.set_nic_in_profile(self.ether_nics[0]
-                                    [NetworkInfo.NIC_NAME_KEY])
+            self.set_nic_in_profile(self.ether_nics[0])
             raise SkipException
         
-        try:
-            selected_nic_name = self.nic.nic_name
-        except AttributeError:
+        if self.nic.nic_iface is None:
             selected_nic_name = ""
+        else:
+            selected_nic_name = NetworkInfo.get_nic_name(self.nic.nic_iface)
         
         y_loc = 1
         y_loc += self.center_win.add_paragraph(NICSelect.PARAGRAPH, y_loc)
@@ -111,18 +114,14 @@ class NICSelect(BaseScreen):
             # e.g. "net0 (bge0)"
             # If NIC device is not populated, display just NIC name.
             #
-            if nic[NetworkInfo.NIC_DEV_KEY]:
-                list_item_text = "%s (%s)" % (nic[NetworkInfo.NIC_NAME_KEY],
-                                              nic[NetworkInfo.NIC_DEV_KEY])
-            else:
-                list_item_text = nic[NetworkInfo.NIC_NAME_KEY]
+            list_item_text = NetworkInfo.get_nic_desc(nic)
 
             # list item width
             self.list_area.columns = len(list_item_text) + 1
 
             list_item = ListItem(self.list_area, window=self.list_region,
                                  text=list_item_text, data_obj=nic)
-            if nic[NetworkInfo.NIC_NAME_KEY] == selected_nic_name:
+            if NetworkInfo.get_nic_name(nic) == selected_nic_name:
                 selected_nic = list_item
             y_loc += 1
         
@@ -137,10 +136,11 @@ class NICSelect(BaseScreen):
     def on_change_screen(self):
         '''Save the highlighted NIC as the selected NIC'''
         selected_nic = self.list_region.get_active_object().data_obj
-        self.set_nic_in_profile(selected_nic[NetworkInfo.NIC_NAME_KEY])
+        self.set_nic_in_profile(selected_nic)
     
     def set_nic_in_profile(self, selected_nic):
-        '''Set the name of the selected NIC in the profile '''
-        LOGGER.info("Selecting %s for manual configuration", selected_nic)
+        '''Store selected NIC in the profile '''
+        LOGGER.info("Selecting %s for manual configuration",
+                    NetworkInfo.get_nic_desc(selected_nic))
         nic = solaris_install.sysconfig.profile.from_engine().nic
-        nic.nic_name = selected_nic
+        nic.nic_iface = selected_nic

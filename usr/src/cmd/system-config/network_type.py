@@ -66,6 +66,8 @@ class NetworkTypeScreen(BaseScreen):
     NONE_DETAIL = _("Do not configure the network at this time")
     NO_NICS_FOUND = _("No wired network interfaces found. Additional "
                       "device drivers may be needed.")
+    ALL_NICS_FROMGZ = _("No configurable network interfaces found. They are "
+                        "all controlled from global zone.")
     
     ITEM_OFFSET = 2
     ITEM_MAX_WIDTH = 17
@@ -91,10 +93,28 @@ class NetworkTypeScreen(BaseScreen):
         self.none_option = None
         self.hostname = None
         self.nic_info = NetworkInfo()
-        self.ether_nics = NetworkInfo.find_links()
+
+        # find_links() returns tuple containing
+        #  * dictionary of configurable NICs
+        #  * number of NICs mandated from global zone.
+        #
+        # Taking that information into account, initialize type
+        # of network configuration:
+        #  * FROMGZ - One or more link found, but all found links are
+        #             controlled from global zone.
+        #  * None - otherwise
+        #
+        # Set 'have_nic' flag to True if there is at least one configurable
+        # link, otherwise set the flag to False.
+        #
+        self.ether_nics, self.fromgz_num = NetworkInfo.find_links()
+        self.nic_info.type = None
         self.have_nic = True
         if len(self.ether_nics) == 0:
             self.have_nic = False
+            if self.fromgz_num > 0:
+                self.nic_info.type = NetworkInfo.FROMGZ
+
         self.configure_network = configure_network
     
     def _show(self):
@@ -133,10 +153,21 @@ class NetworkTypeScreen(BaseScreen):
         # Display network configuration part of screen only if applicable.
         if self.configure_network:
             y_loc += 3
-        
+
+            # If there are no configurable links, there is no point to let
+            # user select type of network configuration.
             if not self.have_nic:
-                self.center_win.add_paragraph(NetworkTypeScreen.NO_NICS_FOUND,
-                                              y_loc, 1)
+                # Inform user that no network interfaces were found
+                # on the system.
+                # If this is the case of non-global zone with all links
+                # mandated from global zone, be more specific.
+                if self.nic_info.type == NetworkInfo.FROMGZ:
+                    self.center_win.add_paragraph(
+                        NetworkTypeScreen.ALL_NICS_FROMGZ, y_loc, 1)
+                else:
+                    self.center_win.add_paragraph(
+                        NetworkTypeScreen.NO_NICS_FOUND, y_loc, 1)
+
                 self.main_win.do_update()
                 activate = self.net_type_dict.get(self.nic_info.type,
                                                   self.hostname)
@@ -186,8 +217,7 @@ class NetworkTypeScreen(BaseScreen):
         '''Save hostname and selected network type on change screen'''
         if self.configure_network and self.have_nic:
             self.nic_info.type = self.center_win.get_active_object().item_key
-        else:
-            self.nic_info.type = None
+
         LOGGER.info("Configuring NIC as: %s", self.nic_info.type)
         self.sys_info.hostname = self.hostname.get_text()
     

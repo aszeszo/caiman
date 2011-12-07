@@ -36,6 +36,7 @@ import array
 import fcntl
 import locale
 import logging
+import os
 import platform
 from subprocess import Popen, PIPE
 
@@ -80,9 +81,17 @@ class SystemInfo(data_object.DataObject):
                  keyboard=None, locale=None, actual_lang=None,
                  terminal_type=None):
         data_object.DataObject.__init__(self, self.LABEL)
-        
+
+        # If not provided, set default hostname to current nodename.
+        # This is mostly useful in non-global zone, where nodename defaults
+        # to zone name. If current nodename can't be determined, use
+        # DEFAULT_HOSTNAME as a default.
         if hostname is None:
-            hostname = SystemInfo.DEFAULT_HOSTNAME
+            # os.uname() returns tuple containing five strings in form of
+            # [sysname, nodename, release, version, machine].
+            hostname = os.uname()[1]
+            if not hostname:
+                hostname = SystemInfo.DEFAULT_HOSTNAME
         self.hostname = hostname
         self.tz_region = tz_region
         self.tz_country = tz_country

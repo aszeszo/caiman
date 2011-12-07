@@ -113,7 +113,7 @@ class IPAddress(object):
         (without the spaces)
         
         '''
-        return "".join([bin(x)[2:] for x in segments])
+        return "".join(['{0:08b}'.format(x) for x in segments])
     
     def netmask_prefix(self):
         '''Convert a long form netmask into a short form (CIDR).

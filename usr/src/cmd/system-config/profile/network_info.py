@@ -51,37 +51,53 @@ def LOGGER():
 class NetworkInfo(SMFConfig):
     '''Represents a NIC and its network settings'''
 
+    # type of network configuration
     AUTOMATIC = "automatic"
     MANUAL = "manual"
     NONE = "none"
+    FROMGZ = "fromgz"
+
     DEFAULT_NETMASK = "255.255.255.0"
 
     ETHER_NICS = None
+    FROMGZ_NICS_NUM = None
 
     LABEL = NETWORK_LABEL
 
     NIC_NAME_KEY = "name"
     NIC_DEV_KEY = "device"
+    NIC_LINK_KEY = "link"
 
     @staticmethod
     def find_links():
         '''Use dladm show-link to find available network interfaces (NICs).
-        Filter out NICs with 'allow-address' mandated from global zone
+        Filter out NICs with 'allowed-address' mandated from global zone
         (this type of NIC can be configured for non-global zone with exclusive
         IP stack), since those kind of NICs are controlled from global zone
         and can't be configured within non-global zone.
 
         Construct set of available NICs as a list of dictionaries which
         describe each NIC as
-        { NIC_NAME_KEY: 'vanity name', NIC_DEV_KEY: 'device name'}.
+        { NIC_NAME_KEY: 'vanity name', NIC_DEV_KEY: 'device name',
+          NIC_LINK_KEY: 'link name'}.
 
         If vanity name or device name can't be obtained for particular link,
         then following simplified form is used to describe NIC:
-        { NIC_NAME_KEY: 'link name', NIC_DEV_KEY: ''}.
+        { NIC_NAME_KEY: 'link name', NIC_DEV_KEY: '',
+          NIC_LINK_KEY: 'link name'}.
+
+        Return tuple containing
+         * dictionary of configurable NICs
+         * number of NICs mandated from global zone via allowed-address
+           zone property.
         '''
 
-        if NetworkInfo.ETHER_NICS is not None:
-            return NetworkInfo.ETHER_NICS
+        if NetworkInfo.ETHER_NICS is not None \
+            and NetworkInfo.FROMGZ_NICS_NUM is not None:
+            return (NetworkInfo.ETHER_NICS, NetworkInfo.FROMGZ_NICS_NUM)
+
+        NetworkInfo.ETHER_NICS = []
+        NetworkInfo.FROMGZ_NICS_NUM = 0
         
         argslist = ['/usr/sbin/dladm', 'show-link', '-o', 'link', '-p']
 
@@ -92,7 +108,7 @@ class NetworkInfo(SMFConfig):
             LOGGER().warn("'dladm show-link -o link -p' "
                           "failed with following error: %s", error)
 
-            return []
+            return (NetworkInfo.ETHER_NICS, NetworkInfo.FROMGZ_NICS_NUM)
 
         nic_list = dladm_popen.stdout.strip()
 
@@ -102,7 +118,6 @@ class NetworkInfo(SMFConfig):
         # Start with empty list of NICs and add those which are eligible
         # for configuration.
         #
-        NetworkInfo.ETHER_NICS = []
         all_nics = nic_list.splitlines()
 
         for nic in all_nics:
@@ -122,10 +137,12 @@ class NetworkInfo(SMFConfig):
 
             #
             # Add particular NIC to the list only if 'allowed-ips' link
-            # property is not configured (is empty).
+            # property is not configured (is empty). Count number of NICs
+            # which are configured from global zone.
             #
             if allowed_ips:
                 LOGGER().info("%s allowed-ips: <%s>" % (nic, allowed_ips))
+                NetworkInfo.FROMGZ_NICS_NUM += 1
                 continue
 
             #
@@ -170,17 +187,18 @@ class NetworkInfo(SMFConfig):
                         n_dev = vanity_device[1]
 
             NetworkInfo.ETHER_NICS.append({NetworkInfo.NIC_NAME_KEY: n_name,
-                                           NetworkInfo.NIC_DEV_KEY: n_dev})
+                                           NetworkInfo.NIC_DEV_KEY: n_dev,
+                                           NetworkInfo.NIC_LINK_KEY: nic})
 
         # sort the final list - use NIC name as the sort key
         NetworkInfo.ETHER_NICS.sort(key=itemgetter(NetworkInfo.NIC_NAME_KEY))
-        return NetworkInfo.ETHER_NICS
+        return (NetworkInfo.ETHER_NICS, NetworkInfo.FROMGZ_NICS_NUM)
 
-    def __init__(self, nic_name=None, net_type=None, ip_address=None,
+    def __init__(self, nic_iface=None, net_type=None, ip_address=None,
                  netmask=None, gateway=None, dns_address=None, domain=None):
         DataObject.__init__(self, self.LABEL)
 
-        self.nic_name = nic_name
+        self.nic_iface = nic_iface
         self.type = net_type
         self.ip_address = ip_address
         if netmask is None:
@@ -192,7 +210,7 @@ class NetworkInfo(SMFConfig):
         self.find_defaults = True
 
     def __repr__(self):
-        result = ["NIC %s:" % self.nic_name]
+        result = ["NIC %s:" % self.get_nic_desc(self.nic_iface)]
         result.append("Type: %s" % self.type)
         if self.type == NetworkInfo.MANUAL:
             result.append("IP: %s" % self.ip_address)
@@ -213,11 +231,11 @@ class NetworkInfo(SMFConfig):
     @type.setter
     def type(self, value):
         if value not in [NetworkInfo.AUTOMATIC, NetworkInfo.MANUAL,
-                         NetworkInfo.NONE, None]:
+                         NetworkInfo.NONE, NetworkInfo.FROMGZ, None]:
             raise ValueError("'%s' is an invalid type."
                              "Must be one of %s" % (value,
                              [NetworkInfo.AUTOMATIC, NetworkInfo.MANUAL,
-                              NetworkInfo.NONE]))
+                              NetworkInfo.NONE, NetworkInfo.FROMGZ]))
         # pylint: disable-msg=W0201
         self._type = value
 
@@ -270,29 +288,66 @@ class NetworkInfo(SMFConfig):
         else:
             return False
 
-    def get_ifconfig_data(self):
-        '''Returns a dictionary populated with the data returned from ifconfig
-        Returns None if the call to ifconfig fails in some way
+    @staticmethod
+    def get_nic_desc(nic):
+        '''Generate and return NIC description for given network interface.
+        Description is in form of "NIC name (NIC device)" - e.g. "net0 (bge0)".
+        If device info was not populated, return just NIC name.
 
         '''
-        argslist = ['/sbin/ifconfig', self.nic_name]
-        try:
-            ifconfig_popen = Popen.check_call(argslist, stdout=Popen.STORE,
-                                              stderr=Popen.STORE,
-                                              logger=LOGGER())
-        except CalledProcessError as error:
-            LOGGER().warn("'ifconfig' failed with following error: %s", error)
-            return None
+        if nic[NetworkInfo.NIC_DEV_KEY]:
+            nic_desc = "%s (%s)" % (nic[NetworkInfo.NIC_NAME_KEY],
+                                    nic[NetworkInfo.NIC_DEV_KEY])
+        else:
+            nic_desc = nic[NetworkInfo.NIC_NAME_KEY]
 
-        # pylint: disable-msg=E1103
-        # ifconfig_out is a string
-        ifconfig_out = ifconfig_popen.stdout.split()
-        link_data = {}
-        link_data['flags'] = ifconfig_out[1]
-        ifconfig_out = ifconfig_out[2:]
-        for i in range(len(ifconfig_out) / 2):
-            link_data[ifconfig_out[2 * i]] = ifconfig_out[2 * i + 1]
-        return link_data
+        return nic_desc
+
+    @staticmethod
+    def get_nic_link(nic):
+        '''Returns NIC link name for given network interface - e.g. "bge0".
+        NIC link name is used by ipadm(1m) or dhcpinfo(1) to refer particular
+        network interface.
+
+        '''
+        return nic[NetworkInfo.NIC_LINK_KEY]
+
+    @staticmethod
+    def get_nic_name(nic):
+        '''Returns NIC name for given network interface - e.g. "net0".
+        NIC name is provided to user for purposes of selecting network
+        interface on 'Manual Network Configuration' screen. It is either
+        vanity name or physical device name (if vanity name is not
+        available).
+
+        '''
+        return nic[NetworkInfo.NIC_NAME_KEY]
+
+    def _nic_is_under_dhcp_control(self):
+        '''Returns True if selected NIC is controlled by DHCP.
+        Returns False otherwise.
+
+        '''
+
+        #
+        # Obtain type for all ipadm address objects created over given NIC.
+        # Then search for presence of 'dhcp' type which indicates IPv4
+        # address object controlled by DHCP.
+        #
+        argslist = ['/usr/sbin/ipadm', 'show-addr', '-p', '-o', 'type',
+                    self.get_nic_link(self.nic_iface) + "/"]
+        try:
+            ipadm_popen = Popen.check_call(argslist, stdout=Popen.STORE,
+                                           stderr=Popen.STORE,
+                                           logger=LOGGER())
+        except CalledProcessError as error:
+            LOGGER().warn("'ipadm' failed with following error: %s", error)
+            return False
+
+        if 'dhcp' in ipadm_popen.stdout.split():
+            return True
+        else:
+            return False
 
     def _run_dhcpinfo(self, code, maxent=1):
         '''Run the dhcpinfo command against this NIC, requesting 'code'
@@ -301,21 +356,22 @@ class NetworkInfo(SMFConfig):
         This function always returns successfully; if the underlying call
         to dhcpinfo fails, then None is returned.
         '''
-        ifconfig_data = self.get_ifconfig_data()
-        if not ifconfig_data or ifconfig_data['flags'].count("DHCP") == 0:
+        nic_link = self.get_nic_link(self.nic_iface)
+
+        if not self._nic_is_under_dhcp_control():
             LOGGER().warn("This connection is not using DHCP")
             return None
 
         argslist = ['/sbin/dhcpinfo',
-                    '-i', self.nic_name,
+                    '-i', nic_link,
                     '-n', str(maxent),
                     code]
         try:
             dhcp_popen = Popen.check_call(argslist, stdout=Popen.STORE,
                                           stderr=Popen.STORE, logger=LOGGER())
         except CalledProcessError as error:
-            LOGGER().warn("'dhcpinfo -i %s -n %s' failed with following error:"
-                          " %s" % (self.nic_name, maxent, error))
+            LOGGER().warn("'dhcpinfo -i %s -n %s %s' failed with following "
+                          "error: %s", nic_link, str(maxent), code, error)
             return None
             
         # pylint: disable-msg=E1103
@@ -353,9 +409,11 @@ class NetworkInfo(SMFConfig):
 
             static_address = IPAddress(self.ip_address, netmask=self.netmask)
 
+            nic_name = self.get_nic_name(self.nic_iface)
+
             # IPv4 configuration
             ipv4.add_props(static_address=static_address,
-                           name='%s/v4' % self.nic_name,
+                           name='%s/v4' % nic_name,
                            address_type='static')
 
             #
@@ -366,7 +424,7 @@ class NetworkInfo(SMFConfig):
                 ipv4.add_props(default_route=self.gateway)
 
             # IPv6 configuration
-            ipv6.add_props(name='%s/v6' % self.nic_name,
+            ipv6.add_props(name='%s/v6' % nic_name,
                            address_type='addrconf',
                            stateless='yes',
                            stateful='yes')

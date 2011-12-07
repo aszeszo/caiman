@@ -148,7 +148,7 @@ class SummaryScreen(BaseScreen):
                 summary_text.append("")
                 summary_text.append(_("Network:"))
                 summary_text.extend(self.get_networks())
-            elif configure_group(SC_GROUP_NS):
+            if configure_group(SC_GROUP_NS):
                 self._get_nameservice(summary_text)
         
             return "\n".join(summary_text)
@@ -166,27 +166,23 @@ class SummaryScreen(BaseScreen):
                                    self.sysconfig.system.hostname)
 
         if not configure_group(SC_GROUP_NETWORK):
-            if configure_group(SC_GROUP_NS):
-                self._get_nameservice(network_summary)
             return network_summary
 
         nic = self.sysconfig.nic       
-        if nic:
-            if nic.type == NetworkInfo.AUTOMATIC:
-                network_summary.append(_("  Network Configuration: Automatic"))
-            elif nic.type == NetworkInfo.NONE:
-                network_summary.append(_("  Network Configuration: None"))
-            else:
-                network_summary.append(_("  Manual Configuration: %s")
-                                       % nic.nic_name)
-                network_summary.append(_("IP Address: %s") % nic.ip_address)
-                network_summary.append(_("Netmask: %s") % nic.netmask)
-                if nic.gateway:
-                    network_summary.append(_("Router: %s") % nic.gateway)
-                if configure_group(SC_GROUP_NS):
-                    self._get_nameservice(network_summary)
-        elif configure_group(SC_GROUP_NS):
-            self._get_nameservice(network_summary)
+        if nic.type == NetworkInfo.AUTOMATIC:
+            network_summary.append(_("  Network Configuration: Automatic"))
+        elif nic.type == NetworkInfo.NONE:
+            network_summary.append(_("  Network Configuration: None"))
+        elif nic.type == NetworkInfo.FROMGZ:
+            network_summary.append(_("  Network Configuration:"
+                                     " Mandated from global zone"))
+        elif nic.type == NetworkInfo.MANUAL:
+            network_summary.append(_("  Manual Configuration: %s")
+                                   % NetworkInfo.get_nic_desc(nic.nic_iface))
+            network_summary.append(_("IP Address: %s") % nic.ip_address)
+            network_summary.append(_("Netmask: %s") % nic.netmask)
+            if nic.gateway:
+                network_summary.append(_("Router: %s") % nic.gateway)
         return network_summary
 
     def _get_nameservice(self, summary):

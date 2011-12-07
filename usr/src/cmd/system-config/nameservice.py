@@ -102,9 +102,11 @@ class NameService(BaseScreen):
         ''' called upon display of a screen '''
         sc_profile = solaris_install.sysconfig.profile.from_engine()
         LOGGER.debug(sc_profile)
-        if hasattr(sc_profile, 'nic') and sc_profile.nic and \
-                sc_profile.nic.type != NetworkInfo.MANUAL and \
-                configure_group(SC_GROUP_NETWORK):
+        # Skip naming services screens if user either wants automatic
+        # networking configuration or no networking at all.
+        if configure_group(SC_GROUP_NETWORK) and \
+           (sc_profile.nic.type == NetworkInfo.AUTOMATIC or
+            sc_profile.nic.type == NetworkInfo.NONE):
             raise SkipException
         if sc_profile.nameservice is None:
             # first time, assign sysconfig values to defaults found above

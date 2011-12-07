@@ -154,9 +154,9 @@ class SummaryScreen(BaseScreen):
             network_summary.append(_("  Network Configuration: Automatic"))
         elif nic.type == NetworkInfo.NONE:
             network_summary.append(_("  Network Configuration: None"))
-        else:
+        elif nic.type == NetworkInfo.MANUAL:
             network_summary.append(_("  Manual Configuration: %s")
-                                   % nic.nic_name)
+                                   % NetworkInfo.get_nic_desc(nic.nic_iface))
             network_summary.append(_("    IP Address: %s") % nic.ip_address)
             network_summary.append(_("    Netmask: %s") % nic.netmask)
             if nic.gateway:

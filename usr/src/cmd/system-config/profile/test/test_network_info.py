@@ -74,6 +74,7 @@ SAMPLE_NONE_NETWORK_XML = '''<root>
 </root>
 '''
 
+
 class TestNetworkInfo_to_xml(unittest.TestCase):
 
     def _gen_to_xml(self, nic, compare_with_this):
@@ -107,6 +108,11 @@ class TestNetworkInfo_to_xml(unittest.TestCase):
         '''NetworkInfo.to_xml() looks correct for type = MANUAL'''
         nic = NetworkInfo(dns_address="1.2.3.4")
         nic.type = NetworkInfo.MANUAL
+        # initialize structure containing information about selected
+        # network interface
+        nic.nic_iface = {NetworkInfo.NIC_NAME_KEY: 'net0',
+                         NetworkInfo.NIC_DEV_KEY: 'e1000g0',
+                         NetworkInfo.NIC_LINK_KEY: 'net0'}
         xml = nic.to_xml()
         for svc in xml:
             if svc.get("name") == "network/physical":
@@ -124,7 +130,7 @@ class TestNetworkInfo_to_xml(unittest.TestCase):
         for prop_group in net_install.iterchildren().next():
             if prop_group.get("name") not in ("install_ipv4_interface",
                                               "install_ipv6_interface"):
-                self.fail("Unexpected property group of network/dns/install: "
+                self.fail("Unexpected property group of network/install: "
                           "%s" % etree.tostring(prop_group, pretty_print=True))
 
 

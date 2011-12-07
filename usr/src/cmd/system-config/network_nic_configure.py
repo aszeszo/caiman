@@ -107,7 +107,7 @@ class NICConfigure(BaseScreen):
         if self.nic.type != NetworkInfo.MANUAL:
             raise SkipException
         
-        nic_name = self.nic.nic_name
+        nic_name = NetworkInfo.get_nic_name(self.nic.nic_iface)
         
         if self.nic.find_defaults:
             self.set_defaults(self.nic)
