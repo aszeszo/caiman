@@ -246,11 +246,30 @@ class formatValue(unittest.TestCase):
         self.cpu = None
         self.mem = None
 
-    def test_arch_formatValue(self):
+    @staticmethod
+    def is_ipv4(fmt):
+        octets = fmt.split('.')
+        # Each ipv4 address is composed of 4 octets
+        if len(octets) != 4:
+            return False
+        for k in octets:
+            # Octet is formated without leading 0
+            if k != str(int(k)):
+                return False
+            # Each octet is in range 0-255
+            if int(k) < 0 or int(k) > 255:
+                return False
+        return True
+
+    def test_ipv4_formatValue(self):
         '''Ensure that ipv4 criteria is formatted appropriately'''
         fmt = AIdb.formatValue('MINipv4', self.ipv4)
-        for octet in fmt.split('.'):
-            self.assertEqual(octet, str(int(octet)))
+        self.assertTrue(self.is_ipv4(fmt))
+
+    def test_network_formatValue(self):
+        '''Ensure that ipv4 network criteria is formatted appropriately'''
+        fmt = AIdb.formatValue('network', self.network)
+        self.assertTrue(self.is_ipv4(fmt))
 
     def test_mac_formatValue(self):
         '''Ensure that mac criteria is formatted appropriately'''
@@ -266,8 +285,6 @@ class formatValue(unittest.TestCase):
 
     def test_other_formatValue(self):
         '''Ensure that formatValue does nothing with all other criteria'''
-        fmt = AIdb.formatValue('network', self.network)
-        self.assertEqual(fmt, self.network)
         fmt = AIdb.formatValue('arch', self.arch)
         self.assertEqual(fmt, self.arch)
         fmt = AIdb.formatValue('platform', self.platform)
@@ -491,6 +508,7 @@ class findManifest(unittest.TestCase):
                        }
         manifest = AIdb.findManifest(my_crit_dict, self.aidb)
         self.assertEquals(manifest, None)
+
 
 class is_in_list(unittest.TestCase):
     '''Tests for is_in_list'''

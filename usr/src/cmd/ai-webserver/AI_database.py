@@ -557,7 +557,7 @@ def getTableCriteria(name, instance, queue, table, humanOutput=False,
         queue.put(query)
         query.waitAns()
         rsp = query.getResponse()
-        if rsp: # make sure it wasn't just deleted
+        if rsp:  # make sure it wasn't just deleted
             return rsp[0]
     return None
 
@@ -736,7 +736,7 @@ def formatValue(key, value):
         ret = value[0:2] + ":" + value[2:4] + ":" + \
               value[4:6] + ":" + value[6:8] + ":" + \
               value[8:10] + ":" + value[10:12]
-    elif key == "ipv4" and value:
+    elif key in ("ipv4", "network") and value:
         svalue = "%12.12d" % long(value)
         ret = str(int(svalue[0:3])) + "." + \
               str(int(svalue[3:6])) + "." + \
