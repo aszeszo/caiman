@@ -27,6 +27,7 @@ Common screen functionality for text installer UI
 '''
 
 from terminalui import _
+from terminalui.inner_window import InnerWindow
 
 
 class QuitException(StandardError):
@@ -107,6 +108,9 @@ class BaseScreen(object):
         self.orig_border = (0, 0)
         self.help_data = self.HELP_DATA
         self.help_format = self.HELP_FORMAT
+        # List of keys which cause redrawing the current screen.
+        # Only Ctrl-L by default.
+        self.redraw_keys = [InnerWindow.REPAINT_KEY]
     
     def get_win_size_y(self):
         '''Return the window size, adjusted based on the specified border'''

@@ -26,6 +26,7 @@
 Contains the Welcome Screen for the SCI Tool
 '''
 
+from curses import KEY_ENTER
 from solaris_install.sysconfig import _, SCI_HELP, get_sc_options_from_doc, \
                                       configure_group, SC_GROUP_IDENTITY, \
                                       SC_GROUP_NETWORK, SC_GROUP_NS, \
@@ -39,7 +40,6 @@ from terminalui.window_area import WindowArea
 
 class WelcomeScreen(BaseScreen):
     '''First screen of the SCI tool.
-    No special __init__ needed beyond that provided by BaseScreen
     
     '''
     
@@ -64,6 +64,16 @@ class WelcomeScreen(BaseScreen):
     HELP_DATA = (SCI_HELP + "/%s/welcome.txt",
                  _("Welcome and Navigation Instructions"))
     INDENT = 2  # begin text right of scroll bar
+
+    def __init__(self, main_win):
+        super(WelcomeScreen, self).__init__(main_win)
+        #
+        # In addition to default set of redraw keys, refresh Welcome screen
+        # also when 'Enter' or 'Spacebar' keys are pressed.
+        # That's useful in cases when user attaches to console after Welcome
+        # screen was already displayed.
+        #
+        self.redraw_keys.extend([KEY_ENTER, ord(' ')])
     
     def set_actions(self):
         '''Remove the F3_Back Action from the first screen'''

@@ -217,13 +217,15 @@ class MainWindow(object):
         self.footer.window.addstr(display_str.encode(get_encoding()))
         self.footer.window.noutrefresh()
 
-    def getch(self):
+    def getch(self, redraw_keys=[InnerWindow.REPAINT_KEY]):
         '''Call down into central_area to get a keystroke, and, if necessary,
-        update the footer to switch to using the Esc- prefixes
+        update the footer to switch to using the Esc- prefixes.
+        Redraw the screen if any of redraw keys is pressed.
 
         '''
         input_key = self._active_win.getch()
-        if input_key == InnerWindow.REPAINT_KEY:
+        # Redraw whole screen if one of 'redraw' keys has been pressed.
+        if input_key in redraw_keys:
             self.redrawwin()
             input_key = None
         if InnerWindow.UPDATE_FOOTER:
@@ -238,7 +240,7 @@ class MainWindow(object):
         '''
         input_key = None
         while input_key not in self.actions:
-            input_key = self.getch()
+            input_key = self.getch(current_screen.redraw_keys)
             input_key = self.central_area.process(input_key)
             self.do_update()
         return self.actions[input_key].do_action(current_screen)
