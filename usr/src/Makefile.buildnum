@@ -111,4 +111,4 @@ PLATNUM= 0
 #
 OPENCS  :sh = (hg tip --template '{rev}\n')
 NIGHTLYID		= $(OPENCS)
-BUILDID= 6
+BUILDID= 7
