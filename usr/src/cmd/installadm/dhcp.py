@@ -20,7 +20,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 Classes, methods and related routines used in the configuration and management
@@ -49,8 +49,17 @@ GETENT = "/usr/bin/getent"
 SVCS = "/usr/bin/svcs"
 SVCADM = "/usr/sbin/svcadm"
 SVCCFG = "/usr/sbin/svccfg"
+SVCPROP = "/usr/bin/svcprop"
+
 DHCP_SERVER_IPV4_SVC = "svc:/network/dhcp/server:ipv4"
-RESOLV = "/etc/resolv.conf"
+
+# Mappings for name services (DNS, NIS) and related properties
+_ns_map = {'dns': {'SVC_NAME': "svc:/network/dns/client",
+                   'DOMAIN_PROP': "config/domain",
+                   'SERVER_PROP': "config/nameserver"},
+           'nis': {'SVC_NAME': "svc:/network/nis/domain",
+                   'DOMAIN_PROP': "config/domainname",
+                   'SERVER_PROP': "config/ypservers"}}
 
 # These lists may be used to validate action arguments to the control() method.
 SMF_SUPPORTED_ACTIONS = ('enable', 'disable', 'restart')
@@ -75,18 +84,11 @@ SPARC_VCI_PATTERN = 'match if not \(sub.*"PXEClient"\);'
 #
 # First is the configuration file base, containing the stock options we'd
 # like set for any new configuration.
-# Optionally passed in the format list:
-#   domainname - The domain name for this system
-#   nameservers - A comma-seperated list of server(s) (IP or hostname)
 CFGFILE_BASE = """# dhcpd.conf
 #
 # Configuration file for ISC dhcpd
 # (created by installadm(1M))
 #
-
-# global option definitions, common to all subnets
-option domain-name "%(domainname)s";
-option domain-name-servers %(nameservers)s;
 
 default-lease-time 900;
 max-lease-time 86400;
@@ -98,6 +100,20 @@ authoritative;
 # Set logging facility (accompanies setting in syslog.conf)
 log-facility local7;
 """
+
+# A set of strings to use when setting name services configuration data during
+# file initialization. These are currently server-wide (global) attributes and
+# are included when we initialize a new base config file, but all entries are
+# optional, so we have a separate string for each setting.
+CFGFILE_DNS_DOMAIN_STRING = """option domain-name "%s";
+"""
+CFGFILE_DNS_SERVERS_STRING = """option domain-name-servers %s;
+"""
+CFGFILE_NIS_DOMAIN_STRING = """option nis-domain "%s";
+"""
+CFGFILE_NIS_SERVERS_STRING = """option nis-servers %s;
+"""
+
 # The following defines a block quote for subnet stanzas. These stanzas
 # describe the details of a subnet which will be supported by the DHCP
 # server.
@@ -204,14 +220,9 @@ class _DHCPConfigBase(_DHCPConfigStanza):
     '''
     DHCP configuration class containing base configuration data.  This should
     only be employed when a new configuration file is being created.
-    Constructor arguments:
-        domainname - The domain name for this system
-        nameservers - A comma-seperated list of server(s) (IP or hostname)
     '''
-    def __init__(self, domainname, nameservers):
+    def __init__(self):
         self.block = CFGFILE_BASE
-        self.domainname = domainname
-        self.nameservers = nameservers
 
 
 class _DHCPConfigSubnet(_DHCPConfigStanza):
@@ -643,20 +654,44 @@ class DHCPServer(object):
         if self.is_configured():
             raise DHCPServerError(_("init_config failed, file already exists"))
 
-        domainname = _get_domain()
-        nameservers = _get_name_servers()
-        if nameservers is not None:
-            nameservers = ', '.join([ip for ip in nameservers])
-
-        if domainname is None or nameservers is None:
-            print >> sys.stderr, cw(_("\nName services are not configured for "
-                                      "local DHCP server. Manual "
-                                      "configuration will be required, please "
-                                      "see dhcpd(8) for further "
-                                      "information.\n"))
-
-        new_stanza = _DHCPConfigBase(domainname, nameservers)
+        # Initialize a base configuration and create a new file with it
+        new_stanza = _DHCPConfigBase()
         self._add_stanza_to_config_file(new_stanza)
+
+        # Add configured name services to the global configuration
+        self._add_name_services()
+
+    def _add_name_services(self):
+        '''
+        Discovers name services available on the server and adds them to the
+        global scope of the DHCP configuration. DNS and NIS are supported, both
+        of which are optional for AI services.
+        '''
+        # Note the protocol dependencies: NIS requires a domain and any number
+        # of optional servers, DNS requires at least one server and an optional
+        # domain.
+        lines = list()
+        dns_servers = _get_nameservers('dns')
+        if dns_servers is not None:
+            lines.append(CFGFILE_DNS_SERVERS_STRING % dns_servers)
+            dns_domain = _get_domain('dns')
+            if dns_domain is not None:
+                lines.append(CFGFILE_DNS_DOMAIN_STRING % dns_domain)
+
+        nis_domain = _get_domain('nis')
+        if nis_domain is not None:
+            lines.append(CFGFILE_NIS_DOMAIN_STRING % nis_domain)
+            nis_servers = _get_nameservers('nis')
+            if nis_servers is not None:
+                lines.append(CFGFILE_NIS_SERVERS_STRING % nis_servers)
+
+        if lines:
+            # At least one name service is configured. Format the text that
+            # is saved off with a header and print it to the config file.
+            lines.insert(0, '\n# Global name services\n')
+            lines.append('\n')
+            with open(self._properties['config_file'], 'a') as cfg:
+                cfg.writelines(lines)
 
     def control(self, action):
         '''
@@ -698,8 +733,7 @@ class DHCPServer(object):
         '''
         Add the stanza passed to the server's configuration file.
         '''
-        cfgfile = self._properties['config_file']
-        with open(cfgfile, 'a') as cfg:
+        with open(self._properties['config_file'], 'a') as cfg:
             cfg.write(new_stanza.format_stanza())
 
     @property
@@ -1223,47 +1257,58 @@ def _check_subnet_for_overlap(subnet, loaddr, hiaddr):
                                        % subnet.subnet_ip))
 
 
-def _get_domain():
+def _get_domain(svc):
     '''
-    Returns the first domain name listed in the /etc/resolv.conf file.
-    Note this can be labeled either 'search' or 'domain'.
+    Returns the domainname of the name service passed as 'svc'. Supported
+    values of svc are 'dns' and 'nis'. Returns None if no domainname is
+    set or if the svc passed is not online.
     '''
+    if svc not in ['dns', 'nis']:
+        raise ValueError(_("invalid name service: %s") % svc)
 
-    if os.path.exists(RESOLV):
-        lines = list()
-        with open(RESOLV, "r") as resolv:
-            lines = resolv.readlines()
+    service = _ns_map[svc]['SVC_NAME']
+    prop = _ns_map[svc]['DOMAIN_PROP']
 
-        sre = re.compile("^search\s+(\S+)")
-        dre = re.compile("^domain\s+(\S+)")
-        domains = list()
-
-        domains = [m.group(1) for m in filter(bool, map(sre.match, lines))]
-        if domains:
-            return domains[0]
-
-        domains = [m.group(1) for m in filter(bool, map(dre.match, lines))]
-        if domains:
-            return domains[0]
-    else:
-        print >> sys.stderr, _("Unable to determine DNS domain for DHCP "
-                               "configuration.")
+    cmd = [SVCS, "-Ho", "STATE", service]
+    p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                         logger='', stderr_loglevel=logging.DEBUG)
+    if p.stdout.strip() != 'online':
         return None
 
+    cmd = [SVCPROP, "-p", prop, service]
+    p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                         logger='', stderr_loglevel=logging.DEBUG)
+    
+    return p.stdout.strip()
 
-def _get_name_servers():
+
+def _get_nameservers(svc):
     '''
-    Returns this host's name server(s).
+    Returns a comma-separated string of name server(s) for the protocol named
+    in 'svc' if any are configured. Supported values of svc are 'dns' and
+    'nis'. Returns None if no servers are found, or if the svc passed is not
+    online.
     '''
-    regexp = re.compile("^nameserver\s+(\S+)$")
-    if os.path.exists(RESOLV):
-        with open(RESOLV, "r") as resolv:
-            return [m.group(1)
-                for m in filter(bool, map(regexp.match, resolv.readlines()))]
-    else:
-        print >> sys.stderr, _("Unable to determine DNS servers for DHCP "
-                               "configuration.")
+    if svc not in ['dns', 'nis']:
+        raise ValueError(_("invalid name service: %s") % svc)
+
+    service = _ns_map[svc]['SVC_NAME']
+    prop = _ns_map[svc]['SERVER_PROP']
+
+    cmd = [SVCS, "-Ho", "STATE", service]
+    p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                         logger='', stderr_loglevel=logging.DEBUG)
+    if p.stdout.strip() != 'online':
         return None
+
+    cmd = [SVCPROP, "-p", prop, service]
+    p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                         logger='', stderr_loglevel=logging.DEBUG)
+    servers = p.stdout.strip().split()
+    if servers is not None:
+        servers = ', '.join([ip for ip in servers])
+
+    return servers
 
 
 def _get_default_route_for_subnet(subnet_ip):
