@@ -522,6 +522,12 @@ def do_create_baseservice(options):
                 publisher=options.publisher)
         except (ImageError,
                 pkg.client.api_errors.ApiException) as err:
+            print >> sys.stderr, cw(_("The specified data source, %s, "
+                "for the service is not a path to an existing ISO image.") % \
+                options.srcimage)
+            print >> sys.stderr, cw(_("Attempting to create the service from"
+                " pkg(5) package, %s, failed for the following reasons:") % \
+                options.srcimage)
             if isinstance(err, pkg.client.api_errors.VersionException):
                 print >> sys.stderr, cw(_("The IPS API version specified, "
                     + str(err.received_version) +
@@ -578,7 +584,7 @@ def do_create_baseservice(options):
                                        bootargs=options.bootargs)
     except AIServiceError as err:
         raise SystemExit(err)
-    
+
     # Register & enable service
     # (Also enables system/install/server, as needed)
     got_services_error = False
@@ -645,7 +651,7 @@ def do_create_service(cmd_options=None):
     options = parse_options(cmd_options)
 
     logging.debug('options: %s', options)
-    
+
     # Check the network configuration. Verify that the server settings
     # are not obviously broken (i.e., check for things which will definitely
     # cause failure).
@@ -670,7 +676,7 @@ def do_create_service(cmd_options=None):
     modified_env['LC_NUMERIC'] = 'C'
     if Popen(cmd, env=modified_env).wait():
         raise SystemExit(1)
-    
+
     # convert options.bootargs to a string
     if options.bootargs:
         options.bootargs = ",".join(options.bootargs) + ","
