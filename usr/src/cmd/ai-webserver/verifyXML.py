@@ -19,13 +19,13 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 """
 A/I Verify Manifest
 """
 # Eventually bring names into convention.
 import os.path
-
+import sys
 import lxml.etree
 
 import osol_install.auto_install.AI_database as AIdb
@@ -163,6 +163,51 @@ def checkMAC(value):
 
 
 # =============================================================================
+def checkArch(value):
+# =============================================================================
+    """
+    Private function that checks whether arch value is one of the known values
+
+    Args:
+      value: the string being checked
+
+    Returns:
+      None
+
+    Raises:
+      ValueError: Warning: Architecture is not listed in list of known
+                  architectures
+    """
+
+    if value not in com.KNOWN_ARCHS:
+        arch_err_msg = _("Warning: Architecture '%s' is not listed in list " \
+            "of known architectures: %s") % (value, com.KNOWN_ARCHS)
+        raise ValueError(arch_err_msg)
+
+
+# =============================================================================
+def checkCPU(value):
+# =============================================================================
+    """
+    Private function that checks whether cpu value is one of the known values
+
+    Args:
+      value: the string being checked
+
+    Returns:
+      None
+
+    Raises:
+      ValueError: Warning: CPU class is not listed in list of know CPU classes
+    """
+
+    if value not in com.KNOWN_CPUS:
+        cpu_err_msg = _("Warning: CPU class '%s' is not listed in list of " \
+            "known CPU classes: %s") % (value, com.KNOWN_CPUS)
+        raise ValueError(cpu_err_msg)
+
+
+# =============================================================================
 def prepValuesAndRanges(criteriaRoot, database, table=AIdb.MANIFESTS_TABLE):
 # =============================================================================
     """
@@ -234,6 +279,22 @@ def prepValuesAndRanges(criteriaRoot, database, table=AIdb.MANIFESTS_TABLE):
 
         # For value criteria, there is no need to do anything to store
         # single value into val_range.text.  It is already there.
+        # Just check architecture and cpu values because it is common to
+        # confuse i86pc and i386 or sparc and sun4v
+        if crit_name == "arch":
+            for one_value in value_list:
+                try:
+                    checkArch(one_value)
+                except ValueError as err:
+                    # Just print warning
+                    print >> sys.stderr, err
+        elif crit_name == "cpu":
+            for one_value in value_list:
+                try:
+                    checkCPU(one_value)
+                except ValueError as err:
+                    # Just print warning
+                    print >> sys.stderr, err
         #
         # For some types supported by range criteria, some additional
         # format checking is needed.  Also, range criteria that are passed

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """
 Common Python Objects for Installadm Commands
@@ -113,6 +113,12 @@ MULTIHOMED_TEST = ("/usr/bin/test `%(ksh93)s -c 'source %(com-script)s;"
 
 _IS_MULTIHOMED = None
 
+# List of known/supported architectures (reported by uname -m)
+KNOWN_ARCHS = ['i86pc', 'sun4u', 'sun4v']
+
+# List of known/supported processor types (reported by uname -p)
+KNOWN_CPUS = ['i386', 'sparc']
+
 
 def is_multihomed():
     ''' Determines if system is multihomed
@@ -129,7 +135,7 @@ def is_multihomed():
 def setup_logging(log_level):
     '''Initialize the logger, logging to stderr at log_level,
        log_level defaults to warn
-    
+
     Input:
         Desired log level for logging
     Return:
@@ -148,7 +154,7 @@ if "PYLOG_LEVEL" in os.environ:
 def ask_yes_or_no(prompt):
     ''' Prompt user if it is ok to do something.
         Input: prompt - question to ask user
-        Returns: True - if user agrees 
+        Returns: True - if user agrees
                  False otherwise (default)
         Raises: KeyboardInterrupt if user hits ctl-c
 
@@ -177,7 +183,7 @@ def cli_wrap(text):
     utility to ensure appropriate formatting for the CLI's output when
     printing longer-than-70-character strings. Note that the wrap width is not
     dynamic, it is hardcoded at 70 characters.
-    
+
     The argument 'text' is processed into a list of strings and returned as a
     rejoined string. The text is first dedented, which removes any leading
     whitespace (as might be seen with a block-quoted string), and it is then
