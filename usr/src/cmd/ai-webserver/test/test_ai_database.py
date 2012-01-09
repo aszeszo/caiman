@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -282,6 +282,8 @@ class formatValue(unittest.TestCase):
         fmt = AIdb.formatValue('MINmem', self.mem)
         self.assertEqual(fmt.split(' ')[0], self.mem)
         self.assertEqual(fmt.split(' ')[1], 'MB')
+        fmt = AIdb.formatValue('MINmem', self.mem, units=False)
+        self.assertEqual(fmt, self.mem)
 
     def test_other_formatValue(self):
         '''Ensure that formatValue does nothing with all other criteria'''

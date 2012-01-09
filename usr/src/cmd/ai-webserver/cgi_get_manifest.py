@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 cgi_get_manifest retrieves the manifest based upon certain criteria
@@ -269,6 +269,12 @@ def send_manifest(form_data, port=0, servicename=None,
         except (ValueError, NameError, TypeError, KeyError):
             criteria = dict()
 
+    # Generate templating dictionary from criteria
+    template_dict = dict()
+    for crit in criteria:
+        template_dict["AI_" + crit.upper()] = \
+                AIdb.formatValue(crit, criteria[crit], units=False)
+            
     # find the appropriate manifest
     try:
         manifest = AIdb.findManifest(criteria, aisql)
@@ -437,8 +443,8 @@ def send_manifest(form_data, port=0, servicename=None,
                         raw_profile = pfp.read()
                     # do any template variable replacement {{AI_xxx}}
                     tmpl_profile = sc.perform_templating(raw_profile,
-                                                         validate_only=False)
-                    # precautionary validation or profile, logging only
+                                                         template_dict)
+                    # precautionary validation of profile, logging only
                     sc.validate_profile_string(tmpl_profile, image_dir,
                                                dtd_validation=True,
                                                warn_if_dtd_missing=True)

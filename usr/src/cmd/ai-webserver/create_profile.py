@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 """
 AI create-profile
 """
@@ -258,63 +258,15 @@ def do_create_profile(cmd_options=None):
             has_errors = True
             continue
 
-        # define all criteria in local environment for imminent validation
-        for crit in AIdb.getCriteria(queue, table=AIdb.PROFILES_TABLE,
-                onlyUsed=False, strip=True):
-            if crit not in criteria_dict:
-                continue
-            val = criteria[crit]
-            if not val:
-                continue
-
-            # Determine if this crit is a range criteria or not.
-            is_range_crit = AIdb.isRangeCriteria(queue, crit,
-                table=AIdb.PROFILES_TABLE)
-
-            if is_range_crit:
-                # Range criteria must be specified as a single value to be
-                # supported for templating.
-                if val[0] != val[1]:
-                    continue
-
-                # MAC specified in criteria - also set client-ID in environment
-                if crit == 'mac':
-                    val = val[0]
-                    os.environ["AI_MAC"] = \
-                        "%x:%x:%x:%x:%x:%x" % (
-                                int(val[0:2], 16),
-                                int(val[2:4], 16),
-                                int(val[4:6], 16),
-                                int(val[6:8], 16),
-                                int(val[8:10], 16),
-                                int(val[10:12], 16))
-                    os.environ["AI_CID"] = "01" + str(val).upper()
-                # IP or NETWORK specified in criteria
-                elif crit == 'network' or crit == 'ipv4':
-                    val = val[0]
-                    os.environ["AI_" + crit.upper()] = \
-                        "%d.%d.%d.%d" % (
-                                int(val[0:3]),
-                                int(val[3:6]),
-                                int(val[6:9]),
-                                int(val[9:12]))
-                else:
-                    os.environ["AI_" + crit.upper()] = val[0]
-            else:
-                # Value criteria must be specified as a single value to be
-                # supported for templating.
-                if len(val) == 1:
-                    os.environ["AI_" + crit.upper()] = val[0]
-
         # validates the profile and report errors if found
-        tmpl_profile = df.validate_file(profile_name, profile_file, image_dir,
+        raw_profile = df.validate_file(profile_name, profile_file, image_dir,
                                         verbose=False)
-        if not tmpl_profile:
+        if not raw_profile:
             has_errors = True
             continue
 
-        # create file from template string and report failures
-        full_profile_path = copy_profile_internally(tmpl_profile)
+        # create file from profile string and report failures
+        full_profile_path = copy_profile_internally(raw_profile)
         if not full_profile_path:
             has_errors = True
             continue
@@ -371,43 +323,14 @@ def do_update_profile(cmd_options=None):
         raise SystemExit(missing_profile_error.format(
                          service=options.service_name, profile=profile_name))
 
-    crit_dict = AIdb.getProfileCriteria(profile_name, queue, humanOutput=True,
-                 onlyUsed=True)
-
-    # if there is criteria set for profile export the value in environment
-    if crit_dict:
-        for crit in crit_dict.keys():
-            is_range_crit = crit.startswith('MIN') or crit.startswith('MAX')
-            val = crit_dict[crit]
-            if crit.startswith('MAX'):
-                critname = crit[3:] 
-
-                # if the corresponding MIN value not set in db continue
-                if "MIN" + critname not in crit_dict:
-                    continue
-                min_value = crit_dict["MIN" + critname]
-                if not min_value:
-                    continue
-
-                # if the MIN value is equal to MAX, define the variable
-                # in environment
-                if val and val == min_value:
-                    fmt_value = AIdb.formatValue(critname, min_value)
-                    os.environ["AI_" + critname.upper()] = fmt_value
-                    if critname == "mac":
-                        cid = fmt_value.replace(":", "")
-                        os.environ["AI_CID"] = "01" + cid.upper()
-            if not is_range_crit and val:
-                os.environ["AI_" + crit.upper()] = val
-
     # validates the profile and report the errors if found 
-    tmpl_profile = df.validate_file(profile_name, profile_file, image_dir,
+    raw_profile = df.validate_file(profile_name, profile_file, image_dir,
                                     verbose=False)
-    if not tmpl_profile:
+    if not raw_profile:
         raise SystemExit(1)
 
-    # create file from template string and report failures
-    tmp_profile_path = copy_profile_internally(tmpl_profile)
+    # create file from string and report failures
+    tmp_profile_path = copy_profile_internally(raw_profile)
     if not tmp_profile_path:
         raise SystemExit(1) 
 

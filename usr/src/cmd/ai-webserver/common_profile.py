@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 '''
 Contains routines and definitions for any script involving profiles
 '''
@@ -44,19 +44,20 @@ AI_MANIFEST_ATTACHMENT_NAME = 'manifest.xml'
 WEBSERVD_UID = pwd.getpwnam('webservd').pw_uid
 WEBSERVD_GID = grp.getgrnam('webservd').gr_gid
 
-TEMPLATE_VARIABLES = [
-            'AI_ARCH',
-            'AI_CID',
-            'AI_CPU',
-            'AI_HOSTNAME',
-            'AI_IPV4',
-            'AI_MAC',
-            'AI_MEM',
-            'AI_NETWORK',
-            'AI_PLATFORM',
-            'AI_SERVICE',
-            'AI_ZONENAME'
-            ]
+# The values in this dictionary are merely valid dummy values used to ensure
+# that templated SMF properties can be validated by installadm operations.
+TEMPLATE_VARIABLES = {
+    'AI_ARCH': 'i86pc',
+    'AI_CPU': 'i386',
+    'AI_HOSTNAME': 'solaris',
+    'AI_IPV4': '10.10.10.10',
+    'AI_MAC': '01:01:01:01:01:01',
+    'AI_MEM': '2048',
+    'AI_NETWORK': '10.0.0.0',
+    'AI_PLATFORM': 'i86pc',
+    'AI_SERVICE': 'default-i386',
+    'AI_ZONENAME': 'testzone'
+    }
 
 
 class AICriteriaTemplate(Template):
@@ -75,65 +76,25 @@ class AICriteriaTemplate(Template):
     '''
 
 
-def perform_templating(profile_str, validate_only=True):
-    ''' Given profile string, do all template substitutions for any criteria
-    found in the process environment
+def perform_templating(profile_str, template_dict=dict(TEMPLATE_VARIABLES)):
+    ''' Given profile string, do all template substitutions using either a
+    provided dictionary or the default dictionary.
     Args:
-        profile_str - profile in a string
-        validate_only - boolean, set to True if doing validation only -
-            for cases where the client criteria is not available
-            If validate_only, do not generate exceptions for criteria missing
-            from environment
+        profile_str - profile as a string
+        template_dict - Optional dictionary to use for templating
     Returns:
         profile string with any templating substitution performed
     Exceptions:
-        KeyError when template variable missing when it is
-            absolutely needed; e.g., install time, installadm
-            for static profile
-        ValueError when environment variable format is invalid
+        KeyError when template variable missing
     '''
-    template_dict = dict()
-    # look for all supported criteria in process environment
-    for replacement_tag in TEMPLATE_VARIABLES:
-        if replacement_tag in os.environ:
-            envval = os.environ[replacement_tag]
-            if replacement_tag == 'AI_MAC':
-                try:
-                    macval = verifyXML.checkMAC(envval).upper()
-                except ValueError:
-                    print >> sys.stderr, _(
-                            "Warning: MAC address in enviroment is invalid "
-                            "and will be ignored.")
-                    continue
-            elif replacement_tag == 'AI_NETWORK' or \
-                    replacement_tag == 'AI_IPV4':
-                try:
-                    verifyXML.checkIPv4(envval)
-                except ValueError:
-                    print >> sys.stderr, _(
-                            "Warning: IP or network address in enviroment is "
-                            "invalid and will be ignored.")
-                    continue
-            # load template dictionary with criteria found in environment
-            if replacement_tag == 'AI_MAC':
-                template_dict[replacement_tag] = envval.upper()
-                # if the MAC address is defined,
-                # and the client ID not already defined in the environment,
-                # then derive client ID from the MAC address
-                if 'AI_CID' not in os.environ or os.environ['AI_CID'] is None:
-                    cid = "01%s" % macval
-                    template_dict['AI_CID'] = cid.upper()
-            else:
-                template_dict[replacement_tag] = envval
     # instantiate our template object derived from string Template class
     tmpl = AICriteriaTemplate(profile_str)
-    if validate_only:
-        # do not insist on all criteria being present in environment
-        profile_out = tmpl.safe_substitute(template_dict)
-    else:
-        # if template variable not in dict - exception KeyError
-        profile_out = tmpl.substitute(template_dict)
-    return profile_out # profile string with substitutions
+    # Force any MAC value to all uppercase
+    if 'AI_MAC' in template_dict:
+        template_dict['AI_MAC'] = template_dict['AI_MAC'].upper()
+    # if template variable not in dict - exception KeyError
+    profile_out = tmpl.substitute(template_dict)
+    return profile_out  # profile string with substitutions
 
 
 def sql_values_from_criteria(criteria, queue, table, gbl=False):
@@ -148,9 +109,9 @@ def sql_values_from_criteria(criteria, queue, table, gbl=False):
         gbl - if True, global
     Returns: a tuple for SQLite clauses respectively: WHERE, INTO, VALUES
     '''
-    where = list() # for WHERE clause
-    intol = list() # for INTO clause
-    vals = list() # for VALUES clause
+    where = list()  # for WHERE clause
+    intol = list()  # for INTO clause
+    vals = list()  # for VALUES clause
     for crit in AIdb.getCriteria(queue, table, onlyUsed=False, strip=True):
 
         # Determine if this crit is a range criteria or not.
@@ -275,7 +236,7 @@ def validate_profile_string(profile_str, image_dir=None, resolve_entities=True,
         dtd_validation=False
         )
     root = etree.parse(StringIO(profile_str), parser)
-    if not resolve_entities: # just check basic XML, no inclusions
+    if not resolve_entities:  # just check basic XML, no inclusions
         return profile_str
     # validate against DTD if provided
     if dtd_validation and \
@@ -343,7 +304,7 @@ def validate_criteria_from_user(criteria, dbo, table):
             # Inf.)
             if man_criterion[0] != "unbounded" and \
                 man_criterion[1] != "unbounded" and \
-                man_criterion[0] > man_criterion[1]: # Check min > max
+                man_criterion[0] > man_criterion[1]:  # Check min > max
                 raise SystemExit(_(
                     "Error:\tCriteria %s is not a valid range (MIN > MAX) ")
                     % crit)
@@ -364,7 +325,7 @@ def validate_criteria_from_user(criteria, dbo, table):
                     raise SystemExit(_(
                         "Error:\tCriteria %s is not a valid hexadecimal value")
                                 % crit)
-            else: # this is a decimal value
+            else:  # this is a decimal value
                 try:
                     man_criterion = [long(str(man_criterion[0]).upper()),
                                      long(str(man_criterion[1]).upper())]

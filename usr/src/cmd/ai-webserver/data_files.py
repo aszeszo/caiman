@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 
 """
 data_files
@@ -341,7 +341,7 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
         image_dir - path of service image, used to locate service_bundle
         verbose - boolean, True if verbosity desired, False otherwise
     
-    Return: profile in string format if it is valid, None otherwise.
+    Return: Raw profile in string format if it is valid, None otherwise.
 
     '''
     if verbose:
@@ -360,7 +360,7 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
     tmpl_profile = None
     try:
         # do any templating
-        tmpl_profile = sc.perform_templating(raw_profile, validate_only=False)
+        tmpl_profile = sc.perform_templating(raw_profile)
         # validate
         validated_xml = sc.validate_profile_string(tmpl_profile, image_dir,
                                                    dtd_validation=True,
@@ -371,7 +371,7 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
         value = sys.exc_info()[1]  # take value from exception
         found = False
         # check if missing variable in error is supported
-        for tmplvar in sc.TEMPLATE_VARIABLES:
+        for tmplvar in sc.TEMPLATE_VARIABLES.keys():
             if "'" + tmplvar + "'" == str(value):  # values in single quotes
                 found = True  # valid template variable, but not in env
                 break
@@ -384,7 +384,7 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
                 _("Error: template variable %s in profile %s is not a "
                   "valid template variable.  Valid template variables:  ") \
                 % (value, profile_name) + '\n\t' + \
-                ', '.join(sc.TEMPLATE_VARIABLES)
+                ', '.join(sc.TEMPLATE_VARIABLES.keys())
         err = list()  # no supplemental message text needed for this exception
     # for all errors
     if errmsg:
@@ -398,7 +398,7 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
         return 
     if validated_xml and verbose:
         print >> sys.stderr, " Passed"
-    return tmpl_profile
+    return raw_profile
 
 
 # The criteria class is a list object with an overloaded get_item method

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 '''
 
 AI Database Routines
@@ -709,7 +709,7 @@ def build_query_str(criteria, criteria_set_in_db, all_criteria_in_db):
     return query_str
 
 
-def formatValue(key, value):
+def formatValue(key, value, units=True):
     ''' Format and stringify database values.
 
     Args:
@@ -722,6 +722,7 @@ def formatValue(key, value):
             - All other criteria types are stringified only.
 
       value: The raw database value to format and stringify.
+      units: Optional argument to control inclusion of units in output value
 
     Returns: a nicely-readable string representing the value. If value is none
              returns none
@@ -742,7 +743,7 @@ def formatValue(key, value):
               str(int(svalue[3:6])) + "." + \
               str(int(svalue[6:9])) + "." + \
               str(int(svalue[9:12]))
-    elif key == "mem" and value:
+    elif units and key == "mem" and value:
         ret = str(value) + " MB"
     else:
         ret = str(value)

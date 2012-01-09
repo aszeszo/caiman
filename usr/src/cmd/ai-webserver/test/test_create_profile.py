@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -30,7 +30,7 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 '''
 
 import gettext
-import lxml.etree 
+import lxml.etree
 import os
 import shutil
 import tempfile
@@ -134,7 +134,7 @@ class MockDataBase(object):
 class MockGetManifestCriteria(object):
     '''Class for mock getCriteria '''
     def __init__(self):
-        self.criteria = {"arch": "sparc", 
+        self.criteria = {"arch": "sparc",
                          "MINmem": None, "MAXmem": None, "MINipv4": None,
                          "MAXipv4": None, "MINmac": None, "MAXmac": None}
 
@@ -150,13 +150,13 @@ class MockAIservice(object):
     def __init__(self, *args, **kwargs):
 
         if MockAIservice.KEYERROR:
-            raise KeyError() 
+            raise KeyError()
 
 
 class MockAISCF(object):
     '''Class for mock AISCF '''
     def __init__(self, *args, **kwargs):
-        pass  
+        pass
 
 
 class MockAIService(object):
@@ -173,7 +173,7 @@ class MockAIService(object):
 class MockAIRoot(object):
     '''Class for mock _AI_root'''
     def __init__(self, tag="auto_install", name=None):
-        # name is value of name attribute in manifest 
+        # name is value of name attribute in manifest
         if name:
             self.root = lxml.etree.Element(tag, name=name)
         else:
@@ -196,16 +196,16 @@ class MockIsService(object):
 
 
 class MockInstallAdmImage(object):
-    '''Class for mock InstallAdmImage class''' 
+    '''Class for mock InstallAdmImage class'''
 
     path = None
-    
+
     def __init__(self, *args, **kwargs):
         pass
 
 
 class MockEuid(object):
-    '''Class for mock geteuid() ''' 
+    '''Class for mock geteuid() '''
 
     @classmethod
     def geteuid(cls):
@@ -235,65 +235,65 @@ class ParseOptions(unittest.TestCase):
         '''Ensure no options caught'''
         self.assertRaises(SystemExit, create_profile.parse_options,
                 create_profile.DO_CREATE, [])
-        myargs = ["mysvc"] 
+        myargs = ["mysvc"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_CREATE, myargs) 
-        myargs = ["profile"] 
+                create_profile.DO_CREATE, myargs)
+        myargs = ["profile"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_CREATE, myargs) 
-        myargs = ["mysvc", "profile"] 
+                create_profile.DO_CREATE, myargs)
+        myargs = ["mysvc", "profile"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_CREATE, myargs) 
+                create_profile.DO_CREATE, myargs)
 
         self.assertRaises(SystemExit, create_profile.parse_options,
-            create_profile.DO_UPDATE, []) 
-        myargs = ["mysvc"] 
+            create_profile.DO_UPDATE, [])
+        myargs = ["mysvc"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_UPDATE, myargs) 
-        myargs = ["profile"] 
+                create_profile.DO_UPDATE, myargs)
+        myargs = ["profile"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_UPDATE, myargs) 
-        myargs = ["mysvc", "profile"] 
+                create_profile.DO_UPDATE, myargs)
+        myargs = ["mysvc", "profile"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_UPDATE, myargs) 
+                create_profile.DO_UPDATE, myargs)
 
     def test_parse_invalid_options(self):
         '''Ensure invalid option flagged'''
-        myargs = ["-n", "mysvc", "-p", "profile", "-u"] 
+        myargs = ["-n", "mysvc", "-p", "profile", "-u"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_CREATE, myargs) 
-        myargs = ["-n", "mysvc", "-p", "profile", "-a"] 
+                create_profile.DO_CREATE, myargs)
+        myargs = ["-n", "mysvc", "-p", "profile", "-a"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_CREATE, myargs) 
+                create_profile.DO_CREATE, myargs)
 
-        myargs = ["-n", "mysvc", "-p", "profile", "-u"] 
+        myargs = ["-n", "mysvc", "-p", "profile", "-u"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_UPDATE, myargs) 
-        myargs = ["-n", "mysvc", "-p", "profile", "-a"] 
+                create_profile.DO_UPDATE, myargs)
+        myargs = ["-n", "mysvc", "-p", "profile", "-a"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_UPDATE, myargs) 
+                create_profile.DO_UPDATE, myargs)
 
     def test_parse_options_novalue(self):
         '''Ensure options with missing value caught'''
-        myargs = ["-n", "mysvc", "-p", "profile", "-c"] 
+        myargs = ["-n", "mysvc", "-p", "profile", "-c"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_CREATE, myargs) 
-        myargs = ["-n", "-f", "profile"] 
+                create_profile.DO_CREATE, myargs)
+        myargs = ["-n", "-f", "profile"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_CREATE, myargs) 
-        myargs = ["-n", "mysvc", "-p"] 
+                create_profile.DO_CREATE, myargs)
+        myargs = ["-n", "mysvc", "-p"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_CREATE, myargs) 
+                create_profile.DO_CREATE, myargs)
 
-        myargs = ["-n", "mysvc", "-p", "profile", "-f"] 
+        myargs = ["-n", "mysvc", "-p", "profile", "-f"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_UPDATE, myargs) 
-        myargs = ["-n", "-f", "profile"] 
+                create_profile.DO_UPDATE, myargs)
+        myargs = ["-n", "-f", "profile"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_UPDATE, myargs) 
-        myargs = ["-n", "mysvc", "-p"] 
+                create_profile.DO_UPDATE, myargs)
+        myargs = ["-n", "mysvc", "-p"]
         self.assertRaises(SystemExit, create_profile.parse_options,
-                create_profile.DO_UPDATE, myargs) 
+                create_profile.DO_UPDATE, myargs)
 
 
 class CriteriaToDict(unittest.TestCase):
@@ -377,40 +377,29 @@ class CriteriaToDict(unittest.TestCase):
 
     def test_parse_multi_options(self):
         '''Ensure multiple profiles processed'''
-        myargs = ["-n", "mysvc", "-f", "profile", "-f", "profile2"] 
+        myargs = ["-n", "mysvc", "-f", "profile", "-f", "profile2"]
         options = create_profile.parse_options(create_profile.DO_CREATE,
                 myargs)
         self.assertEquals(options.profile_file, ["profile", "profile2"])
 
     def test_perform_templating(self):
         '''Test SC profile templating'''
-        # preserve our environment
-        saveenv = {}
-        for replacement_tag in com.TEMPLATE_VARIABLES:
-            if replacement_tag in os.environ:
-                saveenv[replacement_tag] = os.environ[replacement_tag]
-        # load environment variables for translation
-        os.environ['AI_ARCH'] = 'sparc'
-        os.environ['AI_MAC'] = '0a:0:0:0:0:0'
-        os.environ['AI_ZONENAME'] = 'myzone'
+        # load template variables for translation
+        template_dict = {'AI_ARCH': 'sparc', 'AI_MAC': '0a:0:0:0:0:0'}
         # provide template to test
-        tmpl_str = "{{AI_ARCH}} {{AI_MAC}} {{AI_ZONENAME}} {{AI_CID}}" 
+        tmpl_str = "{{AI_ARCH}} {{AI_MAC}}"
         # do the templating
-        profile = com.perform_templating(tmpl_str, False)
+        profile = com.perform_templating(tmpl_str, template_dict)
         # check for expected results
         self.assertNotEquals(profile.find('sparc'), -1)
         self.assertNotEquals(profile.find('0A:0:0:0:0:0'), -1)  # to upper
-        self.assertNotEquals(profile.find('010A0000000000'), -1)  # client ID
-        self.assertNotEquals(profile.find('myzone'), -1)
         # simulate situation in which criteria are missing
-        del os.environ['AI_ARCH']
-        self.assertRaises(KeyError, com.perform_templating, tmpl_str, False)
-        # restore our environment
-        for replacement_tag in com.TEMPLATE_VARIABLES:
-            if replacement_tag in saveenv:
-                os.environ[replacement_tag] = saveenv[replacement_tag]
-            elif replacement_tag in os.environ:
-                del os.environ[replacement_tag]
+        self.assertRaises(KeyError, com.perform_templating,
+                          tmpl_str + " {{FOO_BAR}}")
+        # test zone case where only criterion is zone name
+        zone_dict = {'AI_ZONENAME': 'myzone'}
+        profile = com.perform_templating("{{AI_ZONENAME}}", zone_dict)
+        self.assertNotEquals(profile.find('myzone'), -1)
 
 
 class DoUpdateProfile(unittest.TestCase):
@@ -448,7 +437,7 @@ class DoUpdateProfile(unittest.TestCase):
         self.old_file = old_prof.name
         old_prof.writelines(orig_prof)
         old_prof.close()
-        
+
         #create dummy db and populate it with temporary profile
         dbfile = tempfile.NamedTemporaryFile(dir=self.tmp_dir, delete=False)
         self.dbpath = dbfile.name
@@ -459,7 +448,7 @@ class DoUpdateProfile(unittest.TestCase):
                     "platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER,"
                     "MINmem INTEGER, MAXmem INTEGER, zonename TEXT)")
 
-        dbcon.execute("CREATE TABLE manifests (name TEXT, instance INTEGER, " 
+        dbcon.execute("CREATE TABLE manifests (name TEXT, instance INTEGER, "
                     "arch TEXT, MINmac INTEGER, MAXmac INTEGER,"
                     "MINipv4 INTEGER, MAXipv4 INTEGER, cpu TEXT,"
                     "platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER,"
@@ -473,7 +462,7 @@ class DoUpdateProfile(unittest.TestCase):
         dbcon.close()
 
         # initialize service and dbpath
-        self.service_AIService = svc.AIService 
+        self.service_AIService = svc.AIService
         create_profile.AIService = MockAIService
         MockAIService.database_path = self.dbpath
         MockAIService.image = MockInstallAdmImage()
@@ -488,7 +477,7 @@ class DoUpdateProfile(unittest.TestCase):
         # to perform chown on profile file
         self.sc_uid = com.WEBSERVD_UID
         self.sc_gid = com.WEBSERVD_GID
-        com.WEBSERVD_UID = getpwnam(os.environ.get("USER"))[2] 
+        com.WEBSERVD_UID = getpwnam(os.environ.get("USER"))[2]
         com.WEBSERVD_GID = getpwnam(os.environ.get("USER"))[3]
 
         self.os_geteuid = os.geteuid
@@ -499,7 +488,7 @@ class DoUpdateProfile(unittest.TestCase):
 
         com.WEBSERVD_UID = self.sc_uid
         com.WEBSERVD_GID = self.sc_gid
-        com.INTERNAL_PROFILE_DIRECTORY = self.sc_profile_dir 
+        com.INTERNAL_PROFILE_DIRECTORY = self.sc_profile_dir
         config.is_service = self.config_is_service
         svc.AIService = self.service_AIService
         os.geteuid = self.os_geteuid
