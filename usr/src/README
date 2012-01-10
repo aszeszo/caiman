@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -65,6 +65,7 @@ via pfexec or sudo, to install software on the build system.
 	system/library/libdiskmgt/header-libdiskmgt
 	system/zones/internal
 	text/gnu-gettext
+	text/locale
 
     To get these packages, run "pkg install <package>"
 
