@@ -499,6 +499,9 @@ class DHCPArchClass(DHCPData):
         in_class = False
         seek_bootfile = False
         edit_complete = False
+        # dhcpd server runs under dhcpserv user account and needs to be able
+        # to read its config file
+        orig_umask = os.umask(0022)
         with open(tmp_cfgfile, "w") as tmp_cfg:
             for line in current_lines:
                 if not edit_complete:
@@ -562,7 +565,7 @@ class DHCPArchClass(DHCPData):
                                 seek_bootfile = True
                 # Write each line from the old file to the new as we traverse
                 tmp_cfg.write(line)
-
+        os.umask(orig_umask)
         # Ok, we're done writing lines from the old file to the new. Let's
         # ensure we've made our edit. If not, for whatever reason, we should
         # inform the enduser that manual DHCP configuration might be required.
@@ -726,7 +729,7 @@ class DHCPServer(object):
             logging.debug("dhcp.control: unexpected service state: %s",
                           self._state)
             raise DHCPServerError(cw(_("DHCP server is in an unexpected "
-                                       "state: action [%s] state [%s]") % 
+                                       "state: action [%s] state [%s]") %
                                        (action, self._state)))
 
     def _add_stanza_to_config_file(self, new_stanza):
@@ -1278,7 +1281,7 @@ def _get_domain(svc):
     cmd = [SVCPROP, "-p", prop, service]
     p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                          logger='', stderr_loglevel=logging.DEBUG)
-    
+
     return p.stdout.strip()
 
 
@@ -1356,7 +1359,7 @@ def fixup_sparc_bootfile(bootfile, verbose=False):
     # be able to simply use the IP address returned from get_valid_networks().
     valid_nets = list(com.get_valid_networks())
     if valid_nets:
-        ipaddr = valid_nets[0] 
+        ipaddr = valid_nets[0]
     else:
         if verbose:
             print >> sys.stderr, cw(_("\nNo networks are currently set to "

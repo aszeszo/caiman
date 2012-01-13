@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -37,7 +37,7 @@ import osol_install.auto_install.service_config as config
 
 
 class ServiceConfig(unittest.TestCase):
-    '''Tests for service_config''' 
+    '''Tests for service_config'''
 
     @classmethod
     def setUpClass(cls):
@@ -118,8 +118,8 @@ class ServiceConfig(unittest.TestCase):
         config._write_service_config('s5', props)
         services = config.get_all_service_names()
         self.assertEqual(len(services), 5)
-        self.assertTrue('s1' in services and 's2' in services and 
-                        's3' in services and 's4' in services and 
+        self.assertTrue('s1' in services and 's2' in services and
+                        's3' in services and 's4' in services and
                         's5' in services)
 
     def test_get_all_service_props(self):
@@ -134,7 +134,7 @@ class ServiceConfig(unittest.TestCase):
         self.assertEqual(all_props['s1'], {'version': config.CURRENT_VERSION,
                          'hot': 'fudge'})
         self.assertEqual(all_props['s2'], {'version': config.CURRENT_VERSION,
-                         'ice': 'cream'}) 
+                         'ice': 'cream'})
         self.assertEqual(all_props['s3'], {'version': config.CURRENT_VERSION,
                          'apple': 'pie'})
 
@@ -177,7 +177,6 @@ class ServiceConfig(unittest.TestCase):
         self.assertRaises(config.ServiceCfgError,
                           config.verify_key_properties, 's1', props)
 
-
         props = {config.PROP_SERVICE_NAME: 's1',
                  config.PROP_STATUS: config.STATUS_ON,
                  config.PROP_TXT_RECORD: 'aiwebserver=ais:5555'}
@@ -208,7 +207,7 @@ class ServiceConfig(unittest.TestCase):
         self.assertTrue(aliased == ['alias1'])
         aliased = config.get_aliased_services('base1', recurse=True)
         self.assertTrue(aliased == ['alias1', 'alias2'])
-        
+
     def test_clients(self):
         '''test clients'''
 
@@ -230,12 +229,28 @@ class ServiceConfig(unittest.TestCase):
         self.assertEqual(clientdict.keys(), ['01AABBCCDDAABB',
                                              '01AAAAAAAAAAAA'])
         self.assertEqual(clientdict['01AAAAAAAAAAAA'][config.FILES],
-                         ['/tmp/aaa', '/tmp/AAA'] )
+                         ['/tmp/aaa', '/tmp/AAA'])
 
         config.remove_client_from_config('s1', '01AABBCCDDAABB')
         clientdict = config.get_clients('s1')
         self.assertTrue('01AABBCCDDAABB' not in clientdict)
 
+    def test_configfile_permissions(self):
+        '''test permissions of .config file'''
+
+        svc = 'permtestsvc'
+        props = {'french': 'fries', 'banana': 'split'}
+        # save original umask
+        orig_umask = os.umask(0022)
+        # set too restrictive and too open umask
+        for mask in (0066, 0000):
+            os.umask(mask)
+            config._write_service_config(svc, props)
+            path = config._get_configfile_path(svc)
+            mode = os.stat(path).st_mode
+            self.assertEqual(mode, 0100644)
+        # return umask to the original value
+        os.umask(orig_umask)
 
 if __name__ == '__main__':
     unittest.main()

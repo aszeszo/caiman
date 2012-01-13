@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 functions supporting creating and modifying menu.lst
@@ -157,6 +157,8 @@ def setup_grub(svc_name, image_path, image_info, srv_address, menu_path,
         os.remove(media_grub)
 
     # Create a new menu.lst for the AI client to use during boot
+    # menu.lst should be created with right permissions
+    orig_umask = os.umask(0022)
     with open(os.path.join(menu_path, MENULST), "w") as menu:
         # First setup the the global environment variables
         menu.write("default=0\n")
@@ -188,3 +190,4 @@ def setup_grub(svc_name, image_path, image_info, srv_address, menu_path,
                     srv_address))
         menu.write("\tmodule$ /%s/platform/i86pc/$ISADIR/boot_archive\n" %
                    svc_name)
+    os.umask(orig_umask)

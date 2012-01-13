@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 
 # Description:
 #	This script sets up the wanboot.conf file which is used
@@ -35,6 +35,9 @@ PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 
 . /usr/lib/installadm/installadm-common
 
+# Ensure that we will create files with right permissions
+# umask is shell built-in
+umask 022
 
 WANBOOTCGI="/usr/lib/inet/wanboot/wanboot-cgi"
 CGIBIN_WANBOOTCGI="cgi-bin/wanboot-cgi"

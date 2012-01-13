@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 This file contains functions to manage the properties of installation
@@ -760,8 +760,14 @@ def _write_config_file(service_name, cfg):
 
     cfgpath = os.path.join(svcdir, CFGFILE)
     logging.log(com.XDEBUG, 'writing config file:  %s', cfgpath)
+
+    # .config file should be created with right permissions
+    orig_umask = os.umask(0022)
+
     with open(cfgpath, 'w') as cfgfile:
         cfg.write(cfgfile)
+
+    os.umask(orig_umask)
 
 
 def _write_service_config(service_name, props):
