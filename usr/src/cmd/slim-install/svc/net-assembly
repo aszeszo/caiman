@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Make sure that the libraries essential to this stage of booting can be found.
@@ -306,8 +306,7 @@ then
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
-# Use an overlay mount to work around CR 7029145.
-$MOUNT -F hsfs -o ro -O $usr_lofi_dev /usr
+$MOUNT -F hsfs -o ro $usr_lofi_dev /usr
 if [ $? -ne 0 ]
 then
 	echo "Unable to mount /usr filesystem" > /dev/msglog

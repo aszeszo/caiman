@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
@@ -59,8 +59,7 @@ if [ $? -ne 0 -o -z "$usr_lofi_dev" ]; then
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
-# Use an overlay mount to work around CR 7029145.
-$MOUNT -F hsfs -o ro -O ${usr_lofi_dev} /usr
+$MOUNT -F hsfs -o ro ${usr_lofi_dev} /usr
 if [ $? -ne 0 ]; then
 	echo "Unable to mount /usr filesystem" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
