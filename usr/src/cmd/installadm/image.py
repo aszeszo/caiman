@@ -19,7 +19,7 @@
 # information: Portions Copyright [yyyy] [name of copyright owner]
 #
 # CDDL HEADER END
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 Classes and functions for managing client images on an installadm server
@@ -74,8 +74,8 @@ class ImageError(StandardError):
 class InstalladmImage(object):
     '''Represents an AI client image on the installadm server'''
 
-    NO_ZLIB = _("\nError:\tThe image at %(path)s is not a valid autoinstall "
-                "image.\n")
+    INVALID_AI_IMAGE = _("\nError:\tThe image at %(path)s is not a valid "
+                         "Automated Installer image.")
 
     def __init__(self, image_path):
         self._path = image_path
@@ -84,19 +84,25 @@ class InstalladmImage(object):
     
     def verify(self):
         '''
-        Check that the image exists and appears valid (has a solaris.zlib file)
+        Check that the image directory exists, appears to be a valid net
+        boot image (has a solaris.zlib file), and is a valid Automated
+        Installer image (has an auto_install/ai.dtd file).
         Raises: ImageError if path checks fail
         Pre-conditions: Expects self.path to return a valid image_path
         Returns: None
         '''
         # check image_path exists
         if not os.path.isdir(self.path):
-            raise ImageError(cw(_("\nError:\tThe image_path (%s) is not "
-                                  "a directory. Please provide a "
-                                  "different image path.\n") % self.path))
-        # check that the image_path has a solaris.zlib file
-        if not os.path.exists(os.path.join(self.path, "solaris.zlib")):
-            raise ImageError(cw(self.NO_ZLIB % {"path": self.path}))
+            raise ImageError(cw(_("\nError:\tThe image path (%s) is not "
+                               "a directory. Please provide a "
+                               "different image path.\n") % self.path))
+
+         # check that the image_path has solaris.zlib and
+         # auto_install/ai.dtd files
+        if not (os.path.exists(os.path.join(self.path, "solaris.zlib")) and
+                os.path.exists(os.path.join(self.path,
+                               "auto_install/ai.dtd"))):
+            raise ImageError(cw(self.INVALID_AI_IMAGE % {"path": self.path}))
     
     @property
     def version(self):
@@ -215,7 +221,8 @@ class InstalladmPkgImage(InstalladmImage):
     DEFAULT_PKG_NAME = 'install-image/solaris-auto-install'
     ARCH_VARIANT = u'variant.arch'
     SVC_NAME_ATTR = 'com.oracle.install.service-name'
-    NO_ZLIB = _("\nError: The pkg image is not an autoinstall image.\n")
+    INVALID_AI_IMAGE = _(
+        "\nError:\tThe pkg image is not an Automated Installer image.\n")
     
     def __init__(self, image_path, pkg_image=None):
         super(InstalladmPkgImage, self).__init__(image_path)
@@ -248,7 +255,8 @@ class InstalladmPkgImage(InstalladmImage):
                 order.append(pub.prefix)
             
             if not publishers:
-                raise ImageError(_("Error: There are no enabled publishers."))
+                raise ImageError(_("\nError:\tThere are no enabled "
+                                 "publishers.\n"))
 
         if arch is None:
             arch = root_img.img.get_variants()[cls.ARCH_VARIANT]
@@ -305,11 +313,13 @@ class InstalladmPkgImage(InstalladmImage):
             # Returns a list of tuples; should only be one publisher with
             # one package
             if len(p5i_data) != 1:
-                raise ImageError("Error: More than one publisher in p5i file")
+                raise ImageError(_("\nError:\tMore than one publisher "
+                                 "in p5i file.\n"))
             
             pub, pkgs = p5i_data[0]
             if len(pkgs) != 1:
-                raise ImageError("Error: More than one package in p5i file")
+                raise ImageError(_("\nError:\tMore than one package "
+                                 "in p5i file.\n"))
             
             if pub and self.pkg_image.has_publisher(prefix=pub.prefix):
                 img_pub = self.pkg_image.get_publisher(prefix=pub.prefix,
@@ -376,6 +386,7 @@ class InstalladmIsoImage(InstalladmImage):
         cmd = [com.SETUP_IMAGE_SCRIPT, com.IMAGE_CREATE, iso, targetdir]
         Popen.check_call(cmd, stderr=Popen.STORE)
         iso_img = cls(targetdir)
+        iso_img.verify()
         iso_img._prep_ai_webserver()
         return iso_img
 

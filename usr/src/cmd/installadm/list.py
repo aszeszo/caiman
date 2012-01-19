@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """
 AI List Services
@@ -33,7 +33,7 @@ import osol_install.auto_install.service_config as config
 
 from optparse import OptionParser
 
-from osol_install.auto_install.installadm_common import _
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.auto_install.service import AIService, VersionError
 
 # FDICT contains the width of each field that gets printed
@@ -49,6 +49,9 @@ IGNORED = _("Ignored")
 INACTIVE = _("Inactive")
 
 _WARNED_ABOUT = set()
+
+ARCH_UNKNOWN = _('* - Architecture unknown, service image does '
+                 'not exist or is inaccessible.\n')
 
 
 def warn_version(version_err):
@@ -116,34 +119,26 @@ def parse_options(cmd_options=None):
     return loptions
 
 
-def which_arch(path):
+def which_arch(service):
     """
-    Looks to see if the platform pointed to by path is x86 or Sparc.
-    If the path does not exist then we are unable to determine the
+    Looks to see if the platform of the service is i386 or sparc.
+    If the service.image does not exist then we are unable to determine the
     architecture.
 
     Args
-        path = directory path to examine
+        service - service object to query
 
     Returns
-        x86     if <path>/platform/i86pc exists
-        Sparc   if <path>/platform/sun4v exists
-        -       if neither exists
+        *       if service.arch is None
+        otherwise return the value service.arch
 
     Raises
         None
     """
-    lpath = os.path.join(path, 'platform/i86pc')
-    if os.path.exists(lpath):
-        arch = 'x86'
-    else:
-        lpath = os.path.join(path, 'platform/sun4v')
-        if os.path.exists(lpath):
-            arch = 'Sparc'
-        else:
-            arch = '-'
+    if service.arch is None:
+        return '*'
 
-    return arch
+    return service.arch
 
 
 def print_local_services(sdict, width, awidth):
@@ -177,6 +172,7 @@ def print_local_services(sdict, width, awidth):
     """
     tkeys = sdict.keys()
     tkeys.sort()
+    missing_image = False
     for aservice in tkeys:
         firstone = True
         for info in sdict[aservice]:
@@ -188,7 +184,14 @@ def print_local_services(sdict, width, awidth):
             print info['aliasof'].ljust(awidth),
             print info['status'].ljust(FDICT['status']),
             print info['arch'].ljust(FDICT['arch']),
+            # If the architecture can't be identified, either the image is
+            # missing or not accessible.
+            if info['arch'] == "*":
+                missing_image = True
             print info['path']
+
+    if missing_image:
+        print cw(ARCH_UNKNOWN)
     print
 
 
@@ -203,7 +206,7 @@ def find_clients(lservices, sname=None):
 
         {
           'service1': [
-                { 'ipath':<path1>, 'client':<client1>, <arch': <arch>},
+                { 'ipath':<path1>, 'client':<client1>, 'arch': <arch>},
                 ....
                       ],
           ....
@@ -230,7 +233,7 @@ def find_clients(lservices, sname=None):
         except VersionError as version_err:
             warn_version(version_err)
             continue
-        arch = service.arch
+        arch = which_arch(service)
         image_path = [service.image.path]
         client_info = config.get_clients(servicename)
         for clientkey in client_info:
@@ -342,7 +345,7 @@ def get_local_services(services, sname=None):
             width = max(len(servicename), width)
             info['status'] = serv[config.PROP_STATUS]
             info['path'] = serv[config.PROP_IMAGE_PATH]
-            info['arch'] = which_arch(info['path'])
+            info['arch'] = which_arch(service)
             if config.PROP_ALIAS_OF in serv:
                 # have an alias
                 aliasof = serv[config.PROP_ALIAS_OF]
@@ -463,6 +466,7 @@ def list_local_clients(lservices, name=None):
         # sort the keys so that the service names are in alphabetic order.
         tkeys = sdict.keys()
         tkeys.sort()
+        missing_image = False
         for aservice in tkeys:
             service_firstone = True
             for aclient in sdict[aservice]:
@@ -473,6 +477,10 @@ def list_local_clients(lservices, name=None):
                     print ' ' * width,
                 print aclient['client'].ljust(FDICT['cadd']),
                 print aclient['arch'].ljust(FDICT['arch']),
+                # If the architecture can't be identified, either the image is
+                # missing or not accessible.
+                if aclient['arch'] == '*':
+                    missing_image = True
                 path_firstone = True
                 cpaths = list()
                 for cpath in aclient['ipath']:
@@ -484,6 +492,8 @@ def list_local_clients(lservices, name=None):
                             path_firstone = False
                         print cpath
                     cpaths.insert(0, cpath)
+            if missing_image:
+                print cw(ARCH_UNKNOWN)
 
     # start of list_local_clients
     sdict, width = get_clients(lservices, sname=name)

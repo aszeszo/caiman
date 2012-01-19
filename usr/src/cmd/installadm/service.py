@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 Objects and functions supporting accessing and modifying AI service instances
@@ -676,7 +676,15 @@ class AIService(object):
 
         '''
         # Verify the image and ensure the mountpoints exist
-        self.image.verify()
+        try:
+            self.image.verify()
+        except ImageError as error:
+            # verify doesn't know anything about services so prepend the 
+            # service name to the exception to give the user sufficient
+            # context to fix the problem and re-raise the exception
+            raise ImageError(cw(_('Service Name: %s\n') %
+                             self.name + str(error)))
+
         # Mount service's image to /etc/netboot/<svcname>
         self._lofs_mount(self.image.path, self.mountpoint)
         # Do second lofi mount of menu.lst(x86) or system.conf(sparc)

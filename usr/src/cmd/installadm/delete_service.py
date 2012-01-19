@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 '''
 AI delete-service
 '''
@@ -174,11 +174,10 @@ def delete_specified_service(service_name, auto_remove, noprompt):
             arch = sname.split('default-')[1]
             _warning = """
             WARNING: The service you are deleting, or a dependent alias, is
-            the alias for the default %(sarch)s service. Without the '%(name)s'
+            the alias for the default %(arch)s service. Without the '%(name)s'
             service, %(arch)s clients will fail to boot unless explicitly
             assigned to a service using the create-client command.
-            """ % {'sarch': arch,
-                   'arch': ('x86', 'SPARC')[arch == 'sparc'],
+            """ % {'arch': arch,
                    'name': sname}
 
             print >> sys.stderr, cw(_(_warning))

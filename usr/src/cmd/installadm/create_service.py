@@ -20,7 +20,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 AI create-service
@@ -379,7 +379,7 @@ def do_alias_service(options):
     logging.debug("Creating alias of service %s", options.aliasof)
 
     print _("\nCreating %(arch)s alias: %(name)s\n") % \
-            {'arch': 'SPARC' if image.arch == 'sparc' else 'x86',
+            {'arch': image.arch,
              'name': options.svcname}
 
     logging.debug("Creating AIService aliasname %s base svc=%s, bootargs=%s",
@@ -514,6 +514,11 @@ def do_create_baseservice(options):
                                               options.imagepath)
         except CalledProcessError as err:
             raise SystemExit(err.popen.stderr)
+        except ImageError as err:
+            print >> sys.stderr, str(err)
+            shutil.rmtree(options.imagepath, ignore_errors=True)
+            raise SystemExit(cw(_('Please re-enter command and specify '
+                             'a valid Automated Installer ISO file')))
     else:
         try:
             image = InstalladmPkgImage.image_create(options.srcimage,
@@ -553,7 +558,7 @@ def do_create_baseservice(options):
                                                    image=image, iso=have_iso)
 
     print _("\nCreating %(arch)s service: %(name)s\n") % \
-            {'arch': 'SPARC' if image.arch == 'sparc' else 'x86',
+            {'arch': image.arch,
              'name': options.svcname}
 
     # If image was created in temporary location, move to correct
