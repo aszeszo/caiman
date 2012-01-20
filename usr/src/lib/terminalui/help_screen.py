@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -50,7 +50,13 @@ class HelpScreen(BaseScreen):
     def __init__(self, main_win, help_header, help_index, intro):
         super(HelpScreen, self).__init__(main_win)
 
-        self.locale = locale.setlocale(locale.LC_MESSAGES, "")
+        try:
+            self.locale = locale.setlocale(locale.LC_MESSAGES, "")
+        except locale.Error:
+            terminalui.LOGGER.warning("System configured with invalid "
+                                      "locale(5), falling back to C.")
+            self.locale = locale.setlocale(locale.LC_MESSAGES, "C")
+
         terminalui.LOGGER.debug("locale=%s", self.locale)
 
         self.help_header = help_header

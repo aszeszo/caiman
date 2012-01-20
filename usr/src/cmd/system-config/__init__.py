@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -1076,7 +1076,13 @@ def _prepare_engine(options):
 
 def _init_locale():
     '''Initializes the locale'''
-    locale.setlocale(locale.LC_ALL, "")
+    try:
+        locale.setlocale(locale.LC_ALL, "")
+    except locale.Error:
+        print _("System configured with invalid locale(5), "
+                 "falling back to C.")
+        locale.setlocale(locale.LC_ALL, "C")
+
     gettext.install("sysconfig", "/usr/share/locale", unicode=True)
     set_wrap_on_whitespace(_("DONT_TRANSLATE_BUT_REPLACE_msgstr_WITH_True_"
                              "OR_False: Should wrap text on whitespace in"

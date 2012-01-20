@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -38,11 +38,9 @@ import locale
 import logging
 import os
 import platform
-from subprocess import Popen, PIPE
 
 import solaris_install.data_object as data_object
-from solaris_install.getconsole import get_console, SERIAL_CONSOLE,\
-    PHYSICAL_CONSOLE
+from solaris_install.getconsole import get_console, PHYSICAL_CONSOLE
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig.profile import SMFConfig, SMFInstance, \
                                               SMFPropertyGroup, SYSTEM_LABEL
@@ -252,13 +250,18 @@ class SystemInfo(data_object.DataObject):
         # getdefaultlocale() returns a tuple such as ('en_US', 'UTF8')
         # The second portion of that tuple is not formatted correctly for
         # processing, so use getpreferredencoding() to get the encoding.
-        language = locale.getdefaultlocale()[0]
-        encoding = locale.getpreferredencoding()
-        
+        # If current locale can't be determined, use default value.
+        try:
+            language = locale.getdefaultlocale()[0]
+        except (IndexError, ValueError):
+            language = None
+
         if language is None:
             self.locale = SystemInfo.DEFAULT_LOCALE
             self.actual_lang = SystemInfo.DEFAULT_ACTUAL_LOCALE
         else:
+            encoding = locale.getpreferredencoding()
+
             if encoding:
                 self.locale = ".".join([language, encoding])
             else:

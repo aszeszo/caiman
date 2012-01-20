@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -173,8 +173,10 @@ class NameServiceInfo(SMFConfig):
                                         psw)
             # configure default service instance
             ldap.insert_children(ENABLED_DEFAULT_SERVICE_LIST)
-        # For NIS, user is given automatic (broadcast) or manual
-        # specification of NIS server.  If automatic, just set broadcast.
+        # For NIS, user can choose either automatic (broadcast) or manual
+        # specification of NIS server.  If user selected automatic, skip
+        # configuration of smf properties carrying list of NIS servers.
+        # That will signal ypbind(1m) to operate in broadcast mode.
         # Note: NIS domain is set below for LDAP as well as NIS
         if self.nameservice == 'NIS' or \
                 (self.nameservice == 'LDAP' and self.domain):
@@ -193,7 +195,7 @@ class NameServiceInfo(SMFConfig):
                     LOGGER().info('setting NIS domain: %s', self.domain)
                     nis_props.setprop("propval", "domainname", "hostname",
                                       self.domain)
-                # manual configuration naming NIS server explicitly
+                # NIS server specified.
                 if self.nis_auto == self.NIS_CHOICE_MANUAL and \
                         self.nameservice == 'NIS':
                     proptype = 'host'
@@ -207,15 +209,7 @@ class NameServiceInfo(SMFConfig):
             if self.nameservice == 'NIS':
                 nis_client = SMFConfig('network/nis/client')
                 data_objects.append(nis_client)
-                # automatic NIS configuration (broadcast)
-                if self.nis_auto == self.NIS_CHOICE_AUTO:
-                    # configure 'config' property group
-                    nis_client_props = SMFPropertyGroup('config')
-                    nis_client.insert_children([nis_client_props])
-                    # set NIS broadcast property
-                    nis_client_props.setprop("propval", "use_broadcast",
-                                             "boolean", "true")
-                # configure default service instance
+                # Enable default service instance.
                 nis_client.insert_children(ENABLED_DEFAULT_SERVICE_LIST)
         return [do.get_xml_tree() for do in data_objects]
 
