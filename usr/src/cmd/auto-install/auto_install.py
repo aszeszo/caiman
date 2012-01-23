@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 
 """AutoInstall main class and progress logging support."""
 
@@ -67,6 +67,7 @@ from solaris_install.ict import initialize_smf, update_dumpadm, \
     create_snapshot, setup_swap
 from solaris_install.ict.apply_sysconfig import APPLY_SYSCONFIG_DICT, \
     APPLY_SYSCONFIG_PROFILE_KEY
+from solaris_install.ict.transfer_files import add_transfer_files_to_doc
 from solaris_install.logger import FileHandler, ProgressHandler, MAX_INT
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.manifest.parser import ManifestError, \
@@ -1207,25 +1208,11 @@ class AutoInstall(object):
             (str(tf_dict)))
 
     def add_transfer_files(self):
-        """
-            Create dataobjectdict dictionary containing src/dest
-            pairs for files that are to be transferred to the new
-            boot environment.
-        """
-        # Check for existence of transfer-ai-files data object dictionary,
-        # insert if not found
-        tf_doc_dict = None
-        tf_doc_dict = self.doc.volatile.get_first_child( \
-            name=TRANSFER_FILES_CHECKPOINT)
-
-        if tf_doc_dict is None:
-            # Initialize dictionary in DOC
-            tf_dict = dict()
-            tf_doc_dict = DataObjectDict(TRANSFER_FILES_CHECKPOINT,
-                tf_dict)
-            self.doc.volatile.insert_children(tf_doc_dict)
-        else:
-            tf_dict = tf_doc_dict.data_dict
+        '''
+            Build up list of files to be added to DataObjectCache for transfer
+            to new boot environment.
+        '''
+        tf_dict = dict()
 
         # If using dmm, transfer script and derived manifest
         if self.derived_script:
@@ -1268,6 +1255,8 @@ class AutoInstall(object):
         #  dest = post.install_logs_path(\
         #      os.path.basename(self._app_data.work_dir))
         #  tf_dict[self._app_data.work_dir] = dest
+
+        add_transfer_files_to_doc(TRANSFER_FILES_CHECKPOINT, tf_dict)
 
         self.logger.debug("Transfer files list:\n%s" %
             (str(tf_dict)))

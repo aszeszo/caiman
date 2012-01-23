@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -43,6 +43,7 @@ import g11nsvc
 import gtk
 
 import osol_install.errsvc as errsvc
+from solaris_install import post_install_logs_path
 from solaris_install.engine import InstallEngine
 from solaris_install.gui_install.gui_install_common import exit_gui_install, \
     other_instance_is_running, write_pid_file, modal_dialog, \
@@ -51,6 +52,7 @@ from solaris_install.gui_install.gui_install_common import exit_gui_install, \
     TRANSFER_PREP, VAR_SHARED_DATASET
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.gui_install.screen_manager import ScreenManager
+from solaris_install.ict.transfer_files import add_transfer_files_to_doc
 from solaris_install.logger import INSTALL_LOGGER_NAME, FileHandler
 import solaris_install.sysconfig as sysconfig
 
@@ -125,6 +127,11 @@ TI_CHKPS[BOOT_ARCHIVE] = (BOOT_ARCHIVE,
                           "solaris_install/ict/boot_archive",
                           "BootArchive")
 
+TRANSFER_FILES = "transfer-gui-files"
+TI_CHKPS[TRANSFER_FILES] = (TRANSFER_FILES,
+                            "solaris_install/ict/transfer_files",
+                            "TransferFiles")
+
 CREATE_SNAPSHOT = "create-snapshot"
 TI_CHKPS[CREATE_SNAPSHOT] = (CREATE_SNAPSHOT,
                              "solaris_install/ict/create_snapshot",
@@ -168,6 +175,13 @@ def setup_checkpoints():
     engine.register_checkpoint(*(TI_CHKPS[APPLY_SYSCONFIG]))
     logger.debug("Establishing the " + BOOT_ARCHIVE + " checkpoint")
     engine.register_checkpoint(*(TI_CHKPS[BOOT_ARCHIVE]))
+    logger.debug("Establishing the " + TRANSFER_FILES + " checkpoint")
+    # Build up list of files to be added to DataObjectCache for transfer
+    # to new boot environment.
+    tf_dict = dict()
+    tf_dict['/var/adm/messages'] = post_install_logs_path('messages')
+    add_transfer_files_to_doc(TRANSFER_FILES, tf_dict)
+    engine.register_checkpoint(*(TI_CHKPS[TRANSFER_FILES]))
     logger.debug("Establishing the " + CREATE_SNAPSHOT + " checkpoint")
     engine.register_checkpoint(*(TI_CHKPS[CREATE_SNAPSHOT]))
     logger.debug("**** Checkpoints Established ****")

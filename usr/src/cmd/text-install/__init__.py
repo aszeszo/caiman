@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -68,6 +68,7 @@ DUMP_ADMIN = "update-dump-admin"
 DEVICE_CONFIG = "device-config"
 APPLY_SYSCONFIG = "apply-sysconfig"
 BOOT_ARCHIVE = "boot-archive"
+TRANSFER_FILES = "transfer-ti-files"
 CREATE_SNAPSHOT = "create-snapshot"
 
 import curses
@@ -84,7 +85,8 @@ from optparse import OptionParser
 
 import solaris_install.sysconfig as sysconfig
 
-from solaris_install import Popen, CalledProcessError
+from solaris_install import Popen, CalledProcessError, post_install_logs_path
+from solaris_install.ict.transfer_files import add_transfer_files_to_doc
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME, FileHandler
 from solaris_install.target.controller import TargetController
@@ -112,7 +114,7 @@ from terminalui.main_window import MainWindow
 from terminalui.screen_list import ScreenList
 
 
-LOG_LOCATION_FINAL = "/var/sadm/system/logs/install_log"
+LOG_LOCATION_FINAL = post_install_logs_path('install_log')
 DEFAULT_LOG_LOCATION = "/system/volatile/install_log"
 DEFAULT_LOG_LEVEL = "info"
 DEBUG_LOG_LEVEL = "debug"
@@ -295,6 +297,15 @@ def prepare_engine(options):
     eng.register_checkpoint(BOOT_ARCHIVE,
                             "solaris_install/ict/boot_archive",
                             "BootArchive")
+
+    # Build up list of files to be added to DataObjectCache for transfer
+    # to new boot environment.
+    tf_dict = dict()
+    tf_dict['/var/adm/messages'] = post_install_logs_path('messages')
+    add_transfer_files_to_doc(TRANSFER_FILES, tf_dict)
+    eng.register_checkpoint(TRANSFER_FILES,
+                            "solaris_install/ict/transfer_files",
+                            "TransferFiles")
 
     eng.register_checkpoint(CREATE_SNAPSHOT,
                             "solaris_install/ict/create_snapshot",

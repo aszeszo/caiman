@@ -21,12 +21,14 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os
 import shutil
 
+from solaris_install.data_object.data_dict import DataObjectDict
+from solaris_install.engine import InstallEngine
 import solaris_install.ict as ICT
 
 
@@ -137,3 +139,27 @@ class TransferFiles(ICT.ICTBaseClass):
                     if not os.access(os.path.dirname(dest), os.F_OK):
                         os.makedirs(os.path.dirname(dest))
                     self.copy_file(source, dest)
+
+
+def add_transfer_files_to_doc(transfer_name, files):
+    '''
+        Create dataobjectdict dictionary containing src/dest pairs
+        for files to be transferred via transfer-files checkpoint to
+        newly installed boot environment.
+    '''
+
+    # Check for existence of data object dictionary, create if not found
+    engine = InstallEngine.get_instance()
+    doc = engine.data_object_cache
+    tf_doc_dict = doc.volatile.get_first_child(name=transfer_name)
+
+    if tf_doc_dict is None:
+        # Iniitalize dictionary in DOC
+        tf_dict = dict()
+        tf_doc_dict = DataObjectDict(transfer_name, tf_dict)
+        doc.volatile.insert_children(tf_doc_dict)
+    else:
+        tf_dict = tf_doc_dict.data_dict
+
+    # Add list of files to be transferred
+    tf_dict.update(files)
