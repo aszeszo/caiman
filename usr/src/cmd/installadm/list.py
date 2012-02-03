@@ -566,7 +566,7 @@ def get_manifest_or_profile_names(services, dbtable):
                 aiqueue = maisql.getQueue()
                 swidth = max(len(sname), swidth)
                 if not AIdb.tableExists(aiqueue, dbtable):
-                    return sdict, swidth, mwidth
+                    continue
                 for name in AIdb.getNames(aiqueue, dbtable):
                     mwidth = max(len(name), mwidth)
                     tdict = dict()
