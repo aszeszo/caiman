@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -38,6 +38,7 @@ import sys
 
 import gtk
 
+from solaris_install import post_install_logs_path
 from solaris_install.logger import INSTALL_LOGGER_NAME
 
 # Define "_()" for gettext
@@ -58,7 +59,7 @@ IMAGE_DIR = SHARE_DIR + "/gui-install"
 DEFAULT_LOG_LOCATION = "/system/volatile/install_log"
 
 # final log location after installation
-LOG_LOCATION_FINAL = "var/sadm/system/logs/install_log"
+LOG_LOCATION_FINAL = post_install_logs_path("install_log").lstrip("/")
 
 # PID file for checking for multiple instances of program
 PIDFILE = "/system/volatile/gui-install.pid"

@@ -20,7 +20,7 @@ After a successful installation, you can take either of the following actions:
 
      * Within the installer, press F4 to view the installation log. 
 
-     * Reboot to start the newly installed software. After you reboot, you can view the installation log at /var/sadm/system/logs/install_log.	
+     * Reboot to start the newly installed software. After you reboot, you can view the installation log at /var/log/install/install_log.	
 
      * If you want to perform additional tasks before rebooting, press F9 to quit the installer. 
 

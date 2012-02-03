@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''Module body for solaris_install package
@@ -56,7 +56,7 @@ _ = gettext.translation('AI', '/usr/share/locale', fallback=True).gettext
 SYSTEM_TEMP_DIR = '/system/volatile'
 
 # Post-Install Logs Location
-POST_INSTALL_LOGS_DIR = '/var/sadm/system/logs'
+POST_INSTALL_LOGS_DIR = '/var/log/install'
 
 # DOC label for entries pertaining to the distribution constructor
 # All 'volatile' entries are stored in DC_LABEL and all 'persistent'
@@ -66,7 +66,7 @@ DC_PERS_LABEL = "DC specific persistent"
 
 # Path to AI_DTD
 IMG_AI_MANIFEST_PATH = "auto_install"
-IMG_AI_MANIFEST_DTD = os.path.join(IMG_AI_MANIFEST_PATH ,
+IMG_AI_MANIFEST_DTD = os.path.join(IMG_AI_MANIFEST_PATH,
                                    "ai.dtd.@DTD_VERSION_AI@")
 SYS_AI_MANIFEST_DTD = "/usr/share/install/ai.dtd.@DTD_VERSION_AI@"
 

@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Use tee(1) when posting messages to both console and log file
@@ -36,6 +36,8 @@ AI_ENGINE_EXIT_FAILURE_INVALID_MANIFEST=2
 AI_ENGINE_EXIT_SUCCESS=0
 # success - auto reboot
 AI_ENGINE_EXIT_REBOOT=64
+# Default log location
+AI_LOG_LOCATION=/var/log/install
 
 # Auto install manifest
 AI_MANIFEST=/system/volatile/ai.xml
@@ -176,7 +178,7 @@ case $ret in
 		    "for details" | $TEE_LOGTOCONSOLE
 
 		echo "After reboot it will be located at" \
-		    "/var/sadm/system/logs/install_log" | $TEE_LOGTOCONSOLE
+		    "$AI_LOG_LOCATION/install_log" | $TEE_LOGTOCONSOLE
 
 		if [ "$AI_AUTO_SHUTDOWN" = "enable" ]; then
 		    echo "Shutdown requested. Shutting down the system" | \
@@ -196,7 +198,7 @@ case $ret in
 		    $TEE_LOGTOCONSOLE
 		echo "Auto reboot enabled. The system will be" \
 		    "rebooted now" | $TEE_LOGTOCONSOLE
-		echo "Log files will be available in /var/sadm/system/logs/" \
+		echo "Log files will be available in $AI_LOG_LOCATION/" \
 		    "after reboot" | $TEE_LOGTOCONSOLE
 
 		# Obtain dataset from beadm: active BE on reboot has a R in

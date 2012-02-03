@@ -109,10 +109,6 @@ file path=usr/share/gui-install/help/C/INSTALL_PROGRESS_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_REVIEW_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_TIMEZONE_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_USERS_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/UPGRADE_DISK_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/UPGRADE_FAILURE_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/UPGRADE_PROGRESS_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/UPGRADE_REVIEW_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/WELCOME_PANEL.txt group=sys
 file path=usr/share/gui-install/installation.xml group=sys
 file path=usr/share/gui-install/installationdisk.xml group=sys
