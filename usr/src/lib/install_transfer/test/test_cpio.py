@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """Transfer CPIO checkpoint Unit Tests"""
@@ -654,7 +654,7 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.contents = ["xinit", "fontpath.d"]
+        self.tr_node.contents = ["xinit"]
 
         try:
             progress_estimate = self.tr_cpio.get_progress_estimate()

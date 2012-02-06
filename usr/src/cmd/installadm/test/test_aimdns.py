@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''Testcase for aimdns
 
@@ -216,10 +216,12 @@ def check_install_SMF():
     ''' Check if install/server SMF services is available.
         returning True if available and False if not.
     '''
-    # Ensure system/install/server SMF service is available
+    # Ensure system/install/server SMF service is available and online
     cmd = ["/usr/bin/svcs", "svc:/system/install/server"]
     try:
-        Popen.check_call(cmd, stdout=Popen.DEVNULL, stderr=Popen.DEVNULL)
+        output = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE)
+        if output.stdout.split()[3] != 'online':
+            raise SkipTest("svc:/system/install/server not enabled")
     except CalledProcessError:
         # This system does not have the service so skip the test
         raise SkipTest("svc:/system/install/server not installed")

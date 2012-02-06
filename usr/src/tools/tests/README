@@ -48,14 +48,19 @@ for the slim_source gate. In order to run the tests you should:
 		and may be available from the contrib repository at a
 		later date.
 
-2) Build the gate, per the instructions in usr/src/README.
+2)  You also need to install the following additional packages from solaris publisher in order for the slim_unit test and slim_code cleaness tests to run:
+
+        group/system/solaris-desktop
+        install/installadm
+
+3) Build the gate, per the instructions in usr/src/README.
 	Note:	The slim_test program will test Python code from
 		the proto area, so the associated files must be
 		re-built to pick up any changes to tested code.
 		The tests themselves are run from the source files,
 		so changes to tests do not require a re-build.
 
-3) Use the "bldenv" command to set-up the build and test environment. 
+4) Use the "bldenv" command to set-up the build and test environment. 
    slim_test should be run with sudo:
 
 	sudo /opt/onbld/bin/bldenv -d ../../developer.sh

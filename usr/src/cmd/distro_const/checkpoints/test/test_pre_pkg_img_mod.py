@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_pre_pkg_img_mod
@@ -370,11 +370,11 @@ class TestGetPkgVersion(unittest.TestCase):
             os.remove(self.outfile)
 
     def test_get_pkg_version(self):
-        self.ppim.get_pkg_version("SUNWcs")
+        self.ppim.get_pkg_version("system/core-os")
 
         # verify a version string is present in the local pers dict
         d = self.ppim.dc_pers_dict
-        self.assert_("SUNWcs" in d)
+        self.assert_("system/core-os" in d)
 
 
 class TestGenerateGnomeCaches(unittest.TestCase):
