@@ -76,10 +76,13 @@ TI_CHKPS[TARGET_INIT] = (TARGET_INIT,
                          "solaris_install/target/instantiation",
                          "TargetInstantiation")
 
+args = {"arg" : {"fatal_if_not_found": "True"}}
+
 TRANSFER_ROOT = "transfer-root"
 TI_CHKPS[TRANSFER_ROOT] = (TRANSFER_ROOT,
                            "solaris_install/transfer/cpio",
-                           "TransferCPIO")
+                           "TransferCPIO",
+                           kwargs=args)
 
 TRANSFER_MISC = "transfer-misc"
 TI_CHKPS[TRANSFER_MISC] = (TRANSFER_MISC,

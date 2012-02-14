@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -38,7 +38,6 @@ import tempfile
 from osol_install.install_utils import file_size
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.engine import InstallEngine
-from solaris_install.target.size import Size
 from solaris_install.transfer.info import Args
 from solaris_install.transfer.info import CPIOSpec as CPIO
 from solaris_install.transfer.info import Destination
@@ -283,17 +282,33 @@ class AbstractCPIO(Checkpoint):
            the sorted results in the file
         '''
         # Sort the entries by inode
+        files_missing = False
         tmp_flist = []
+        
+        os.chdir(self.src)
         with open(infile, 'r') as filehandle:
             for fname in filehandle.readlines():
                 fname = fname.rstrip()
+                frealpath = os.path.realpath(fname)
+                if (not os.path.isdir(fname) and not os.path.islink(fname)) :
+                    if (os.getcwd() == "/"):
+                        fname = frealpath[1:]
+                    else :
+                        fname = os.path.relpath(frealpath)
                 try:
                     st1 = os.lstat(os.path.join(self.src, fname))
                     tmp_flist.append((st1.st_ino, fname))
                 except OSError, msg:
-                    self.logger.debug("CPIO transfer error processing %s",
+                    files_missing = True
+                    self.logger.warning("CPIO transfer error processing %s",
                                       fname)
-                    self.logger.debug(msg)
+                    self.logger.warning(msg)
+
+        # We fail after all the files have been checked not just the first. 
+        # Since this is a very fast method, the time cost is low so it is 
+        # worth it to give a full list of missing files to the caller.
+        if files_missing and self.fatal_fail :
+            raise ValueError("Source files missing. See log for details.")
 
         tmp_flist.sort(key=operator.itemgetter(0))
         with open(outfile, 'a') as filehandle:
@@ -401,6 +416,12 @@ class AbstractCPIO(Checkpoint):
                                          stderr=err_file, close_fds=True)
             self.cpio_process = cpio_proc
             cpio_proc.wait()
+
+            if (cpio_proc.returncode != 0) :
+                err_file.seek(0)
+                error_info = err_file.read()
+                raise Exception("CPIO Transfer failed with %s" % error_info)
+
             self.cpio_process = None
 
     def run_exec_file(self, file_name):
@@ -528,9 +549,17 @@ class AbstractCPIO(Checkpoint):
 class TransferCPIO(AbstractCPIO):
     '''CPIO transfer class which takes input from the DOC'''
     VALUE_SEPARATOR = ","
+    DEFAULT_ARG = {"fatal_if_not_found" : "False"}
 
-    def __init__(self, name):
+    def __init__(self, name, **kwargs):
         super(TransferCPIO, self).__init__(name)
+
+        # DC wraps kwargs in a second dictionary. 
+        # This call removes that wrapper dictionary.
+        args_dict = kwargs.get("arg", self.DEFAULT_ARG)
+        self.fatal_fail = args_dict.get("fatal_if_not_found",
+                          self.DEFAULT_ARG.get("fatal_if_not_found"))
+        self.fatal_fail = self.fatal_fail.capitalize() == 'True'
 
         # Holds a list of transfer actions
         self._transfer_list = list()
@@ -613,8 +642,17 @@ class TransferCPIOAttr(AbstractCPIO):
     '''CPIO transfer class which gets it input directly from the attributes.
        Provides the checkpoint functionality.
     '''
-    def __init__(self, name):
+    DEFAULT_ARG = {"fatal_if_not_found" : "False"}
+
+    def __init__(self, name, **kwargs):
         super(TransferCPIOAttr, self).__init__(name)
+
+        # DC wraps kwargs in a second dictionary. 
+        # This call removes that wrapper dictionary.
+        args_dict = kwargs.get("arg", self.DEFAULT_ARG)
+        self.fatal_fail = args_dict.get("fatal_if_not_found",
+                          self.DEFAULT_ARG.get("fatal_if_not_found"))
+        self.fatal_fail = self.fatal_fail.capitalize() == 'True'
 
         # Attributes that can be populated
         self.cpio_args = self.DEF_CPIO_ARGS

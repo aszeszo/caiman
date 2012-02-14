@@ -57,8 +57,9 @@ class TestCPIOFunctions(unittest.TestCase):
     TEST_SKIP_FILE_LIST_FILE = "/tmp/test_skip_file_list"
     TEST_DIR_EXCL_LIST_FILE = "/tmp/test_dir_excl_list"
     TEST_MEDIA_TRANSFORM = "/tmp/media_transform"
+    TEST_MISSING_FILE = "/tmp/missing_file"
 
-    def setUp(self):
+    def setUp(self, fatal_if_not_found = False):
         InstallEngine._instance = None
         InstallEngine()
         self.engine = InstallEngine.get_instance()
@@ -67,7 +68,11 @@ class TestCPIOFunctions(unittest.TestCase):
         self.tr_node = CPIOSpec()
         self.soft_node.insert_children([self.tr_node])
         self.doc.insert_children([self.soft_node])
-        self.tr_cpio = TransferCPIO("CPIO_Transfer")
+        if (fatal_if_not_found):
+            self.tr_cpio = TransferCPIO("CPIO_Transfer",
+                           arg = {'fatal_if_not_found': 'True'})
+        else:
+            self.tr_cpio = TransferCPIO("CPIO_Transfer")
 
     def tearDown(self):
         if os.access(self.TEST_DST_DIR, os.F_OK):
@@ -758,6 +763,26 @@ class TestCPIOFunctions(unittest.TestCase):
         '''
         self.assertRaises(Exception, TransferCPIO, "CPIO Transfer")
 
+    def test_fail_on_missing_file(self):
+        '''Test fail if file missing'''
+        self.setUp(True)
+        self.tr_cpio.src = os.path.join(self.TEST_SRC_DIR, "etc/X11")
+        self.tr_cpio.dst = self.TEST_DST_DIR
+        self.tr_cpio.media_transform = self.TEST_MISSING_FILE
+        with open(self.TEST_MISSING_FILE, 'w') as filehandle:
+            filehandle.write("#!/usr/bin/python\n")
+            filehandle.write("#!/usr/bin/nothere\n")
+        os.chmod(self.TEST_MISSING_FILE, 0777)
+
+        # The CPIO values that are specified
+        self.tr_cpio.action = "install"
+        self.tr_cpio.contents = self.tr_cpio.media_transform
+
+        try:
+            self.tr_cpio.execute(dry_run=True)
+            self.fail("Didn't fail when it hit a missing file")
+        except Exception as err:
+            pass
 
 class TestCPIOAttrFunctions(unittest.TestCase):
     TEST_DST_DIR = "/tmp/cpio_test_dir"
@@ -1023,6 +1048,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
             self.tr_cpio.execute(dry_run=True)
         except Exception as err:
             self.fail(str(err))
-
+            
 if __name__ == '__main__':
     unittest.main()

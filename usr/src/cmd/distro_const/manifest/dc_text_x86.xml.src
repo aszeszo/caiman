@@ -20,7 +20,7 @@
 
   CDDL HEADER END
 
-  Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+  Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 
   XML specification for building an Oracle Solaris installer iso image
 -->
@@ -259,7 +259,11 @@
       <checkpoint name="ba-init"
           desc="Boot Archive Initialization"
           mod_path="solaris_install/transfer/cpio"
-          checkpoint_class="TransferCPIO"/>
+          checkpoint_class="TransferCPIO">
+          <kwargs>
+            <arg name="fatal_if_not_found">false</args>
+          </kwargs>
+      </checkpoint>
       <checkpoint name="ba-config"
           desc="Boot Archive Configuration"
           mod_path="solaris_install/distro_const/checkpoints/boot_archive_configure"

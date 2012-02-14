@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ boot_archive_archive - archive the boot archive directory
@@ -287,7 +287,8 @@ class BootArchiveArchive(Checkpoint):
 
         # create a new TransferCPIOAttr object to copy every file from
         # boot_archive to the lofi mountpoint.
-        tr_attr = TransferCPIOAttr("Archive Population")
+        tr_attr = TransferCPIOAttr("Archive Population", 
+                                  arg = {"fatal_if_not_found":"true"})
 
         # set the transfer src correctly
         tr_attr.src = self.ba_build
