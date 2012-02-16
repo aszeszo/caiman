@@ -253,13 +253,10 @@ def prepare_engine(options):
                             "solaris_install/target/instantiation",
                             "TargetInstantiation")
 
-    arg = {"arg": {"fatal_if_not_found": "true"}}
-
     # The following 3 are transfer checkpoints
     eng.register_checkpoint(TRANSFER_ROOT,
                            "solaris_install/transfer/cpio",
-                           "TransferCPIO",
-                           kwargs=arg)
+                           "TransferCPIO")
 
     eng.register_checkpoint(TRANSFER_MISC,
                            "solaris_install/transfer/cpio",
