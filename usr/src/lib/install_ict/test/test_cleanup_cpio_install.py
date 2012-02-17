@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
    test_cleanup_live_cd
@@ -100,7 +100,8 @@ class TestCleanupCPIOInstall(unittest.TestCase):
             '/save/usr/share/dbus-1/services/gnome-power-manager.service',
             '/save/usr/share/gnome/autostart/gnome-keyring-daemon-wrapper.desktop',
             '.livecd', '.volsetid', '.textinstall', 'etc/sysconfig/language',
-            '.liveusb', 'a', 'bootcd_microroot', '/save/bogus']
+            '.liveusb', 'a', 'bootcd_microroot', 'var/user/jack',
+            'var/cache/gdm/jack/dmrc', 'var/cache/gdm/jack/', '/save/bogus']
 
         self.test_target = create_filesystem(*self.filesys_files)
 
@@ -134,8 +135,9 @@ class TestCleanupCPIOInstall(unittest.TestCase):
 
         cleanup_list = ['.livecd', '.volsetid', '.textinstall',
                         'etc/sysconfig/language', '.liveusb', 'a',
-                        'bootcd_microroot', 'file1', 'file2',
-                        'file3']
+                        'bootcd_microroot', 'var/user/jack',
+                        'var/cache/gdm/jack/dmrc', 'var/cache/gdm/jack/',
+                        'file1', 'file2', 'file3']
 
         # Instantiate the checkpoint
         self.clean_lcd = CleanupCPIOInstall("cleanup_cpio_install")

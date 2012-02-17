@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os
@@ -67,7 +67,8 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
 
         self.cleanup_list = ['.livecd', '.volsetid', '.textinstall',
                              'etc/sysconfig/language', '.liveusb',
-                             'a', 'bootcd_microroot']
+                             'a', 'bootcd_microroot', 'var/user/jack',
+                             'var/cache/gdm/jack/dmrc', 'var/cache/gdm/jack/']
 
     def execute(self, dry_run=False):
         '''
