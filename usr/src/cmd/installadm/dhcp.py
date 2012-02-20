@@ -38,7 +38,7 @@ import osol_install.auto_install.installadm_common as com
 
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.libaimdns import getifaddrs
-from solaris_install import Popen
+from solaris_install import Popen, CalledProcessError
 
 
 VERSION = "0.1"
@@ -56,7 +56,8 @@ DHCP_SERVER_IPV4_SVC = "svc:/network/dhcp/server:ipv4"
 # Mappings for name services (DNS, NIS) and related properties
 _ns_map = {'dns': {'SVC_NAME': "svc:/network/dns/client",
                    'DOMAIN_PROP': "config/domain",
-                   'SERVER_PROP': "config/nameserver"},
+                   'SERVER_PROP': "config/nameserver",
+                   'DOMAIN_SEARCH_PROP': "config/search"},
            'nis': {'SVC_NAME': "svc:/network/nis/domain",
                    'DOMAIN_PROP': "config/domainname",
                    'SERVER_PROP': "config/ypservers"}}
@@ -108,6 +109,8 @@ log-facility local7;
 CFGFILE_DNS_DOMAIN_STRING = """option domain-name "%s";
 """
 CFGFILE_DNS_SERVERS_STRING = """option domain-name-servers %s;
+"""
+CFGFILE_DNS_DOMAIN_SEARCH_STRING = """option domain-search %s;
 """
 CFGFILE_NIS_DOMAIN_STRING = """option nis-domain "%s";
 """
@@ -672,7 +675,8 @@ class DHCPServer(object):
         '''
         # Note the protocol dependencies: NIS requires a domain and any number
         # of optional servers, DNS requires at least one server and an optional
-        # domain.
+        # domain or search.
+
         lines = list()
         dns_servers = _get_nameservers('dns')
         if dns_servers is not None:
@@ -680,7 +684,10 @@ class DHCPServer(object):
             dns_domain = _get_domain('dns')
             if dns_domain is not None:
                 lines.append(CFGFILE_DNS_DOMAIN_STRING % dns_domain)
-
+            dns_search = _get_dns_search('dns')
+            if dns_search is not None:
+                lines.append(CFGFILE_DNS_DOMAIN_SEARCH_STRING % dns_search)
+                
         nis_domain = _get_domain('nis')
         if nis_domain is not None:
             lines.append(CFGFILE_NIS_DOMAIN_STRING % nis_domain)
@@ -1279,10 +1286,44 @@ def _get_domain(svc):
         return None
 
     cmd = [SVCPROP, "-p", prop, service]
+    try:
+        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                             logger='', stderr_loglevel=logging.DEBUG)
+        return p.stdout.strip()
+    except CalledProcessError:
+        logging.debug("Property not set: %s", cmd)
+        return None
+
+
+def _get_dns_search(svc):
+    '''
+    Returns the domain_search for DNS. Returns None if no search-domain is
+    set or if the svc passed is not online.
+    '''
+    if svc != 'dns':
+        raise ValueError(_("invalid name service: %s") % svc)
+
+    service = _ns_map[svc]['SVC_NAME']
+    prop = _ns_map[svc]['DOMAIN_SEARCH_PROP']
+
+    cmd = [SVCS, "-Ho", "STATE", service]
     p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                          logger='', stderr_loglevel=logging.DEBUG)
+    if p.stdout.strip() != 'online':
+        return None
 
-    return p.stdout.strip()
+    cmd = [SVCPROP, "-p", prop, service]
+    try:
+        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                             logger='', stderr_loglevel=logging.DEBUG)
+
+        # return output as a quoted string "example.com","sales.example.com"
+
+        search_domains = p.stdout.strip().split()
+        return ','.join(['"' + x + '"' for x in search_domains])
+    except CalledProcessError:
+        logging.debug("Property not set: %s", cmd)
+        return None
 
 
 def _get_nameservers(svc):
@@ -1305,13 +1346,15 @@ def _get_nameservers(svc):
         return None
 
     cmd = [SVCPROP, "-p", prop, service]
-    p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                         logger='', stderr_loglevel=logging.DEBUG)
-    servers = p.stdout.strip().split()
-    if servers is not None:
-        servers = ', '.join([ip for ip in servers])
-
-    return servers
+    try:
+        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                             logger='', stderr_loglevel=logging.DEBUG)
+        servers = p.stdout.strip().split()
+        if servers is not None:
+            return  ', '.join([ip for ip in servers])
+    except CalledProcessError:
+        logging.debug("Property not set: %s", cmd)
+	return None
 
 
 def _get_default_route_for_subnet(subnet_ip):
