@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -138,7 +138,7 @@ class UserInfo(SMFPropertyGroup):
     password = property(get_password, set_password)
     
     def is_password_configured(self):
-        '''Empty string is valid; 'None' indicates that password 
+        '''Empty string is valid; 'None' indicates that password
         needs to be set first
         
         '''
@@ -268,9 +268,15 @@ def validate_login(login_str):
     'root' or 'nobody') otherwise returns True
     
     '''
+    forbidden_logins = ['nobody', 'noaccess', 'nobody4']
     try:
-        pwd.getpwnam(login_str)
-        raise LoginInvalid("'%s' cannot be used" % login_str)
+        uid = pwd.getpwnam(login_str).pw_uid
+        if uid <= 99 or login_str in forbidden_logins:
+            # We are trying to add existing system user or we are trying
+            # to add nobody, noaccess or nobody4
+            raise LoginInvalid("'%s' cannot be used" % login_str)
+        else:
+            return True
     except KeyError:
         # KeyError raised if the given user doesn't exist; in which
         # case, it's safe to apply
