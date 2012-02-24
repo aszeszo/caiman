@@ -687,7 +687,7 @@ class DHCPServer(object):
             dns_search = _get_dns_search('dns')
             if dns_search is not None:
                 lines.append(CFGFILE_DNS_DOMAIN_SEARCH_STRING % dns_search)
-                
+
         nis_domain = _get_domain('nis')
         if nis_domain is not None:
             lines.append(CFGFILE_NIS_DOMAIN_STRING % nis_domain)
@@ -1354,7 +1354,7 @@ def _get_nameservers(svc):
             return  ', '.join([ip for ip in servers])
     except CalledProcessError:
         logging.debug("Property not set: %s", cmd)
-	return None
+        return None
 
 
 def _get_default_route_for_subnet(subnet_ip):
