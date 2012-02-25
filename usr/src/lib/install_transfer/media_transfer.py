@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -32,7 +32,7 @@ import os
 import platform
 import logging
 
-from solaris_install import Popen
+from solaris_install import Popen, run
 from solaris_install.data_object.cache import DataObjectCache
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint
@@ -62,6 +62,9 @@ SVC_STATUS_ENABLED = "online"
 
 PRTCONF = "/usr/sbin/prtconf"
 DHCPINFO = "/sbin/dhcpinfo"
+
+MOUNT = "/usr/sbin/mount"
+UMOUNT = "/usr/sbin/umount"
 
 IMAGE_INFO_FILENAME = ".image_info"
 IMAGE_SIZE_KEYWORD = "IMAGE_SIZE"
@@ -298,6 +301,23 @@ def setup_doc_content(manifest_name, media_source):
     doc.volatile.insert_children(software_nodes)
 
 
+def unmount_libc_overlay(logger):
+    '''If the processor optimized libc is mounted on top of
+       the base libc on /lib/libc.so.1,
+       unmount the optimized libc overlay so the one without processor
+       optimization can be copied into the install target by subsequent
+       cpio transfer checkpoints.
+    '''
+
+    p = run([MOUNT], logger=logger)
+
+    # check the output of the mount command to see whether the optimized
+    # libc is mounted, if so, unmount it.
+    if "/lib/libc.so.1 on" in p.stdout:
+        logger.debug("Optimized libc is mounted, unmounting...")
+        run([UMOUNT, "/lib/libc.so.1"], logger=logger)
+
+
 class PrepareMediaTransfer(AbstractCheckpoint):
     '''This checkpoint is used by installation environments booted from
        the media.  It prepares the DOC for CPIO based transfer.
@@ -321,6 +341,8 @@ class PrepareMediaTransfer(AbstractCheckpoint):
                                      TRANSFER_MANIFEST_NAME)
 
         setup_doc_content(manifest_name, PrepareMediaTransfer.MEDIA_SOURCE)
+
+        unmount_libc_overlay(self.logger)
 
 
 class NetPrepareMediaTransfer(AbstractCheckpoint):
@@ -469,3 +491,5 @@ class NetPrepareMediaTransfer(AbstractCheckpoint):
                     self.logger.debug("Downloading " + file)
                     download_files(server_url + "/" + file, dst_name,
                                    self.logger)
+
+        unmount_libc_overlay(self.logger)
