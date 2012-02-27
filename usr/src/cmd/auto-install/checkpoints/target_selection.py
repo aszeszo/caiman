@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 ''' target_selection.py - Select Install Target(s)
@@ -34,6 +34,7 @@ import traceback
 
 from operator import attrgetter
 import osol_install.errsvc as errsvc
+import osol_install.liberrsvc as liberrsvc
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.target import Target, vdevs
@@ -42,6 +43,7 @@ from solaris_install.target.controller import TargetController, \
 from solaris_install.target.logical import Logical, Zpool, Vdev, BE, Zvol, \
     Filesystem, DatasetOptions, PoolOptions
 from solaris_install.target.physical import Disk, Iscsi, Partition, Slice
+from solaris_install.target.shadow.physical import ShadowPhysical
 from solaris_install.target.size import Size
 
 DISK_RE = "c\d+(?:t\d+)?d\d+"
@@ -2880,17 +2882,24 @@ class TargetSelection(Checkpoint):
         # Check error service for errors
         errors = errsvc.get_all_errors()
 
-        # Found errors and they cannot be ignored
-        if errors:
-            # Print desired contents to log
-            existing_desired = \
-                self.doc.persistent.get_first_child(Target.DESIRED)
-            if existing_desired:
-                self.logger.debug("Desired =\n%s\n" % (str(existing_desired)))
-            self.logger.debug("Disk =\n%s\n" % (str(ret_disk)))
-            errstr = "Following errors occurred processing disks :\n%s" % \
-                (str(errors[0]))
-            raise SelectionError(errstr)
+        for err in errors:
+            if self._wipe_disk and \
+                isinstance(err.error_data[liberrsvc.ES_DATA_EXCEPTION],
+                           ShadowPhysical.SliceInUseError):
+                self.logger.debug("SliceInUseError - not fatal")
+                self.logger.debug("Error module ID: %s.. error type: %s" % \
+                        (err.get_mod_id(), str(err.get_error_type())))
+                self.logger.debug("Exception value: %s" % \
+                        err.error_data[liberrsvc.ES_DATA_EXCEPTION].value)
+            else:
+                self.logger.error("Error module ID: %s.. error type: %s" % \
+                                 (err.get_mod_id(), str(err.get_error_type())))
+                self.logger.error("Error class: %r" % \
+                                  err.error_data[liberrsvc.ES_DATA_EXCEPTION])
+                self.logger.error("Exception value: %s" % \
+                        err.error_data[liberrsvc.ES_DATA_EXCEPTION].value)
+                raise SelectionError("Final Validation Failed. See "
+                                     "install_log for more details.")
 
         return ret_disk
 
@@ -3144,13 +3153,26 @@ class TargetSelection(Checkpoint):
             # Do final validation before passing to Target Instantiation
             if not new_desired_target.final_validation():
                 errors = errsvc.get_all_errors()
-                if errors:
-                    errstr = "Following errors occurred during final " \
-                        "validation :\n%s" % (str(errors[0]))
-                    raise SelectionError(errstr)
-                else:
-                    raise SelectionError("Final Validation Failed. See "
-                        "install_log for more details.")
+
+                for err in errors:
+                    if isinstance(err.error_data[liberrsvc.ES_DATA_EXCEPTION],
+                                  ShadowPhysical.SliceInUseError):
+                        self.logger.debug("SliceInUseError - not fatal")
+                        self.logger.debug("Error module ID: %s.. error " \
+                                          "type: %s" % (err.get_mod_id(),\
+                                          str(err.get_error_type())))
+                        self.logger.debug("Exception value: %s" % \
+                            err.error_data[liberrsvc.ES_DATA_EXCEPTION].value)
+                    else:
+                        self.logger.error("Error module ID: %s.. error " \
+                                          "type: %s" % (err.get_mod_id(),\
+                                          str(err.get_error_type())))
+                        self.logger.error("Error class: %r" % \
+                                  err.error_data[liberrsvc.ES_DATA_EXCEPTION])
+                        self.logger.error("Exception value: %s" % \
+                            err.error_data[liberrsvc.ES_DATA_EXCEPTION].value)
+                        raise SelectionError("Final Validation Failed. See "
+                             "install_log for more details.")
 
         return new_desired_target
 
