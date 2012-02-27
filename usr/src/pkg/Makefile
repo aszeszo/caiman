@@ -19,7 +19,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 include $(SRC)/Makefile.master
@@ -636,6 +636,8 @@ $(PDIR)/%.dep: $(PDIR)/%.mog
 # The full chain implies that there should be a .dep.res suffix rule,
 # but dependency generation is done on a set of manifests, rather than
 # on a per-manifest basis.  Instead, see the gendeps rule above.
+# -T is used for Python files so that .pyc files are not recompiled on
+# installed systems, ensuring their packages normally verify clean.
 #
 
 $(PDIR)/%.pub: $(PDIR)/%.res
@@ -645,8 +647,8 @@ $(PDIR)/%.pub: $(PDIR)/%.res
 		print "Publishing $(@F:%.pub=%) to $$r repository"; \
 		pkgsend -s file://$(PKGDEST)/repo.$$r publish \
 		    -d $(PKGROOT) -d $(SRC)/pkg/license_files \
-		    -d $(SRC) --fmri-in-manifest --no-index --no-catalog $(<) \
-		    > /dev/null; \
+		    -d $(SRC) -T \*.py --fmri-in-manifest --no-index \
+		    --no-catalog $(<) > /dev/null; \
 	fi; \
 	$(TOUCH) $(@);
 
