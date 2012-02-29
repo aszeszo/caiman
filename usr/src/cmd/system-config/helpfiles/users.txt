@@ -2,6 +2,8 @@ USERS
 
 In this screen, you can type a root password and define a user account for your installed system.
 
+Note: When a user account is added, the home directory is created on the <root_pool>/export/home/<login> ZFS dataset. The parent of that dataset, <root_pool>/export/home, must exist in order for you to be allowed to create the user account.
+
 GUIDELINE
 
      * Both the root password and user account are optional. But, completing all fields in the screen is recommended.

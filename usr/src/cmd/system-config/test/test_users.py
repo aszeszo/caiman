@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -101,6 +101,7 @@ class TestUserScreen(unittest.TestCase):
         self.UserScreen__init__ = UserScreen.__init__
         UserScreen.__init__ = lambda x, y: None
         self.user_screen = UserScreen(None)
+        self.user_screen.show_user_account = True
     
     def tearDown(self):
         UserScreen.__init__ = self.UserScreen__init__

@@ -234,7 +234,10 @@ def get_all_screens(main_win):
     result.append(TimeZone(main_win, screen=TimeZone.LOCATIONS))
     result.append(TimeZone(main_win))
     result.append(DateTimeScreen(main_win))
-    result.append(UserScreen(main_win))
+
+    # All screens are to be brought up, so make sure complete user screen
+    # (root password as well as initial user account) is displayed.
+    result.append(UserScreen(main_win, show_user_account=True))
 
     return result
 

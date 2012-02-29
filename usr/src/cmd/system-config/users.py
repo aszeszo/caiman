@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -28,6 +28,7 @@ Set root password and primary user data
 
 import logging
 
+from solaris_install import CalledProcessError, run
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig import _, SCI_HELP
 import solaris_install.sysconfig.profile
@@ -44,6 +45,9 @@ from terminalui.i18n import textwidth
 
 LOGGER = None
 
+# Consumed CLIs
+ZFS = "/usr/sbin/zfs"
+
 
 class UserScreen(BaseScreen):
     '''Allow user to set:
@@ -55,8 +59,11 @@ class UserScreen(BaseScreen):
     '''
     
     HEADER_TEXT = _("Users")
-    INTRO = _("Define a root password for the system and user account for"
-              " yourself.")
+    INTRO_SHOW_USER = _("Define a root password for the system and user "
+                        "account for yourself.")
+    INTRO_HIDE_USER = _("Define a root password for the system. Creation "
+                        "of user account is disabled. See Help for "
+                        "additional information.")
     ROOT_TEXT = _("System Root Password")
     ROOT_LABEL = _("Root password:")
     CONFIRM_LABEL = _("Confirm password:")
@@ -70,7 +77,7 @@ class UserScreen(BaseScreen):
     PASS_SCREEN_LEN = 16  # also used as column width for user input
     ITEM_OFFSET = 2
     
-    def __init__(self, main_win):
+    def __init__(self, main_win, show_user_account=None):
         global LOGGER
         if LOGGER is None:
             LOGGER = logging.getLogger(INSTALL_LOGGER_NAME + ".sysconfig")
@@ -116,7 +123,27 @@ class UserScreen(BaseScreen):
         self.user_confirm_err = None
         self.user_confirm_list = None
         self.user_confirm_edit = None
-    
+
+        #
+        # If show_user_account is True, complete Users screen will be
+        # displayed (root password edit fields as well as widgets related
+        # to creating initial user account). Otherwise, widgets for initial
+        # user account are hidden.
+        #
+        # If not initialized explicitly by caller (e.g. text installer),
+        # show_user_account is set to True only if all conditions needed
+        # for successful creation of user account are met.
+        #
+        # In particular, existence of parent of home ZFS dataset is checked,
+        # since if parent of home ZFS dataset was missing, then
+        # svc:/system/config-user smf service (responsible for configuring
+        # root and user accounts) would fail to create user account. As
+        # a result of that, the whole system would end up in maintenance mode.
+        #
+        self.show_user_account = show_user_account
+        if self.show_user_account is None:
+            self.show_user_account = self.home_zfs_parent_exists()
+
     def _show(self):
         '''Display the user name, real name, and password fields'''
         
@@ -128,10 +155,10 @@ class UserScreen(BaseScreen):
         #
         if sc_profile.users is None:
             #
-            # assume root is a role. root is later changed to normal account
-            # if user account is not created
+            # Assume root is a normal account. It will be changed to a role
+            # if the user account is created.
             #
-            root = UserInfo(login_name="root", is_role=True)
+            root = UserInfo(login_name="root", is_role=False)
 
             #
             # Initialize attributes of user account which can't be configured
@@ -153,8 +180,13 @@ class UserScreen(BaseScreen):
         
         y_loc = 1
         
-        self.center_win.add_paragraph(UserScreen.INTRO, y_loc, 1, y_loc + 2,
-                                      self.win_size_x - 1)
+        if self.show_user_account:
+            intro_text = UserScreen.INTRO_SHOW_USER
+        else:
+            intro_text = UserScreen.INTRO_HIDE_USER
+
+        self.center_win.add_paragraph(intro_text, y_loc, 1,
+                                      y_loc + 2, self.win_size_x - 1)
         
         y_loc += 3
         self.center_win.add_text(UserScreen.ROOT_TEXT, y_loc, 1,
@@ -187,7 +219,13 @@ class UserScreen(BaseScreen):
                                                error_win=self.root_confirm_err)
         rc_edit_kwargs = {"linked_win": self.root_pass_edit}
         self.root_confirm_edit.on_exit_kwargs = rc_edit_kwargs
-        
+
+        # User account disabled, do not display related widgets.
+        if not self.show_user_account:
+            self.main_win.do_update()
+            self.center_win.activate_object(self.root_pass_list)
+            return
+
         y_loc += 2
         self.center_win.add_text(UserScreen.USER_TEXT, y_loc, 1,
                                  self.win_size_x - 1)
@@ -251,11 +289,8 @@ class UserScreen(BaseScreen):
         self.center_win.activate_object(self.root_pass_list)
     
     def on_change_screen(self):
-        '''Save real name and login name always'''
-        self.user.real_name = self.real_name_edit.get_text()
-        self.user.login_name = self.username_edit.get_text()
-        self.root.is_role = bool(self.user.login_name)
-        
+        '''Store entered information into data object cache.'''
+
         if self.root_pass_edit.modified:
             if self.root_pass_edit.compare(self.root_confirm_edit):
                 self.root.password = self.root_pass_edit.get_text()
@@ -267,6 +302,19 @@ class UserScreen(BaseScreen):
         
         self.root_pass_edit.clear_text()
         self.root_confirm_edit.clear_text()
+
+        #
+        # User account disabled, do not store related info into data object
+        # cache.
+        #
+        if not self.show_user_account:
+            return
+
+        self.user.real_name = self.real_name_edit.get_text()
+        self.user.login_name = self.username_edit.get_text()
+
+        # If user account is to be created, configure root account as a role.
+        self.root.is_role = bool(self.user.login_name)
         
         if self.user_pass_edit.modified:
             if self.user_pass_edit.compare(self.user_confirm_edit):
@@ -282,25 +330,15 @@ class UserScreen(BaseScreen):
     
     def validate(self):
         '''Check for mismatched passwords, bad login names, etc.'''
-        if self.user_pass_edit.modified:
-            user_pass_set = bool(self.user_pass_edit.get_text())
-        else:
-            user_pass_set = (self.user.passlen != 0)
-        
-        if self.root_pass_edit.modified:
-            root_pass_set = bool(self.root_pass_edit.get_text())
-        else:
-            root_pass_set = (self.root.passlen != 0)
-        
-        login_name = self.username_edit.get_text()
-        LOGGER.debug("login_name=%s", login_name)
-        real_name = self.real_name_edit.get_text()
-        LOGGER.debug("real_name=%s", real_name)
-        
         # Note: the Root and User password fields may be filled with
         # asterisks if the user previously invoked this screen.  Therefore,
         # if not empty we check their modified flags before validating the
         # contents.
+
+        if self.root_pass_edit.modified:
+            root_pass_set = bool(self.root_pass_edit.get_text())
+        else:
+            root_pass_set = (self.root.passlen != 0)      
 
         # Root password is mandatory and, if modified, must be valid
         if not root_pass_set or self.root_pass_edit.modified:
@@ -310,6 +348,20 @@ class UserScreen(BaseScreen):
         if not self.root_pass_edit.compare(self.root_confirm_edit):
             raise UIMessage(_("Root passwords don't match"))
 
+        # User account disabled, skip related validation steps.
+        if not self.show_user_account:
+            return
+
+        if self.user_pass_edit.modified:
+            user_pass_set = bool(self.user_pass_edit.get_text())
+        else:
+            user_pass_set = (self.user.passlen != 0)
+        
+        login_name = self.username_edit.get_text()
+        LOGGER.debug("login_name=%s", login_name)
+        real_name = self.real_name_edit.get_text()
+        LOGGER.debug("real_name=%s", real_name)
+        
         # Username (if specified) must be valid
         login_valid(self.username_edit)
 
@@ -328,6 +380,35 @@ class UserScreen(BaseScreen):
             if real_name or user_pass_set:
                 raise UIMessage(_("Enter username or clear all user "
                                   "account fields"))
+
+    def home_zfs_parent_exists(self):
+        '''Return True if parent of to-be-created home ZFS dataset exists.
+        Otherwise, return False.
+
+        Home ZFS dataset is created in form of <root_pool>/export/home/<login>
+        with mountpoint /export/home/<login> inherited from parent dataset.
+
+        The check verifies that ZFS dataset with to-be-inherited /export/home
+        mountpoint exists.
+        '''
+
+        # obtain mountpoints for all existing ZFS datasets
+        cmd = [ZFS, "list", "-H", "-o", "mountpoint"]
+        try:
+            mountpoint_list = run(cmd, logger=LOGGER)
+        except CalledProcessError:
+            LOGGER.warn("Could not determine if parent of home ZFS dataset "
+                        "exists.")
+            return False
+
+        if "/export/home" not in mountpoint_list.stdout.splitlines():
+            LOGGER.debug("Parent of home ZFS dataset does not exist, creation "
+                         "of user account disabled.")
+            return False
+
+        LOGGER.debug("Parent of home ZFS dataset exists, creation of user "
+                     "account enabled.")
+        return True
 
 
 def username_valid(edit_field):

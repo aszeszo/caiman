@@ -19,7 +19,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 
 -->
 <!DOCTYPE auto_install SYSTEM "file:///usr/share/install/ai.dtd.@DTD_VERSION_AI@">
@@ -28,6 +28,24 @@
     <target>
       <logical>
         <zpool name="rpool" is_root="true">
+          <!--
+            Subsequent <filesystem> entries instruct an installer to create
+            following ZFS datasets:
+
+                <root_pool>/export         (mounted on /export)
+                <root_pool>/export/home    (mounted on /export/home)
+
+            Those datasets are part of standard environment and should be
+            always created.
+
+            In rare cases, if there is a need to deploy an installed system
+            without these datasets, either comment out or remove <filesystem>
+            entries. In such scenario, it has to be also assured that
+            in case of non-interactive post-install configuration, creation
+            of initial user account is disabled in related system
+            configuration profile. Otherwise the installed system would fail
+            to boot.
+          -->
           <filesystem name="export" mountpoint="/export"/>
           <filesystem name="export/home"/>
           <be name="solaris"/>
