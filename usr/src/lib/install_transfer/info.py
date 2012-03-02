@@ -19,18 +19,16 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
    Transfer checkpoint data objects. These objects are stored in the data
    object cache (DOC) and used by the transfer checkpoints.
 '''
-import tempfile
 
 from lxml import etree
 from solaris_install.data_object import DataObject, ParsingError
-from solaris_install.data_object import ObjectNotFoundError
 
 ACTION = "action"
 APP_CALLBACK = "app_callback"

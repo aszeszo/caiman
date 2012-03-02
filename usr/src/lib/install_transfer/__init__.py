@@ -21,19 +21,18 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """init module for the transfer checkpoint"""
-import info
 import sys
+from solaris_install.transfer import info
 from solaris_install.data_object.cache import DataObjectCache
 
-from cpio import TransferCPIO
-from ips import TransferIPS
-from p5i import TransferP5I
-from svr4 import TransferSVR4
-
+from solaris_install.transfer.cpio import TransferCPIO
+from solaris_install.transfer.ips import TransferIPS
+from solaris_install.transfer.p5i import TransferP5I
+from solaris_install.transfer.svr4 import TransferSVR4
 
 __all__ = ["ips", "p5i", "cpio", "info", "prog", "svr4"]
 

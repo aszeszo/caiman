@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''Transfer IPS checkpoint. Sub-class of the checkpoint class'''
 
@@ -31,7 +31,6 @@ import gettext
 import locale
 import os
 import shutil
-import sys
 
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
@@ -43,7 +42,6 @@ import pkg.misc as misc
 from pkg.client import global_settings
 from pkg.client.api import IMG_TYPE_ENTIRE, IMG_TYPE_PARTIAL
 from solaris_install import PKG5_API_VERSION
-from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.engine import InstallEngine
 from solaris_install.transfer.info import Args
@@ -1097,11 +1095,11 @@ class TransferIPS(AbstractIPS):
                      (succeeded, total))
 
         for pub, err in cre.failed:
-                lines.append("")
-                lines.append(str(err))
+            lines.append("")
+            lines.append(str(err))
 
         if cre.errmessage:
-                lines.append(cre.errmessage)
+            lines.append(cre.errmessage)
 
         return "\n".join(lines)
 

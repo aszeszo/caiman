@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -38,7 +38,6 @@ import tempfile
 from osol_install.install_utils import file_size
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.engine import InstallEngine
-from solaris_install.target.size import Size
 from solaris_install.transfer.info import Args
 from solaris_install.transfer.info import CPIOSpec as CPIO
 from solaris_install.transfer.info import Destination
@@ -149,7 +148,7 @@ class AbstractCPIO(Checkpoint):
         if need_parse_input:
             self._cleanup_tmp_files()
             self._transfer_list = list()
-          
+
         # The file_size() function used for calculating size of each
         # file returns the value in bytes.  Convert to kilobytes.
         size = size / 1024
