@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 import osol_install.errsvc as errsvc
 
@@ -77,6 +77,7 @@ class ShadowLogical(ShadowList):
             # check the mountpoint if this is a Filesystem object
             if hasattr(value, "mountpoint") and hasattr(dataset, "mountpoint"):
                 if value.mountpoint is not None and \
+                   value.mountpoint.lower() not in ["none", "legacy"] and \
                    value.mountpoint == dataset.mountpoint:
                     self.set_error(
                         self.DuplicateMountpointError(dataset.name,

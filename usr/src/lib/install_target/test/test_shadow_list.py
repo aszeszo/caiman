@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_shadow_list.py - collection of unittests for testing target validation
@@ -236,6 +236,18 @@ class TestZFSFilesystem(unittest.TestCase):
         error = errsvc._ERRORS[0]
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
             ShadowLogical.DuplicateMountpointError))
+
+    def test_add_multiple_legacy_mountpoints(self):
+        self.zpool.add_filesystem("test_filesystem1", "legacy")
+        self.assertFalse(errsvc._ERRORS)
+        self.zpool.add_filesystem("test_filesystem2", "legacy")
+        self.assertFalse(errsvc._ERRORS)
+
+    def test_add_multiple_none_mountpoints(self):
+        self.zpool.add_filesystem("test_filesystem1", "none")
+        self.assertFalse(errsvc._ERRORS)
+        self.zpool.add_filesystem("test_filesystem2", "none")
+        self.assertFalse(errsvc._ERRORS)
 
     def test_delete_filesystem(self):
         fs1 = self.zpool.add_filesystem("test_filesystem1")
