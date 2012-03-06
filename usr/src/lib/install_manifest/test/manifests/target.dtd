@@ -18,7 +18,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 
 -->
 
@@ -215,7 +215,7 @@
      Both of these types of properties can be set in the option string.
      For example:
 
--o altroot=/a -o autoexpand=off -o delegation=off -O atime=on -O compression=lzbj
+-o altroot=/a -o autoexpand=off -o delegation=off -O atime=on -O compression=lzjb
 -->
 <!ELEMENT pool_options (options)>
 <!ELEMENT dataset_options (options)>

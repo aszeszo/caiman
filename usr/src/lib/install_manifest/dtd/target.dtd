@@ -18,7 +18,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 
 -->
 
@@ -237,13 +237,13 @@
         </pool_options>
         <dataset_options>
           <option name="atime" value="on"/>
-          <option name="compression" value="lzbj"/>
+          <option name="compression" value="lzjb"/>
         </dataset_options>
 
     would result in a call to zpool like:
 
         zpool create -o altroot=/a -o autoexpand=off -o delegation=off \
-            -O atime=on -O compression=lzbj
+            -O atime=on -O compression=lzjb
 
 -->
 <!ELEMENT pool_options (option+)>
@@ -255,8 +255,8 @@
 
         <options>
           <option name="atime" value="on"/>
-          <option name="compression" value="lzbj"/>
-        <options>
+          <option name="compression" value="lzjb"/>
+        </options>
 -->
 <!ELEMENT options (option+)>
 
