@@ -19,7 +19,7 @@
  
   CDDL HEADER END
  
-  Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+  Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 
   XML specification for building an Oracle Solaris installer iso image
 -->
@@ -249,15 +249,12 @@
         <name>usr/platform/sun4v/lib/fm/topo/plugins/niu.so</name>
         <name>usr/platform/sun4v/lib/fm/topo/maps/sun4v-hc-topology.xml</name>
         <name>usr/platform/SUNW,SPARC-Enterprise/lib/fm/topo/plugins/ioboard.so</name>
-        <name>usr/platform/SUNW,Sun-Fire/lib/fm/topo/plugins/ioboard.so</name>
-        <name>usr/platform/SUNW,Sun-Fire-15000/lib/fm/topo/plugins/ioboard.so</name>
         <name>usr/platform/SUNW,Netra-T5440/lib/fm/topo/maps/Netra-T5440-hc-topology.xml</name>
         <name>usr/platform/SUNW,Sun-Fire-T200/lib/fm/topo/maps/Sun-Fire-T200-hc-topology.xml</name>
         <name>usr/platform/SUNW,Sun-Fire-T200/lib/fm/topo/maps/SPARC-Enterprise-T1000-hc-topology.xml</name>
         <name>usr/platform/SUNW,Sun-Fire-T200/lib/fm/topo/maps/Netra-T2000-hc-topology.xml</name>
         <name>usr/platform/SUNW,Sun-Fire-T200/lib/fm/topo/maps/SPARC-Enterprise-T2000-hc-topology.xml</name>
         <name>usr/platform/SUNW,Sun-Fire-T200/lib/fm/topo/maps/Sun-Fire-T1000-hc-topology.xml</name>
-        <name>usr/platform/SUNW,Sun-Fire-15000/lib/fm/topo/maps/Sun-Fire-15000-hc-topology.xml</name>
         <name>usr/platform/SUNW,SPARC-Enterprise-T5120/lib/fm/topo/maps/SPARC-Enterprise-T5220-hc-topology.xml</name>
         <name>usr/platform/SUNW,SPARC-Enterprise-T5120/lib/fm/topo/maps/SPARC-Enterprise-T5120-hc-topology.xml</name>
         <name>usr/platform/SUNW,Sun-Blade-T6300/lib/fm/topo/maps/Sun-Blade-T6300-hc-topology.xml</name>
@@ -266,7 +263,6 @@
         <name>usr/platform/SUNW,T5140/lib/fm/topo/maps/T5240-hc-topology.xml</name>
         <name>usr/platform/SUNW,T5140/lib/fm/topo/maps/T5440-hc-topology.xml</name>
         <name>usr/platform/SUNW,SPARC-Enterprise/lib/fm/topo/maps/SPARC-Enterprise-hc-topology.xml</name>
-        <name>usr/platform/SUNW,Sun-Fire/lib/fm/topo/maps/Sun-Fire-hc-topology.xml</name>
         <name>usr/platform/SUNW,Netra-CP3060/lib/fm/topo/maps/Netra-CP3060-hc-topology.xml</name>
         <name>usr/platform/SUNW,Netra-CP3260/lib/fm/topo/maps/Netra-CP3260-hc-topology.xml</name>
         <name>usr/platform/SUNW,Sun-Blade-T6320/lib/fm/topo/maps/Sun-Blade-T6320-hc-topology.xml</name>
