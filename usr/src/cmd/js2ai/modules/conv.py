@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """Conversion routines used to Solaris 10 convert rules and profile files to
 the xml format used by the Solaris installer
@@ -821,6 +821,10 @@ class XMLProfileData(object):
         being generated.
 
         """
+        # if device doesn't contain slice information 
+        # return false
+        if not 's' in device:
+            return False
         disk_name, slice_num = device.split("s")
         diskname_node = self.__fetch_diskname_node(disk_name)
         if diskname_node is None:
