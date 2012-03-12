@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ boot_archive_archive - archive the boot archive directory
@@ -239,22 +239,27 @@ class BootArchiveArchive(Checkpoint):
 
             # check to see if root is in the exclude_dirs list
             if root in exclude_dirs:
-                self.logger.debug("skipping " + root + " due to exclude list")
+                self.logger.debug("skipping root dir %s due to exclude list",
+                                  root)
                 continue
 
-            # walk each dir and if the entry is in the exclude_dir list, skip
-            # it
+            # walk each dir and if the entry is in the exclude_dir list
+            # add to to the skip list.  After looking through all
+            # directories, remove the ones to be skipped from the dirs list
+            skip_dirs = list()
             for d in dirs:
                 if os.path.join(root, d) in exclude_dirs:
-                    self.logger.debug("skipping " + os.path.join(root, d) + \
-                                      " due to exclude list")
-                    dirs.remove(d)
-
+                    self.logger.debug("adding %s to directory skip list due"
+                                      " to exclude list", os.path.join(root, d))
+                    skip_dirs.append(d)
+            for sd in skip_dirs:
+                dirs.remove(sd)
+            
             # walk each file and if it's in the skip_list, continue
             for f in files:
                 if os.path.join(root, f) in exclude_files:
-                    self.logger.debug("skipping " + os.path.join(root, f) + \
-                                     " due to exclude list")
+                    self.logger.debug("skipping file %s due to exclude list",
+                                      os.path.join(root, f))
                     continue
 
                 # we have a file that needs to be fiocompressed
