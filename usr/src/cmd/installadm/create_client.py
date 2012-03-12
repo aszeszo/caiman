@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 AI create-client
@@ -107,7 +107,7 @@ def parse_options(cmd_options=None):
     # check that the service exists
     service_props = config.get_service_props(options.service_name)
     if not service_props:
-        parser.error(_("The specified service does not exist: %s\n") %
+        raise SystemExit(_("The specified service does not exist: %s\n") %
                        options.service_name)
 
     # get the image_path from the service
