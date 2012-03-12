@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -896,12 +896,12 @@ def incremental_validate_domain(edit_field):
 
 
 def _has_name_service():
-        nsv = solaris_install.sysconfig.profile.from_engine().nameservice
-        if nsv.dns:
-            return True
-        if nsv.nameservice:
-            return True
-        return False
+    nsv = solaris_install.sysconfig.profile.from_engine().nameservice
+    if nsv.dns:
+        return True
+    if nsv.nameservice:
+        return True
+    return False
 
 
 def _convert_to_ldap_domain(domain):

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -29,7 +29,7 @@ Time Zone selection screen - used for all three TimeZone screens
 import curses
 import logging
 
-from osol_install.libzoneinfo import get_tz_info, tz_isvalid
+from osol_install.libzoneinfo import get_tz_info
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig import _, SCI_HELP
 import solaris_install.sysconfig.profile
