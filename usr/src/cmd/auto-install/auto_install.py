@@ -42,6 +42,16 @@ import osol_install.errsvc as errsvc
 
 from osol_install.liberrsvc import ES_DATA_EXCEPTION
 
+#
+# pylint complains about the following imports -- boot, device_config,
+# boot_archive, instantiation, initialize_smf, transfer_files,
+# apply_sysconfig, INSTALL, update_dumpadm, DataObject, discovery, varshared,
+# setup_swap, create_snapshot, TargetSelectionZone.  However, if these are
+# removed and the engine is run in debug mode then it will be impossible to
+# catch any exceptions.  Once CR 7041360 is fixed then these imports may
+# be removed.
+#
+
 from solaris_install import \
     ApplicationData, system_temp_path, post_install_logs_path, Popen
 from solaris_install.auto_install import TRANSFER_FILES_CHECKPOINT
@@ -742,7 +752,7 @@ class AutoInstall(object):
                                     "ManifestParser", args=args, kwargs=kwargs)
             return True
         except Exception as ex:
-            self.logger.debug("Uncaught exception parsing manifest: %s" % \
+            self.logger.error("Uncaught exception parsing manifest: %s" % \
                 (str(ex)))
             return False
 
@@ -1075,12 +1085,14 @@ class AutoInstall(object):
                         # to the transfer checkpoint.  Also append a kwarg
                         # specifying that we're allowing the checkpoint to
                         # show progress to stdout.
-                        arg_dict={"zonename": self.options.zonename,
+                        arg_dict = {"zonename": self.options.zonename,
                             "show_stdout": True}
                         self.engine.register_checkpoint(*ckpt_info,
                             kwargs={"arg": arg_dict})
                     else:
-                        self.engine.register_checkpoint(*ckpt_info)
+                        arg_dict = {"show_stdout": True}
+                        self.engine.register_checkpoint(*ckpt_info,
+                            kwargs={"arg": arg_dict})
                 else:
                     self.logger.error(
                         "Failed to register the softare install: %s"
@@ -1161,7 +1173,7 @@ class AutoInstall(object):
                 "CreateSnapshot", args=None, kwargs=None)
 
         except Exception as ex:
-            self.logger.debug(
+            self.logger.error(
                 "An execption occurred registering checkpoints: %s\n%s" %
                 (str(ex), traceback.format_exc()))
             return False
@@ -1339,6 +1351,7 @@ class AIProgressHandler(ProgressHandler):
         self.server_up = False
         self.logger = logger
         self.skip_console_msg = skip_console_msg
+        self.previous_msg = None
 
         # Get a port number
         self.skt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1362,7 +1375,7 @@ class AIProgressHandler(ProgressHandler):
                     self.skt.bind((self.hostname, self.portno))
                     self.skt.listen(5)
                     break
-                except socket.error, msg:
+                except socket.error:
                     self.skt.close()
                     self.skt = None
                     continue
@@ -1432,6 +1445,16 @@ class AIProgressHandler(ProgressHandler):
 
     def progress_receiver(self, msg):
         """Receive a message, show on screen and/or console"""
+        # Messages are of the format <TIME> <Percent> <Message>.
+        # The split()[1:] removes the <TIME> from the message.
+        current = " ".join(msg.split()[1:])
+
+        # Ensure that the message is new.
+        if self.previous_msg == current:
+            return
+
+        # Save this message to compare against the next one.
+        self.previous_msg = current
 
         # Default to showing on stdout
         print "%s" % (msg)

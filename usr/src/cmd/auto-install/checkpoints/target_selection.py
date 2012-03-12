@@ -3437,7 +3437,7 @@ class TargetSelection(Checkpoint):
         '''Primary execution method used by the Checkpoint parent class
            to select the targets during an install.
         '''
-        self.logger.info("=== Executing Target Selection Checkpoint ==")
+        self.logger.debug("=== Executing Target Selection Checkpoint ==")
 
         try:
             (from_manifest, discovered) = self.parse_doc()
