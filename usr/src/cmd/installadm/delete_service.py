@@ -32,7 +32,6 @@ import osol_install.auto_install.client_control as clientctrl
 import osol_install.auto_install.dhcp as dhcp
 import osol_install.auto_install.installadm_common as com
 import osol_install.auto_install.service_config as config
-import osol_install.libaiscf as libaiscf
 
 from optparse import OptionParser
 
@@ -76,6 +75,10 @@ def parse_options(cmd_options=None):
     service_name = args[0]
     
     # validate service name
+    try:
+        com.validate_service_name(service_name)
+    except ValueError as err:
+        raise SystemExit(err)
     if not config.is_service(service_name):
         raise SystemExit(_("\nError: The specified service does "
                            "not exist: %s\n") % service_name)
