@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -30,7 +30,6 @@ import curses
 import os
 import logging
 import datetime
-import platform
 import shutil
 
 from select import select
@@ -39,12 +38,10 @@ import osol_install.errsvc as errsvc
 import osol_install.liberrsvc as liberrsvc
 import solaris_install.sysconfig as sysconfig
 
-from libbe_py import beUnmount
 from osol_install.libzoneinfo import tz_isvalid
 from solaris_install import Popen
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME
-from solaris_install.sysconfig.profile import ConfigProfile
 from solaris_install.target.controller import TargetController
 from solaris_install.target.size import Size
 from solaris_install.target.libbe.be import be_unmount
@@ -179,7 +176,7 @@ def do_ti_install(install_data, screen, update_status_func):
         raise ti_utils.InstallationError("Unable to find solaris slice")
     inst_device_size = solaris_slice.size
 
-    LOGGER.info("Installation Device Size: %sMB", inst_device_size)
+    LOGGER.info("Installation Device Size: %s", inst_device_size)
 
     minimum_size = screen.tc.minimum_target_size
     LOGGER.info("Minimum required size: %s", minimum_size)
