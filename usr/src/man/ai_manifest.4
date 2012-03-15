@@ -1,1469 +1,2370 @@
-System Administration Commands                     ai_manifest(4)
-
-NAME
-
-     ai_manifest - automated installation manifest file format
-
-
-DESCRIPTION
-
-     The automated installer (AI) provides a customizable,
-     hands-free installation mechanism for Oracle Solaris and
-     uses an XML-based file format as the description of the
-     installation parameters.  This file is called an AI
-     manifest.  The installation can be customized in various
-     ways such as disk layout and the software to be installed
-     on the system.  The sections in the AI manifest are the
-     following:
-
-        - Automated Install settings - settings used during the
-          installation.
-
-        - Disk Layouts - specifies the disk layout for the
-          installation.
-
-        - Software Sections - specifies the software packages to
-          be installed and possibly uninstalled.
-
-        - Boot Configuration - specifies how the GRUB boot menu
-          will be set up.  (x86 only)
-
-        - Other Configuration - specifies other configuration
-          components to be installed onto the system.
-
-     These sections are described in more detail below.
-
-     When customizing an AI manifest, it is recommended that a
-     copy of a template or default manifest from an install
-     service's image be used with that install service.  For
-     example, if an install service's image is located at
-     <imagepath>, the following files are available:
-
-        <imagepath>/auto_install/manifest/default.xml
-
-           - A copy of the default AI manifest used for this
-             install service when it was created.
-
-        <imagepath>/auto_install/manifest/ai_manifest.xml
-
-           - A commented, sample AI manifest with example
-             usages of customizing the AI manifest.
-
-     For more information about install services and their
-     images, and how AI manifests are managed with install
-     services, see installadm(1M).
-     
-     The automated installer is also used for installing native
-     zones via the 'zoneadm install' command.  It is possible to
-     pass an AI manifest file to this command to customize how
-     a zone gets installed, but not all specifications in the
-     manifest are applicable in this use-case.  These
-     specifications are noted in the sections below.
-
-     Complimentary to the AI manifest is the System Configuration
-     (SC) profile.  An SC profile is an smf(5) profile, and is
-     used to specify the system configuration desired for the
-     installed system such as hostname, networking, root and
-     initial user account settings.  See installadm(1M) for how
-     SC profiles are managed with install services.  For more
-     information on the SC profile file format, see profiles in
-     smf(5).
-
-
-AUTOMATED INSTALL SETTINGS
-
-     The following describe the set of attributes of the
-     <ai_instance> element.
-
-        - name
-
-          The name of this manifest instance.
-
-        - http_proxy
-
-          This defines a HTTP Proxy to be used for accessing
-          remote files (e.g. the IPS repository) during the
-          installation.  Its value is a HTTP URI, for example:
-
-             http://myproxy.mycompany.com:8080/
-
-          This attribute is not applicable when installing a
-          zone and is ignored if provided.
-
-        - auto_reboot
-
-          This defaults to a value of "false", which will cause
-          the install to wait for manual intervention to reboot.
-
-          A value of "true" means that on a successful
-          installation the machine will reboot into the installed
-          boot environment.
-
-          This attribute is not applicable when installing a
-          zone and is ignored if provided.
-
-     For example:
-
-         <auto_install>
-             <ai_instance name='default' auto_reboot='true'
-                 http_proxy='http://myproxy.mycompany.com:8080/'>
-                 ...
-             </ai_instance>
-         </auto_install>
-
-
-DISK LAYOUTS
-
-     The Automated Installer allows for a diverse specification
-     of the targets varying from total automatic selection of the
-     install target to very fine-grained/specific control of the
-     final layout.
-
-     For Oracle Solaris, the preferred default layout is defined
-     to be the following:
-
-        - Using the whole of one disk (usually the boot disk or
-          first disk)
-        - For X86, allocating a FDISK partition that consumes the
-          full disk contents
-        - For X86 and SPARC, defining a single slice 0, that will
-          be the full size of the disk (or FDISK partition in the
-          case of X86)
-        - A single root pool that uses the complete slice 0.
-        - Creation of a swap zvol, and a dump zvol, in the
-          root pool, space permitting.
-    
-     If the <target> element is totally omitted (and thus any
-     sub-elements) from the AI XML manifest, then the above is
-     what will be generated.
-
-     It is possible to be specific about any element of the
-     <target> element by specifying the disks and/or the logical
-     (zpools) layout using the relevant XML elements.  For zone
-     installations, disk specifications are not applicable and
-     will be ignored.
-
-     The general structure is:
-
-         <target>
-             <!-- zero or more disk elements -->
-             <disk ...>
-                ...
-             </disk>
-             <logical...>
-                 <!-- zero or more zpools -->
-                 <zpool ...>
-                 </zpool>
-             </logical>
-         </target>
-
-     When specifying the layout, in some cases it may be possible
-     to specify a size element and take the format:.
-
-         <size val="SIZE" start_sector="START_SECTOR"/>
-
-     The start_sector attribute may be omitted to allow the
-     installer to search for the first location that is big
-     enough to contain the specified SIZE. The START_SECTOR value
-     is a numeric value that specifies the desired start sector
-     for the new partition or slice.
-
-     The values for SIZE are numeric with a suffix. Possible
-     suffixes are:
-
-        - s or sec: Sectors
-        - b: Bytes
-        - k or kb: Kilobytes (2^10)
-        - m or mb: Megabytes (2^20)
-        - g or gb: Gigabytes (2^30)
-        - t or tb: Terabytes (2^40)
-        - p or pb: Petabytes (2^50)
-        - e or eb: Exabytes (2^60)
-        - z or zb: Zettabytes (2^70)
-
-     More detail of what is possible with <disk> and <logical>
-     elements are as follows:
-
-        - <disk> specification
-
-           - Disk Selection
-
-             Disks may be selected using various names and/or
-             property values.
-        
-             Specifying a disk name for the device takes
-             precedence since it is very specific, and this can
-             be specified as one of:
-
-                - ctd: Controller Target Disk Name
-
-                  This is commonly what is seen when running
-                  the format(1M) command, e.g.:
-
-                      <disk_name name="c0t0d0" name_type="ctd"/>
-        
-                - volid: Volume Identifier
-
-                  This is the volume identifier as can be set by
-                  the format(1M) command.
-.sp
-.in + 9
+'\" te
+.\" Copyright (c) 2008, 2012, Oracle and/or its affiliates.
+.\" All rights reserved.
+.TH ai_manifest 4 "22 Feb 2012" "SunOS 5.11" "File Formats"
+.SH NAME
+ai_manifest \- Automated installation manifest file format
+.SH SYNOPSIS
+.LP
 .nf
-                      <disk_name name="MY_BOOT_DISK" name_type="volid"/>
+/usr/share/install/ai.dtd.1
 .fi
-.in -9
-.sp
-                - devpath: Device Path
 
-                  This is the device path relative to the
-                  /devices directory, e.g.:
+.SH DESCRIPTION
 .sp
-.in + 9
+.LP
+Automated Installer (AI) provides a customizable, hands-free installation mechanism for Oracle Solaris and uses an XML-based file format as the description of the installation parameters. This installation parameters file is called an AI manifest. The installation can be customized in various ways such as disk layout and the software to be installed on the system.
+.sp
+.LP
+The AI manifest has the following sections:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Automated installation settings. Specifies settings used during the installation.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Disk layout. Specifies the disk layout for the installation.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Software. Specifies the software packages to be installed.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Boot configuration (x86 only). Specifies how to configure the GRUB boot menu.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Other configuration. Specifies other configuration components to be installed onto the system.
+.RE
+.sp
+.LP
+These sections are described in more detail below.
+.sp
+.LP
+To create a new AI manifest, use a copy of the template or default manifest from the relevant install service image. For example, if the install service image is located at \fIimagepath\fR, the following files are available:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIimagepath\fR/auto_install/manifest/default.xml\fR\fR
+.ad
+.sp .6
+.RS 4n
+The original default AI manifest for this install service.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fIimagepath\fR/auto_install/manifest/ai_manifest.xml\fR\fR
+.ad
+.sp .6
+.RS 4n
+An annotated, sample AI manifest with example customizations.
+.RE
+
+.sp
+.LP
+You can use the \fBinstalladm export\fR command to retrieve a copy of any manifest that already exists in an install service.
+.sp
+.LP
+AI manifests are also used for installing non-global zones using the \fBzoneadm install\fR command. An AI manifest file can be passed to this command to customize the zone installation. Only a subset of AI manifest specifications applies to installing non-global zones. These specifications are noted in the sections below.
+.sp
+.LP
+Complementing the AI manifest are Service Management Facility (SMF) configuration profiles. These profiles specify the system configuration for the installed system such as hostname, networking, and root and initial user account settings.
+.sp
+.LP
+For more information about install services, AI manifests, and configuration profiles, see the installadm(1M) man page and Part\ III, \fIInstalling Using an Install Server,\fR in \fIInstalling Oracle Solaris 11 Systems\fR. For information about the configuration profile file format, see \fBsmf\fR(5).
+.SH AUTOMATED INSTALLATION SETTINGS
+.sp
+.LP
+The \fBai_instance\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 15n
+.rt  
+The name of this manifest instance.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBhttp_proxy\fR\fR
+.ad
+.RS 15n
+.rt  
+The HTTP proxy to use to access remote files during the installation. Examples of remote files accessed during installation are software packages in an Image Packaging System (IPS) package repository. The value of \fBhttp_proxy\fR is an HTTP URI such as \fBhttp://myproxy.mycompany.com:8080/\fR.
+.sp
+This attribute is not applicable when installing a non-global zone and is ignored if provided.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBauto_reboot\fR\fR
+.ad
+.RS 15n
+.rt  
+The flag that specifies whether to automatically reboot after installation. The default value of \fBauto_reboot\fR is \fBfalse\fR. When \fBauto_reboot\fR is \fBfalse\fR, the installation waits for manual intervention to reboot.
+.sp
+When \fBauto_reboot\fR is \fBtrue\fR, on a successful installation, the machine automatically reboots into the newly installed boot environment.
+.sp
+This attribute is not applicable when installing a non-global zone and is ignored if provided.
+.RE
+
+.sp
+.LP
+The following example demonstrates how to use the \fBai_instance\fR element:
+.sp
+.in +2
 .nf
-                      <disk_name
-                          name="/devices/pci@0,0/pci10de,375@f/pci108e,286@0/disk@0,0"
-                          name_type="devpath"/>
+<auto_install>
+    <ai_instance name='default' auto_reboot='true'
+      http_proxy='http://myproxy.mycompany.com:8080/'>
+    <!-- target and software sections -->
+    </ai_instance>
+</auto_install>
 .fi
-.in -9
-.sp
-               - devid: Device Identifier
+.in -2
 
-                 This is a device identifier as can be found in
-                 the devid in the prtconf command output, e.g.:
+.SH DISK LAYOUT
 .sp
-.in + 9
+.LP
+AI enables a range of disk specification, varying from completely automatic selection of the installation target to fine-grained control of the disk layout.
+.sp
+.LP
+The \fBtarget\fR element specifies the disk layout. The default disk layout when no \fBtarget\fR element is specified has the following characteristics:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The whole of one disk is used to install the Oracle Solaris OS. This disk is usually the boot disk or first disk.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+For x86, an \fBfdisk\fR partition is allocated that consumes the full disk contents. See the \fBfdisk\fR(1M) man page for more information about \fBfdisk\fR partitions.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A single slice 0 is allocated that is the full size of the disk for SPARC or the full size of the \fBfdisk\fR partition for x86.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A single root pool is created that uses the complete slice 0.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A swap volume and a dump volume are created in the root pool if space is available.
+.RE
+.sp
+.LP
+The \fBtarget\fR element has the following structure:
+.sp
+.in +2
 .nf
-                     <disk_name 
-                         name="id1,sd@TSun_____STK_RAID_INT____F0F0F0"
-                         name_type="devid"/>
+<!-- zero or one target element -->
+<target>
+    <!-- zero or more disk elements -->
+    <disk ...>
+    </disk>
+    <logical ...>
+        <!-- zero or more zpool elements -->
+        <zpool ...>
+        </zpool>
+    </logical>
+</target>
 .fi
-.in -9
+.in -2
+
 .sp
-               - receptacle: Receptacle identifier 
-        
-                 This is the receptacle value from a CRO
-                 (Chassis, Receptacle, Occupant) configuration
-                 (see the croinfo(1M) manpage), e.g.:
+.LP
+Child elements of the \fBtarget\fR element enable you to specify disks and logical layout.
 .sp
-.in + 9
+.LP
+Disk specifications are not applicable when installing a non-global zone and are ignored if provided.
+.sp
+.LP
+Some disk layout elements have a size sub-element. The \fBsize\fR element has the following format:
+.sp
+.in +2
 .nf
-                     <disk_name name="SYS/1" name_type="receptacle"/>
+<size val="\fIsize\fR" start_sector="\fIstart_sector\fR"/>
 .fi
-.in -9
+.in -2
+
 .sp
-             While the <disk_name> is very specific, the
-             <disk_prop> specification will attempt to do a
-             best-match based on the criteria provided.  The
-             types of criteria that are possible are:
-
-                - dev_type: Device type
-
-                - dev_vendor: Device Vendor
-
-                  This is the vendor as would be seen using the
-                  'inquiry' command in format(1M), e.g.:
+.LP
+The \fIstart_sector\fR value is a numeric value that specifies the desired start sector for the new partition or slice. If the \fIstart_sector\fR attribute is omitted, the installer searches for the first location large enough to contain the specified \fIsize\fR.
 .sp
-.in + 9
+.LP
+Values for \fIsize\fR are numeric with one of the following suffixes:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBs\fR or \fBsec\fR: sectors
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBb\fR: bytes
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBk\fR or \fBkb\fR: kilobytes (2^10)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBm\fR or \fBmb\fR: megabytes (2^20)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBg\fR or \fBgb\fR: gigabytes (2^30)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBt\fR or \fBtb\fR: terabytes (2^40)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBp\fR or \fBpb\fR: petabytes (2^50)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBe\fR or \fBeb\fR: exabytes (2^60)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBz\fR or \fBzb\fR: zettabytes (2^70)
+.RE
+.sp
+.LP
+The remainder of this section describes the \fBdisk\fR and \fBlogical\fR elements in detail.
+.SS "Installation Location"
+.sp
+.LP
+If you do not specify a location for installing the Oracle Solaris OS on a client, AI selects a default location for that client.
+.sp
+.LP
+The default location for the installation is the first disk found on each client that meets the size requirement. If the size of a disk is greater than or equal to the required size, the installer selects that disk as the installation location. If the size of the disk is less than the required size, the installer checks the next disk. If no disk is found that meets the size requirement, the automated installation fails for that client. The install log at \fB/system/volatile/install_log\fR shows the details of the disk selection process for that system.
+.sp
+.LP
+The \fBdisk\fR section of the \fBtarget\fR section specifies the installation location.
+.sp
+.LP
+Disk specifications are not applicable when installing a non-global zone and are ignored if provided.
+.sp
+.LP
+Disks can be selected using one of the following types of selection criteria:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Group 1: Deterministic criteria such as disk name or IP address. Use the \fB<disk_name>\fR sub-element as described in "Target Device Name" below or the \fB<iscsi>\fR sub-element as described in "ISCSI Target Device" below.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Group 2: Nondeterministic criteria such as disk size or vendor. Use the \fB<disk_prop>\fR sub-element as described in "Target Device Properties" below.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Group 3: Keyword criteria such as the \fBboot_disk\fR keyword. Use the \fB<disk_keyword>\fR sub-element as described in "Target Device Keyword" below.
+.RE
+.sp
+.LP
+You can specify criteria from only one of these three groups. If you use Group 2 selection criteria, you can specify multiple criteria. For example, you can specify both size and vendor. If you use Group 1 selection criteria, you can specify only one of those criteria.
+.SS "Target Device Name"
+.sp
+.LP
+Use the \fBdisk_name\fR element to specify the target device name for a device that is not an iSCSI device. The \fBdisk_name\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBname\fR attribute specifies the name of the target device.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname_type\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBname_type\fR attribute specifies the type of the target device name. The \fBname_type\fR attribute can have one of the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBctd\fR: Controller Target Disk Name\fR
+.ad
+.sp .6
+.RS 4n
+This is a CTD name such as \fBc0t0d0\fR or an MPXIO name such as \fBc0t2000002037CD9F72d0\fR. This type of name is commonly seen when running the \fBformat\fR(1M) command.
+.sp
+.in +2
 .nf
-                      <disk_prop dev_vendor="Sun"/>
+<disk_name name="c0t0d0" name_type="ctd"/>
 .fi
-.in -9
-.sp
-                - dev_chassis: Device Chassis
+.in -2
 
-                  This is the device chassis as seen in the
-                  output of the croinfo(1M) command, e.g.:
+This is the default target device name type if the \fBname_type\fR attribute is omitted.
+.RE
+
 .sp
-.in + 9
+.ne 2
+.mk
+.na
+\fB\fBvolid\fR: Volume Identifier\fR
+.ad
+.sp .6
+.RS 4n
+This is the volume identifier as can be set by the \fBformat\fR(1M) command.
+.sp
+.in +2
 .nf
-                      <disk_prop dev_chassis="SYS"/>
+<disk_name name="MY_BOOT_DISK" name_type="volid"/>
 .fi
-.in -9
-.sp
-                - dev_size: Device Size
+.in -2
 
-                  This specifies a minimum size for the disk to
-                  be selected, and is specified using a number
-                  with a size unit, e.g.:
+.RE
+
 .sp
-.in + 9
+.ne 2
+.mk
+.na
+\fB\fBdevpath\fR: Device Path\fR
+.ad
+.sp .6
+.RS 4n
+This is the device path relative to the \fB/devices\fR directory.
+.sp
+.in +2
 .nf
-                      <disk_prop dev_size="100gb"/>
+<disk_name
+  name="/devices/pci@0,0/pci10de,375@f/pci108e,286@0/disk@0,0"
+  name_type="devpath"/>
 .fi
-.in -9
+.in -2
+
+.RE
+
 .sp
-             The <disk_prop> element allows the specification of
-             one or more of the attributes at the same time to
-             allow further restriction of the match, e.g:
+.ne 2
+.mk
+.na
+\fB\fBdevid\fR: Device Identifier\fR
+.ad
+.sp .6
+.RS 4n
+This is the device identifier as found in the "Device Id" in the output from the \fBiostat\fR(1M) command with the \fB-iEn\fR options.
 .sp
-.in + 9
+.in +2
 .nf
-                 <disk_prop dev_vendor="HITACHI" dev_size="100gb"/>
+<disk_name
+  name="id1,sd@TSun_____STK_RAID_INT____F0F0F0"
+  name_type="devid"/>
 .fi
-.in -9
+.in -2
+
+.RE
+
 .sp
-             which would limit the selection of a disk to a 100Gb
-             Hitachi drive.
-        
-             It is also possible to select the system's boot-disk
-             by specifying a <disk_keyword> element, for example:
+.ne 2
+.mk
+.na
+\fB\fBreceptacle\fR: Receptacle Identifier\fR
+.ad
+.sp .6
+.RS 4n
+This is the receptacle value from a CRO (Chassis, Receptacle, Occupant) configuration as found in the output from the \fBcroinfo\fR(1M) command with the \fB-o cR\fR option.
 .sp
-.in + 9
+.in +2
 .nf
-                 <disk_keyword key="boot_disk"/>
+<disk_name name="SYS/1" name_type="receptacle"/>
 .fi
-.in -9
-.sp
-             It is possible to select an iSCSI disk by specifying
-             the <iscsi> element, which has the following
-             attributes:
+.in -2
 
-                - target_name
+.RE
 
-                  The name refers to the iSCSI Qualified Name
-                  (IQN) or the Extended Unique Identifier (EUI)
-                  of the iSCSI target, e.g.:
+.RE
+
+.SS "ISCSI Target Device"
 .sp
-.in + 9
+.LP
+Use the \fBiscsi\fR element to specify an iSCSI disk as the installation target. The \fBiscsi\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsource\fR\fR
+.ad
+.RS 15n
+.rt  
+The \fBsource\fR attribute specifies the source of the iSCSI configuration data. The \fBsource\fR attribute can have the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmanifest\fR\fR
+.ad
+.sp .6
+.RS 4n
+This value refers to this AI manifest. This is the default if no value is specified for the \fBsource\fR attribute.
+.sp
+When the \fBsource\fR attribute is omitted or the value of the \fBsource\fR attribute is \fBmanifest\fR, the \fBtarget_lun\fR and \fBtarget_ip\fR attributes must be specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdhcp\fR\fR
+.ad
+.sp .6
+.RS 4n
+This value refers to the use of DHCP where the iSCSI information is sourced by specifying the information in the DHCP \fBrootpath\fR parameter.
+.sp
+When the value of the \fBsource\fR attribute is \fBdhcp\fR, do not specify any other \fBiscsi\fR attributes.
+.sp
+.in +2
 .nf
-                      iqn.1986-03.com.sun:02:a4a694bc-6de2-ee50-8979-e25ba29acb86
+<iscsi source="dhcp"/>
 .fi
-.in -9
+.in -2
+
+.RE
+
+.RE
+
 .sp
-                - source
-
-                  This refers to the source of the iSCSI
-                  configuration data. The only supported values
-                  for source at present are:
-          
-                     manifest
-            
-                     Referring to the AI manifest itself - this
-                     is the default if no value is specified for
-                     this attribute.
-          
-                     dhcp
-          
-                     Referring to the use of DHCP where the iSCSI
-                     information is then sourced by it being
-                     specified in the DHCP Rootpath parameter.
-                     In this case, no other attributes should be
-                     specified.
-
-                - target_lun
-
-                  Where it is possible that a iSCSI target has
-                  several LUNs, it is possible to isolate which
-                  of these correspond to the disk to use by
-                  specifying a number for 'target_lun'. 
-
-                  If there is more than one LUN provided by the
-                  iSCSI target, then it is necessary to specify a
-                  value for 'target_lun'. The values are indexed
-                  from 0, so the first LUN would be LUN 0.
-
-                  If there is only one LUN provided, then it is
-                  safe to omit this value.
-
-                - target_port
-
-                  If not specified, the default target_port of
-                  3260 (the iSCSI standard port) is used. This
-                  allows for an alternative port number to be
-                  used.
-
-             iSCSI does not have an action attribute. AI uses
-             iSCSI devices but we do not operate directly on
-             them.
-
-             If the "target_name" attribute is not provided, we
-             will use iscsiadm in sendtargets mode, otherwise we
-             will set up static discovery.
-
-             The IP address of the server is specified using the
-             <ip> sub-element with the IP address in the text
-             part of the element:
-
-                 <ip>ADDRESS</ip>
-
-             Given this information the device will be made
-             available for installation.
-
-           - Disk Layout
-
-             The <disk> element has a couple of possible
-             attributes:
-
-              - whole_disk
-
-                This defaults to "false" and in this scenario it 
-                is necessary to always provide some definition of
-                the partitions and/or slices.
-
-                If the whole_disk flag is set to "false" for the
-                <disk> element, then any existing partitions or
-                slices will be retained unless deletion is
-                specified. 
-          
-                Otherwise, if it is set to "true" then existing
-                partitions or slices will be wiped unless
-                specifically preserved in the layout.
-
-              - in_zpool and in_vdev
-
-                If specified, this partition will be used as part
-                of the zpool and in the vdev specified.
-
-             The simplest way to layout a disk is to use the
-             whole disk for installation by setting the
-             whole_disk attribute to "true".
+.ne 2
+.mk
+.na
+\fB\fBtarget_name\fR\fR
+.ad
+.RS 15n
+.rt  
+The \fBtarget_name\fR attribute specifies the iSCSI Qualified Name (IQN) or the Extended Unique Identifier (EUI) of the iSCSI target, as shown in the following example:
 .sp
-.in + 9
+.in +2
 .nf
-                 <disk whole_disk="true">
-                     <disk_name name="c0t0d0" name_type="ctd"/>
-                 </disk>
+iqn.1986-03.com.sun:02:a4a694bc-6de2-ee50-8979-e25ba29acb86
 .fi
-.in -9
+.in -2
+
+If the \fBtarget_name\fR attribute is not provided, AI uses \fBiscsiadm\fR(1M) in \fBsendtargets\fR mode.
 .sp
-             For more complex layouts it is possible to specify
-             partitions (on X86 only) and/or slices. 
-
-             Sizes can be specified as sub-elements of
-             <partition> or <slice> elements. If omitted then the
-             installer will search for a suitable gap on the disk
-             that is big enough to hold the installation, and
-             will use that full gap.
-
-             Partitions
-
-                Partitions can only be specified when installing
-                to an X86 based client - specifying them for a
-                SPARC client will fail. Partitions consist of
-                several attributes:
-
-                - name:
-
-                  This is the FDISK partition number, with number
-                  1 to 4, being primary partitions. If one of the
-                  primary partitions is an extended partition,
-                  then it is possible to use the numbers 5 to 32
-                  to refer to logical partitions. 
-              
-                  In most cases this is a required attribute. The
-                  only case where it is not is if the action
-                  specified is "use_existing_solaris2".
-
-               - action
-
-                 The action for a partition can be one of the
-                 following values:
-
-                    create
-
-                    This is the default action for a partition,
-                    and specifies that a partition is to be
-                    created. If there is an existing partition
-                    with the same name then that partition will
-                    be deleted first.
-
-                    delete
-
-                    This specifies that the named partition is to
-                    be deleted.  Should this partition not exist
-                    it will be skipped over and a warning output.
-
-                    preserve
-
-                    This specifies that the named partition is to
-                    be untouched, and is commonly used where
-                    there is another operating system installed
-                    elsewhere on the same disk.
-
-                    use_existing_solaris2
-
-                    This specifies to use an existing Solaris2
-                    partition.  In this case it possible, and
-                    preferred, that the name be omitted so that
-                    the installer may search for the Solaris2
-                    partition itself.
-
-                - part_type
-
-                  This is used to specify a FDISK partition type,
-                  and defaults to 191 which is the partition type
-                  for a Solaris2 partition. See the fdisk(1M)
-                  command for more information on possible
-                  partition types.
-
-                - in_zpool and in_vdev
-
-                  If specified, then this states that this
-                  partition will be used as part of the zpool and
-                  in the vdev specified.
-
-                Partitions may also have <size> sub-element to
-                specify the size of the partition.  See above for
-                details of how the <size> element is specified.
-
-                To create a 10gb Solaris2 partition, using
-                default values, you could write it as simply as:
-.sp
-.in + 9
+.in +2
 .nf
-                    <partition name="1">
-                        <size val="10gb"/>
-                    </partition>
+<iscsi target_lun="0" target_ip="192.168.1.34"/>
 .fi
-.in -9
+.in -2
+
+If the \fBtarget_name\fR attribute is provided, AI uses static discovery.
 .sp
-                It is not necessary to specify the size with an
-                action of "preserve", "delete" or
-                "use_existing_solaris2".
-
-             Slices
-
-                For X86, when specifying slices, they must be
-                contained within a partition definition. 
-
-                Slice elements have several attributes that may
-                be specified:
-
-                - name:
-
-                  This is the slice number with the numbers
-                  ranging from 0 to 7
-
-                - action
-
-                  The action for a slice can be one of the
-                  following values:
-
-                     create
-
-                     This is the default action for a slice, and
-                     specifies that a slice is to be created. If
-                     there is an existing slice with the same
-                     name then that slice will be deleted first.
-
-                     delete
-
-                     This specifies that the named slice is to be
-                     deleted. If this slice does not exist, it
-                     will be skipped over and a warning will be
-                     given.
-
-                     preserve
-
-                     This specifies that the named slice is to be
-                     untouched, and is commonly used where there
-                     is existing data from a previous
-                     installation already present.
-
-                - is_swap
-
-                  This attribute defaults to "false" and is used
-                  to specify that the slice being created is to
-                  be used as a swap device. By default a swap
-                  zvol will be created in the root pool, but in
-                  some instances it may be preferable to use a
-                  swap slice.  If this attribute is set to
-                  "true", the in_zpool and in_vdev should not be
-                  used.
-
-                - force
-
-                  This flag defaults to "false". Setting it to
-                  "true" tells the installer to ignore the fact
-                  that an existing slice may be already be in use
-                  for something else (e.g. is used in an existing
-                  zpool) and to continue to perform the specified
-                  action on it.
-
-                - in_zpool and in_vdev
-
-                  If specified, then this states that this slice
-                  will be used as part of the zpool and in the
-                  vdev specified.
-
-                  If a slice has these values then <disk> (and
-                  possibly <partition>) elements should not have
-                  them specified.
-
-                Slices may also have <size> sub-element to
-                specify the size of the slice.  See above for
-                details of how the <size> element is specified.
-
-                An example of creating a 20gb slice, using
-                default values, and a 4gb swap slice is:
-.sp
-.in + 9
+.in +2
 .nf
-                    <slice name="0">
-                        <size val="20gb"/>
-                    </slice>
-                    <slice name="1" is_swap="true">
-                        <size val="4gb"/>
-                    </slice>
+<iscsi target_name="iqn.1986-03.com.sun:02:a4a694bc-6de2-ee50-8979-e25ba29acb86"
+    target_lun="0" target_ip="192.168.1.34"/>
 .fi
-.in -9
+.in -2
+
+.RE
+
 .sp
-                On X86, with a containing partition, this would
-                be written as:
+.ne 2
+.mk
+.na
+\fB\fBtarget_lun\fR\fR
+.ad
+.RS 15n
+.rt  
+If an iSCSI target provides more than one LUN, specify which LUN to use by specifying an integer value for \fBtarget_lun\fR. LUN numbers are indexed from 0. To specify the first LUN, specify a \fBtarget_lun\fR value of 0.
 .sp
-.in + 9
+If only one LUN is provided, this attribute can be omitted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtarget_port\fR\fR
+.ad
+.RS 15n
+.rt  
+If not specified, the default \fBtarget_port\fR of 3260 (the iSCSI standard port) is used. This attribute enables you to specify an alternative port number.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtarget_ip\fR\fR
+.ad
+.RS 15n
+.rt  
+The value of this attribute is the IP address of the server.
+.sp
+.in +2
 .nf
-                    <partition name="1">
-                        <slice name="0">
-                            <size val="20gb"/>
-                        </slice>
-                        <slice name="1" is_swap="true">
-                            <size val="4gb"/>
-                        </slice>
-                    </partition>
+<iscsi target_lun="0" target_ip="192.168.1.34"/>
 .fi
-.in -9
+.in -2
+
+.RE
+
+.SS "Target Device Properties"
 .sp
-        - <logical> specification
-        
-           The logical section of the target specification
-           defines the layout of the logical devices like the
-           automatic addition of a swap or dump device and any
-           number of zpools.
-
-           The <logical> element has two attributes:
-
-              - noswap
-
-                This defaults to "false", meaning that if space
-                allows, a swap zvol will automatically be created
-                in the root zpool. If set to "true" then no swap
-                zvol will automatically be created.
-
-              - nodump
-
-                This defaults to "false", meaning that if space
-                allows, a dump zvol will automatically be created
-                in the root zpool. If set to "true" then no dump
-                zvol will automatically be created.
-
-           It is possible to add several zpool definitions using
-           the <zpool> sub-element. Only one of these may be
-           defined as being the root pool, multiple root pools
-           will fail.
-
-           - <zpool> specification
-
-             The <zpool> element has several attributes that
-             can be specified:
-
-                - name
-
-                  The zpool created will use this name and is
-                  limited to a name that can be passed to the
-                  zpool create command. 
-
-                  The name here can be used in other elements
-                  "in_zpool" attribute.
-
-                - action
-
-                  The action attribute can have several possible
-                  values:
-
-                  create
-
-                     This specifies that the zpool is to be
-                     created.
-
-                  delete
-
-                     This specifies that the zpool is to be
-                     deleted.
-
-                  preserve
-
-                     This specifies that the zpool is to be
-                     preserved, unmodified.  This only is
-                     possible to use for a non-root pool.
-
-                  use_existing
-
-                     This specifies that the root zpool is to be
-                     re-used to install to. Using this will mean
-                     that the installer will retain any existing
-                     zvols or filesystems (datasets) already
-                     existing.
-
-                - is_root
-
-                  This boolean flag defaults to "false". If set
-                  to "true" then that zpool will be the one that
-                  the new Boot Environment (BE) will be created
-                  in.  A value of "false" is used to define a
-                  data pool.
-
-                - mountpoint
-
-                  The mountpoint can only be specified for
-                  non-root pools, and it sets the mountpoint of
-                  the filesystem being created.  If a mountpoint
-                  is not specified, the filesystem's mountpoint
-                  is inherited from its parent.
-
-             It is possible to set ZFS properties on the newly
-             created zpool and the automatically created zfs
-             dataset using the <pool_options> and
-             <dataset_options> sub-tags.  The format of these
-             is a simple name/value tag, and the properties that
-             can be set are subject to the same restrictions that
-             the zpool(1M) command enforces.  An example of how
-             this works is:
+.LP
+Use the \fBdisk_prop\fR element to specify properties of the target device. Multiple properties can be specified. AI attempts to find a best match based on the criteria provided.
 .sp
-.in + 9
+.LP
+Use attributes of the \fBdisk_prop\fR element to specify the target properties. The \fBdisk_prop\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdev_type\fR: Device Type\fR
+.ad
+.sp .6
+.RS 4n
+The type of the target disk. Possible values include SCSI, ATA, and USB. This value is not case sensitive.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdev_vendor\fR: Device Vendor\fR
+.ad
+.sp .6
+.RS 4n
+The vendor as shown by the \fBinquiry\fR menu option of the \fBformat\fR(1M) command.
+.sp
+.in +2
 .nf
-                 <zpool name="rpool" is_root="true">
-                     <pool_options>
-                         <option name="listsnaps" value="on"/>
-                         <option name="delegation" value="off"/>
-                     </pool_options>
-                     <dataset_options>
-                         <option name="atime" value="on"/>
-                         <option name="compression" value="on"/>
-                     </dataset_options>
-                     ...
-                 </zpool>
+<disk_prop dev_vendor="Sun"/>
 .fi
-.in -9
+.in -2
+
+.RE
+
 .sp
-             It is possible to influence how the Boot Environment
-             is created during the install by specifying the <be>
-             element.
-
-             The <be> element has one attribute:
-
-                - name
-
-                  This will be the name of the new BE that is
-                  created by the installer. It defaults to the
-                  name "solaris" if the <be> element is not
-                  specified.
-
-                  The automated installer makes use of the
-                  auto-naming feature provided by the boot
-                  environment sub-system.  When installing into
-                  an existing target area (for example, when
-                  installing a zone), a boot environment with
-                  this name may already exist, in which case this
-                  name is used as a base to generate a new name.
-                  For example, given a value of "solaris", the
-                  resultant boot environment name may be
-                  "solaris-N" where N is an integer.
-
-             A Boot Environment is created as a ZFS dataset, and
-             as such is capable of having ZFS properties set on
-             it.  These can be provided by specifying the
-             <options> sub-element as follows:
+.ne 2
+.mk
+.na
+\fB\fBdev_chassis\fR: Device Chassis\fR
+.ad
+.sp .6
+.RS 4n
+The chassis value from a CRO (Chassis, Receptacle, Occupant) configuration as found in the output from the \fBcroinfo\fR(1M) command with the \fB-o cA\fR option.
 .sp
-.in + 9
+.in +2
 .nf
-                 <be name="installed_be">
-                     <options>
-                         <option name="compression" value="on"/>
-                         <option name="dedup" value="on"/>
-                     <options>
-                 </be>
+<disk_prop dev_chassis="SYS"/>
 .fi
-.in -9
+.in -2
+
+.RE
+
 .sp
-             A zpool can also have any number of vdev redundancy
-             groups, datasets or zvols define within it.  These
-             are defined using the <vdev>, <filesystem> and
-             <zvol> elements respectively.
-
-             Virtual Device (vdev) Redundancy Groups
-
-             A zpools size or structure is defined by using the
-             <vdev> element.  You may have several <vdev>
-             elements specified, each with different redundancy
-             types.  The <vdev> element has several attributes:
-
-                - name
-
-                  This is the name for the vdev. This name can be
-                  used in other elements' "in_vdev" attributes.
-
-                - redundancy
-
-                  none
-
-                  This means that there is no redundancy, and if
-                  multiple devices are included in this group
-                  they will be striped.
-
-                  mirror (Default)
-
-                  This means that all devices contained are
-                  considered mirrors of each other.
-
-                  raidz raidz1 raidz2 raidz3
-
-                  Any devices contained in a group with one of
-                  these values will be used to define a RAIDZ
-                  grouping.
-         
-                  spare
-
-                  Any devices in this group will be seen as hot
-                  spares should there be failures.
-
-                  cache
-
-                  Any devices used in this group will provide
-                  caching for the zpool.
-
-                  log logmirror
-
-                  Any devices in this group will be used for
-                  logging.  If "logmirror" is specified then the
-                  devices will be mirrors.
-
-               A root pool can only be defined as having one of
-               the following configurations:
-            
-                  - a redundancy type of "none" with one device,
-                    multiple devices are not supported here.
-                  - a redundancy type of "mirror" with multiple
-                    devices.
-
-               To add a device to a <vdev> use the in_zpool
-               and/or in_vdev attributes of a <disk>, <partition>
-               or <slice> element (see above), for example:
+.ne 2
+.mk
+.na
+\fB\fBdev_size\fR: Device Size\fR
+.ad
+.sp .6
+.RS 4n
+The minimum size for the disk. The value is a number with a size unit.
 .sp
-.in + 9
+.in +2
 .nf
-                   <logical>
-                       <zpool name="rpool" is_root="true">
-                           <vdev name="mirrored" redundancy="mirror"/>
-                       </zpool>
-                   </logical>
-                   <disk whole_disk="true" in_zpool="rpool" in_vdev="mirrored">
-                       <disk_name name="c0t0d0" name_type="ctd"/>
-                   </disk>
-                   <disk whole_disk="true" in_zpool="rpool" in_vdev="mirrored">
-                       <disk_name name="c1t0d0" name_type="ctd"/>
-                   </disk>
+<disk_prop dev_size="100gb"/>
 .fi
-.in -9
+.in -2
+
+.RE
+
 .sp
-               would generate a root zpool called "rpool" which
-               is mirrored over two disks.
-
-               It is possible to omit one of the in_zpool or
-               in_vdev attributes as long as there is no
-               ambiguity in what they refer to.
-
-             Filesystems (or Datasets)
-
-                The <filesystem> element has several attributes
-                that can be specified to define it:
-
-                   - name
-
-                     This defines the name for the filesystem,
-                     relative to the zpool.  For example if the
-                     filesystem is named "export", within a zpool
-                     named "rpool" then the zfs dataset name will
-                     be "rpool/export"
-
-                     For filesystems with the "in_be" attribute
-                     set to "true", this name is relative to the
-                     boot environment's root dataset.
-
-                   - action
-
-                     The action attribute has several possible
-                     values:
-
-                        create
-
-                        This value says that the filesystem is to
-                        be created
-
-                        delete
-
-                        This value says that the filesystem is to
-                        be delete
-
-                        preserve
-
-                        This value says that the filesystem is to
-                        be preserved. This only makes sense if
-                        the zpool itself is also preserved.
-
-                   - mountpoint
-
-                     This sets the mountpoint of the filesystem
-                     being created. If a mountpoint is not
-                     specified, the filesystem's mountpoint is
-                     inherited from its parent.
-            
-                   - in_be
-
-                     This defaults to "false" meaning that the
-                     filesystem to be created is shared between
-                     all Boot Environments. If this is set to
-                     "true" then each boot environment will have
-                     its own separate copy of this filesystem.
-
-                Similar to the <dataset_options> it is possible
-                to set the zfs dataset properties on a
-                <filesystem>.  This is done using an <options>
-                sub-tag.  For example:
+.LP
+The \fBdisk_prop\fR element allows specification of multiple attributes at the same time to further constrain the disk search. The following example limits the selection of a disk to a Hitachi drive with a size of at least 100 GB.
 .sp
-.in + 9
+.in +2
 .nf
-                    <filesystem name="exported">
-                        <options>
-                            <option name="compression" value="off"/>
-                            <option name="dedup" value="on"/>
-                        <options>
-                    </filesystem>
+<disk_prop dev_vendor="HITACHI" dev_size="100gb"/>
 .fi
-.in -9
+.in -2
+
+.SS "Target Device Keyword"
 .sp
-                Note, as is the default behavior with ZFS
-                filesystems, any property set on a filesystem is
-                inherited by its children filesystems unless
-                explicitly set otherwise.
-
-             Zvol
-
-                The <zvol> element is used to define a zvol
-                within the zpool.  A zvol is typically used for
-                swap or dump devices, but may have other uses.
-
-                The attributes that are used with <zvols> are:
-
-                   - name
-
-                     This defines the name to be used for the
-                     zvol.
-
-                   - action
-
-                     This attribute has several possible values:
-
-                        create
-
-                        This value says that the zvol is to be
-                        created.
-
-                        delete
-
-                        This value says that the zvol is to be
-                        deleted.
-
-                        preserve
-
-                        This value says that the zvol is to be
-                        preserved.  This only makes sense if the
-                        zpool itself is also preserved.
-
-                        use_existing
-
-                        If this value is specified for a swap or
-                        dump device then the existing zvol will
-                        be re-used.  This value only makes sense
-                        if the zpool itself is also being
-                        preserved.
-
-                   - use
-
-                     This attribute has several possible values:
-
-                        none
-
-                        This states that the zvol is to be
-                        created, but not used for anything during
-                        the install.
-
-                        swap
-
-                        This states that the zvol is to be
-                        created and used as a swap device. It
-                        will also be used as a swap device during
-                        the install.
-
-                        dump
-
-                        This states that the zvol is to be
-                        created and used as a dump device. It
-                        will also be used as a dump device during
-                        the install.
-
-                Zvols may also have <size> sub-element to specify
-                the size of the zvol.  See above for details of
-                how the <size> element is specified.  An example
-                of using the <size> sub-tag with <zvol> is:
-
-
-                Similar to the <dataset_options>, it is possible
-                to set the zfs zvol options on a <zvol>. This is
-                done using an <options> sub-tag.  For example:
+.LP
+The \fBdisk_keyword\fR element can be used to specify the system's boot disk as the target disk.
 .sp
-.in + 9
+.in +2
 .nf
-                    <zvol name="swap">
-                        <options>
-                            <option name="compression" value="off"/>
-                        <options>
-                    </zvol>
+<disk_keyword key="boot_disk"/>
 .fi
-.in -9
+.in -2
+
 .sp
-
-
-SOFTWARE SECTIONS
-
-     It is possible to install software from a number of sources:
-
-        - IPS Repository
-        - P5I Specification
-        - SVR4 Packages
-        - CPIO Transfer
-
-     The <software> element takes one of these values as the as
-     the 'type' parameter, for example:
-
-         <software type="IPS">
-             ...
-         </software>
-
-     Depending on the mechanism for installing the software, it
-     may be necessary to specify a <destination> and <source>
-     element and several <software_data> elements. Each mechanism
-     is discussed now in more detail.
-
-     Installing using IPS:
-
-        For IPS installs, it is only possible to specify a single
-        <source> element. 
-        
-        The <source> element is usually used to specify which
-        publishers to use for installing the packages.  You may
-        specify multiple publishers, which may or may not have
-        mirrors and/or more than one origin.
-
-        The order that publishers appear in the manifest will be
-        the rank order in which they will be set in the installed
-        system.
-
-        If installing into a zone, the system repository is
-        always set to be used by the zone. Any publishers
-        specified in the manifest will be added in the order they
-        appear in the manifest, after the publishers provided by
-        the system repository.  See pkg(1) and pkg.sysrepo(1M)
-        for more information on the system repository.
-
-        An example for specifying several publishers with a local
-        mirror is the following:
+.LP
+The only value supported for the \fBkey\fR attribute is \fBboot_disk\fR.
+.SS "Whole Disk, Partitions, and Slices"
 .sp
-.in + 9
+.LP
+The simplest way to lay out a disk is to use the entire disk for installation by setting the \fBwhole_disk\fR attribute to \fBtrue\fR.
+.sp
+.LP
+For more complex disk layouts, you can specify partitions (for x86 systems only) and slices.
+.sp
+.LP
+The \fBdisk\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBwhole_disk\fR\fR
+.ad
+.RS 14n
+.rt  
+The default value of this attribute is \fBfalse\fR. When \fBwhole_disk\fR is \fBfalse\fR, partitions or slices must be defined. Any existing partitions or slices are retained unless you remove them by specifying the \fBdelete\fR value for the \fBaction\fR attribute of the partition or slice.
+.sp
+When \fBwhole_disk\fR is \fBtrue\fR, any existing partitions or slices are removed.
+.sp
+The following example specifies using the entire disk for installation:
+.sp
+.in +2
 .nf
-            <source>
-                <publisher name="solaris">
-                    <origin name="http://pkg.oracle.com/solaris/release"/>
-                    <mirror name="http://localpkg.mycompany.com/solaris"/>
-                </publisher>
-                <publisher name="internal-software">
-                    <origin name="http://internalsoft.mycompany.com/"/>
-                </publisher>
-            </source>
+<disk whole_disk="true">
+  <disk_name name="c0t0d0" name_type="ctd"/>
+</disk>
 .fi
-.in -9
-.sp
-        The next item(s) to specify would be the actions to
-        perform as <software_data> elements with an action
-        attribute with one of two values:
+.in -2
 
-           - "install" (the default value if not explicitly set)
-           - "uninstall"
+.RE
 
-        (other values are not supported for IPS). For each of
-        these actions, one or more packages may be specified
-        using the <name> element, e.g.:
 .sp
-.in + 9
+.ne 2
+.mk
+.na
+\fB\fBin_zpool\fR\fR
+.ad
+.RS 14n
+.rt  
+The \fBin_zpool\fR attribute links this disk to a ZFS pool defined in the \fBlogical\fR section of the AI manifest. The value of the \fBin_zpool\fR attribute must match the value of the \fBname\fR attribute of the corresponding \fBzpool\fR element.
+.sp
+If the \fBin_zpool\fR attribute is specified here, then do not specify \fBin_zpool\fR for any subordinate partitions or slices.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBin_vdev\fR\fR
+.ad
+.RS 14n
+.rt  
+The \fBin_vdev\fR attribute links this disk to a virtual device defined in the \fBlogical\fR section of the AI manifest. The value of the \fBin_vdev\fR attribute must match the value of the \fBname\fR attribute of the corresponding \fBvdev\fR element.
+.sp
+If the \fBin_vdev\fR attribute is specified here, then do not specify \fBin_vdev\fR for any subordinate partitions or slices.
+.RE
+
+.SS "Partitions"
+.sp
+.LP
+Partitions can only be specified when installing to an x86 system. If partitions are specified for a SPARC system, the installation fails. The \fBpartition\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBname\fR attribute is the \fBfdisk\fR partition number. Values 1, 2, 3, and 4 are primary partitions. If one of the primary partitions is an extended partition, values 5 through 32 can be specified for logical partitions.
+.sp
+The \fBname\fR attribute is required unless the specified \fBaction\fR is \fBuse_existing_solaris2\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBaction\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBaction\fR attribute can have the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate\fR\fR
+.ad
+.sp .6
+.RS 4n
+This is the default action for a partition. The \fBcreate\fR action tells the installer to create a partition with the specified name. If a partition with the same name already exists, that existing partition is deleted first.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBdelete\fR action tells the installer to delete the named partition. If the named partition does not exist, the \fBdelete\fR action is skipped and a warning message is output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpreserve\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBpreserve\fR action tells the installer to leave the named partition untouched. This action is commonly used if another operating system is installed at another location on the same disk.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBuse_existing_solaris2\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBuse_existing_solaris2\fR action tells the installer to use an existing Solaris2 partition. The installer searches for the existing Solaris2 partition.
+.sp
+When \fBuse_existing_solaris2\fR is specified, the \fBname\fR and \fBpart_type\fR attributes are ignored.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpart_type\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBpart_type\fR is the \fBfdisk\fR partition type. The default value is 191, which is the partition type for a Solaris2 partition. See the \fBfdisk\fR(1M) command for more information about possible partition types.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBin_zpool\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBin_zpool\fR attribute links this partition to a ZFS pool defined in the \fBlogical\fR section of the AI manifest. The value of the \fBin_zpool\fR attribute must match the value of the \fBname\fR attribute of the corresponding \fBzpool\fR element.
+.sp
+If the \fBin_zpool\fR attribute is specified, then do not specify \fBin_zpool\fR for the associated \fBdisk\fR element or any subordinate \fBslice\fR elements.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBin_vdev\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBin_vdev\fR attribute links this partition to a virtual device defined in the \fBlogical\fR section of the AI manifest. The value of the \fBin_vdev\fR attribute must match the value of the \fBname\fR attribute of the corresponding \fBvdev\fR element.
+.sp
+If the \fBin_vdev\fR attribute is specified, then do not specify \fBin_vdev\fR for the associated \fBdisk\fR element or any subordinate \fBslice\fR elements.
+.RE
+
+.sp
+.LP
+Partitions can have a \fBsize\fR sub-element to specify the size of the partition. See the beginning of the "Disk Layout" section for details about how to use the \fBsize\fR element.
+.sp
+.LP
+The following example creates a 10 GB Solaris2 partition using default attribute values:
+.sp
+.in +2
 .nf
-            <software_data> <!-- defaults to install action -->
-                <name>pkg:/entire</name>
-                <name>pkg:/group/system/solaris-large-server</name>
-            </software_data>
-
-            <software_data action="uninstall">
-                <name>pkg:/unwanted/pkg</name>
-            </software_data>
+<disk>
+    <disk_name name="c0t0d0" name_type="ctd"/>
+    <partition name="1">
+        <size val="10gb"/>
+    </partition>
+</disk>
 .fi
-.in -9
+.in -2
+
 .sp
-        It is possible to set properties, facets and SSL
-        information on the destination repository, which is used
-        in an IPS install, using the <destination> element and
-        its sub-element <image>. 
-        
-        <image> has a few attributes which are:
-
-           - ssl_key and ssl_certificate
-
-             These map to the pkg(1) command -k and -c arguments
-             respectively and are used to specify SSH related
-             information to access the IPS repository.
-
-        <image> has several sub-elements which are:
-
-           - <facet set="true|false">FACET NAME</facet> 
-
-             This allows the specification of facets which are
-             used to limit some of the elements of a package that
-             are installed.  A common use-case is to limit the
-             locales, or be specific about the locales that are
-             installed.  This can be achieved by using something
-             like:
+.LP
+If the size is not specified, the size of the parent element is used.
 .sp
-.in + 9
+.LP
+The \fBpreserve\fR, \fBdelete\fR, and \fBuse_existing_solaris2\fR actions do not need a \fBsize\fR specification.
+.SS "Slices"
+.sp
+.LP
+For an x86 system, slices must be contained within a partition definition.
+.sp
+.LP
+The \fBslice\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 12n
+.rt  
+The \fBname\fR attribute is the slice number. The value can be 0 through 7.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBaction\fR\fR
+.ad
+.RS 12n
+.rt  
+The \fBaction\fR attribute can have the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate\fR\fR
+.ad
+.RS 12n
+.rt  
+This is the default action for a slice. The \fBcreate\fR action tells the installer to create a slice with the specified name. If a slice with the same name already exists, that existing slice is deleted first.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete\fR\fR
+.ad
+.RS 12n
+.rt  
+The \fBdelete\fR action tells the installer to delete the named slice. If the named slice does not exist, the \fBdelete\fR action is skipped and a warning message is output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpreserve\fR\fR
+.ad
+.RS 12n
+.rt  
+The \fBpreserve\fR action tells the installer to leave the named slice untouched. This action is commonly used when data exists from a previous installation.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBis_swap\fR\fR
+.ad
+.RS 12n
+.rt  
+The default value of this attribute is \fBfalse\fR. When \fBis_swap\fR is \fBfalse\fR, the installer creates a swap volume in the root pool.
+.sp
+When \fBis_swap\fR is \fBtrue\fR, the named slice is used as a swap device. When \fBis_swap\fR is \fBtrue\fR, do not use the \fBin_zpool\fR or \fBin_vdev\fR attributes.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBforce\fR\fR
+.ad
+.RS 12n
+.rt  
+The default value of this attribute is \fBfalse\fR.
+.sp
+When \fBforce\fR is \fBtrue\fR, the installer ignores any existing slice that might already be in use (for example, a slice that is used in an existing ZFS storage pool) and continues to perform the specified action on the named slice.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBin_zpool\fR\fR
+.ad
+.RS 12n
+.rt  
+The \fBin_zpool\fR attribute links this slice to a ZFS pool defined in the \fBlogical\fR section of the AI manifest. The value of the \fBin_zpool\fR attribute must match the value of the \fBname\fR attribute of the corresponding \fBzpool\fR element.
+.sp
+If the \fBin_zpool\fR attribute is specified, then do not specify \fBin_zpool\fR for the associated \fBpartition\fR or \fBdisk\fR elements.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBin_vdev\fR\fR
+.ad
+.RS 12n
+.rt  
+The \fBin_vdev\fR attribute links this slice to a virtual device defined in the \fBlogical\fR section of the AI manifest. The value of the \fBin_vdev\fR attribute must match the value of the \fBname\fR attribute of the corresponding \fBvdev\fR element.
+.sp
+If the \fBin_vdev\fR attribute is specified, then do not specify \fBin_vdev\fR for the associated \fBpartition\fR or \fBdisk\fR elements.
+.RE
+
+.sp
+.LP
+Slices can have a \fBsize\fR sub-element to specify the size of the slice. See the beginning of the "Disk Layout" section for details about how to use the \fBsize\fR element. If the size is not specified, the size of the parent element is used.
+.sp
+.LP
+The following example creates a 20 GB slice using default attribute values and a 4 GB swap slice for a SPARC system:
+.sp
+.in +2
 .nf
-                 <destination>
-                     <image>
-                         <!-- de-select all locales -->
-                         <facet set="false">facet.locale.*</facet>
-                         <!-- specify specific locales to install -->
-                         <!-- install German and English only -->
-                         <facet set="true">facet.locale.de</facet>
-                         <facet set="true">facet.locale.de_DE</facet>
-                         <facet set="true">facet.locale.en</facet>
-                         <facet set="true">facet.locale.en_US</facet>
-                     </image>
-                 </destination>
+<disk>
+    <disk_name name="c0t0d0" name_type="ctd"/>
+    <slice name="0">
+        <size val="20gb"/>
+    </slice>
+    <slice name="1" is_swap="true">
+        <size val="4gb"/>
+    </slice>
+</disk>
 .fi
-.in -9
+.in -2
+
 .sp
-           - <property val="true|false">PROPERTY NAME</property>
-          
-             This allows the specification of IPS properties to
-             be set in the destination image. For further
-             information on what properties can be set, please
-             see the pkg(1) manpage.
-            
-
-     Installing using P5I:
-
-        A P5I is a file that describes an IPS installation,
-        including possible publishers, mirrors and packages.
-
-        To specify one or more P5I files to be processed, provide
-        them as origins in the <source>/<publisher> element.  For
-        example:
+.LP
+The following example is the same example for an x86 system:
 .sp
-.in + 9
+.in +2
 .nf
-            <source>
-                <image>
-                    <origin>/somewhere/image1.p5i</origin>
-                    <origin>/somewhere/image2.p5i</origin>
-                </image>
-            </source>
+<disk>
+    <disk_name name="c0t0d0" name_type="ctd"/>
+    <partition name="1">
+        <slice name="0">
+            <size val="20gb"/>
+        </slice>
+        <slice name="1" is_swap="true">
+            <size val="4gb"/>
+        </slice>
+    </partition>
+</disk>
 .fi
-.in -9
+.in -2
+
+.SS "Swap and Dump"
 .sp
-        With respect to the <destination> element, this behaves
-        the same as for an IPS installation.
-
-        Specification of packages to install via the
-        <software_data> elements is not supported in this mode.
-
-     Installing using SVR4:
-
-        For a SVR4 transfer, it is necessary to specify a source
-        directory for the packages to be installed in the new
-        Boot Environment.
+.LP
+A swap slice can be explicitly defined by setting the \fBis_swap\fR attribute of the \fBslice\fR element to \fBtrue\fR, as shown in "Slices" above.
 .sp
-.in + 9
+.LP
+A volume in a pool can be explicitly defined as a swap volume or a dump volume by setting the \fBuse\fR attribute of the \fBzvol\fR element to \fBswap\fR or \fBdump\fR, as shown in "ZFS Volumes" below.
+.sp
+.LP
+By default, a swap volume and a dump volume are automatically created if space is available.
+.sp
+.LP
+On low memory systems, a swap slice can be preferable to a swap volume since volumes incur a small memory overhead.
+.sp
+.LP
+If you want to explicitly specify swap or dump and do not want swap or dump volumes automatically created, set the following attributes of the \fBlogical\fR element to \fBtrue\fR:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnoswap\fR\fR
+.ad
+.RS 10n
+.rt  
+The default value of this attribute is \fBfalse\fR. When \fBnoswap\fR is \fBfalse\fR, if space allows, the installer automatically creates a swap volume in the root pool.
+.sp
+When \fBnoswap\fR is \fBtrue\fR, no swap volume is automatically created.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnodump\fR\fR
+.ad
+.RS 10n
+.rt  
+The default value of this attribute is \fBfalse\fR. When \fBnodump\fR is \fBfalse\fR, if space allows, the installer automatically creates a dump volume in the root pool.
+.sp
+When \fBnodump\fR is \fBtrue\fR, no dump volume is automatically created.
+.RE
+
+.SS "ZFS Storage Pools"
+.sp
+.LP
+Use the \fBlogical\fR section of the \fBtarget\fR section to specify any number of ZFS storage pools.
+.sp
+.LP
+Multiple pools can be defined by using the \fBzpool\fR sub-element of the \fBlogical\fR element. Only one of these pools can be the root pool. The installation fails if multiple root pools are defined.
+.sp
+.LP
+If a \fBzpool\fR element defines a root pool, and no target disks, partitions, or slices are specified in the AI manifest, then the installer selects a target as described in "Installation Location" above. This selection is automatically assigned to the root pool.
+.sp
+.LP
+If target disks, partitions, or slices are specified in the AI manifest, then the \fBzpool\fR must be associated with at least one of these disks, partitions, or slices. To make this association, use the \fBin_zpool\fR attribute of the \fBdisk\fR element, the \fBpartition\fR element, or the \fBslice\fR element.
+.sp
+.LP
+The \fBzpool\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 14n
+.rt  
+This is the name of the new pool. This value must be a name that can be passed to the \fBzpool create\fR command.
+.sp
+This name could be used as the value of an \fBin_zpool\fR attribute of a \fBdisk\fR, \fBpartition\fR, or \fBslice\fR element to define that disk, partition, or slice as a constituent device in the \fBzpool\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBaction\fR\fR
+.ad
+.RS 14n
+.rt  
+The \fBaction\fR attribute can have the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate\fR\fR
+.ad
+.sp .6
+.RS 4n
+This is the default action for a \fBzpool\fR. The \fBcreate\fR action tells the installer to create a pool with the specified name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBdelete\fR action tells the installer to delete the named pool.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpreserve\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBpreserve\fR action tells the installer to leave the named pool unmodified. This action can be specified only for a non-root pool.
+.sp
+.LP
+The value of the \fBaction\fR attribute must be \fBpreserve\fR in the following cases:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The value of the \fBaction\fR attribute of any subordinate \fBfilesystem\fR is \fBpreserve\fR.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The value of the \fBaction\fR attribute of any subordinate \fBzvol\fR is \fBpreserve\fR.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The value of the \fBaction\fR attribute of any subordinate \fBzvol\fR is \fBuse_existing\fR.
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBuse_existing\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBuse_existing\fR action tells the installer to install to the existing root pool. Any existing volumes or file systems (datasets) are retained.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBis_root\fR\fR
+.ad
+.RS 14n
+.rt  
+The default value of this attribute is \fBfalse\fR. When \fBis_root\fR is \fBfalse\fR, a data pool is defined.
+.sp
+When \fBis_root\fR is \fBtrue\fR, the new boot environment is created in the named pool.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmountpoint\fR\fR
+.ad
+.RS 14n
+.rt  
+The \fBmountpoint\fR attribute specifies the mount point of the top level file system of the pool. The default mount point is \fB/\fIpoolname\fR\fR. The mount point must be an absolute path.
+.RE
+
+.sp
+.LP
+To set ZFS properties on the new pool, use the \fBpool_options\fR element. Similarly, to set ZFS properties on the automatically created ZFS dataset, use the \fBdataset_options\fR element. Both the \fBpool_options\fR and \fBdataset_options\fR elements have an \fBoption\fR sub-element. Each \fBoption\fR element has a \fBname\fR attribute and a \fBvalue\fR attribute. The properties set with these name/value pairs are subject to the same restrictions that the \fBzpool\fR(1M) command enforces. The following example shows how to set these properties:
+.sp
+.in +2
 .nf
-            <source>
-                <dir path="/somedir"/>
-            </source>
+<logical>
+    <zpool name="rpool" is_root="true">
+        <pool_options>
+            <option name="listsnaps" value="on"/>
+            <option name="delegation" value="off"/>
+        </pool_options>
+        <dataset_options>
+            <option name="atime" value="on"/>
+            <option name="compression" value="on"/>
+        </dataset_options>
+    </zpool>
+</logical>
 .fi
-.in -9
+.in -2
+
 .sp
-        The <software_data> element is used to specify the action
-        to be performed.  The action attribute can be one of two
-        values:
-
-           - "install" (the default value if not explicitly set)
-
-              Copies the files from the source to the new boot
-              environment.
-
-           - "uninstall"
-
-              Removes the files from the new boot environment.
-
-        (other values are not supported for SVR4). For each of
-        these actions, one or more packages may be specified
-        using the <name> element, e.g.:
+.LP
+Any number of virtual device redundancy groups (\fBvdev\fR element), ZFS datasets (\fBfilesystem\fR element), or ZFS volumes (\fBzvol\fR element) can be defined for a pool. Boot environments (\fBbe\fR element) can be specified for a pool. The following sections describe the \fBvdev\fR, \fBfilesystem\fR, \fBzvol\fR, and \fBbe\fR elements.
+.SS "Virtual Device Redundancy Groups"
 .sp
-.in + 9
+.LP
+Use the \fBvdev\fR element to define the size or structure of a \fBzpool\fR. You can specify multiple \fBvdev\fR elements, each with a different redundancy type.
+.sp
+.LP
+If a \fBzpool\fR contains more than one \fBvdev\fR element, then you must use the \fBin_vdev\fR attribute on any \fBdisk\fR, \fBpartition\fR, or \fBslice\fR elements that are defined with \fBin_zpool\fR attributes.
+.sp
+.LP
+You can omit the \fBin_zpool\fR attribute on a disk, partition, or slice if the \fBvdev\fR name is unique throughout the AI manifest.
+.sp
+.LP
+If a \fBzpool\fR contains only one \fBvdev\fR element, you can omit the \fBin_vdev\fR attribute on a \fBdisk\fR, \fBpartition\fR, or \fBslice\fR.
+.sp
+.LP
+The \fBvdev\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 14n
+.rt  
+This is the name of the new \fBvdev\fR.
+.sp
+This name should be used as the value of an \fBin_vdev\fR attribute of a \fBdisk\fR, \fBpartition\fR, or \fBslice\fR element to define that disk, partition, or slice as a constituent device in the \fBvdev\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBredundancy\fR\fR
+.ad
+.RS 14n
+.rt  
+The \fBredundancy\fR attribute can have the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmirror\fR\fR
+.ad
+.sp .6
+.RS 4n
+This is the default value. When \fBredundancy\fR is \fBmirror\fR or is not specified, all devices contained are considered to be mirrors of each other.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBraidz\fR, \fBraidz1\fR,  \fBraidz2\fR, \fBraidz3\fR\fR
+.ad
+.sp .6
+.RS 4n
+Devices in a group with one of these values are used to define a RAIDZ grouping.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBspare\fR\fR
+.ad
+.sp .6
+.RS 4n
+Devices in this group are seen as hot spares in case of failure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcache\fR\fR
+.ad
+.sp .6
+.RS 4n
+Devices in this group provide caching for the pool.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlog\fR, \fBlogmirror\fR\fR
+.ad
+.sp .6
+.RS 4n
+Devices in this group are used for logging. If \fBlogmirror\fR is specified, the devices are mirrors.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnone\fR\fR
+.ad
+.sp .6
+.RS 4n
+When \fBredundancy\fR is \fBnone\fR, no redundancy is defined. If multiple devices are included in this group, these devices are striped.
+.RE
+
+A root pool can be defined as having only one of the following configurations:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A \fBredundancy\fR type of \fBnone\fR with one device. Multiple devices are not supported in this configuration.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A \fBredundancy\fR type of \fBmirror\fR with multiple devices.
+.RE
+.RE
+
+.sp
+.LP
+To add a device to a \fBvdev\fR, use the \fBin_zpool\fR and \fBin_vdev\fR attributes of a \fBdisk\fR, \fBpartition\fR, or \fBslice\fR element. The following example specifies a root pool named \fBrpool\fR that is mirrored over two disks:
+.sp
+.in +2
 .nf
-            <software_data> <!-- defaults to install action -->
-                <name>ORGpackage1</name>
-                <name>ORGpackage2</name>
-            </software_data>
-
-            <software_data action="uninstall">
-                <name>ORGpackage8</name>
-            </software_data>
+<disk whole_disk="true" in_zpool="rpool" in_vdev="mirrored">
+    <disk_name name="c0t0d0" name_type="ctd"/>
+</disk>
+<disk whole_disk="true" in_zpool="rpool" in_vdev="mirrored">
+    <disk_name name="c1t0d0" name_type="ctd"/>
+</disk>
+<logical>
+    <zpool name="rpool" is_root="true">
+        <vdev name="mirrored" redundancy="mirror"/>
+    </zpool>
+</logical>
 .fi
-.in -9
+.in -2
+
 .sp
-     Installing using CPIO:
-    
-        For a CPIO transfer, it is necessary to specify a source.
-        The destination directory will always be set to the
-        mountpoint for the new boot environment during the
-        install.
+.LP
+You can omit one of the \fBin_zpool\fR or \fBin_vdev\fR attributes if the pool or virtual device they refer to is unambiguous.
+.SS "File Systems (Datasets)"
 .sp
-.in + 9
+.LP
+Use the \fBfilesystem\fR element to define ZFS file systems or datasets within a ZFS pool.
+.sp
+.LP
+The \fBfilesystem\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 14n
+.rt  
+This is the name of the new \fBfilesystem\fR, relative to the \fBzpool\fR. For example, if the \fBfilesystem\fR is named \fBexport\fR within a \fBzpool\fR named \fBrpool\fR, the ZFS dataset name is \fBrpool/export\fR.
+.sp
+If the \fBin_be\fR attribute of the \fBfilesystem\fR is set to \fBtrue\fR, this name is relative to the root dataset of the boot environment.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBaction\fR\fR
+.ad
+.RS 14n
+.rt  
+The \fBaction\fR attribute can have the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate\fR\fR
+.ad
+.RS 12n
+.rt  
+This is the default action for a \fBfilesystem\fR. The \fBcreate\fR action tells the installer to create a file system with the specified name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete\fR\fR
+.ad
+.RS 12n
+.rt  
+The \fBdelete\fR action tells the installer to delete the named file system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpreserve\fR\fR
+.ad
+.RS 12n
+.rt  
+The \fBpreserve\fR action tells the installer to leave the named file system unmodified. If \fBpreserve\fR is specified for the \fBfilesystem\fR, then \fBpreserve\fR should be specified for the associated \fBzpool\fR.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmountpoint\fR\fR
+.ad
+.RS 14n
+.rt  
+The \fBmountpoint\fR attribute specifies the mount point of the new file system. If a mount point is not specified, the file system inherits the mount point from its parent.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBin_be\fR\fR
+.ad
+.RS 14n
+.rt  
+The default value of this attribute is \fBfalse\fR. When \fBin_be\fR is \fBfalse\fR, the new dataset is shared among all boot environments.
+.sp
+When \fBin_be\fR is \fBtrue\fR, a separate copy of this new dataset is created within each boot environment. When \fBin_be\fR is \fBtrue\fR, the value of the \fBname\fR attribute is relative to the root dataset of the boot environment.
+.RE
+
+.sp
+.LP
+Use the \fBoptions\fR sub-element to set the ZFS dataset properties on a \fBfilesystem\fR. Any editable ZFS file system property can be set. Use of the \fBoptions\fR element for a \fBfilesystem\fR is similar to the use of the \fBdataset_options\fR element for a \fBzpool\fR, as shown in the following example:
+.sp
+.in +2
 .nf
-            <source>
-                <dir path="/somedir"/>
-            </source>
+<logical>
+    <zpool name="rpool" is_root="true">
+        <filesystem name="export">
+            <options>
+                <option name="compression" value="off"/>
+                <option name="dedup" value="on"/>
+            <options>
+        </filesystem>
+    </zpool>
+</logical>
 .fi
-.in -9
+.in -2
+
 .sp
-        The <software_data> element is used to specify the action
-        to be performed.  The action attribute can be one of
-        three values:
-
-           - "install" (the default value if not explicitly set)
-
-             Copies the files from the source to the new boot
-             environment.
-
-             The files or directories to be copied may be
-             specified using the <name> element - in all cases
-             these are relative to the destination, e.g.:
+.LP
+A child \fBfilesystem\fR inherits any property set on a parent \fBfilesystem\fR unless that property is explicitly set differently. This is the default behavior of ZFS file systems.
+.SS "ZFS Volumes"
 .sp
-.in + 9
+.LP
+Use the \fBzvol\fR element to define ZFS volumes within a ZFS pool. A \fBzvol\fR is typically used for swap or dump devices, but it can have other uses.
+.sp
+.LP
+The \fBzvol\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 10n
+.rt  
+This is the name of the new ZFS volume.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBaction\fR\fR
+.ad
+.RS 10n
+.rt  
+The \fBaction\fR attribute can have the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate\fR\fR
+.ad
+.RS 16n
+.rt  
+This is the default action for a \fBzvol\fR. The \fBcreate\fR action tells the installer to create a ZFS volume with the specified name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete\fR\fR
+.ad
+.RS 16n
+.rt  
+The \fBdelete\fR action tells the installer to delete the named volume.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpreserve\fR\fR
+.ad
+.RS 16n
+.rt  
+The \fBpreserve\fR action tells the installer to leave the named \fBzvol\fR unmodified. If \fBpreserve\fR is specified for the \fBzvol\fR, then \fBpreserve\fR should be specified for the associated \fBzpool\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBuse_existing\fR\fR
+.ad
+.RS 16n
+.rt  
+If this value is specified for a swap or dump device, the existing volume is re-used. If \fBuse_existing\fR is specified for the \fBzvol\fR, then \fBpreserve\fR should be specified for the associated \fBzpool\fR.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBuse\fR\fR
+.ad
+.RS 10n
+.rt  
+The \fBuse\fR attribute can have the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnone\fR\fR
+.ad
+.RS 8n
+.rt  
+This is the default value. When \fBuse\fR is \fBnone\fR, the \fBzvol\fR is created but not used during the installation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBswap\fR\fR
+.ad
+.RS 8n
+.rt  
+When \fBuse\fR is \fBswap\fR, the \fBzvol\fR is created and used as a swap device. The \fBzvol\fR is also used as a swap device during the installation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdump\fR\fR
+.ad
+.RS 8n
+.rt  
+When \fBuse\fR is \fBdump\fR, the \fBzvol\fR is created and used as a dump device. The \fBzvol\fR is also used as a dump device during the installation.
+.RE
+
+.RE
+
+.sp
+.LP
+Use the \fBsize\fR sub-element to specify the size of the \fBzvol\fR See the beginning of the "Disk Layout" section for details about how to use the \fBsize\fR element.
+.sp
+.LP
+Use the \fBoptions\fR sub-element to set ZFS volume options on a \fBzvol\fR. Use of the \fBoptions\fR element for a \fBzvol\fR is similar to the use of the \fBdataset_options\fR element for a \fBzpool\fR, as shown in the following example:
+.sp
+.in +2
 .nf
-                 <software_data> <!-- defaults to install action -->
-                     <name>path/relative/to/source</name>
-                     <name>another/path/relative/to/source</name>
-                 </software_data>
+<logical>
+    <zpool name="rpool" is_root="true">
+        <zvol name="swap">
+            <options>
+                <option name="compression" value="off"/>
+            <options>
+        </zvol>
+    </zpool>
+</logical>
 .fi
-.in -9
-.sp
-           - "uninstall"
+.in -2
 
-             Removes the files from the new boot environment.
-
-             The files or directories to be removed may be
-             specified using the <name> element - in all cases
-             these are relative to the destination, e.g.:
+.SS "Boot Environments"
 .sp
-.in + 9
+.LP
+Use the \fBbe\fR element to specify how the boot environment is created during the installation.
+.sp
+.LP
+The \fBbe\fR element has one attribute:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 8n
+.rt  
+This is the name of the new boot environment that is created by the installer. If the \fBbe\fR element is not specified, the default name for this boot environment is \fBsolaris\fR.
+.RE
+
+.sp
+.LP
+The installer makes use of the auto-naming feature provided by the boot environment subsystem. When installing into an existing target area (for example, when installing a zone), a boot environment with the name specified by the \fBbe\fR element \fBname\fR attribute might already exist. If the specified boot environment name already exists, this name is used as a base to generate a new name. For example, if \fBbe\fR is not specified, and a boot environment named \fBsolaris\fR already exists, the new boot environment is named \fBsolaris-\fIn\fR\fR, where \fIn\fR is the first integer in counting order that forms a boot environment name that does not already exist.
+.sp
+.LP
+A boot environment is created as a ZFS dataset and can have ZFS properties set on it. Use the \fBoptions\fR sub-element to set ZFS properties on a boot environment, as shown in the following example:
+.sp
+.in +2
 .nf
-                 <software_data action="uninstall">
-                     <name>path/relative/to/destination</name>
-                 </software_data>
+<logical>
+    <zpool name="rpool" is_root="true">
+        <be name="installed_be">
+            <options>
+                <option name="compression" value="on"/>
+                <option name="dedup" value="on"/>
+            <options>
+        </be>
+    </zpool>
+</logical>
 .fi
-.in -9
-.sp
-           - "transform"
+.in -2
 
-             Executes a script with the source and destination
-             directories as parameters, e.g.
+.SH SOFTWARE
 .sp
-.in + 9
+.LP
+The \fBsoftware\fR element specifies software to install. The \fBsoftware\fR section specifies the following information:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The type of the software source
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The location of the source
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The names of software packages to install or uninstall
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Optional components of software to install
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Image properties
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+SSL keys and certificates required to access the IPS repository
+.RE
+.sp
+.LP
+The \fBsoftware\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 8n
+.rt  
+This is the name of the \fBsoftware\fR instance. This name must be unique among all \fBsoftware\fR instances in this AI manifest.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtype\fR\fR
+.ad
+.RS 8n
+.rt  
+This is the type of the software source.
+.sp
+.LP
+The \fBtype\fR attribute can have one of the following values. The default value if \fBtype\fR is not specified is \fBIPS\fR.
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBIPS\fR: IPS package repository
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBP5I\fR: IPS package file
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBSVR4\fR: SVR4 packages
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBCPIO\fR: \fBcpio\fR archive
+.RE
+.RE
+
+.sp
+.LP
+The \fBsoftware\fR element has the following structure:
+.sp
+.in +2
 .nf
-                 <software_data action="transform">
-                     <name>/script/to/run.sh</name>
-                 </software_data>
+<!-- one or more software elements -->
+<software>
+    <!-- zero or one destination element
+         This element is only used when type is IPS or P5I.
+    -->
+    <destination>
+        <!-- image properties and
+             optional software components
+        -->
+    </destination>
+    <!-- one or more source elements
+         IPS type: only one source element
+    -->
+    <source>
+        <!-- one or more publisher or dir elements
+             IPS, P5I, and SVR4 types:
+                 one or more publisher/origin elements
+             CPIO types: one or more dir elements
+        -->
+    </source>
+    <!-- zero or more software_data elements
+         At least one software_data element must have an
+             action of install.
+         P5I type: zero software_data elements
+    -->
+    <software_data>
+        <!-- one or more name elements -->
+    </software_data>
+</software>
 .fi
-.in -9
+.in -2
+
+.SS "IPS Installations"
 .sp
-             would result in a call like:
-
-                 /script/to/run.sh SRC DEST
-
-
-BOOT CONFIGURATION
-
-     As part of the AI manifest, it is possible to influence how
-     the GRUB boot menu is configured on the installed system.
-     This section is not applicable to zone installations and is
-     ignored when installing a zone.
-
-     Boot modifications are achieved using the <boot_mods>
-     element which has a couple of attributes:
-
-        - title
- 
-          This sets the title for the main boot entry in the GRUB
-          menu.  This overrides the name that would be
-          automatically generated from the /etc/release or
-          install media.
-
-        - timeout
-
-          This sets the time to wait (in seconds) before the
-          specialized menu item is selected.
-
-     On SPARC, it is only possible to set the "title" attribute,
-     all other settings in this section will be ignored.
-
-     It is then possible to add multiple boot menu items using
-     the sub-element <boot_entry>. These menu items are in
-     addition to any automatically generated by the installer. 
-    
-     The <boot_entry> element has several attributes:
-
-        - default_entry
-      
-          This boolean value defaults to "false".  If set to
-          "true" then this menu item will be the default selected
-          on boot. 
-
-          If multiple entries set to "true" then the last entry
-          will take precedence.
-
-        - insert_at
-
-          This defaults to "end", meaning that the entry will be
-          placed at the end of the generated boot menu. It may
-          also be set to "start" to place the entry at the start
-          of the menu.
-
-     The boot entry is then defined by providing the
-     sub-elements:
-
-        - title_suffix
-
-          This is a required element, and defines text to be
-          added to the end of the title specified in the
-          <boot_mods> element.
-
-        - kernel_args
-
-          This is an optional string of values that will be
-          passed to the kernel by the boot loader.
-    
-
-     An example of what this all looks like is:
+.LP
+The default installation type if the \fBtype\fR attribute is not specified is \fBIPS\fR.
 .sp
-.in + 9
+.LP
+For installations of type IPS, only a single \fBsource\fR element can be specified.
+.sp
+.LP
+Use the \fBsource\fR element to specify which publishers to use for installing the packages. Multiple publishers can be specified. Each publisher must have at least one origin. Each publisher can have multiple origins and mirrors.
+.sp
+.LP
+The order in which publishers are defined in the AI manifest is the order in which the publishers are searched for IPS packages to install and the order in which the publishers are set in the installed system.
+.sp
+.LP
+When installing a non-global zone, the system repository is used by the zone. Any publishers specified in the AI manifest are added in the order in which they appear in the AI manifest, after the publishers provided by the system repository. See \fBpkg\fR(1) and \fBpkg.sysrepo\fR(1m) for more information about the system repository.
+.sp
+.LP
+The following example specifies multiple publishers, one of which has a mirror as well as an origin:
+.sp
+.in +2
 .nf
-         <boot_mods title="Boot Testing" timeout="20">
-             <boot_entry default_entry="true">
-                 <title_suffix>Default Boot Entry</title_suffix>
-             </boot_entry>
-         </boot_mods>
+<software type="IPS">
+  <source>
+    <publisher name="solaris">
+      <origin name="http://pkg.oracle.com/solaris/release"/>
+      <mirror name="http://localpkg.mycompany.com/solaris"/>
+    </publisher>
+    <publisher name="internal-software">
+      <origin name="http://internalsoft.mycompany.com/"/>
+    </publisher>
+  </source>
+</software>
 .fi
-.in -9
+.in -2
+
 .sp
-
-
-OTHER CONFIGURATION
-
-     The automated installer supports certain types of other
-     configurations through the use of the <configuration>
-     element.  At this time, the only configuration type
-     supported are zone configurations.  When installing a global
-     zone system, the zone configurations specified in the AI
-     manifest will be used to install zones onto the system after
-     the global zone has been installed.
-
-     The <configuration> element has the following attributes:
-
-        - type
-
-          The type of configuration to install.  The only type
-          supported by the automated installer is 'zone'.
-
-        - name
-
-          A name given to the configuration.  This name must be
-          unique across all configuration elements in an AI
-          manifest.  For configurations of type 'zone', this name
-          is also used as the zonename for the zone.
-
-        - source
-
-          The location from which the automated installer will
-          download the configuration file for this configuration
-          element.  The value can be a HTTP or FTP URI
-          specification.  For configurations of type 'zone', this
-          value should point to a zone configuration file as
-          produced from 'zonecfg export'.
-
-     For example,
+.LP
+Use the \fBsoftware_data\fR element to specify packages to install or uninstall. The \fBaction\fR attribute can have one of the following two values:
 .sp
-.in + 9
+.ne 2
+.mk
+.na
+\fB\fBinstall\fR\fR
+.ad
+.RS 13n
+.rt  
+Installs the IPS packages specified in the \fBname\fR sub-elements. This is the default if the \fBaction\fR attribute is not specified. At least one \fBsoftware_data\fR element must have an action of install.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBuninstall\fR\fR
+.ad
+.RS 13n
+.rt  
+Removes the IPS packages specified in the \fBname\fR sub-elements.
+.RE
+
+.sp
+.LP
+Other values of the \fBaction\fR attribute are not supported for IPS installations.
+.sp
+.LP
+For each of these actions, one or more packages can be specified in the \fBname\fR element, as shown in the following example:
+.sp
+.in +2
 .nf
-         <configuration type='zone' name='zone1'
-             source='http://myserver.com/configs/zone1/config'/>
+<software_data> <!-- defaults to install action -->
+    <name>pkg:/entire</name>
+    <name>pkg:/group/system/solaris-large-server</name>
+</software_data>
+<software_data action="uninstall">
+    <name>pkg:/unwanted/pkg</name>
+</software_data>
 .fi
-.in -9
+.in -2
+
+.SS "P5I Installations"
 .sp
-
-
-FILES 
-
-     /usr/share/auto_install/manifest/default.xml
-
-        A default system installation with no customizations,
-        this file is provided on the system for reference only.
-        To create a new AI manifest, the copy of this file
-        relative to each install service image should be used.
-        See the DESCRIPTION section for more information.
-
-     /usr/share/auto_install/manifest/zone_default.xml
-
-        A default zone installation with no customization, this
-        file is used as the default manifest by 'zoneadm install'
-        to install native zones.
-        
-     /usr/share/auto_install/manifest/ai_manifest.xml
-    
-        A template AI manifest with details commented out, this
-        file provides examples of some customizations that may be
-        performed.  This file is provided on the system for
-        reference only.  To create a new AI manifest, the copy
-        of this file relative to each install service image
-        should be used.  See the DESCRIPTION section for more
-        information.
-
-
-ATTRIBUTES
-     See attributes(5) for descriptions of the following
-     attributes:
+.LP
+A \fB\&.p5i\fR file is a file that describes IPS publishers, packages, and possibly mirrors.
 .sp
-.in + 9
+.LP
+To specify one or more \fB\&.p5i\fR files to be processed, provide the files as origins in the \fBpublisher\fR element, as shown in the following example:
+.sp
+.in +2
 .nf
-     _____________________________________________________________________
-    | ATTRIBUTE TYPE|                 ATTRIBUTE VALUE                     |
-    |_______________|_____________________________________________________|
-    | Availability  | pkg:/system/install/auto-install/auto-install-common|
-    |_______________|_____________________________________________________|
-    | Stability     |                      Uncommitted                    |
-    |_______________|_____________________________________________________|
+<software type="P5I">
+    <source>
+        <publisher>
+            <origin name="/somewhere/image1.p5i"/>
+            <origin name="/somewhere/image2.p5i"/>
+        </publisher>
+    </source>
+</software>
 .fi
-.in -9
+.in -2
+
+.sp
+.LP
+If this AI manifest does not also have an IPS type software section, make sure your \fB\&.p5i\fR files specify origins.
+.sp
+.LP
+Specification of packages to install is not supported for P5I installations. Therefore, \fBsoftware_data\fR elements are not supported in a \fBsoftware\fR element of type \fBP5I\fR.
+.SS "SVR4 Installations"
+.sp
+.LP
+For a SVR4 transfer, a directory containing SVR4 package subdirectories or a SVR4 package datastream file must be specified using a file directory path or a FILE URI. The SVR4 package datastream file can also be specified using an HTTP URI. 
+.sp
+.in +2
+.nf
+<software type="SVR4">
+    <source>
+        <publisher>
+            <origin name="/somedir"/>
+        </publisher>
+    </source>
+</software>
+.fi
+.in -2
+
+.sp
+.LP
+The \fBsoftware_data\fR element is used to specify the action to be performed. The \fBaction\fR attribute can have one of the following two values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBinstall\fR\fR
+.ad
+.RS 13n
+.rt  
+Copies the files from the source to the new boot environment. This is the default if the \fBaction\fR attribute is not specified. At least one \fBsoftware_data\fR element must have an action of install.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBuninstall\fR\fR
+.ad
+.RS 13n
+.rt  
+Removes the files from the new boot environment.
+.RE
+
+.sp
+.LP
+Other values of the \fBaction\fR attribute are not supported for SVR4 installations.
+.sp
+.LP
+For each of these actions, one or more packages can be specified in the \fBname\fR element, as shown in the following example:
+.sp
+.in +2
+.nf
+<software type="SVR4">
+    <source>
+        <publisher>
+            <origin name="/somedir"/>
+        </publisher>
+    </source>
+    <software_data> <!-- defaults to install action -->
+        <name>ORGpackage1</name>
+        <name>ORGpackage2</name>
+    </software_data>
+    <software_data action="uninstall">
+        <name>ORGpackage8</name>
+    </software_data>
+</software>
+.fi
+.in -2
+
+.SS "CPIO Installations"
+.sp
+.LP
+For a CPIO transfer, a source directory must be specified. The destination directory is set to the mount point for the new boot environment during the installation.
+.sp
+.in +2
+.nf
+<software type="CPIO">
+    <source>
+        <dir path="/somedir"/>
+    </source>
+</software>
+.fi
+.in -2
+
+.sp
+.LP
+The \fBsoftware_data\fR element is used to specify the action to be performed. The \fBaction\fR attribute can have one of the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBinstall\fR\fR
+.ad
+.RS 13n
+.rt  
+Copies the files from the source to the new boot environment. This is the default if the \fBaction\fR attribute is not specified. At least one \fBsoftware_data\fR element must have an action of install.
+.sp
+Use the \fBname\fR element to specify the files or directories to be copied. Paths specified in the \fBname\fR element are relative to the source.
+.sp
+.in +2
+.nf
+<software_data>
+  <!-- defaults to install action -->
+  <name>path/relative/to/source</name>
+  <name>another/path/relative/to/source</name>
+</software_data>
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBuninstall\fR\fR
+.ad
+.RS 13n
+.rt  
+Removes files from the new boot environment.
+.sp
+Use the \fBname\fR element to specify the files or directories to be removed. Paths specified in the \fBname\fR element are relative to the destination.
+.sp
+.in +2
+.nf
+<software_data action="uninstall">
+    <name>path/relative/to/destination</name>
+</software_data>
+.fi
+.in -2
+
+.RE
+
+.SS "Optional Software Components and Image Properties"
+.sp
+.LP
+Use the \fBdestination\fR element and the \fBimage\fR sub-element to specify the following information:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Optional components of software to install
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Image properties
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+SSL keys and certificates
+.RE
+.sp
+.LP
+The \fBdestination\fR section only applies to IPS and P5I installation types. A \fBdestination\fR element can have only one \fBimage\fR sub-element.
+.SS "SSL Keys and Certificates"
+.sp
+.LP
+Use attributes of the \fBimage\fR element to specify SSL keys and certificates that are required for publishers using client SSL authentication. The key and certificate specified here apply to the first publisher defined in this AI manifest.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBssl_key\fR\fR
+.ad
+.RS 12n
+.rt  
+This attribute maps to the following \fBpkg\fR command:
+.sp
+.in +2
+.nf
+pkg set-publisher -k \fIssl_key\fR
+.fi
+.in -2
+
+The value of the \fBssl_key\fR attribute is the \fIssl_key\fR. See the \fBpkg\fR(1) man page for more information about the \fBpkg set-publisher\fR command.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBssl_cert\fR\fR
+.ad
+.RS 12n
+.rt  
+This attribute maps to the following \fBpkg\fR command:
+.sp
+.in +2
+.nf
+pkg set-publisher -c \fIssl_cert\fR
+.fi
+.in -2
+
+The value of the \fBssl_cert\fR attribute is the \fIssl_cert\fR.
+.RE
+
+.SS "Optional Software Components"
+.sp
+.LP
+Use the \fBfacet\fR sub-element of the \fBimage\fR element to specify optional software components to install. Facets are not separate software packages but are optional components of any given software package such as locales, documentation, and development files such as files with debug information. You can save space by specifying that you only want to install one or two languages, for example. See the \fBpkg\fR(1) man page for more information about IPS facets.
+.sp
+.LP
+The \fBfacet\fR element has a boolean \fBset\fR attribute and a value that is the name of an IPS facet.
+.sp
+.in +2
+.nf
+<facet set="true|false">\fIfacet_name\fR</facet>
+.fi
+.in -2
+
+.sp
+.LP
+The following example specifies that only German and English facets of packages should be installed. The example first specifies that no locales should be installed and then specifies that German and English locales should be installed:
+.sp
+.in +2
+.nf
+<destination>
+    <image>
+        <!-- de-select all locales -->
+        <facet set="false">facet.locale.*</facet>
+        <!-- specify specific locales to install -->
+        <!-- install German and English only -->
+        <facet set="true">facet.locale.de</facet>
+        <facet set="true">facet.locale.de_DE</facet>
+        <facet set="true">facet.locale.en</facet>
+        <facet set="true">facet.locale.en_US</facet>
+    </image>
+</destination>
+.fi
+.in -2
+
+.SS "Image Properties"
+.sp
+.LP
+Use the \fBproperty\fR sub-element of the \fBimage\fR element to specify IPS image properties for the new image this installation creates.
+.sp
+.LP
+The \fBproperty\fR element has a boolean \fBval\fR attribute and a value that is the name of a property.
+.sp
+.in +2
+.nf
+<property val="true|false">\fIproperty_name\fR</property>
+.fi
+.in -2
+
+.sp
+.LP
+See the "Image Properties" section of the \fBpkg\fR(1) man page for information about what properties can be set.
+.SH BOOT CONFIGURATION (X86 ONLY)
+.sp
+.LP
+The AI manifest can be used to modify how the GRUB boot menu is configured on the installed system.
+.sp
+.LP
+This section is not applicable to zone installations and is ignored when installing a non-global zone.
+.sp
+.LP
+Use the \fBboot_mods\fR element and the \fBboot_entry\fR sub-element to modify the GRUB boot menu.
+.sp
+.LP
+The \fBboot_mods\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtitle\fR\fR
+.ad
+.RS 11n
+.rt  
+The value of the \fBtitle\fR attribute is the base title of boot entries specified by \fBboot_entry\fR sub-elements of this \fBboot_mods\fR element. This attribute value overrides the name automatically generated from the first line of \fB/etc/release\fR or from the install media.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtimeout\fR\fR
+.ad
+.RS 11n
+.rt  
+The value of the \fBtimeout\fR attribute is the number of seconds to wait before the default \fBboot_entry\fR of this \fBboot_mods\fR element is selected.
+.RE
+
+.sp
+.LP
+Only the \fBtitle\fR attribute can be set on SPARC systems. All other settings in this section are ignored for SPARC systems.
+.sp
+.LP
+Use the \fBboot_entry\fR sub-element to add one or more menu items to the boot menu. These menu items are in addition to any menu items that are automatically generated by the installer.
+.sp
+.LP
+The \fBboot_entry\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdefault_entry\fR\fR
+.ad
+.RS 17n
+.rt  
+If this boolean value is set to \fBtrue\fR, then this menu item is the default option selected on boot. The default value of this attribute is \fBfalse\fR.
+.sp
+If multiple \fBboot_entry\fR elements have \fBdefault_entry\fR set to \fBtrue\fR, then the last such entry is the default option selected on boot.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBinsert_at\fR\fR
+.ad
+.RS 17n
+.rt  
+This attribute can be set to one of the following two values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBend\fR\fR
+.ad
+.RS 9n
+.rt  
+Place the entry at the end of the generated boot menu. This is the default placement.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBstart\fR\fR
+.ad
+.RS 9n
+.rt  
+Place the entry at the beginning of the generated boot menu.
+.RE
+
+.RE
+
+.sp
+.LP
+The \fBboot_entry\fR menu item is then defined by the following sub-elements:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtitle_suffix\fR\fR
+.ad
+.RS 16n
+.rt  
+This element is required. This element defines text to be added to the end of the title specified in the \fBboot_mods\fR element.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBkernel_args\fR\fR
+.ad
+.RS 16n
+.rt  
+This element is optional. This element is a string of values passed to the kernel by the boot loader.
+.RE
+
+.sp
+.LP
+The following example specifies a boot menu entry named "Boot Testing Default Boot Entry" that is the last entry on the menu and is automatically selected after 20 seconds:
+.sp
+.in +2
+.nf
+<boot_mods title="Boot Testing" timeout="20">
+    <boot_entry default_entry="true">
+        <title_suffix>Default Boot Entry</title_suffix>
+    </boot_entry>
+</boot_mods>
+.fi
+.in -2
+
+.SH OTHER CONFIGURATION
+.sp
+.LP
+The \fBconfiguration\fR element supports non-global zone configurations. When installing a global zone system, the zone configurations specified in the AI manifest are used to install non-global zones onto the system after the global zone has been installed.
+.sp
+.LP
+The \fBconfiguration\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtype\fR\fR
+.ad
+.RS 10n
+.rt  
+The type of configuration to install. The only type supported by AI is \fBzone\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 10n
+.rt  
+A name given to the configuration. This name must be unique across all configuration elements in an AI manifest. For configurations of type \fBzone\fR, this name is also used as the \fBzonename\fR for the zone.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsource\fR\fR
+.ad
+.RS 10n
+.rt  
+The location from which AI downloads the configuration file for this configuration element. The value can be an HTTP or FILE URI specification. For configurations of type \fBzone\fR, this value should point to a zone configuration file as produced from the \fBzonecfg export\fR command.
+.RE
+
+.sp
+.LP
+The following specification installs \fBzone1\fR on the installation clients:
+.sp
+.in +2
+.nf
+<configuration type="zone" name="zone1"
+    source="http://myserver.com/configs/zone1/config"/>
+.fi
+.in -2
+
+.sp
+.LP
+For more information about configuring and installing zones, see Chapter 12, \fIInstalling and Configuring Zones,\fR in \fIInstalling Oracle Solaris 11 Systems\fR.
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/share/auto_install/manifest/default.xml\fR\fR
+.ad
+.sp .6
+.RS 4n
+A default system installation specification with no customizations. This AI manifest is provided on the system for reference only. To create a new AI manifest, use the copy of this file from the relevant install service image. See the "Description" section for information about copying this file from an install service.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/share/auto_install/manifest/zone_default.xml\fR\fR
+.ad
+.sp .6
+.RS 4n
+A default zone installation with no customization. This file is used as the default manifest by the \fBzoneadm install\fR command to install non-global zones.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/share/auto_install/manifest/ai_manifest.xml\fR\fR
+.ad
+.sp .6
+.RS 4n
+A template AI manifest with details commented out. This file provides examples of some customizations that can be performed. This file is provided on the system for reference only. To create a new AI manifest, use the copy of this file from the relevant install service image.  See the "Description" section for information about copying this file from an install service.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
 .sp
 
-SEE ALSO
+.sp
+.TS
+tab() box;
+cw(1.38i) |cw(4.13i) 
+lw(1.38i) |lw(4.13i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilityT{
+\fBsystem/install/auto-install/auto-install-common\fR
+T}
+_
+Interface StabilityUncommitted
+.TE
 
-     installadm(1M), beadm(1M), pkg(1), grub(5), prtconf(1M),
-     format(1M), zfs(1M), zpool(1M), pkg.sysrepo(1M), smf(5),
-     zoneadm(1M), zonecfg(1M)
-
+.SH SEE ALSO
+.sp
+.LP
+installadm(1M), \fBbeadm\fR(1M), \fBpkg\fR(1), \fBgrub\fR(5), \fBprtconf\fR(1M), \fBformat\fR(1M), \fBzfs\fR(1M), \fBzpool\fR(1M), \fBpkg.sysrepo\fR(1m), \fBsmf\fR(5), \fBzoneadm\fR(1M), \fBzonecfg\fR(1M)
+.sp
+.LP
+Part\ III, \fIInstalling Using an Install Server,\fR in \fIInstalling Oracle Solaris 11 Systems\fR

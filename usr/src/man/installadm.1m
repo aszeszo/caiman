@@ -1,7 +1,7 @@
 '\" te
-.\" Copyright (c) 2008, 2011, Oracle and/or its
+.\" Copyright (c) 2008, 2012, Oracle and/or its
 .\" affiliates. All rights reserved.
-.TH installadm 1M "04 Aug 2011" "SunOS 5.11" "System Administration Commands"
+.TH installadm 1M "14 Mar 2012" "SunOS 5.11" "System Administration Commands"
 .SH NAME
 installadm \- Manages automated installations on a network
 .SH SYNOPSIS
@@ -100,6 +100,13 @@ installadm create-profile -n|--service \fIsvcname\fR
 
 .LP
 .nf
+installadm update-profile -n|--service \fIsvcname\fR
+    -f|--file \fIprofile_filename\fR
+    [-p|--profile \fIprofile_name\fR]
+.fi
+
+.LP
+.nf
 installadm delete-profile -p|--profile \fIprofile_name\fR...
     -n|--service \fIsvcname\fR
 .fi
@@ -166,10 +173,10 @@ When the client boots, a search is initiated for a manifest or script that match
 Each service has one default manifest or script. The default is used when the criteria of no other manifest or script matches the system being installed. Any manifest or script can be designated as the default. Any criteria associated with a default manifest or script become inactive and are not considered during manifest or script selection. If a different manifest or script is later made the default, the criteria of the former default manifest or script become active again. Manifests or scripts with no criteria associated with them can only be used as default manifests or scripts. Manifests or scripts without criteria become inactive when a different manifest or script is designated the default.
 .sp
 .LP
-System configuration profiles are complementary to manifests and scripts in that they also contain specifications for an installation. In particular, profiles are used to specify configuration information such as user name, user password, time zone, host name, and IP address. Profiles can contain variables to get configuration parameters from the install server environment or from criteria specified in the \fBcreate-profile\fR subcommand. In this way, a single profile file can set different configuration parameters on different clients. See the "Examples" section.
+System configuration profiles are complementary to manifests and scripts in that they also contain specifications for an installation. In particular, profiles are used to specify configuration information such as user name, user password, time zone, host name, and IP address. Profiles can contain variables that are replaced at installation time with appropriate values for the client being installed. In this way, a single profile file can set different configuration parameters on different clients. See the "Examples" section.
 .sp
 .LP
-System configuration profiles are processed by \fBsmf\fR(5) and conform to document format \fBservice_bundle\fR(4). See \fBsysconfig\fR(1M) and \fIInstalling Oracle Solaris 11 Systems\fR for more information about system configuration profiles. Each client can use any number of system configuration profiles. A particular SMF property can be specified no more than once for each client system.
+System configuration profiles are processed by \fBsmf\fR(5) and conform to document format \fBservice_bundle\fR(4). See \fBsysconfig\fR(1M) and Chapter 11, \fIConfiguring the Client System,\fR in \fIInstalling Oracle Solaris 11 Systems\fR for more information about system configuration profiles. Each client can use any number of system configuration profiles. A particular SMF property can be specified no more than once for each client system.
 .sp
 .LP
 If you want a specific client to use a specific install service, you can associate that client with the service by using the \fBcreate-client\fR subcommand. You can also use \fBcreate-client\fR to modify an existing client.
@@ -266,6 +273,58 @@ List manifests and scripts for an install service
 .el o
 List profiles for an install service
 .RE
+.SH INSTALL SERVER CONFIGURATION PROPERTIES
+.sp
+.LP
+The following properties of the \fBsvc:/system/install/server:default\fR SMF service are used to configure the install server.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBall_services/networks\fR\fR
+.ad
+.sp .6
+.RS 4n
+A list of networks in CIDR format (for example, 192.168.56.0/24) to allow or disallow, depending on how the \fBall_services/exclude_networks\fR property is set.
+.sp
+Use this list of networks to specify which clients this install server serves. By default, the AI install server is configured to serve install clients on all networks that the server is connected to if the server is multihomed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBall_services/exclude_networks\fR\fR
+.ad
+.sp .6
+.RS 4n
+A boolean value. If true, exclude networks specified by the \fBall_services/networks\fR property from being served by this install server. If false, include networks specified by the \fBall_services/networks\fR property.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBall_services/port\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the port that hosts the AI install services web server. By default, the web server is hosted on port 5555.
+.sp
+If you want to use a different port number from the default, customize the \fBport\fR property before you create any install services.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBall_services/default_imagepath_basedir\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the default location for images created by the \fBinstalladm create-service\fR command. Images are located at \fBall_services/default_imagepath_basedir/\fIservice_name\fR\fR. The default value of this property is \fB/export/auto_install\fR.
+.RE
+
 .SH OPTIONS
 .sp
 .LP
@@ -359,7 +418,7 @@ If the IP range requested is not on a subnet that the install server has direct 
 .ad
 .sp .6
 .RS 4n
-Optional: Uses this install service name instead of a system-generated service name.
+Optional: Uses this install service name instead of a system-generated service name. The \fIsvcname\fR can consist of alphanumeric characters, underscores (\fB_\fR), and hyphens (\fB-\fR). The first character of \fIsvcname\fR cannot be a hyphen.
 .sp
 If the \fB-n\fR option is not specified, a service name is generated automatically. 
 .RE
@@ -491,7 +550,7 @@ Optional: Used to provide the IP address of the boot server from which clients s
 .ad
 .sp .6
 .RS 4n
-Optional: Specifies the path at which to create the net image. If not specified, the default location, \fB/export/auto_install/\fIsvcname\fR\fR, is used. A confirmation prompt is displayed unless \fB-y\fR is also specified.
+Optional: Specifies the path at which to create the net image. If not specified, the image is created in a \fIsvcname\fR directory at the location defined by the value of the \fBall_services/default_imagepath_basedir\fR property. For the default value of this property, see "Install Server Configuration Properties." A confirmation prompt is displayed unless \fB-y\fR is also specified.
 .RE
 
 .sp
@@ -539,6 +598,14 @@ Makes \fIsvcname\fR an alias of \fIexisting_service\fR.
 .TP
 .ie t \(bu
 .el o
+\fBimagepath=\fInewpath\fR\fR
+.sp
+Relocates the service's imagepath after the service has been created. 
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
 \fBdefault-manifest=\fImanifest_name\fR\fR
 .sp
 Designates a particular manifest or script that is already registered with a given service to be the default manifest or script for that service. Use the following command to show a list of manifests and scripts registered with this service.
@@ -574,7 +641,7 @@ Required: Specifies the name of the install service whose property is being set.
 .ad
 .sp .6
 .RS 4n
-Renames the install service \fIsvcname\fR to \fInewsvcname\fR.
+Renames the install service \fIsvcname\fR to \fInewsvcname\fR. The \fInewsvcname\fR can consist of alphanumeric characters, underscores (\fB_\fR), and hyphens (\fB-\fR). The first character of \fInewsvcname\fR cannot be a hyphen.
 .RE
 
 .sp
@@ -845,7 +912,7 @@ Optional: Specifies that this manifest or script is the new default manifest or 
 .ad
 .sp .6
 .RS 4n
-Updates a specific manifest or script that is associated with a specific install service. Any criteria or default status remain with the manifest or script following the update.
+Updates the specific manifest or script from the \fIsvcname\fR install service. Replaces the specified manifest or script with the contents of \fImanifest_or_script_filename\fR. Any criteria or default status remain with the manifest or script following the update.
 .sp
 .LP
 The name of the manifest is determined in the following order:
@@ -864,7 +931,6 @@ The value of the \fBai_instance\fR \fBname\fR attribute, if present in the chang
 3.
 The base name of the manifest or script file name, if it matches the \fBai_instance\fR \fBname\fR attribute value in an existing manifest, or the name given by \fBinstalladm list\fR if it matches the name of an existing script.
 .RE
-The replacement manifest or script is given by the \fImanifest_or_script_filename\fR.
 .sp
 .ne 2
 .mk
@@ -964,7 +1030,7 @@ Profile names must be unique for an AI service. If multiple \fB-f\fR options are
 .ad
 .sp .6
 .RS 4n
-Required: Specifies the name of the install service of the profile being updated.
+Required: Specifies the name of the install service of the profile being created.
 .RE
 
 .sp
@@ -1009,6 +1075,63 @@ Optional: Specifies criteria to be associated with the profiles. See the "Criter
 .sp .6
 .RS 4n
 Optional: Specifies the path name of a criteria XML file containing criteria to be associated with the specified profiles.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBupdate-profile -n|--service \fIsvcname\fR -f|--file \fIprofile_filename\fR [-p|--profile \fIprofile_name\fR]\fR\fR
+.ad
+.sp .6
+.RS 4n
+Updates the specified profile from the \fIsvcname\fR install service. Replaces the specified profile with the contents of \fIprofile_filename\fR. Any criteria remain with the profile following the update.
+.sp
+.LP
+The profile to be updated is determined in the following order:
+.RS +4
+.TP
+1.
+The \fIprofile_name\fR specified by the \fB-p\fR option, if present.
+.RE
+.RS +4
+.TP
+2.
+The base name of \fIprofile_filename\fR.
+.RE
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-n\fR|\fB--service\fR \fIsvcname\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the name of the install service of the profile being updated.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-f\fR|\fB--file\fR \fIprofile_filename\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required: Specifies the path name of the file to use to update the profile.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fB-p\fR|\fB--profile\fR \fIprofile_name\fR\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optional: Specifies the name of the profile being updated. Use this option if the name of the profile to update is different from the base name of \fIprofile_filename\fR.
 .RE
 
 .RE
@@ -1318,9 +1441,7 @@ lw(1.38i) lw(4.13i)
 CriteriaDescription
 \fBarch\fRArchitecture per \fBuname -m\fR.
 \fBcpu\fRCPU class per \fBuname -p\fR.
-\fBhostname\fRT{
-Assigned hostname. Can be used only for profiles, not for manifests.
-T}
+\fBhostname\fRAssigned hostname.
 \fBipv4\fRIP version 4 network address.
 \fBmac\fRT{
 Hexadecimal MAC address with colon (:) separators.
@@ -1402,7 +1523,7 @@ Because this is the first SPARC service created, the \fBdefault-sparc\fR service
 
 .sp
 .LP
-On an i386 install server, this command sets up an i386 net image and install service named \fBmysvc\fR at the default image location, \fB/export/auto_install/mysvc\fR. The \fB-y\fR option provides confirmation that the default location is acceptable. Since the architecture is not specified, the service created is of the same architecture as the install server. This command assumes that a package repository on the \fBpkg publisher\fR list for the install server contains the \fBinstall-image/solaris-auto-install\fR package.
+On an i386 install server, this command sets up an i386 net image and install service named \fBmysvc\fR in a directory named \fBmysvc\fR at the image location specified by the value of the \fBall_services/default_imagepath_basedir\fR property. For the default value of this property, see "Install Server Configuration Properties." The \fB-y\fR option provides confirmation that the default location is acceptable. Since the architecture is not specified, the service created is of the same architecture as the install server. This command assumes that a package repository on the \fBpkg publisher\fR list for the install server contains the \fBinstall-image/solaris-auto-install\fR package.
 
 .sp
 .LP
@@ -1410,7 +1531,7 @@ To specify the creation of a SPARC service on this server, use the \fB-a\fR opti
 
 .sp
 .LP
-To specify the source of the \fBsolaris-auto-install\fR package, use the \fB-p\fR option. For example, use the following command to specify the \fBai-image\fR repository located at \fBhttp://example.company.com:4281\fR as the source of the \fBsolaris-auto-install\fR package:
+To specify the publisher of the \fBsolaris-auto-install\fR package, use the \fB-p\fR option. For example, use the following command to specify the \fBai-image\fR repository located at \fBhttp://example.company.com:4281\fR as the publisher of the \fBsolaris-auto-install\fR package:
 
 .sp
 .in +2
@@ -1518,7 +1639,7 @@ Use the following sample command to replace the default manifest for an existing
 .in +2
 .nf
 # \fBinstalladm set-service -o default-manifest=my_manifest \e\fR
-\fB-n service_092910\fR
+\fBservice_092910\fR
 .fi
 .in -2
 .sp
@@ -1535,10 +1656,10 @@ Use the following sample command to list the install services on a local server.
 $ \fBinstalladm list\fR
 Service Name     Alias Of         Status  Arch  Image Path 
 ------------     --------         ------  ----  ---------- 
-default-i386     sol-11-i386-svc  on      x86   /export/images/soli386
-default-sparc    sol-11-sparc-svc on      Sparc /export/images/solsparc
-sol-11-i386-svc  -                on      x86   /export/images/soli386
-sol-11-sparc-svc -                on      Sparc /export/images/solsparc
+default-i386     sol-11-i386-svc  on      i386  /export/images/soli386
+default-sparc    sol-11-sparc-svc on      sparc /export/images/solsparc
+sol-11-i386-svc  -                on      i386  /export/images/soli386
+sol-11-sparc-svc -                on      sparc /export/images/solsparc
 .fi
 .in -2
 .sp
@@ -1655,7 +1776,7 @@ In this example, the manifest does not contain a name attribute, so the manifest
 .sp
 .in +2
 .nf
-$ \fBinstalladm list -m -n svc1\fR
+# \fBinstalladm list -m -n svc1\fR
 Manifest       Criteria
 --------       --------
 my_manifest    mac  = AA:BB:CC:DD:EE:FF
@@ -1686,7 +1807,7 @@ In this example, the manifest name is taken from the \fB-m\fR option.
 .sp
 .in +2
 .nf
-$ \fBinstalladm list -m -n svc1\fR
+# \fBinstalladm list -m -n svc1\fR
 Manifest       Criteria
 --------       --------
 chosen_name    ipv4 = 10.0.2.100 - 10.0.2.199
@@ -1703,8 +1824,8 @@ Use the following sample command to add the manifest in \fB/export/manifest3.xml
 .sp
 .in +2
 .nf
-# \fBinstalladm create-manifest -f /export/manifest3.xml -n svc1 \e\fR
-\fB-c MEM="2048-unbounded" -c ARCH=i86pc\fR
+# \fBinstalladm create-manifest -f /export/manifest3.xml \e\fR
+\fB-n svc1 -c MEM="2048-unbounded" -c ARCH=i86pc\fR
 .fi
 .in -2
 .sp
@@ -1725,7 +1846,7 @@ In this example, the manifest name is taken from the \fBname\fR attribute of the
 .sp
 .in +2
 .nf
-$ \fBinstalladm list -m -n svc1\fR
+# \fBinstalladm list -m -n svc1\fR
 Manifest    Criteria
 --------    --------
 my_name     arch = i86pc
@@ -1743,12 +1864,12 @@ Use the following sample command to add the profile in \fB/export/profile4.xml\f
 .sp
 .in +2
 .nf
-# \fBinstalladm create-profile -f /export/profile4.xml -n svc1 \e\fR
-\fB-p profile4 -c hostname="myhost1 host3 host6"\fR
-$ \fBinstalladm list -p -n svc1\fR
+# \fBinstalladm create-profile -f /export/profile4.xml \e\fR
+\fB-n svc1 -p profile4 -c hostname="myhost1 host3 host6"\fR
+# \fBinstalladm list -p -n svc1\fR
 Profile          Criteria
 -------          --------
-profile4         hostname = myhost1 host3 host6
+profile4.xml     hostname = myhost1 host3 host6
 .fi
 .in -2
 .sp
@@ -1763,40 +1884,24 @@ If you do not specify criteria, then the profile is used by all clients that use
 .in +2
 .nf
 # \fBinstalladm create-profile -f /export/locale.xml -n svc1\fR
-$ \fBinstalladm list -p -n svc1\fR
+# \fBinstalladm list -p -n svc1\fR
 Profile          Criteria
 -------          --------
-profile4         hostname = myhost1 host3 host6
-locale
+profile4.xml     hostname = myhost1 host3 host6
+locale.xml
 .fi
 .in -2
 .sp
 
 .LP
-\fBExample 19 \fRAdd a System Configuration Profile With Replacement Tags
+\fBExample 19 \fRAdd a System Configuration Profile With Variables
 .sp
 .LP
-A profile can use replacement tags, which serve as placeholders for custom client configuration information that comes from either the user's environment (see \fBenviron\fR(4)) or from the criteria specified in the \fB-c\fR option in the \fBcreate-profile\fR subcommand. Using replacement tags, a profile file can be reused for any number of different systems. In the following example, each profile is stored with the \fBhostname\fR value taken from the \fB-c\fR criteria option:
-
-.sp
-.in +2
-.nf
-# \fBinstalladm create-profile -p myhost1_hostname \e\fR
-\fB-f /export/hostname.xml -n svc1 -c hostname=myhost1\fR
-# \fBinstalladm create-profile -p myhost2_hostname \e\fR
-\fB-f /export/hostname.xml -n svc1 -c hostname=myhost2\fR
-$ \fBinstalladm list -p -n svc1\fR
-Profile               Criteria
--------               --------
-myhost1_hostname      hostname = myhost1
-myhost2_hostname      hostname = myhost2
-.fi
-.in -2
-.sp
+A profile can use variables that are replaced with custom client configuration information at client installation time. Using such variables, a profile file can be reused for any number of different systems.
 
 .sp
 .LP
-The \fBhostname.xml\fR file contains the following line: 
+This example uses one system configuration profile file to assign each install client a unique host name. The \fBhostname.xml\fR file contains the following line:
 
 .sp
 .in +2
@@ -1807,7 +1912,7 @@ The \fBhostname.xml\fR file contains the following line:
 
 .sp
 .LP
-The \fBcreate-profile\fR command makes the substitution so that the \fBmyhost1_hostname\fR profile contains the following line:
+At installation time, \fB{{AI_HOSTNAME}}\fR is replaced with the actual host name of that system. For example, when \fBhostname.xml\fR is used to configure the client with host name \fBmyhost1\fR, the \fBhostname.xml\fR profile contains the following line:
 
 .sp
 .in +2
@@ -1818,18 +1923,7 @@ The \fBcreate-profile\fR command makes the substitution so that the \fBmyhost1_h
 
 .sp
 .LP
-Using the same \fBhostname.xml\fR input file, the \fBmyhost2_hostname\fR profile contains the following line:
-
-.sp
-.in +2
-.nf
-<propval name="nodename" value="myhost2"/>
-.fi
-.in -2
-
-.sp
-.LP
-The replacement tag, \fB{{AI_HOSTNAME}}\fR, is replaced with different values for each \fBcreate-profile\fR invocation because the \fBhostname\fR  criteria was used and substituted into the profile. For more information about using replacement tags with profiles, see \fIInstalling Oracle Solaris 11 Systems\fR.
+For more information about using replacement tags with profiles, see \fIUsing System Configuration Profile Templates\fR in \fIInstalling Oracle Solaris 11 Systems\fR.
 
 .LP
 \fBExample 20 \fRAdd Criteria To an Existing Manifest
@@ -1889,7 +1983,7 @@ Use the following sample command to export the profile \fBmyprofile.xml\fR in th
 .sp
 .in +2
 .nf
-$ \fBinstalladm export -p myprofile -n svc1\fR
+# \fBinstalladm export -p myprofile -n svc1\fR
 .fi
 .in -2
 .sp
@@ -1918,7 +2012,7 @@ Use the following sample commands to export the data of an existing manifest nam
 .sp
 .in +2
 .nf
-$ \fBinstalladm export -n svc2 -m spec -o /home/admin/spec.xml\fR
+# \fBinstalladm export -n svc2 -m spec -o /home/admin/spec.xml\fR
 .fi
 .in -2
 .sp
@@ -1935,6 +2029,59 @@ Make changes to \fB/home/admin/spec.xml\fR.
 .fi
 .in -2
 .sp
+
+.LP
+\fBExample 26 \fRExport and Update an Existing Profile
+.sp
+.LP
+Use the following sample commands to export the data of an existing profile named \fBprof1\fR in service \fBsvc2\fR, and then update the profile with modified content.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm export -n svc2 -p prof1 -o /home/admin/prof1.xml\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Make changes to \fB/home/admin/prof1.xml\fR.
+
+.sp
+.in +2
+.nf
+# \fBinstalladm update-profile -n svc2 \e\fR
+\fB-f /home/admin/prof1.xml -p prof1\fR
+.fi
+.in -2
+.sp
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 13n
+.rt  
+The command was processed successfully.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB>0\fR\fR
+.ad
+.RS 13n
+.rt  
+An error occurred.
+.RE
 
 .SH ATTRIBUTES
 .sp
@@ -1964,4 +2111,4 @@ aimanifest(1M), \fBsysconfig\fR(1M), \fBdhcp\fR(5), \fBdhcpd\fR(8), \fBsmf\fR(5)
 Part\ III, \fIInstalling Using an Install Server,\fR in \fIInstalling Oracle Solaris 11 Systems\fR
 .sp
 .LP
-\fITransitioning From Oracle Solaris 10 Custom JumpStart to Oracle Solaris 11 Automated Installer\fR
+\fITransitioning From Oracle Solaris 10 JumpStart to Oracle Solaris 11 Automated Installer\fR

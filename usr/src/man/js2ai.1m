@@ -1,7 +1,7 @@
 '\" te
-.\" Copyright (c) 2011, Oracle and/or its affiliates.
-.\" All rights reserved.
-.TH js2ai 1M "22 Jul 2011" "SunOS 5.11" "System Administration Commands"
+.\" Copyright (c) 2011, 2012, Oracle and/or its
+.\" affiliates. All rights reserved.
+.TH js2ai 1M "20 Feb 2012" "SunOS 5.11" "System Administration Commands"
 .SH NAME
 js2ai \- Translate JumpStart rules and profiles for use with the Automated Installer (AI).
 .SH SYNOPSIS
@@ -30,7 +30,7 @@ js2ai -V \fImanifest\fR
 .SH DESCRIPTION
 .sp
 .LP
-\fBjs2ai\fR is a utility for converting Oracle Solaris 10 JumpStart \fBrules\fR, profile, and \fBsyscfg\fR configuration files to a format compatible with Automated Installer (AI). This utility makes a "best effort" to translate those JumpStart keywords that can be translated to the AI context. While this conversion does not create a complete one-to-one equivalence with JumpStart, it does provide AI manifest and system configuration (SC) profile entries that can then be used as a template for creating a complete AI configuration setup based on information gathered from JumpStart configuration files.
+\fBjs2ai\fR is a utility for converting Oracle Solaris 10 JumpStart \fBrules\fR, profile, and \fBsyscfg\fR configuration files to a format compatible with Automated Installer (AI). This utility makes a "best effort" to translate those JumpStart keywords that can be translated to the AI context. While this conversion does not create a complete one-to-one equivalence with JumpStart, it does provide AI manifest and system configuration profile entries that can then be used as a template for creating a complete AI configuration setup based on information gathered from JumpStart configuration files.
 .sp
 .LP
 Using \fBjs2ai\fR, you can do the following:
@@ -130,7 +130,7 @@ The \fBrootdisk\fR is set to the specified device.
 T}
 \fBsystem_type\fROnly the value \fBstandalone\fR is supported.
 \fBusedisk\fRT{
-The specified device might be used to resolve the \fBany\fR or \fBrootdisk\fR device during the conversion. Any devices specified that are not used for this purpose are added to the ZFS root pool, when that pool is not mirrored..
+The specified device might be used to resolve the \fBany\fR or \fBrootdisk\fR device during the conversion. Any devices specified that are not used for this purpose are added to the ZFS root pool, when that pool is not mirrored.
 T}
 .TE
 
@@ -172,7 +172,7 @@ lw(.44i) lw(5.06i)
 StageAction
 _
 1T{
-If the \fBroot_device\fR keyword is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the device on which the slice resides..
+If the \fBroot_device\fR keyword is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the device on which the slice resides.
 T}
 2T{
 If \fBrootdisk\fR is not set and the \fBboot_device\fR keyword is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the boot device.
@@ -181,12 +181,22 @@ T}
 If \fBrootdisk\fR is not set, \fBpartitioning default\fR is specified, and a \fBsolaris\fR \fBfdisk\fR entry is encountered, \fBjs2ai\fR sets \fBrootdisk\fR to the specified \fBdisk_name\fR.
 T}
 4T{
-If \fBrootdisk\fR is not set and a \fBfilesys cwtxdysz size /\fR entry is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the \fBcwtxdysz\fR disk specified in the entry.
+If \fBrootdisk\fR is not set and a \fBfilesys \fIcwtxdysz\fR \fIsize\fR /\fR entry is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the \fIcwtxdysz\fR disk specified in the entry.
 T}
 5T{
-If \fBrootdisk\fR is not set and a \fBusedisk disk_name\fR entry is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the \fBdisk_name\fR disk specified in the entry.
+If \fBrootdisk\fR is not set and a \fBusedisk \fIdisk_name\fR\fR entry is specified in the profile, \fBjs2ai\fR sets \fBrootdisk\fR to the \fIdisk_name\fR disk specified in the entry.
 T}
 6T{
+If \fBrootdisk\fR is not set and the following specification is encountered in the profile where \fIsize\fR is not 0 or \fBdelete\fR and \fIdisk_name\fR is not \fBall\fR, then \fBrootdisk\fR is set to this \fIdisk_name\fR.
+.sp
+.in +2
+.nf
+fdisk \fIdisk_name\fR solaris \fIsize\fR
+.fi
+.in -2
+
+T}
+7T{
 If \fBrootdisk\fR is not set, any occurrence where the device is specified as \fBrootdisk\fR generates a conversion error.
 T}
 .TE
@@ -208,13 +218,13 @@ lw(.44i) lw(5.06i)
 StageAction
 _
 1T{
-If the \fBany\fR device is specified and the keyword action specified (non-mirrored \fBpool\fR, or \fBfilesys\fR with a / mount point), the \fBany\fR device is set to \fBrootdisk\fR if \fBrootdisk\fR is set.
+If the \fBany\fR device is specified and the keyword action specified (non-mirrored pool, or \fBfilesys\fR with a / mount point), the \fBany\fR device is set to \fBrootdisk\fR if \fBrootdisk\fR is set.
 T}
 2T{
 If the \fBany\fR device has not been translated and a \fBusedisk\fR statement exists in the profile, the \fBany\fR device is set to the device specified by the \fBusedisk\fR statement.
 T}
 3T{
-If the \fBany\fR device has not been translated and the action where the \fBany\fR device is specified causes the ZFS root pool to be created, AI chooses the device. This is not applicable when a mirrored \fBpool\fR is specified.
+If the \fBany\fR device has not been translated and the action where the \fBany\fR device is specified causes the ZFS root pool to be created, AI chooses the device. This is not applicable when a mirrored pool is specified.
 T}
 .TE
 
@@ -238,7 +248,7 @@ _
 If the profile specifies the \fBpool\fR keyword, \fBjs2ai\fR sets the ZFS root pool to the devices specified by the \fBpool\fR keyword.
 T}
 2T{
-If the ZFS root pool has not been determined and the profile specifies a \fBfilesys\fR with a mount point of / or an \fBfdisk\fR with a type \fBsolaris\fR and a size other than 0 or \fBdelete\fR, the ZFS root pool is created using the devices specified.
+If the ZFS root pool has not been determined and the profile specifies a \fBfilesys\fR with a mount point of /, the ZFS root pool is created using the devices specified.
 T}
 3T{
 If the ZFS root pool has not been determined and all keywords in the profile have been processed, and if \fBrootdisk\fR is set, the ZFS root pool is created using the \fBrootdisk\fR device.
@@ -269,10 +279,10 @@ _
 No translation is performed. Make sure the keyboard specified in the \fBsysidcfg\fR file is supported in Oracle Solaris 11.
 T}
 \fBname_service\fRT{
-Supports values \fBNone\fR, \fBDNS\fR, \fBNIS\fR, and \fBLDAP\fR. NIS+ name services are translated as NIS.
+Supports values \fBNone\fR, \fBDNS\fR, \fBNIS\fR, and \fBLDAP\fR. NIS+ name services are translated as NIS. If a name service is specified, the network interface in Oracle Solaris 11 is configured for \fBDefaultFixed\fR. The \fBnetwork_interface\fR keyword can be used to define the characteristics of the network.
 T}
 \fBnetwork_interface\fRT{
-Only a single interface is supported. Limited support for \fBPRIMARY\fR. Only the first interface encountered in the \fBsysidcfg\fR file is processed.
+AI supports configuring only a single interface as part of system installation. Because of this limitation, the \fBjs2ai\fR tool processes only the interface labeled \fBPRIMARY\fR or the first interface encountered in the \fBsysidcfg\fR file. If a \fBname_service\fR is specified, the network is configured as \fBDefaultFixed\fR.  A properly configured \fBDefaultFixed\fR network needs to provide the host name, IP address, netmask, and gateway. Automated network configuration is only supported if no name service is specified.
 T}
 \fBroot_password\fRNo translation is necessary.
 \fBsecurity_policy\fRSupports value: \fBNone\fR
@@ -419,7 +429,7 @@ Provide details on the actions that occurred during processing.
 .ad
 .sp .6
 .RS 4n
-Validate the specified AI manifest file or SC profile file. AI criteria validation is not supported.
+Validate the specified AI manifest file or SMF system configuration profile file. AI criteria validation is not supported.
 .RE
 
 .SH ERROR REPORT
@@ -625,7 +635,7 @@ For each \fBsysidcfg\fR file, execute the following command:
 .in -2
 .sp
 
-For each \fBsysidcfg\fR file processed, this step creates an AI SC profile file named \fBsc_profile.xml\fR in the directory where the \fBjs2ai\fR command was invoked. Use the \fB-D\fR option to specify a different directory for the \fBsc_profile.xml\fR file.
+For each \fBsysidcfg\fR file processed, this step creates an AI system configuration profile file named \fBsc_profile.xml\fR in the directory where the \fBjs2ai\fR command was invoked. Use the \fB-D\fR option to specify a different directory for the \fBsc_profile.xml\fR file.
 .RE
 .RS +4
 .TP
@@ -669,17 +679,17 @@ Rerun \fBjs2ai\fR without the \fB-S\fR option.
 .in -2
 .sp
 
-If any validation errors occur for any of the processed \fBsysidcfg\fR files, the resulting AI SC profile must be manually corrected. Examine the \fBjs2ai.log\fR file for details of the failure. See the AI documentation for information about SC profiles.
+If any validation errors occur for any of the processed \fBsysidcfg\fR files, the resulting AI system configuration profile must be manually corrected. Examine the \fBjs2ai.log\fR file for details of the failure. See the AI documentation for information about system configuration profiles.
 .RE
 .RS +4
 .TP
 9.
-The \fBjs2ai\fR conversion process is complete. Perform a manual verification of the resulting criteria, AI manifest, and SC profile files. The disk space requirements for an Oracle Solaris 11 installation are different from the disk space required for an Oracle Solaris 10 installation. Make sure the disk space allocated in your AI manifests meets the requirements of Oracle Solaris 11.
+The \fBjs2ai\fR conversion process is complete. Perform a manual verification of the resulting criteria, AI manifest, and system configuration profile files. The disk space requirements for an Oracle Solaris 11 installation are different from the disk space required for an Oracle Solaris 10 installation. Make sure the disk space allocated in your AI manifests meets the requirements of Oracle Solaris 11.
 .RE
 .RS +4
 .TP
 10.
-Configure AI to use the newly generated files. Add the newly generated criteria, AI manifest, and SC profile files to an existing AI install service.
+Configure AI to use the newly generated files. Add the newly generated criteria, AI manifest, and system configuration profile files to an existing AI install service.
 .sp
 Use the \fBinstalladm\fR command with the \fBcreate-manifest\fR subcommand to add each AI manifest with criteria for selecting that manifest. Each client can use only one AI manifest.
 .sp
@@ -692,7 +702,7 @@ Use the \fBinstalladm\fR command with the \fBcreate-manifest\fR subcommand to ad
 .in -2
 .sp
 
-Use the \fBcreate-profile\fR subcommand to add each  profile with criteria for selecting that configuration profile. Each client can use one or more SC profiles.
+Use the \fBcreate-profile\fR subcommand to add each  profile with criteria for selecting that configuration profile. Each client can use one or more system configuration profiles.
 .sp
 .in +2
 .nf
@@ -844,7 +854,7 @@ Files:
 \fBExample 6 \fRProcessing a \fBsysidcfg\fR File
 .sp
 .LP
-The following command processes the \fBsysidcfg\fR file in the current directory and outputs the resulting SC profile as \fBsc_profile.xml\fR in the same directory.
+The following command processes the \fBsysidcfg\fR file in the current directory and outputs the resulting SMF system configuration profile as \fBsc_profile.xml\fR in the same directory.
 
 .sp
 .in +2
@@ -952,7 +962,7 @@ This file contains a log of the files processed and any errors found during proc
 .ad
 .sp .6
 .RS 4n
-This file is the SC profile that is generated when the \fB-s\fR option is used to convert a \fBsysidcfg\fR file.
+This file is the SMF system configuration profile that is generated when the \fB-s\fR option is used to convert a \fBsysidcfg\fR file.
 .RE
 
 .SH ATTRIBUTES
@@ -980,7 +990,7 @@ Interface StabilityUncommitted
 installadm(1M), \fBpkg\fR(1)
 .sp
 .LP
-\fITransitioning From Oracle Solaris 10 Custom JumpStart to Oracle Solaris 11 Automated Installer\fR
+\fITransitioning From Oracle Solaris 10 JumpStart to Oracle Solaris 11 Automated Installer\fR
 .sp
 .LP
 Part\ III, \fIInstalling Using an Install Server,\fR in \fIInstalling Oracle Solaris 11 Systems\fR
