@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -273,11 +273,11 @@ def _do_aimanifest(argv):
         AIM_LOGGER.info(_("successful: returns value:%(mvalue)s, "
                       "path:%(mpath)s") % {"mvalue": value, "mpath": path})
 
-        if not options.show_path:
-            path = ""
-
         # Localization not needed here.
-        print "%s %s" % (value, path)
+        if not options.show_path:
+            print "%s" % value
+        else:
+            print "%s %s" % (value, path)
 
     elif (command == "load"):
         # path arg holds the filename

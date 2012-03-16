@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 """
 AI publish_manifest
 """
@@ -116,9 +116,15 @@ def parse_options(do_create, cmd_options=None):
     #    -f  path to manifest file
     #    -m  manifest name
 
-    # check that we got the install service's name and an AI manifest.
-    if options.manifest_path is None or options.service_name is None:
-        parser.error(_("Missing one or more required options."))
+    # check that we got the install service's name.
+    if options.service_name is None:
+        parser.error(_("Missing required option "
+                       "-n <service_name>."))
+
+    # check that we got the AI manifest.
+    if options.manifest_path is None:
+        parser.error(_("Missing required option "
+                       "-f <manifest/script file>."))
 
     logging.debug("options = %s", options)
 
