@@ -19,7 +19,7 @@
  
   CDDL HEADER END
  
-  Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+  Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 
   XML specification for building an Oracle Solaris installer iso image
 -->
@@ -94,7 +94,9 @@
   <name>usr/sbin/svccfg</name>
   <name>usr/sbin/prtconf</name>
   <name>usr/sbin/amd64/prtconf</name>
+  <!-- libraries needed by /usr/sbin/prtconf -->
   <name>usr/lib/libsmbios.so.1</name>
+   <!-- libraries needed by /usr/sbin/svccfg -->
   <name>usr/lib/libtecla.so.1</name>
   <name>usr/lib/libl.so.1</name>
   <name>usr/lib/libexacct.so.1</name>
@@ -172,15 +174,14 @@
   <name>usr/lib/libz.so.1</name>
   <name>usr/bin/i86/ksh93</name>
   <name>usr/lib/isaexec</name>
-  <name>usr/lib/libast.so.1</name>
+  <!-- libraries needed by ksh93 components -->
   <name>usr/lib/libcmd.so.1</name>
-  <name>usr/lib/libdll.so.1</name>
-  <name>usr/lib/libshell.so.1</name>
   <name>usr/lib/libcrypt.so.1</name>
   <name>usr/lib/inet/wanboot/netbootinfo</name>
   <!-- Libraries needed for netbootinfo library -->
   <name>usr/lib/libwanbootutil.so.1</name>
   <name>usr/lib/libwanboot.so.1</name>
+  <!-- libraries needed by /usr/bin/wget -->
   <name>usr/lib/libidn.so.11</name>
   <name>usr/lib/libidn.so.11.6.2</name>
   <name>usr/lib/libmapmalloc.so.1</name>

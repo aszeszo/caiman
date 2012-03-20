@@ -153,9 +153,7 @@
         <name>usr/lib/fs/ufs/mount</name>
         <name>usr/lib/libfstyp.so.1</name>
         <!-- libraries needed by ksh93 components -->
-        <name>usr/lib/sparcv9/libast.so.1</name>
         <name>usr/lib/sparcv9/libcmd.so.1</name>
-        <name>usr/lib/sparcv9/libshell.so.1</name>
         <name>usr/lib/64</name>
         <!-- libraries needed by /usr/bin/wget -->
         <name>usr/lib/libidn.so.11</name>
@@ -185,10 +183,7 @@
         <name>usr/bin/sparcv9/ksh93</name>
         <name>usr/bin/sparcv7/ksh93</name>
         <name>usr/lib/isaexec</name>
-        <name>usr/lib/libast.so.1</name>
         <name>usr/lib/libcmd.so.1</name>
-        <name>usr/lib/libdll.so.1</name>
-        <name>usr/lib/libshell.so.1</name>
         <name>usr/lib/libcrypt.so.1</name>
         <name>usr/lib/libmapmalloc.so.1</name>
         <name>usr/lib/libcrypto.so.1.0.0</name>
