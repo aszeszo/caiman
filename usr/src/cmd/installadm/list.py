@@ -27,6 +27,7 @@ AI List Services
 import gettext
 import os
 import sys
+import signal
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.service_config as config
@@ -52,6 +53,23 @@ _WARNED_ABOUT = set()
 
 ARCH_UNKNOWN = _('* - Architecture unknown, service image does '
                  'not exist or is inaccessible.\n')
+
+
+class SigpipeHandler(object):
+    """ SigpipeHandler - context manager for modifying 'SIGPIPE' signal
+    handling which is set to SIG_IGN by python.
+    """
+    def __enter__(self):
+        """set the python's SIGPIPE handling behaviour
+        to SIG_DFL.
+        """
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+    def __exit__(self, *exc_info):
+        """reset the python's SIGPIPE behaviour
+        to SIG_IGN.
+        """
+        signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 
 
 def warn_version(version_err):
@@ -1131,7 +1149,9 @@ def list_local_manifests(services, name=None):
         fields.extend([[_('Criteria'), len(_('Criteria'))]])
 
         do_header(fields)
-        print_local_manifests(sdict, smwidth, mfindent, stwidth, cwidth)
+        # set the SIGPIPE signal to SIG_DFL
+        with SigpipeHandler():
+            print_local_manifests(sdict, smwidth, mfindent, stwidth, cwidth)
     # list -m -n <service>
     else:
         sdict, mwidth, cwidth = \
@@ -1184,7 +1204,9 @@ def list_local_profiles(linst, name=None):
         fields.extend([[_('Profile'), mwidth]])
 
         do_header(fields)
-        print_local_profiles(sdict, swidth)
+        # set the SIGPIPE signal to SIG_DFL
+        with SigpipeHandler():
+            print_local_profiles(sdict, swidth)
     # list -p -n <service>
     else:
         sdict, mwidth, cwidth = \
