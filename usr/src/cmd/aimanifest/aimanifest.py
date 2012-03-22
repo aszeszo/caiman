@@ -168,11 +168,18 @@ def _setup_logging():
     AIM_LOGGER = logging.getLogger("aimanifest")
     logfile_name = os.environ.get("AIM_LOGFILE")
     if logfile_name is not None:
-        logging.basicConfig(format="%(asctime)s: %(name)s: "
-                                   "%(levelname)s: %(message)s",
-                            datefmt="%H:%M:%S",
-                            filename=logfile_name,
-                            filemode="a")
+        try:
+            logging.basicConfig(format="%(asctime)s: %(name)s: "
+                                "%(levelname)s: %(message)s",
+                                datefmt="%H:%M:%S",
+                                filename=logfile_name,
+                                filemode="a")
+        except IOError as (errno, strerror):
+            raise SystemExit(_("AIM_LOGFILE I/O Error(%(errno)s) :"
+                               "%(strerror)s : %(fname)s"
+                               % ({"errno": errno, "strerror": strerror, \
+                               "fname": logfile_name})))
+
         logging_level = os.environ.get("AIM_LOGLEVEL")
         if logging_level and logging_level.isdigit():
             AIM_LOGGER.setLevel(int(logging_level))
