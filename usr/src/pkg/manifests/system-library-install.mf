@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/system/library/install@$(PKGVERS)
@@ -47,13 +47,17 @@ file path=usr/lib/python2.6/vendor-packages/osol_install/errsvc.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/liberrsvc.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/liberrsvc.pyc
 dir  path=usr/lib/python2.6/vendor-packages/solaris_install
-file path=usr/lib/python2.6/vendor-packages/solaris_install/__init__.py
+# Add bypass generate to allow manual boot-management version 13 dependency
+file path=usr/lib/python2.6/vendor-packages/solaris_install/__init__.py \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file path=usr/lib/python2.6/vendor-packages/solaris_install/__init__.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/_logger.so
 dir  path=usr/lib/python2.6/vendor-packages/solaris_install/boot
 file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/__init__.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/__init__.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/boot.py
+# Add bypass generate to allow manual boot-management version 13 dependency
+file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/boot.py \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/boot.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/boot_spec.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/boot_spec.pyc
@@ -115,9 +119,15 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/target/__init__.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/__init__.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/cgc.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/cgc.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/target/controller.py
+# Add bypass generate to allow manual boot-management version 13 dependency
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/target/controller.py \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/controller.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/target/discovery.py
+# Add bypass generate to allow manual boot-management version 13 dependency
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/target/discovery.py \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/discovery.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/instantiation.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/instantiation.pyc
@@ -180,7 +190,9 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libnvpair/nvl
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libnvpair/nvl.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/logical.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/logical.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/target/physical.py
+# Add bypass generate to allow manual boot-management version 13 dependency
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/physical.py \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/physical.pyc
 dir  path=usr/lib/python2.6/vendor-packages/solaris_install/target/shadow
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/shadow/__init__.py
@@ -236,4 +248,8 @@ dir  path=usr/snadm/lib
 link path=usr/snadm/lib/libspmicommon.so target=libspmicommon.so.1
 file path=usr/snadm/lib/libspmicommon.so.1
 license cr_Sun license=cr_Sun
+# Add manual boot-management version 13 dependency for UEFI/GRUB2 compat.
+# Make sure to remove the pkg.depend.bypass-genererate actions if removing.
+depend type=require \
+    fmri=pkg:/system/library/boot-management@0.5.11,5.11-0.175.1.0.0.13
 depend type=require fmri=system/boot-environment-utilities

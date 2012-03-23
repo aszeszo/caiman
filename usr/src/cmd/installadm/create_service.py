@@ -42,6 +42,9 @@ import pkg.client.api_errors
 import pkg.client.history
 
 from optparse import OptionParser, OptionValueError
+
+from bootmgmt import BootmgmtError
+from osol_install.auto_install.grub import GrubError
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.auto_install.service import AIService, AIServiceError, \
     DEFAULT_ARCH, MountError, UnsupportedAliasError
@@ -388,6 +391,10 @@ def do_alias_service(options):
         service = AIService.create(options.svcname, image,
                                    alias=options.aliasof,
                                    bootargs=options.bootargs)
+    except (GrubError, BootmgmtError) as err:
+        AIService(options.svcname).delete()
+        raise SystemExit(_('\nError: Unable to create alias, %s:\n%s') %
+                         (options.svcname, err))
     except AIServiceError as err:
         raise SystemExit(err)
 
@@ -587,6 +594,10 @@ def do_create_baseservice(options):
         else:
             service = AIService.create(options.svcname, image,
                                        bootargs=options.bootargs)
+    except (GrubError, BootmgmtError) as err:
+        AIService(options.svcname).delete()
+        raise SystemExit(_('\nError: Unable to create service, %s:\n%s') %
+                         (options.svcname, err))
     except AIServiceError as err:
         raise SystemExit(err)
 
@@ -612,6 +623,10 @@ def do_create_baseservice(options):
             defaultarchsvc = AIService.create(defaultarch, image,
                                               bootargs=options.bootargs,
                                               alias=options.svcname)
+        except (GrubError, BootmgmtError) as err:
+            AIService(defaultarch).delete()
+            raise SystemExit(_('\nError: Unable to create alias, %s:\n%s') %
+                             (defaultarch, err))
         except AIServiceError as err:
             raise SystemExit(err)
         except UnsupportedAliasError as err:

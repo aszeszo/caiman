@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -28,10 +28,31 @@ Remember that since the proto area is used for the PYTHONPATH, the gate
 must be rebuilt for these tests to pick up any changes in the tested code.
 '''
 
-import unittest
+
+import grp
 import os
+import pwd
 import tempfile
+import unittest
 import osol_install.auto_install.grub as grub
+
+
+class BootInstance(object):
+    '''Class for fake BootInstance (instead of SolarisNetBootInstance)'''
+    def __init__(self, name='mysvc', path='/export/myimage', bootargs=''):
+        self.svcname = name
+        self.path = path
+        self.bootargs = bootargs
+        self.kargs = ("-B %(args)s,install=true,"
+            "install_media=http://$serverIP:5555/%(path)s,"
+            "install_service=%(name)s,install_svc_address=$serverIP:5555\n" %
+             {'args': self.bootargs, 'path': self.path, 'name': self.svcname})
+
+        self.kernel = ("\tkernel$ /%(name)s/platform/i86pc/kernel/$ISADIR/unix"
+                        % {'name': self.svcname})
+
+        self.boot_archive = ("\tmodule$ /%(name)s/platform/i86pc/$ISADIR/"
+                             "boot_archive\n" % {'name': self.svcname})
 
 
 class TestGrub(unittest.TestCase):
@@ -39,77 +60,95 @@ class TestGrub(unittest.TestCase):
 
     def setUp(self):
         '''unit test set up'''
-        self.path = '/foo/auto_install/x86iso'
+        self.path = '/foo/auto_install/x86path'
         self.svcname = 'myservice'
         self.bootargs = 'console=ttya'
 
-        # create original menu.lst file
-        self.menulst_txt = (
-            "default=0\n"
-            "timeout=30\n"
-            "min_mem64=0\n\n"
-
-            "title Oracle Solaris 11 11/11 Text Installer and command line\n"
-            "\tkernel$ /%(name)s/platform/i86pc/kernel/$ISADIR/unix -B "
-            "%(args)s,install_media=http://$serverIP:5555/%(path)s,"
-            "install_service=%(name)s,install_svc_address=$serverIP:5555\n"
-            "\tmodule$ /%(name)s/platform/i86pc/$ISADIR/boot_archive\n\n"
-
-            "title Oracle Solaris 11 11/11 Automated Install\n"
-            "\tkernel$ /%(name)s/platform/i86pc/kernel/$ISADIR/unix -B "
-            "%(args)s,install=true,"
+        # create original boot instance strings
+        self.kargs = ("-B %(args)s,install=true,"
             "install_media=http://$serverIP:5555/%(path)s,"
-            "install_service=%(name)s,install_svc_address=$serverIP:5555\n"
-            "\tmodule$ /%(name)s/platform/i86pc/$ISADIR/boot_archive\n") % \
-            {'args': self.bootargs, 'path': self.path, 'name': self.svcname}
-
-        (tfp, self.mymenulst) = tempfile.mkstemp()
-        os.write(tfp, self.menulst_txt)
-        os.close(tfp)
-
-    def tearDown(self):
-        '''unit test tear down'''
-        os.remove(self.mymenulst)
+            "install_service=%(name)s,install_svc_address=$serverIP:5555\n" %
+             {'args': self.bootargs, 'path': self.path, 'name': self.svcname})
+        self.kernel = ("\tkernel$ /%(name)s/platform/i86pc/kernel/$ISADIR/unix"
+                        % {'name': self.svcname})
+        self.boot_archive = ("\tmodule$ /%(name)s/platform/i86pc/$ISADIR/"
+                             "boot_archive\n" % {'name': self.svcname})
 
     def test_update_imagepath(self):
-        '''verify update_imagepath updates imagepath correctly'''
+        '''verify update_kargs_imagepath updates imagepath correctly'''
 
-        # update path in menu.lst file, read file back in
-        # and ensure file updated properly
         newpath = '/export/mydir/myimage'
-        grub.update_imagepath(self.mymenulst, self.path, newpath)
-        with open(self.mymenulst, 'r') as menulst_file:
-            newmenulst = menulst_file.read()
-        expected_text = self.menulst_txt.replace(self.path, newpath)
-        self.assertEqual(newmenulst, expected_text)
+        new_kargs = grub.update_kargs_imagepath(self.kargs, self.path, newpath)
+        expected_text = self.kargs.replace(self.path, newpath)
+        self.assertEqual(new_kargs, expected_text)
 
-    def test_update_svcname(self):
-        '''verify update_svcname updates svcname correctly'''
+    def test_update_boot_instance_svcname(self):
+        '''verify update_boot_instance_svcname updates svcname correctly'''
+        newname = 'newsvcname'
+        boot_inst = BootInstance(name=self.svcname, path=self.path,
+                                 bootargs=self.bootargs)
+        boot_inst = grub.update_boot_instance_svcname(boot_inst,
+            self.svcname, 'newsvcname')
+        boot_inst2 = BootInstance(name=newname, path=self.path,
+                                     bootargs=self.bootargs)
+        self.assertEqual(boot_inst.kargs, boot_inst2.kargs)
+        self.assertEqual(boot_inst.kernel, boot_inst2.kernel)
+        self.assertEqual(boot_inst.boot_archive, boot_inst2.boot_archive)
 
-        # update svcname in menu.lst file, read file back in
-        # and ensure file updated properly
+    def test_update_svcname_functions(self):
+        '''verify individual update_svcname functions work correctly'''
+
         newsvcname = 'new_service'
-        grub.update_svcname(self.mymenulst, newsvcname, newsvcname)
-        with open(self.mymenulst, 'r') as menulst_file:
-            newmenulst = menulst_file.read()
-        expected_text = self.menulst_txt.replace('/' + self.svcname + '/',
-                                                 '/' + newsvcname + '/')
-        expected_text = expected_text.replace(
-            'install_service=' + self.svcname,
-            'install_service=' + newsvcname)
-        self.assertEqual(newmenulst, expected_text)
+
+        # test using kernel string
+        new_kernel = grub.update_kernel_ba_svcname(self.kernel, self.svcname,
+                                                   newsvcname)
+        expected_text = self.kernel.replace('/' + self.svcname + '/',
+                                           '/' + newsvcname + '/')
+        self.assertEqual(new_kernel, expected_text)
+
+        # test using module string
+        new_boot_archive = grub.update_kernel_ba_svcname(self.boot_archive,
+            self.svcname, newsvcname)
+        expected_text = self.boot_archive.replace('/' + self.svcname + '/',
+                                                  '/' + newsvcname + '/')
+        self.assertEqual(new_boot_archive, expected_text)
+
+        new_kargs = grub.update_kargs_install_service(self.kargs,
+            self.svcname, newsvcname)
+        expected_text = self.kargs.replace('install_service=' + self.svcname,
+                                           'install_service=' + newsvcname)
+        self.assertEqual(new_kargs, expected_text)
 
     def test_update_bootargs(self):
-        '''verify update_bootargs updates bootargs correctly'''
+        '''verify update_kargs_bootargs updates bootargs correctly'''
 
         # update bootargs in menu.lst file, read file back in
         # and ensure file updated properly
         newbootargs = 'console=ttyb'
-        grub.update_bootargs(self.mymenulst, self.bootargs, newbootargs)
-        with open(self.mymenulst, 'r') as menulst_file:
-            newmenulst = menulst_file.read()
-        expected_text = self.menulst_txt.replace(self.bootargs, newbootargs)
-        self.assertEqual(newmenulst, expected_text)
+        new_kargs = grub.update_kargs_bootargs(self.kargs, self.bootargs,
+                                               newbootargs)
+        expected_text = self.kargs.replace(self.bootargs, newbootargs)
+        self.assertEqual(new_kargs, expected_text)
+
+    def test_set_perms(self):
+        '''Ensure that set_perms sets permissions properly'''
+
+        # save original umask
+        orig_umask = os.umask(0022)
+        # set too restrictive and too open umask
+        for mask in (0066, 0000):
+            tmpfile = tempfile.mktemp()
+            with open(tmpfile, 'w'):
+                pass
+            os.umask(mask)
+            grub.set_perms(tmpfile, pwd.getpwuid(os.getuid()).pw_name,
+                           grp.getgrgid(os.getgid()).gr_name, 420)
+            mode = os.stat(tmpfile).st_mode
+            self.assertEqual(mode, 0100644)
+            os.remove(tmpfile)
+        # return umask to the original value
+        os.umask(orig_umask)
 
 
 if __name__ == '__main__':

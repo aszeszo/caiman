@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Make sure we get the right versions of the commands
@@ -29,6 +28,94 @@ PATH=/usr/sbin:/usr/bin
 # Ensure that commands whose output we're parsing don't localize numeric
 # formats on us
 export LC_ALL=C
+
+function cleanup {
+
+    {
+
+        # unmounting, and uninstalling the lofi'ed devices and
+        # cleanup temporary files.
+
+        for devs in $(mount -p | grep $usbdev | awk '{print $1}'); do
+            umount -f $devs
+        done
+
+        lofiadm "${img}" && \
+            lofiadm -d "${img}"
+
+        if [[ -d "${usbmntpt}" ]]; then
+            rmdir "${usbmntpt}"
+        fi
+
+        rm -f $fdi
+    } > /dev/null 2>&1
+
+}
+
+function error_handler {
+
+	print -u2 "\nError:\n"
+	print -u2 -r -- "${progname}: $*"
+	cleanup
+
+	exit 1
+
+}
+
+function setup_grub2 {
+
+    # There are pre-built MBR stage 1 and UEFI system images on the USB image.
+    # These need to be used instead of trying to construct it ourselves in order
+    # to avoid grub2 version mismatches.
+    mbrimg="$usbmntpt/boot/mbr.img"
+    uefiimg="$usbmntpt/boot/uefi.img"
+
+    # cat the (MBR) usb.img and (ESP) uefi.img to the USB device.
+    cat $mbrimg $uefiimg > $dev || \
+        error_handler "Failed to write ${mbrimg} and ${uefiimg} to ${dev}"
+
+    # Read the geometry of the physical device
+    while read pcyl ncyl acyl bcyl nhead nsect secsiz; do
+        devblksize=$secsiz
+        devblocks=$(($ncyl * $nhead * $nsect))
+    done < <(fdisk -G $dev | grep -v "*")
+
+    # Size the embedded MBR image
+    mbrnbytes=$(ls -lL $mbrimg | awk '{print $5}')
+    mbrnblocks=$(($mbrnbytes / $devblksize))
+
+    # Size the uefi.img
+    uefinbytes=$(ls -lL $uefiimg | awk '{print $5}')
+    uefinblocks=$(($uefinbytes / $devblksize))
+
+    # fdisk table should end up looking like this.
+    # The first line/partition for the ESP is already embedded in the mbr image
+    # that we just cat'd to the disk. So we need to add the solaris partition.
+    # id   active bhead bsect bcyl ehead esect ecyl rsect         numsect
+    # 239  0      0     0     0    0     0     0    mbrnblocks(a) uefinblocks(b)
+    # 191  0      0     0     0    0     0     0    (a)+(b):(c)   diskblocks-(c)
+    solstart=$(($mbrnblocks + $uefinblocks))
+    solnblocks=$(($devblocks - $solstart))
+    addsolpart="191:0:0:0:0:0:0:0:$solstart:$solnblocks"
+    fdisk -A $addsolpart $dev
+
+    # fdisk is stupid and overwrites the MBR boot code region with mboot so we
+    # have to rewrite the first 440 bytes of the MBR image to restore what it
+    # so helpfully overwrote.
+    dd if=$mbrimg bs=1 count=440 oseek=0 of=$bdev 2>/dev/null|| \
+        error_handler "Failed to restore MBR stage1 image from ${usbimg}"
+
+}
+
+
+function setup_legacy_grub {
+
+    # Install grub stages to usb. The USB image is already lofi mounted so no need
+    # to mount the USB device.
+    echo Installing grub to USB device $s0cdev
+    installgrub -mf $usbmntpt/boot/grub/stage1 $usbmntpt/boot/grub/stage2 $s0cdev > /dev/null
+
+}
 
 if [ `/usr/bin/id -u` != "0" ] ; then
 	echo "Must be root to run."
@@ -46,7 +133,7 @@ if [ ! -r $img ] && [ ! -c $img ]; then
 	exit 1
 fi
 # Image size (in MB)
-ibytes=$(ls -l $img | awk '{print $5}')
+ibytes=$(ls -lL $img | awk '{print $5}')
 isz=$((ibytes >> 20))
 
 #nawk script to output the details of plugged in USB drives
@@ -99,6 +186,7 @@ while read -p "Enter the number of your choice: " choice; do
 done
 
 dev=${log[$choice]}
+bdev=${dev/rdsk/dsk}
 s0cdev=${dev/p0/s0}
 s0bdev=${s0cdev/rdsk/dsk}
 mountdev=${s0bdev/s0}
@@ -159,24 +247,41 @@ done
 # Drop in config file to ensure HAL ignores the disk, otherwise it will attempt
 # to mount it after the partition table is rewritten
 fdi=/etc/hal/fdi/preprobe/10osvendor/99-usbcopy.fdi
-trap "rm -f $fdi" SIGTERM EXIT
+trap cleanup SIGTERM EXIT
 
 cat >$fdi << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <deviceinfo version="0.2">
   <device>
-    <match key="block.device" string="$s0bdev">
+    <match key="block.device" string="$bdev">
       <merge key="info.ignore" type="bool">true</merge>
     </match>
   </device>
 </deviceinfo>
 EOF
 
-# Install fdisk table with Solaris using entire disk, default VTOC
-fdisk -B $dev
+# lofi mount the USB image file into a temp dir
+usbmntpt="$(mktemp -d)"
+usbdev="$(lofiadm -a "${img}")" || \
+    error_handler "Failed to lofiadm ${img}"
+mount -F ufs -o ro $usbdev $usbmntpt || \
+    error_handler "Failed to mount ${usbdev} on ${usbmntpt}" 
+
+haslegacygrub=0
+if [ -f $usbmntpt/boot/grub/grub.cfg ] ; then
+    # GRUB2
+    setup_grub2
+elif [ -f $usbmntpt/boot/grub/menu.lst ] ; then
+    # Legacy GRUB
+    # Install fdisk table with Solaris using entire disk, default VTOC
+    haslegacygrub=1
+    fdisk -B $dev
+else
+    error_handler "Failed to find boot loader configuration"
+fi
 
 # Now create root partition.  We want to find number of cylinders in backup
-# partition from label created by fdisk -B and then generate root partition
+# partition from label created by fdisk and then generate root partition
 # using whole disk minus cylinder 1
 acyls=$(prtvtoc $dev | awk '/accessible/{print $2}')
 cyls=$((acyls - 1))
@@ -245,16 +350,12 @@ speed="$((isz / SECONDS)).$((isz * 10 / SECONDS % 10))MB/s"
 echo "Finished $isz MB in $SECONDS seconds ($speed)"
 echo "$retries block(s) re-written due to verification failure"
 
-# Mount image
-mnt=/tmp/usb.$$
-trap "{ umount -f $mnt; rmdir $mnt; rm -f $fdi; }" SIGTERM EXIT
+if [ $haslegacygrub -eq 1 ] ; then
+    # Legacy GRUB. Install boot loader to USB physical device
+    setup_legacy_grub
+fi
 
-mkdir $mnt
-mount -o ro $s0bdev $mnt
-
-# Install grub stages to usb
-echo Installing grub to USB device $s0cdev
-installgrub -mf $mnt/boot/grub/stage1 $mnt/boot/grub/stage2 $s0cdev > /dev/null
+cleanup
 
 echo "Completed copy to USB"
 exit 0

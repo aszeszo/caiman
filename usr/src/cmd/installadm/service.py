@@ -41,7 +41,6 @@ import errno
 import fileinput
 import logging
 import os
-import shutil
 import socket
 import sys
 
@@ -54,6 +53,7 @@ import osol_install.libaimdns as libaimdns
 
 from osol_install.auto_install.data_files import DataFiles, insert_SQL, \
     place_manifest, validate_file
+from osol_install.auto_install.grub import AIGrubCfg as grubcfg
 from osol_install.auto_install.image import InstalladmImage, ImageError
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from solaris_install import Popen, CalledProcessError, force_delete
@@ -262,7 +262,7 @@ class AIService(object):
             bootserver: If DHCP configuration is provided, optionally explicit
                 address for the bootfile server
             alias: An AIService object to which this service will be aliased
-            bootargs (x86 only): Additional bootargs to add to menu.lst
+            bootargs (x86 only): Additional bootargs to add to boot cfgfile
 
         '''
         service = cls(name, _check_version=False)
@@ -306,9 +306,6 @@ class AIService(object):
 
         service._create_default_manifest()
 
-        # Configure DHCP for this service
-        service._configure_dhcp(ip_start, ip_count, bootserver)
-
         # Supported client images will interpolate the bootserver's IP
         # address (as retrieved from the DHCP server) in place of the
         # '$serverIP' string. We choose to utilize this functionality when
@@ -347,6 +344,9 @@ class AIService(object):
         else:
             service._init_grub(srv_address)
 
+        # Configure DHCP for this service
+        service._configure_dhcp(ip_start, ip_count, bootserver)
+
         return service
 
     def __init__(self, name, image=None, image_class=InstalladmImage,
@@ -371,6 +371,8 @@ class AIService(object):
         self._alias = None
         self._bootargs = None
         self._image_class = image_class
+        self._boot_tuples = None
+        self._netcfgfile = None
 
         # _check_version should ONLY be used by AIService.create during service
         # creation. Bypassing the version check when the service has already
@@ -454,10 +456,7 @@ class AIService(object):
         return AIdb.DB(self.database_path)
 
     def rename(self, new_name):
-        '''Change this service's name to "new_name" updating all relevant
-        files, aliases and clients.
-
-        '''
+        '''Change this service's name to new_name '''
         self._update_name_in_service_props(new_name)
         new_svcdir = os.path.join(AI_SERVICE_DIR_PATH, new_name)
         if self.arch == 'sparc':
@@ -478,11 +477,18 @@ class AIService(object):
             #   system.conf  -> /etc/netboot/<defaultsvc>/system.conf
             # by calling: self.do_default_sparc_symlinks(new_name)
         else:
-            # Update the menu.lst file with the new service name
+            # Update the grub config files with the new service name
             # Note that the new svcname is assumed to be the mountpoint
             # in /etc/netboot
-            menulstpath = os.path.join(self.config_dir, MENULST)
-            grub.update_svcname(menulstpath, new_name, new_name)
+            svcgrub = grubcfg(self.name, path=self.image.path,
+                              config_dir=self.config_dir)
+            netconfig_files, config_files, self._boot_tuples = \
+                svcgrub.update_svcname(self.name, new_name)
+
+            # update boot_cfgfile in .config file
+            self._netcfgfile = netconfig_files[0]
+            props = {config.PROP_BOOT_CFGFILE: self._netcfgfile}
+            config.set_service_props(self.name, props)
 
         self._migrate_service_dir(new_svcdir)
         self._setup_manifest_dir(new_name=new_name)
@@ -600,41 +606,63 @@ class AIService(object):
 
         '''
         if self.arch == 'i386':
-            return os.path.join(self.mountpoint, MENULST)
+            mtpt = self.boot_cfgfile
+            if not mtpt:
+                # Fall back to menu.lst
+                mtpt = os.path.join(self.mountpoint, MENULST)
+            return mtpt
         else:
             return os.path.join(self.mountpoint, SYSTEMCONF)
 
     def all_bootmountpts(self):
-        return [os.path.join(self.mountpoint, MENULST),
-                os.path.join(self.mountpoint, SYSTEMCONF)]
+        mountpts = [os.path.join(self.mountpoint, MENULST),
+                    os.path.join(self.mountpoint, SYSTEMCONF)]
+        mountpts.append(self.bootmountpt)
+        return mountpts
 
     @property
     def bootsource(self):
         '''Returns the path to the file that should be mounted at
-        self.bootmountpt
-
+        self.bootmountpt (e.g., /var/ai/service/<svcname>/<grub_cfg_file>)
         '''
         if self.arch == 'i386':
-            return os.path.join(self.config_dir, MENULST)
+            mtpt = self.bootmountpt
+            cfgfile = os.path.basename(mtpt)
+            return os.path.join(self.config_dir, cfgfile)
         else:
             return os.path.join(self.config_dir, SYSTEMCONF)
 
     @property
-    def dhcp_bootfile(self):
-        '''Returns a string that represents what should be added to DHCP
-        as this service's bootfile
+    def boot_tuples(self):
+        '''Boot tuples created by bootmgmt'''
+        return self._boot_tuples
+
+    @property
+    def boot_cfgfile(self):
+        '''Look up and return the name of where to mount config file
+           created by bootmgmt (e.g., /etc/netboot/mysvc/<grub_cfg_file>)
 
         '''
-        if self.arch == 'sparc':
-            http_port = libaimdns.getinteger_property(com.SRVINST,
-                                                      com.PORTPROP)
-            # Always use $serverIP keyword as setup-dhcp will
-            # substitute in the correct IP addresses.
-            dhcpbfile = 'http://%s:%u/%s' % ("$serverIP", http_port,
-                                             com.WANBOOTCGI)
-        else:
-            abs_dhcpbfile = os.path.join(self.mountpoint, self.X86_BOOTFILE)
-            dhcpbfile = os.path.relpath(abs_dhcpbfile, self.MOUNT_ON)
+        props = config.get_service_props(self.name)
+        try:
+            return props[config.PROP_BOOT_CFGFILE]
+        except (KeyError, ValueError, TypeError):
+            return None
+
+    @property
+    def dhcp_bootfile_sparc(self):
+        '''Returns a string that represents what should be added to DHCP
+        as this sparc service's bootfile
+
+        '''
+        if self.arch != 'sparc':
+            return None
+
+        http_port = libaimdns.getinteger_property(com.SRVINST, com.PORTPROP)
+        # Always use $serverIP keyword as setup-dhcp will substitute in
+        # the correct IP addresses.
+        dhcpbfile = 'http://%s:%u/%s' % ("$serverIP", http_port,
+                                         com.WANBOOTCGI)
         return dhcpbfile
 
     def _lofs_mount(self, from_path, to_mountpoint):
@@ -671,8 +699,8 @@ class AIService(object):
             /etc/netboot/<svcname>/system.conf is an lofs mount of
                 AI_SERVICE_DIR_PATH/<svcname>/system.conf
           For x86:
-            /etc/netboot/<svcname>/menu.lst is an lofs mount of
-                AI_SERVICE_DIR_PATH/<svcname>/menu.lst
+            /etc/netboot/<svcname>/<cfgfile> is an lofs mount of
+                AI_SERVICE_DIR_PATH/<svcname>/<grub_cfg_file>
 
         '''
         # Verify the image and ensure the mountpoints exist
@@ -687,8 +715,12 @@ class AIService(object):
 
         # Mount service's image to /etc/netboot/<svcname>
         self._lofs_mount(self.image.path, self.mountpoint)
-        # Do second lofi mount of menu.lst(x86) or system.conf(sparc)
-        self._lofs_mount(self.bootsource, self.bootmountpt)
+        # Do second lofi mount of grub config file for x86 or
+        # system.conf (for sparc)
+        bootsource = self.bootsource
+        bootmount = self.bootmountpt
+        logging.debug('lofs mount of %s, %s', bootsource, bootmount)
+        self._lofs_mount(bootsource, bootmount)
 
     def unmount(self, force=False, arch_safe=False):
         '''Unmount the service, reversing the effects of AIService.mount()
@@ -795,26 +827,10 @@ class AIService(object):
             All:
             o update aliasof property in .config to newbasesvc_name
             o disable alias
-               x86 only:
-                  o Copy over new base services's menu.lst to alias' menu.lst
-                  o reinstate alias service name in alias' menu.lst
-                  o Replace base service bootargs with alias' bootargs in
-                    alias' menu.lst
-                  o For each dependent alias of alias:
-                    o Copy alias' revised menu.lst to dependent alias' menu.lst
-                    o reinstate dependent alias name in dependent alias'
-                      menu.lst
-                    o If bootargs were specified for dependent alias,
-                      replace alias bootargs with dependent alias bootargs
-                  o For each client of alias:
-                    o Copy over alias' revised menu.lst to menu.lst.<clientid>
-                    o reinstate alias service_name in menu.lst.<clientid>
-                    o If client bootargs were specified during create-client,
-                      replace alias bootargs with client bootargs in
-                      menu.lst.<clientid>. Otherwise, alias bootargs are
-                      inherited.
+            o x86 only:  Recreate grub config for alias and dependent aliases
             o revalidate manifests and profiles
             o enable alias
+        Dependent clients are handled in set_service.
 
         Input:   newbasesvc_name - name of new base service
 
@@ -842,26 +858,23 @@ class AIService(object):
             self.disable(force=True)
 
         if self.arch == 'i386':
-            self_menulstpath = os.path.join(self.config_dir, MENULST)
-
             all_aliases = config.get_aliased_services(self.name, recurse=True)
-            all_clients = config.get_clients(self.name).keys()
-            for alias in all_aliases:
-                all_clients.extend(config.get_clients(alias).keys())
 
-            # Copy over the new base service's menu.lst file for the alias
-            # to use. Replace the base service's name with the alias' name
-            # as well as the base service's bootargs with the alias' bootargs
-            # in the alias' menu.lst file.
-            newbasesvc_menulst = os.path.join(newbasesvc.config_dir, MENULST)
-            logging.debug("update_basesvc: copying new menu.lst from %s to %s",
-                          newbasesvc_menulst, self_menulstpath)
-            shutil.copy(newbasesvc_menulst, self_menulstpath)
-            grub.update_svcname(self_menulstpath, self.name, self.name)
-            grub.update_bootargs(self_menulstpath, newbasesvc.bootargs,
-                                 self.bootargs)
+            # Update the grub config with the new base service info.
+            newbasegrub = grubcfg(newbasesvc.name, path=newbasesvc.image.path,
+                                  config_dir=newbasesvc.config_dir)
+            aliasgrub = grubcfg(self.name, path=newbasesvc.image.path,
+                                config_dir=self.config_dir)
+            netconfig_files, config_files, self._boot_tuples = \
+                aliasgrub.update_basesvc(newbasegrub, newbasesvc.bootargs,
+                                         self.bootargs)
 
-            # Recreate menu.lst files of all aliases of this alias
+            # update boot_cfgfile in .config file
+            self._netcfgfile = netconfig_files[0]
+            props = {config.PROP_BOOT_CFGFILE: self._netcfgfile}
+            config.set_service_props(self.name, props)
+
+            # Recreate grub config files of all aliases of this alias
             # (and descendants). Use the sub alias' bootargs instead
             # of the ones specified in the base service.
             for alias in all_aliases:
@@ -871,34 +884,12 @@ class AIService(object):
                     sub_alias_was_mounted = True
                     aliassvc.disable(force=True)
 
-                sub_alias_menulst = os.path.join(aliassvc.config_dir, MENULST)
-                logging.debug("update_basesvc: copying new menu.lst from %s "
-                              "to %s", self_menulstpath, sub_alias_menulst)
-                shutil.copy(self_menulstpath, sub_alias_menulst)
-                grub.update_svcname(sub_alias_menulst, aliassvc.name,
-                                    aliassvc.name)
-                grub.update_bootargs(sub_alias_menulst, self.bootargs,
-                                     aliassvc.bootargs)
+                aliasgrub = grubcfg(alias, path=aliassvc.image.path,
+                                    config_dir=aliassvc.config_dir)
+                aliasgrub.update_basesvc(newbasegrub, newbasesvc.bootargs,
+                                         aliassvc.bootargs)
                 if sub_alias_was_mounted:
                     aliassvc.enable()
-
-            # recreate menu.lst files for clients
-            for clientid in all_clients:
-                (service, datadict) = config.find_client(clientid)
-                client_bootargs = datadict.get(config.BOOTARGS, '')
-                client_menulst = get_client_menulst(clientid)
-
-                # copy alias' menu.lst file to menu.lst.<clientid>
-                logging.debug("update_basesvc: copying new menu.lst from %s "
-                              "to %s", self_menulstpath, client_menulst)
-                shutil.copy(self_menulstpath, client_menulst)
-                grub.update_svcname(client_menulst, self.name, self.name)
-
-                # if the client has bootargs, use them. Otherwise, inherit
-                # the bootargs specified in the alias (do nothing)
-                if client_bootargs:
-                    grub.update_bootargs(client_menulst, self.bootargs,
-                                         client_bootargs)
 
         # Turning point: Function calls prior to this line will reference
         # the 'old' base service's image. Function calls after this line
@@ -917,6 +908,9 @@ class AIService(object):
         # Enable the alias to pick up the new image
         if was_mounted:
             self.enable()
+
+        # Configure DHCP for this service
+        self._configure_dhcp(None, None, None)
 
     @property
     def manifest_dir(self):
@@ -1081,16 +1075,22 @@ class AIService(object):
     def _configure_dhcp(self, ip_start, ip_count, bootserver):
         '''Add DHCP configuration elements for this service.'''
 
-        logging.debug('Calling setup_dhcp_server %s %s %s %s %s',
-            ip_start, ip_count, bootserver, self.dhcp_bootfile, self.arch)
+        logging.debug('Calling setup_dhcp_server %s %s %s',
+                       ip_start, ip_count, bootserver)
 
         setup_dhcp_server(self, ip_start, ip_count, bootserver)
 
     def _init_grub(self, srv_address):
-        '''Initialize grub (menu.lst) for this service'''
-        grub.setup_grub(self.name, self.image.path,
-                        self.image.read_image_info(), srv_address,
-                        self.config_dir, self._bootargs)
+        '''Initialize grub for this service'''
+        svcgrub = grubcfg(self.name, path=self.image.path,
+                          image_info=self.image.read_image_info(),
+                          srv_address=srv_address, config_dir=self.config_dir,
+                          bootargs=self._bootargs)
+
+        netconfig_files, config_files, self._boot_tuples = svcgrub.setup_grub()
+        self._netcfgfile = netconfig_files[0]
+        props = {config.PROP_BOOT_CFGFILE: self._netcfgfile}
+        config.set_service_props(self.name, props)
 
     def _init_wanboot(self, srv_address):
         '''Create system.conf file in AI_SERVICE_DIR_PATH/<svcname>'''
@@ -1291,8 +1291,8 @@ class AIService(object):
         '''Change the location of a service's image:
              o disable the service and all dependent aliases
              o update wanboot.conf for the service (sparc)
-             o update menu.lst files of service and its clients and
-               aliases (x86)
+             o update grub config files of service and its clients
+               and aliases (x86)
              o update service .config file
              o move the image and update webserver symlink
              o enable service and dependent aliases
@@ -1314,28 +1314,31 @@ class AIService(object):
                 enabled_aliases.append(alias)
                 aliassvc.disable(force=True)
 
-        # For x86, update menu.lst files (of service, clients, and aliases)
-        # with the new imagepath.
+        # For x86, update grub config files of service, clients, and
+        # aliases with the new imagepath.
         # For sparc, update wanboot.conf with the new imagepath.
         # There is nothing to do for sparc aliases or clients because they
         # reference the service's wanboot.conf file.
         if self.arch == 'i386':
-            self_menulstpath = os.path.join(self.config_dir, MENULST)
-            grub.update_imagepath(self_menulstpath, self.image.path, new_path)
+            svcgrub = grubcfg(self.name, path=self.image.path,
+                              config_dir=self.config_dir)
+
+            svcgrub.update_imagepath(self.image.path, new_path)
 
             all_clients = config.get_clients(self.name).keys()
             for alias in all_aliases:
                 all_clients.extend(config.get_clients(alias).keys())
 
             for clientid in all_clients:
-                client_menulstpath = get_client_menulst(clientid)
-                grub.update_imagepath(client_menulstpath, self.image.path,
-                                      new_path)
+                clientgrub = grubcfg(self.name, path=self.image.path,
+                                     config_dir=self.config_dir)
+                clientgrub.update_imagepath(self.image.path, new_path,
+                                            mac_address=clientid[2:])
             for alias in all_aliases:
                 aliassvc = AIService(alias)
-                alias_menulstpath = os.path.join(aliassvc.config_dir, MENULST)
-                grub.update_imagepath(alias_menulstpath, aliassvc.image.path,
-                                      new_path)
+                aliasgrub = grubcfg(alias, path=aliassvc.image.path,
+                                    config_dir=aliassvc.config_dir)
+                aliasgrub.update_imagepath(aliassvc.image.path, new_path)
         elif self.arch == 'sparc':
             self.update_wanboot_imagepath(self.image.path, new_path)
 
@@ -1392,11 +1395,6 @@ def get_a_free_tcp_port(hostname):
     return port
 
 
-def get_client_menulst(clientid):
-    '''get path to client menu.lst.<clientid> file'''
-    return (os.path.join(NETBOOT, MENULST + '.' + clientid))
-
-
 _DHCP_MSG = """No local DHCP configuration found. This service is the default
 alias for all %s clients. If not already in place, the following should
 be added to the DHCP configuration:"""
@@ -1409,11 +1407,9 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
                            "DHCP configuration has not been completed. Please "
                            "see dhcpd(8) for further information.\n"))
 
-    bootfile = service.dhcp_bootfile
     arch = service.arch
-
-    logging.debug("setup_dhcp_server: ip_start=%s, ip_count=%s, "
-                  "bootfile=%s, arch=%s", ip_start, ip_count, bootfile, arch)
+    logging.debug("setup_dhcp_server: ip_start=%s, ip_count=%s, arch=%s",
+                  ip_start, ip_count, arch)
 
     server = dhcp.DHCPServer()
     svc_cmd = False
@@ -1448,35 +1444,54 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
     # creating a new default alias for this architecture, set this service's
     # bootfile as the default in the DHCP local server.
     if arch == 'sparc':
+        bootfile = service.dhcp_bootfile_sparc
         bfile = dhcp.fixup_sparc_bootfile(bootfile)
         client_type = 'SPARC'
     else:
-        bfile = bootfile
+        # create new tuple list containing only the arch val and relpath
+        # i.e., go from entries of (dhcparch, archtype, relpath to nbp) to
+        # (dhcparch, relpath to nbp)
+        bootfile = service.boot_tuples
+        bootfile_tuples = zip(*service.boot_tuples)
+        bootfile_tuples = zip(bootfile_tuples[0], bootfile_tuples[2])
+        bfile = ''
+        for archval, archtype, relpath in service.boot_tuples:
+            line = ('    ' + archtype + ' clients (arch ' + archval + '):  ' +
+                     relpath + '\n')
+            bfile = bfile + line
         client_type = 'PXE'
+
+    logging.debug("setup_dhcp_server: bootfile=%s, bfile=\n%s",
+                  bootfile, bfile)
 
     if server.is_configured():
         if service.is_default_arch_service():
             try:
+                if arch == 'i386':
+                    # add the arch option if needed
+                    server.add_option_arch()
                 if server.arch_class_is_set(arch):
                     # There is a class for this architecture already in place
                     cur_bootfile = server.get_bootfile_for_arch(arch)
+                    logging.debug('cur_bootfile is %s', cur_bootfile)
                     if cur_bootfile is None:
                         # No bootfile set for this arch
-                        print cw(_("Setting the default %s bootfile in the "
-                                   "local DHCP configuration to '%s'\n") %
-                                   (client_type, bfile))
+                        print cw(_("Setting the default %s bootfile(s) in "
+                                   "the local DHCP configuration to:"
+                                   "\n%s\n") % (client_type, bfile))
                         server.add_bootfile_to_arch(arch, bootfile)
-                    elif cur_bootfile != bfile:
+                    elif ((arch == 'sparc' and cur_bootfile != bfile) or
+                          (arch == 'i386' and sorted(bootfile_tuples) !=
+                           sorted(cur_bootfile))):
                         # Update the existing bootfile to our default
-                        print cw(_("Updating the default %s bootfile in the "
-                                   "local DHCP configuration from '%s' to "
-                                   "'%s'\n") %
-                                   (client_type, cur_bootfile, bfile))
+                        print cw(_("Updating the default %s bootfile(s) in "
+                                   "the local DHCP configuration to:\n%s\n") %
+                                   (client_type, bfile))
                         server.update_bootfile_for_arch(arch, bootfile)
                 else:
                     # Set up a whole new architecture class
-                    print cw(_("Setting the default %s bootfile in the local "
-                               "DHCP configuration to '%s'\n") %
+                    print cw(_("Setting the default %s bootfile(s) in the "
+                               "local DHCP configuration to:\n%s\n") %
                                (client_type, bfile))
                     server.add_arch_class(arch, bootfile)
 
@@ -1515,9 +1530,10 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
 
         if arch == 'i386':
             # Boot server IP is not needed for SPARC clients
-            print _("\t%-20s : %s" % ("Boot server IP", server_ip))
-
-        print _("\t%-20s : %s\n" % ("Boot file", bfile))
+            print _("%s: %s" % ("Boot server IP", server_ip))
+            print _("%s:\n%s" % ("Boot file(s)", bfile))
+        else:
+            print _("%s: %s\n" % ("Boot file", bfile))
 
         if len(valid_nets) > 1 and arch == 'i386':
             print cw(_("\nNote: determined more than one IP address "

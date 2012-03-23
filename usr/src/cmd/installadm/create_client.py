@@ -36,6 +36,7 @@ import osol_install.auto_install.service_config as config
 
 from optparse import OptionParser, OptionValueError
 
+from bootmgmt import BootmgmtError
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from solaris_install import Popen
 
@@ -80,7 +81,7 @@ def parse_options(cmd_options=None):
                       help=_("Service to associate client with"), nargs=1)
     (options, args) = parser.parse_args(cmd_options)
 
-    if args: 
+    if args:
         parser.error(_("Unexpected argument(s): %s" % args))
 
     # check that we got a service name and mac address
@@ -91,7 +92,7 @@ def parse_options(cmd_options=None):
         parser.error(_("MAC address is required (-e|--macaddr <macaddr>)."))
 
     # Verify that the server settings are not obviously broken.
-    # These checks cannot be complete, but check for things which 
+    # These checks cannot be complete, but check for things which
     # will definitely cause failure.
     logging.debug("Calling %s", com.CHECK_SETUP_SCRIPT)
     ret = Popen([com.CHECK_SETUP_SCRIPT]).wait()
@@ -130,7 +131,8 @@ def parse_options(cmd_options=None):
     return options
 
 
-def create_new_client(arch, service, mac_address, bootargs=None):
+def create_new_client(arch, service, mac_address, bootargs=None,
+                      suppress_dhcp_msgs=False):
     '''Create a new client of a service and ensure the Automated
        Install SMF service is enabled.
 
@@ -138,15 +140,18 @@ def create_new_client(arch, service, mac_address, bootargs=None):
               service - The AIService to attach to
               mac_address - mac address of client
               bootargs - boot arguments to insert in client menu.lst file (x86)
+              suppress_dhcp_msgs - if True, suppresses informational messages
+                                   about DHCP configuration
        Returns: Nothing
 
     '''
     logging.debug("creating new client for service %s, mac %s, "
-                  "arch %s, bootargs %s",
-                  service.name, mac_address, arch, bootargs)
+                  "arch %s, bootargs %s, suppress_dhcp_msgs=%s",
+                  service.name, mac_address, arch, bootargs,
+                  suppress_dhcp_msgs)
     if arch == 'i386':
-        clientctrl.setup_x86_client(service, mac_address,
-                                     bootargs=bootargs)
+        clientctrl.setup_x86_client(service, mac_address, bootargs=bootargs,
+                                    suppress_dhcp_msgs=suppress_dhcp_msgs)
     else:
         clientctrl.setup_sparc_client(service, mac_address)
 
@@ -175,7 +180,8 @@ def do_create_client(cmd_options=None):
         bootargs = ",".join(options.boot_args).lstrip().rstrip() + ","
         logging.debug('bootargs=%s', bootargs)
 
-    clientctrl.remove_client("01" + options.mac_address)
+    clientctrl.remove_client("01" + options.mac_address,
+                             suppress_dhcp_msgs=True)
 
     # wrap the whole program's execution to catch exceptions as we should not
     # throw them anywhere
@@ -183,11 +189,10 @@ def do_create_client(cmd_options=None):
     try:
         create_new_client(options.arch, service,
                           options.mac_address, bootargs)
-    except OSError as err:
-        raise SystemExit(err)
-    except (aismf.ServicesError, config.ServiceCfgError,
-            svc.MountError) as err:
-        raise SystemExit(err)
+    except (OSError, BootmgmtError, aismf.ServicesError,
+            config.ServiceCfgError, svc.MountError) as err:
+        raise SystemExit(_('\nError: Unable to create client, %s:\n%s') %
+                         (options.mac_address, err))
 
 
 if __name__ == "__main__":

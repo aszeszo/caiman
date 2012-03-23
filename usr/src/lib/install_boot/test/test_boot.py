@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ Boot checkpoint Unit Tests
@@ -35,7 +35,7 @@ import platform
 import pwd
 import grp
 
-from shutil import rmtree, copyfile
+from shutil import rmtree, copyfile, copytree
 from lxml import etree
 
 from bootmgmt import BootmgmtUnsupportedPropertyError
@@ -421,25 +421,37 @@ class ISOBootMenuTestCase(BootMenuTestCaseBase):
         rel_file = os.path.join(rel_file_dir, 'release')
         with open(rel_file, 'w') as file_handle:
             file_handle.write('Solaris Boot Test')
-        doc_dict = {"pkg_img_path": temp_dir}
+        # Under normal DC circumstances pkg_img_path and ba_build are
+        # different paths, but this is irrelevant to the boot checkpoint
+        doc_dict = {"pkg_img_path": temp_dir,
+                    "ba_build": temp_dir,
+                    "tmp_dir": temp_dir}
         self.temp_dir = temp_dir
+        with open(os.path.join(temp_dir, ".volsetid"), "w") as volsetid:
+            volsetid.write("boot_checkpoint_ISO_unit_test")
         self.doc.volatile.insert_children(DataObjectDict("DC specific",
                                           doc_dict,
                                           generate_xml=True))
-        # Create a dummy boot and grub menu.ls environment
-        # so that pybootmgmt can instantiate a legacyGrub
-        # boot loader under the bootconfig object
-        # UEFI - this needs updating for SPARC, GRUB2 & UEFI
-        # when support gets added to pybootmgmt
+        # Create a dummy boot and grub menu.lst environment so that pybootmgmt
+        # can instantiate a Legacy GRUB or GRUB2 boot loader under the
+        # bootconfig object.
+        # XXX - this needs updating for SPARC
         if platform.processor() == 'i386':
-            os.makedirs(os.path.join(temp_dir, 'boot/grub'))
-            copyfile('/boot/grub/menu.lst',
-                     os.path.join(temp_dir, 'boot/grub/menu.lst'))
-            copyfile('/boot/grub/stage2_eltorito',
-                     os.path.join(temp_dir, 'boot/grub/stage2_eltorito'))
-            os.makedirs(os.path.join(temp_dir, 'boot/solaris'))
-            copyfile('/boot/solaris/bootenv.rc',
-                     os.path.join(temp_dir, 'boot/solaris/bootenv.rc'))
+            # Create a dummy legacy GRUB environment if that's what the build
+            # host has
+            if os.path.exists('/boot/grub/stage2_eltorito'):
+                os.makedirs(os.path.join(temp_dir, 'boot/grub'))
+                copyfile('/boot/grub/menu.lst',
+                         os.path.join(temp_dir, 'boot/grub/menu.lst'))
+                copyfile('/boot/grub/stage2_eltorito',
+                         os.path.join(temp_dir, 'boot/grub/stage2_eltorito'))
+                os.makedirs(os.path.join(temp_dir, 'boot/solaris'))
+                copyfile('/boot/solaris/bootenv.rc',
+                         os.path.join(temp_dir, 'boot/solaris/bootenv.rc'))
+            # If it has GRUB 2, copy over the entire GRUB2 tree
+            if os.path.exists('/usr/lib/grub2'):
+                copytree('/usr/lib/grub2',
+                         os.path.join(temp_dir, 'usr/lib/grub2'))
 
     def tearDown(self):
         """ Cleans up after each unit test is executed

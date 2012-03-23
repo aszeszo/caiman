@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 """
 AI rename-service
 """
@@ -34,6 +34,7 @@ import osol_install.auto_install.service_config as config
 
 from optparse import OptionParser
 
+from bootmgmt import BootmgmtError
 from osol_install.auto_install.image import ImageError
 from osol_install.auto_install.installadm_common import _, \
     validate_service_name, cli_wrap as cw
@@ -81,7 +82,7 @@ def parse_options(cmd_options=None):
 
 
 def do_rename_service(cmd_options=None):
-    '''Rename a service.
+    '''Rename a service and update all associated aliases and clients.
 
     Note: Errors that occur during the various rename stages
     are printed, but the other stages will continue, with the hopes
@@ -137,9 +138,12 @@ def do_rename_service(cmd_options=None):
     # Remove clients whose base service has been renamed
     clients = config.get_clients(svcname)
     for clientid in clients.keys():
-        clientctrl.remove_client(clientid)
+        clientctrl.remove_client(clientid, suppress_dhcp_msgs=True)
 
-    oldservice.rename(newsvcname)
+    try:
+        oldservice.rename(newsvcname)
+    except BootmgmtError as err:
+        raise SystemExit(err)
 
     # Update aliases whose base service has been renamed
     aliases = config.get_aliased_services(svcname)
@@ -166,13 +170,16 @@ def do_rename_service(cmd_options=None):
         bootargs = None
         if config.BOOTARGS in clients[clientid]:
             bootargs = clients[clientid][config.BOOTARGS]
-        create_client.create_new_client(arch, newservice, client,
-                                        bootargs=bootargs)
-
+        try:
+            create_client.create_new_client(arch, newservice, client,
+                bootargs=bootargs, suppress_dhcp_msgs=True)
+        except BootmgmtError as err:
+            failures.append(err)
+            print >> sys.stderr, (_('\nError: Unable to recreate client, '
+                                    '%s:\n%s') % (client, err))
     if failures:
         return 1
-    else:
-        return 0
+    return 0
 
 
 if __name__ == '__main__':

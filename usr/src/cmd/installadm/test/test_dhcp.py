@@ -97,13 +97,15 @@ class DHCPServerTest(unittest.TestCase):
         '''Test correct permissions of dhcpd4.conf'''
 
         dhcpsrv = dhcp.DHCPServer()
-        dhcpsrv.add_arch_class('i386', 'some-test-string')
+        dhcpsrv.add_arch_class('i386',
+            [('00:00', 'bios', 'some-test-string')])
         # save original umask
         orig_umask = os.umask(0022)
         # set too restrictive and too open umask
         for mask in (0066, 0000):
             os.umask(mask)
-            dhcpsrv.update_bootfile_for_arch('i386', 'some-other-test-string')
+            dhcpsrv.update_bootfile_for_arch('i386',
+                [('00:07', 'uefi', 'some-other-test-string')])
             mode = os.stat(self.dhcp_dir + '/' + 'dhcpd4.conf').st_mode
             self.assertEqual(mode, 0100644)
         # return umask to the original value

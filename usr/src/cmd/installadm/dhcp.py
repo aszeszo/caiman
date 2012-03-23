@@ -20,7 +20,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 Classes, methods and related routines used in the configuration and management
@@ -36,7 +36,8 @@ import time
 
 import osol_install.auto_install.installadm_common as com
 
-from osol_install.auto_install.installadm_common import _, cli_wrap as cw
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw, \
+    MACAddress
 from osol_install.libaimdns import getifaddrs
 from solaris_install import Popen, CalledProcessError
 
@@ -52,6 +53,8 @@ SVCCFG = "/usr/sbin/svccfg"
 SVCPROP = "/usr/bin/svcprop"
 
 DHCP_SERVER_IPV4_SVC = "svc:/network/dhcp/server:ipv4"
+
+OPTIONARCH = "option arch code 93 = unsigned integer 16;"
 
 # Mappings for name services (DNS, NIS) and related properties
 _ns_map = {'dns': {'SVC_NAME': "svc:/network/dns/client",
@@ -97,6 +100,9 @@ max-lease-time 86400;
 # If this DHCP server is the official DHCP server for the local
 # network, the authoritative directive should be uncommented.
 authoritative;
+
+# arch option for PXEClient
+%(optionarch)s
 
 # Set logging facility (accompanies setting in syslog.conf)
 log-facility local7;
@@ -155,11 +161,11 @@ CFGFILE_SUBNET_RANGE_STRING = """  range %(loaddr)s %(hiaddr)s;
 # The following defines a block quote for an x86 class stanza. Class stanzas
 # set details for an entire architecture.
 # Optionally passed in the format list:
-#   bootfile - The bootfile for this architecture class
+#   bootfile_clause - The bootfile if/else clause for this architecture class
 CFGFILE_PXE_CLASS_STANZA = """
 class "PXEBoot" {
   match if (substring(option vendor-class-identifier, 0, 9) = "PXEClient");
-  filename "%(bootfile)s";
+  %(bootfile_clause)s
 }
 """
 
@@ -176,7 +182,10 @@ class "SPARC" {
 """
 
 # This string can be used when adding a new bootfile to an existing class.
-CFGFILE_CLASS_BOOTFILE_STRING = """  filename "%(bootfile)s";
+CFGFILE_CLASS_BOOTFILE_STRING_SPARC = """  filename "%(bootfile)s";
+"""
+
+CFGFILE_CLASS_BOOTFILE_STRING_X86 = """  %(bootfile)s
 """
 
 # The following defines a block quote for an host-specific stanza. These
@@ -191,6 +200,16 @@ host %(hostname)s {
   filename "%(bootfile)s";
 }
 """
+
+CFGFILE_HOST_STANZA_IFCLAUSE = """
+host %(hostname)s {
+  hardware ethernet %(macaddr)s;
+  %(bootfile_clause)s
+}
+"""
+
+# This string is used to add the arch option to the config file if needed.
+CFGFILE_OPTIONARCH_STRING = "%s\n\n" % OPTIONARCH
 
 
 class DHCPServerError(StandardError):
@@ -226,6 +245,7 @@ class _DHCPConfigBase(_DHCPConfigStanza):
     '''
     def __init__(self):
         self.block = CFGFILE_BASE
+        self.optionarch = OPTIONARCH
 
 
 class _DHCPConfigSubnet(_DHCPConfigStanza):
@@ -261,6 +281,9 @@ class _DHCPConfigPXEClass(_DHCPConfigStanza):
     def __init__(self, bootfile):
         self.block = CFGFILE_PXE_CLASS_STANZA
         self.bootfile = bootfile
+        self.bootfile_clause = ''.join(_create_bootfile_clause(bootfile))
+        logging.debug('_DHCPConfigPXEClass bootfile clause is\n%s ',
+                      self.bootfile_clause)
 
 
 class _DHCPConfigSPARCClass(_DHCPConfigStanza):
@@ -282,12 +305,23 @@ class _DHCPConfigHost(_DHCPConfigStanza):
         hostname - Label for this stanza
         macaddr - Ethernet (mac) address of the client
         bootfile - Bootfile for this client
+                   bootfile is either a string OR
+                   a list of tuples from NetBootConfig in the form
+                     [(arch_string, type_string, rel_path_to_bootfile), ...]
     '''
     def __init__(self, hostname, macaddr, bootfile):
-        self.block = CFGFILE_HOST_STANZA
         self.hostname = hostname
         self.macaddr = macaddr
         self.bootfile = bootfile
+        if isinstance(bootfile, list):
+            clientid = '01' + str(MACAddress(macaddr))
+            self.bootfile_clause = \
+                ''.join(_create_bootfile_clause(bootfile, clientid=clientid))
+            logging.debug('_DHCPConfigHost bootfile clause is\n%s ',
+                          self.bootfile_clause)
+            self.block = CFGFILE_HOST_STANZA_IFCLAUSE
+        else:
+            self.block = CFGFILE_HOST_STANZA
 
 
 class DHCPData(object):
@@ -342,7 +376,13 @@ class DHCPArchClass(DHCPData):
         arch - The architecture class being queried
     Attributes:
         arch - The architecture of this architecture class entry
-        bootfile - The bootfile for this architecture class
+        bootfile - The bootfile for this architecture class:
+                   a string for sparc:
+                      e.g.: http://192.168.56.1:5555/cgi-bin/wanboot-cgi
+                   or a list of tuples for x86)
+                         [('00:00', 'default-i386/boot/grub/pxegrub2'),
+                          ('00:07', 'default-i386/boot/grub/grub2netx64.efi')]
+
     '''
     def __init__(self, server, arch, bootfile=None):
         self.server = server
@@ -373,19 +413,28 @@ class DHCPArchClass(DHCPData):
         # we find that it's for the architecture in question, then we can break
         # out of parsing once we're done reading it all in. If not, move on to
         # the next class, if there are any.
+        if_opt_arch_pattern = 'if\s+option\s+arch\s*=\s*(\d{1,2}.\d{1,2})\s*{'
         found = False
         bootfile = None
+        in_ifclause = False
         classlines = list()
         for line in server._current_config():
             if line.startswith("class"):
                 # New class stanza, init a new class list
                 classlines = list()
                 continue
-            if line.endswith("}") and found:
-                # We're at the end of the class we wanted. The classlines list
-                # now contains each line of the class stanza for this
-                # architecture.
-                break
+            if line.endswith("}"):
+                if in_ifclause:
+                    # We're at the end of the if clause, clear the flag.
+                    in_ifclause = False
+                elif found:
+                    # We're at the end of the class we wanted. The classlines
+                    # list now contains each line of the class stanza for this
+                    # architecture.
+                    break
+            if line.startswith("if") and line.endswith("{"):
+                # We're entering an if clause inside the stanza
+                in_ifclause = True
             m = regexp.search(line)
             if m is not None:
                 # We've found the class stanza for this architecture.
@@ -398,11 +447,21 @@ class DHCPArchClass(DHCPData):
             matches = [m.group(1)
                 for m in filter(bool, map(regexp.match, classlines))]
             if matches:
-                bootfile = matches[0]
+                if arch == 'i386' and len(matches) > 1:
+                    regexp = re.compile(if_opt_arch_pattern)
+                    arches = [m.group(1)
+                        for m in filter(bool, map(regexp.search, classlines))]
+                    if arches:
+                        bootfile = zip(arches, matches)
+                    else:
+                        bootfile = matches[0]
+                else:
+                    bootfile = matches[0]
 
         # Finally, if we found the class, instantiate and return a
         # DHCPArchClass object.
         if found:
+            logging.debug('dhcp:get_arch, found class, bootfile=%s', bootfile)
             return cls(server, arch, bootfile)
         else:
             return None
@@ -456,6 +515,9 @@ class DHCPArchClass(DHCPData):
         Note: If action is 'update' and bootfile is "None", the bootfile will
         be unset entirely.
         '''
+        logging.debug('\nin _edit_class_bootfile, action=%s, bootfile=%s',
+                      action, bootfile)
+
         if action not in ['set', 'update']:
             raise ValueError(_("invalid action: %s") % action)
 
@@ -472,18 +534,25 @@ class DHCPArchClass(DHCPData):
         # use "not x86", since we only support the two architectures, and
         # there is no simple way to determine a SPARC client explicitly.
         if self.arch == 'i386':
+            cfgfile_class_bf_string = CFGFILE_CLASS_BOOTFILE_STRING_X86
             vci_re = re.compile(X86_VCI_PATTERN)
+            if bootfile:
+                # Create a dictionary for use in the format string below.
+                # For x86, bf will be a string consisting of an if/else
+                # clause to be inserted into the dhcp conf file.
+                bf = {'bootfile': ''.join(_create_bootfile_clause(bootfile))}
+                logging.debug('_edit_class_bootfile: setting bf to %s' % bf)
         elif self.arch == 'sparc':
             vci_re = re.compile(SPARC_VCI_PATTERN)
+            cfgfile_class_bf_string = CFGFILE_CLASS_BOOTFILE_STRING_SPARC
             bootfile = fixup_sparc_bootfile(bootfile, True)
+            # Create a dictionary for use in the format string below
+            bf = {'bootfile': bootfile}
         else:
             raise DHCPServerError(_("unsupported architecture: %s") % \
                 self.arch)
 
         bootfile_re = re.compile('filename\s+\S+;')
-
-        # Create a dictionary for use in the format string below
-        bf = {'bootfile': bootfile}
 
         current_cfgfile = self.server._properties['config_file']
         tmp_cfgfile = "%s~" % current_cfgfile
@@ -502,6 +571,9 @@ class DHCPArchClass(DHCPData):
         in_class = False
         seek_bootfile = False
         edit_complete = False
+        in_ifclause = False
+        removing_ifclause = False
+        ifclause = list()
         # dhcpd server runs under dhcpserv user account and needs to be able
         # to read its config file
         orig_umask = os.umask(0022)
@@ -521,19 +593,38 @@ class DHCPArchClass(DHCPData):
                         # class stanza and can perform accordingly.
                         in_class = True
                     if line.strip().endswith("}"):
-                        # We are out of this particular class, so unset our
-                        # flag and move on. Note we could assert that
-                        # seek_bootfile shouldn't be set here (see below), but
-                        # it could be possible to have more than one class
-                        # stanza for this architecture. So, just unset that
-                        # flag as well.
-                        in_class = False
-                        seek_bootfile = False
+                        if in_ifclause:
+                            if removing_ifclause:
+                                if bootfile is not None:
+                                    # we've been removing the old bootfile
+                                    # ifclause and now want to insert the
+                                    # new bootfile lines
+                                    tmp_cfg.write(cfgfile_class_bf_string % bf)
+                                # We're removing this if clause
+                                edit_complete = True
+                                continue
+
+                            # We are out of this if clause. Append saved
+                            # if clause lines to file
+                            in_ifclause = False
+                            for ifline in ifclause:
+                                tmp_cfg.write(ifline)
+                        else:
+                            # We are out of this particular class, so unset our
+                            # flag and move on. Note we could assert that
+                            # seek_bootfile shouldn't be set here (see below),
+                            # but it could be possible to have more than one
+                            # class stanza for this architecture. So, just
+                            # unset that flag as well.
+                            in_class = False
+                            seek_bootfile = False
                     if seek_bootfile:
                         if bootfile_re.search(line) is not None:
                             # We're at the bootfile line in the class for this
                             # architecture, and we want to update it (i.e. the
-                            # action is 'update'). If the bootfile argument is
+                            # action is 'update'). If we're in an if clause,
+                            # then keep processing until we're out of the
+                            # clause. Otherwise, if the bootfile argument is
                             # set, then we're updating to a new bootfile
                             # setting. Create a new entry and drop it in,
                             # leaving the old one behind. If a new bootfile
@@ -541,10 +632,22 @@ class DHCPArchClass(DHCPData):
                             # altogether - just leave this line behind.  Either
                             # way,  set our 'done' flag. We'll then just copy
                             # the rest of the file and return.
-                            if bootfile is not None:
-                                tmp_cfg.write(CFGFILE_CLASS_BOOTFILE_STRING % \
-                                    bf)
+                            if in_ifclause:
+                                # we are unsetting or replacing the bootfile.
+                                # If in if clause, remove the entire clause.
+                                ifclause.append(line)
+                                removing_ifclause = True
+                                continue
+                            elif bootfile is not None:
+                                tmp_cfg.write(cfgfile_class_bf_string % bf)
                             edit_complete = True
+                            continue
+                        if (line.strip().startswith('if') and
+                            line.strip().endswith("{")):
+                            in_ifclause = True
+                            ifclause = list()
+                        if in_ifclause:
+                            ifclause.append(line)
                             continue
                     if in_class:
                         if vci_re.search(line) is not None:
@@ -557,7 +660,7 @@ class DHCPArchClass(DHCPData):
                                 # 'done' flag. We'll then just copy the rest of
                                 # the file and return.
                                 tmp_cfg.write(line)
-                                tmp_cfg.write(CFGFILE_CLASS_BOOTFILE_STRING % \
+                                tmp_cfg.write(cfgfile_class_bf_string % \
                                     bf)
                                 edit_complete = True
                                 continue
@@ -849,6 +952,42 @@ class DHCPServer(object):
                                            broadcast, router, nextserver)
             self._add_stanza_to_config_file(new_stanza)
 
+    def add_option_arch(self):
+        '''
+        Add the arch option to the config file if not already there
+        '''
+        current_cfgfile = self._properties['config_file']
+        tmp_cfgfile = "%s~" % current_cfgfile
+
+        # Get the full configuration file, not just this server's current
+        # config, as we'll be making a copy of the current file for editing.
+        current_lines = list()
+        if os.path.exists(current_cfgfile):
+            with open(current_cfgfile, "r") as current:
+                current_lines = current.readlines()
+
+        # if arch is already defined, nothing to do
+        for line in current_lines:
+            if line.strip().startswith(OPTIONARCH):
+                return
+
+        # Need to add option arch. Make the copy and add it.
+        written = False
+        with open(tmp_cfgfile, "w") as tmp_cfg:
+            for line in current_lines:
+                if line.strip().startswith('class') and not written:
+                    tmp_cfg.write(CFGFILE_OPTIONARCH_STRING)
+                    written = True
+                tmp_cfg.write(line)
+
+        if not written:
+            # there were no class stanzas in the file. Append to the end.
+            with open(tmp_cfgfile, 'a') as cfg:
+                cfg.write(CFGFILE_OPTIONARCH_STRING)
+
+        # Rename the temporary new file to the configfile
+        os.rename(tmp_cfgfile, current_cfgfile)
+
     def _add_range_to_subnet(self, subnet, loaddr, hiaddr):
         '''
         Add a new IP range to an already established subnet stanza. This can
@@ -921,7 +1060,9 @@ class DHCPServer(object):
         Add a host stanza to the DHCP configuration.
         Arguments:
             macaddr - Hardware ethernet address of the client
-            bootfile - Bootfile to set for this client
+            bootfile - Bootfile to set for this client OR
+                       list of tuples from grub:setup_client in the form
+                       [(arch_string, type_string, rel_path_to_bootfile), ...]
             hostname - Label for this stanza (optional)
         '''
         logging.debug("dhcp.add_host: adding host [%s] bootfile '%s'",
@@ -956,6 +1097,7 @@ class DHCPServer(object):
         regexp = re.compile(macaddr)
 
         found = False
+        in_ifclause = False
         in_host = False
         remove_finished = False
         new_cfg = list()
@@ -985,25 +1127,33 @@ class DHCPServer(object):
                     hostlines = list()
                     hostlines.append(line)
                     continue
+                if in_host and line.strip().startswith("if ") and \
+                    line.strip().endswith("{"):
+                    # We're entering an if clause inside the host stanza
+                    in_ifclause = True
                 if in_host and line.strip().endswith("}"):
-                    # We're at the end of a host stanza, clear our flag.
-                    in_host = False
+                    if in_ifclause:
+                        # We're at the end of the if clause, clear the flag.
+                        in_ifclause = False
+                    else:
+                        # We're at the end of a host stanza, clear our flag.
+                        in_host = False
 
-                    # Add this final line to the hostlines list.
-                    hostlines.append(line)
+                        # Add this final line to the hostlines list.
+                        hostlines.append(line)
 
-                    # If we've not found our host yet, then this host stanza
-                    # we've just hit the end of needs to be written out to the
-                    # new file; add these lines to 'new_cfg'.
-                    if not found:
-                        new_cfg.extend(hostlines)
+                        # If we've not found our host yet, then this host
+                        # stanza we've just hit the end of needs to be written
+                        # out to the new file; add these lines to 'new_cfg'.
+                        if not found:
+                            new_cfg.extend(hostlines)
+                            continue
+
+                        # If we have found the host we're removing, set our
+                        # finished flag and just move on, leaving this host
+                        # stanza behind.
+                        remove_finished = True
                         continue
-
-                    # If we have found the host we're removing, set our
-                    # finished flag and just move on, leaving this host
-                    # stanza behind.
-                    remove_finished = True
-                    continue
                 if in_host and regexp.search(line):
                     # We've found the right host stanza
                     found = True
@@ -1046,7 +1196,7 @@ class DHCPServer(object):
 
     def add_arch_class(self, arch, bootfile):
         '''
-        Add an x86 architecture class to the DHCP configuration.
+        Add an x86 or SPARC architecture class to the DHCP configuration.
         Arguments:
             arch - The architecture to set this bootfile for.
             bootfile - The bootfile
@@ -1059,6 +1209,9 @@ class DHCPServer(object):
                                     "set in the DHCP configuration") % arch)
 
         if arch == 'i386':
+            self.add_option_arch()
+            logging.debug('creating _DHCPConfigPXEClass, bootfile=%s',
+                          bootfile)
             new_stanza = _DHCPConfigPXEClass(bootfile)
         elif arch == 'sparc':
             bootfile = fixup_sparc_bootfile(bootfile, True)
@@ -1372,12 +1525,12 @@ def _get_default_route_for_subnet(subnet_ip):
                          logger='', stderr_loglevel=logging.DEBUG)
 
     regexp = re.compile('^default\s+(%s)\s+' % IP_PATTERN)
-    for route in [m.group(1)
-        for m in filter(bool, map(regexp.match, p.stdout.splitlines()))]:
-            if _ip_is_in_network(route, subnet_ip, _get_mask(route)):
-                logging.debug("dhcp._get_default_route_for_subnet: found  %s",
-                              route)
-                return route
+    for route in [m.group(1) for m in
+                  filter(bool, map(regexp.match, p.stdout.splitlines()))]:
+        if _ip_is_in_network(route, subnet_ip, _get_mask(route)):
+            logging.debug("dhcp._get_default_route_for_subnet: found  %s",
+                          route)
+            return route
 
     print >> sys.stderr, cw(_("\nUnable to determine a route for network %s. "
                               "Setting the route temporarily to %s; this "
@@ -1428,3 +1581,31 @@ def fixup_sparc_bootfile(bootfile, verbose=False):
 
     logging.debug("dhcp.fixup_sparc_bootfile: setting IP address %s", ipaddr)
     return re.sub('\$serverIP', ipaddr, bootfile)
+
+
+def _create_bootfile_clause(boot_tuples, clientid=None):
+    '''
+    Create the bootfile if/else clause for the host or PXEClient stanzas.
+    Input: boot_tuples: List of tuples returned by NetBootConfig
+               Example:
+                [('00:00', 'bios', 'default-i386/boot/grub/pxegrub2'),
+                 ('00:07', 'uefi', 'default-i386/boot/grub/grub2netx64.efi')]
+           clientid: clientid if creating clause for host section in dhcp
+                     configuration file
+    Returns: list of lines to be used to create if/else bootfile clause
+    '''
+    bf_clause = list()
+    for arch, archtype, relpath in boot_tuples:
+        line = 'if option arch = %s {\n' % arch
+        if bf_clause:
+            line = '  } else ' + line
+        bf_clause.append(line)
+        if clientid:
+            bootfile = clientid + '.' + archtype
+        else:
+            bootfile = relpath
+        bootline = '    filename "%s";\n' % bootfile
+        bf_clause.append(bootline)
+    if bf_clause:
+        bf_clause.append('  }')
+    return bf_clause

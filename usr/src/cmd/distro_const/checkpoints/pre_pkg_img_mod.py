@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ pre_pkg_img_mod.py - Customizations to the package image area before
@@ -170,11 +170,14 @@ class PrePkgImgMod(Checkpoint):
                                                       "etc/inet/hosts"))
 
     def save_menu_lst(self):
-        """ class method to save the original /boot/grub/menu.lst file
+        """ class method to save the original /boot/grub/menu.lst file if it
+            exists. It will not exist on GRUB2 based images so it is silently
+            ignored if not present.
         """
-        
+
         save_list = ["boot/grub/menu.lst"]
-        self.save_files_directories(save_list)
+        if os.path.exists(os.path.join(self.pkg_img_path, save_list[0])):
+            self.save_files_directories(save_list)
 
     def save_files_directories(self, save_list=None):
         """ class method for saving key files and directories for restoration

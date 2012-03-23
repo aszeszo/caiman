@@ -19,54 +19,27 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/install/installadm@$(PKGVERS)
-set name=pkg.description value="Automatic Installation Server Setup Tools"
 set name=pkg.summary value="installadm utility"
+set name=pkg.description value="Automatic Installation Server Setup Tools"
 set name=info.classification \
     value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
-dir path=lib
-dir path=lib/svc
-dir path=lib/svc/manifest group=sys
-dir path=lib/svc/manifest/system group=sys
-dir path=lib/svc/manifest/system/install group=sys
-dir path=lib/svc/method
-dir path=usr group=sys
-dir path=usr/lib
-dir path=usr/lib/installadm
-dir path=usr/lib/python2.6
-dir path=usr/lib/python2.6/vendor-packages
-dir path=usr/lib/python2.6/vendor-packages/osol_install
-dir path=usr/lib/python2.6/vendor-packages/osol_install/auto_install
-dir path=usr/sbin
-dir path=usr/share group=sys
-dir path=usr/share/auto_install group=sys
-dir path=usr/share/man
-dir path=usr/share/man/ja_JP.UTF-8
-dir path=usr/share/man/ja_JP.UTF-8/man1m
-dir path=usr/share/man/man1m
-dir path=usr/share/man/zh_CN.UTF-8
-dir path=usr/share/man/zh_CN.UTF-8/man1m
-dir path=usr/share/xml
-dir path=var group=sys
-dir path=var/ai group=sys
-dir path=var/ai/image-server group=sys
-dir path=var/ai/image-server/cgi-bin group=sys
-dir path=var/ai/image-server/images group=sys
-dir path=var/ai/image-server/logs group=sys
-dir path=var/ai/profile group=webservd mode=0700 owner=webservd
-dir path=var/ai/service group=sys
-dir path=var/installadm group=sys
-dir path=var/installadm/ai-webserver group=sys
-dir path=var/installadm/ai-webserver/AI_data group=sys
-dir path=var/installadm/ai-webserver/AI_files group=sys
-dir path=var/installadm/ai-webserver/compatibility-configuration group=sys
+dir  path=lib
+dir  path=lib/svc
+dir  path=lib/svc/manifest group=sys
+dir  path=lib/svc/manifest/system group=sys
+dir  path=lib/svc/manifest/system/install group=sys
 file path=lib/svc/manifest/system/install/server.xml group=sys
+dir  path=lib/svc/method
 file path=lib/svc/method/svc-install-server mode=0555
+dir  path=usr group=sys
+dir  path=usr/lib
+dir  path=usr/lib/installadm
 file path=usr/lib/installadm/aimdns.py
 file path=usr/lib/installadm/aimdnsd.py
 file path=usr/lib/installadm/check-server-setup
@@ -74,6 +47,10 @@ file path=usr/lib/installadm/installadm-common
 file path=usr/lib/installadm/setup-image
 file path=usr/lib/installadm/setup-service
 file path=usr/lib/installadm/setup-sparc
+dir  path=usr/lib/python2.6
+dir  path=usr/lib/python2.6/vendor-packages
+dir  path=usr/lib/python2.6/vendor-packages/osol_install
+dir  path=usr/lib/python2.6/vendor-packages/osol_install/auto_install
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/AI_database.py \
     group=sys
@@ -92,9 +69,11 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/common_profile.pyc \
     group=sys
+# Add bypass generate to allow manual boot-management version 13 dependency
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_client.py \
-    group=sys
+    group=sys \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_client.pyc \
     group=sys
@@ -104,9 +83,11 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_profile.pyc \
     group=sys
+# Add bypass generate to allow manual boot-management version 13 dependency
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_service.py \
-    group=sys
+    group=sys \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/create_service.pyc \
     group=sys
@@ -150,8 +131,10 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/export.pyc \
     group=sys
+# Add bypass generate to allow manual boot-management version 13 dependency
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/grub.py \
-    group=sys
+    group=sys \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/grub.pyc \
     group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/image.py \
@@ -169,9 +152,11 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/publish_manifest.pyc \
     group=sys
+# Add bypass generate to allow manual boot-management version 13 dependency
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/rename_service.py \
-    group=sys
+    group=sys \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/rename_service.pyc \
     group=sys
@@ -187,9 +172,11 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_criteria.pyc \
     group=sys
+# Add bypass generate to allow manual boot-management version 13 dependency
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_service.py \
-    group=sys
+    group=sys \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_service.pyc \
     group=sys
@@ -205,19 +192,46 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/verifyXML.pyc \
     group=sys
+dir  path=usr/sbin
 file path=usr/sbin/installadm mode=0555
 file path=usr/sbin/installadm-convert mode=0555
+dir  path=usr/share group=sys
+dir  path=usr/share/auto_install group=sys
 file path=usr/share/auto_install/criteria_schema.rng group=sys
+dir  path=usr/share/man
+dir  path=usr/share/man/ja_JP.UTF-8
+dir  path=usr/share/man/ja_JP.UTF-8/man1m
 file path=usr/share/man/ja_JP.UTF-8/man1m/installadm.1m mode=0444
+dir  path=usr/share/man/man1m
 file path=usr/share/man/man1m/installadm.1m mode=0444
+dir  path=usr/share/man/zh_CN.UTF-8
+dir  path=usr/share/man/zh_CN.UTF-8/man1m
 file path=usr/share/man/zh_CN.UTF-8/man1m/installadm.1m mode=0444
+dir  path=usr/share/xml
+dir  path=var group=sys
+dir  path=var/ai group=sys
+dir  path=var/ai/image-server group=sys
+dir  path=var/ai/image-server/cgi-bin group=sys
 file path=var/ai/image-server/cgi-bin/cgi_get_manifest.py mode=0555
+dir  path=var/ai/image-server/images group=sys
+dir  path=var/ai/image-server/logs group=sys
+dir  path=var/ai/profile owner=webservd group=webservd mode=0700
+dir  path=var/ai/service group=sys
+dir  path=var/installadm group=sys
+dir  path=var/installadm/ai-webserver group=sys
 file path=var/installadm/ai-webserver/AI.db
+dir  path=var/installadm/ai-webserver/AI_data group=sys
+dir  path=var/installadm/ai-webserver/AI_files group=sys
 file path=var/installadm/ai-webserver/ai-httpd.conf
+dir  path=var/installadm/ai-webserver/compatibility-configuration group=sys
 license cr_Sun license=cr_Sun
-depend fmri=database/sqlite-3 type=require
-depend fmri=service/network/dhcp/isc-dhcp type=require
-depend fmri=service/network/dns/mdns type=require
-depend fmri=service/network/tftp type=require
-depend fmri=system/install/locale type=require
-depend fmri=web/server/apache-22 type=require
+depend type=require fmri=database/sqlite-3
+# Add manual boot-management version 13 dependency for UEFI/GRUB2 compat.
+# Make sure to remove the pkg.depend.bypass-genererate actions if removing.
+depend type=require \
+    fmri=pkg:/system/library/boot-management@0.5.11,5.11-0.175.1.0.0.13
+depend type=require fmri=service/network/dhcp/isc-dhcp
+depend type=require fmri=service/network/dns/mdns
+depend type=require fmri=service/network/tftp
+depend type=require fmri=system/install/locale
+depend type=require fmri=web/server/apache-22

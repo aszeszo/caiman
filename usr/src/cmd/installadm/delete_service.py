@@ -35,14 +35,14 @@ import osol_install.auto_install.service_config as config
 
 from optparse import OptionParser
 
-from osol_install.auto_install.installadm_common import _, cli_wrap as cw 
+from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.auto_install.service import AIService, DEFAULT_ARCH
-    
+
 
 def get_usage():
     ''' get usage for delete-service'''
     return(_('delete-service [-r|--autoremove] [-y|--noprompt] <svcname>]'))
- 
+
 
 def parse_options(cmd_options=None):
     '''
@@ -50,7 +50,7 @@ def parse_options(cmd_options=None):
     Args: None
     Returns: A tuple of a dictionary of service properties of service
              to delete and an options object
-    
+
     '''
     usage = '\n' + get_usage()
     parser = OptionParser(usage=usage)
@@ -65,15 +65,15 @@ def parse_options(cmd_options=None):
                       'service deletion'))
 
     (options, args) = parser.parse_args(cmd_options)
-    
+
     # Confirm install service's name was passed in
     if not args:
         parser.error(_("Missing required argument, <svcname>"))
     elif len(args) > 1:
         parser.error(_("Too many arguments: %s") % args)
-    
+
     service_name = args[0]
-    
+
     # validate service name
     try:
         com.validate_service_name(service_name)
@@ -82,11 +82,11 @@ def parse_options(cmd_options=None):
     if not config.is_service(service_name):
         raise SystemExit(_("\nError: The specified service does "
                            "not exist: %s\n") % service_name)
-    
+
     # add service_name to the options
     options.service_name = service_name
     logging.debug("options = %s", options)
-    
+
     return options
 
 
@@ -98,9 +98,15 @@ def remove_dhcp_configuration(service):
     inform the end-user that the DHCP configuration should not reference this
     bootfile any longer.
     '''
+    logging.debug("in remove_dhcp_configuration, service=%s", service.name)
+
+    # Skip SPARC services, since they share a global bootfile
+    if service.arch == 'sparc':
+        return
+
     server = dhcp.DHCPServer()
     if server.is_configured():
-        # Server is configured. Regardless of it's current state, check for
+        # Server is configured. Regardless of its current state, check for
         # this bootfile in the service's architecture class. If it is set as
         # the default for this architecture, unset it.
         try:
@@ -110,16 +116,29 @@ def remove_dhcp_configuration(service):
                                       "%s\n" % err))
             return
 
-        # Skip SPARC services, since they share a global bootfile
-        if (service.arch != 'sparc' and arch_class is not None and 
-            arch_class.bootfile == service.dhcp_bootfile):
+        if arch_class is None or arch_class.bootfile is None:
+            # nothing to do
+            return
+
+        logging.debug("arch_class.bootfile is %s", arch_class.bootfile)
+        if isinstance(arch_class.bootfile, list):
+            # The list consists of tuples: (archval, relpath to bootfile)
+            # e.g., [('00:00', '<svcname>/boot/grub/pxegrub2'),..]
+            # Using the first tuple, get the service name.
+            relpath = arch_class.bootfile[0][1]
+        else:
+            relpath = arch_class.bootfile
+        parts = relpath.partition('/')
+        arch_svcname = parts[0]
+
+        if arch_svcname == service.name:
             try:
-                print cw(_("Removing this service's bootfile from local DHCP "
-                           "configuration\n"))
+                print cw(_("Removing this service's bootfile(s) from local "
+                           "DHCP configuration\n"))
                 arch_class.unset_bootfile()
             except dhcp.DHCPServerError as err:
                 print >> sys.stderr, cw(_("\nUnable to unset this service's "
-                                          "bootfile in the DHCP "
+                                          "bootfile(s) in the DHCP "
                                           "configuration: %s\n" % err))
                 return
 
@@ -142,10 +161,8 @@ def delete_specified_service(service_name, auto_remove, noprompt):
     logging.debug("delete_specified_service %s %s %s", service_name,
                   auto_remove, noprompt)
 
-    # get service properties
-    svcprops = config.get_service_props(service_name)
     service = AIService(service_name)
-    
+
     # If the '-r' option has not been specified, look for all
     # dependent aliases and clients
     all_aliases = config.get_aliased_services(service_name, recurse=True)
@@ -194,12 +211,12 @@ def delete_specified_service(service_name, auto_remove, noprompt):
         logging.debug("recursively calling delete_specified_service for %s",
                        dependent)
         delete_specified_service(dependent, True, True)
-    
+
     clients = config.get_clients(service_name).keys()
     for dependent in clients:
         logging.debug("calling remove_client for %s", dependent)
         clientctrl.remove_client(dependent)
-    
+
     logging.debug("now deleting service %s", service_name)
 
     # remove DHCP bootfile configuration for this service, if set
@@ -227,7 +244,7 @@ def do_delete_service(cmd_options=None):
     if os.geteuid() != 0:
         raise SystemExit(_("Error: Root privileges are required for this "
                            "command.\n"))
-    
+
     # parse server options
     options = parse_options(cmd_options)
     delete_specified_service(options.service_name, options.autoremove,

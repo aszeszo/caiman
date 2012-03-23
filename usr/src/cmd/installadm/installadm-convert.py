@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """
 This file contains the code necessary to convert an AI server configuration
@@ -41,13 +41,13 @@ import tempfile
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.dhcp as dhcp
-import osol_install.auto_install.grub as grub
 import osol_install.auto_install.installadm_common as com
 import osol_install.auto_install.service as svc
 import osol_install.auto_install.service_config as config
 import osol_install.libaiscf as smf
 
 from osol_install.auto_install import create_client
+from osol_install.auto_install.grub import AIGrubCfg as grubcfg
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.auto_install.service import AIService
 from solaris_install import Popen, CalledProcessError
@@ -145,7 +145,7 @@ class SUNDHCPData:
         # Set up a regular expression to pull the last tuple from an IP
         regexp = re.compile("^(\d{1,3}\.\d{1,3}\.\d{1,3})\.(\d{1,3})$")
 
-        # Break the IP address into two string values 
+        # Break the IP address into two string values
         m = regexp.match(cur_ipaddr)
         if m is None:
             raise SUNDHCPData.DHCPError("generate_ip_ranges: bad IP "
@@ -154,7 +154,7 @@ class SUNDHCPData:
         cur_network_octet = m.group(1)
         cur_host_octet = m.group(2)
 
-        # Break the IP address into two string values; 
+        # Break the IP address into two string values;
         m = regexp.match(last_ipaddr)
         if m is None:
             raise SUNDHCPData.DHCPError("generate_ip_ranges: bad IP "
@@ -1251,7 +1251,7 @@ def create_config(services, dryrun, ai_service):
 
     # Check to see if installadm-convert has been run before by
     # testing for the existence of install.conf.bak and install.conf
-    # existing as a sym link.  If this is the case then remove the 
+    # existing as a sym link.  If this is the case then remove the
     # link and copy install.conf.bak to install.conf.  This will restore
     # the file to its original contents and allow the convert to run
     # successfully.
@@ -1379,7 +1379,10 @@ def move_service_directory(services, dryrun, ai_service):
 
                 try:
                     print _("     Update menu.lst format")
-                    grub.update_svcname(new_grub, ai_service, ai_service)
+                    svcgrub = grubcfg(ai_service, path=ipath,
+                                      config_dir=new_service_path)
+                    old_mountpt = svcgrub.get_mountpt()
+                    svcgrub.update_svcname(old_mountpt, ai_service)
                 except IOError as err:
                     raise ServiceConversionError(str(err))
 
@@ -1512,7 +1515,7 @@ def convert_client(clients, dry_run, ai_service):
                     svc.MountError) as err:
                 sys.stderr.write("Client conversion failed:\n")
                 sys.stderr.write(str(err) + "\n")
-                
+
 
 def copy_netboot_files(dry_run):
     """

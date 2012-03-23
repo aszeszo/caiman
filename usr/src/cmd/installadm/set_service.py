@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 """
 AI set-service
 """
@@ -29,11 +29,14 @@ import os
 import sys
 
 import osol_install.auto_install.ai_smf_service as aismf
+import osol_install.auto_install.create_client as create_client
+import osol_install.auto_install.client_control as clientctrl
 import osol_install.auto_install.service as svc
 import osol_install.auto_install.service_config as config
 
 from optparse import OptionParser
 
+from bootmgmt import BootmgmtError
 from osol_install.auto_install.installadm_common import _, \
     validate_service_name, cli_wrap as cw
 
@@ -166,19 +169,52 @@ def set_aliasof(options):
         raise SystemExit(cw(_("\nError: %s can not be made an alias of %s "
                               "because %s is dependent on %s\n") % (aliasname,
                               basesvcname, basesvcname, aliasname)))
+
+    # Remove clients of alias
+    clients = config.get_clients(aliasname)
+    for clientid in clients.keys():
+        clientctrl.remove_client(clientid, suppress_dhcp_msgs=True)
+
+    failures = list()
     try:
         aliassvc.update_basesvc(basesvcname)
-    except (OSError, config.ServiceCfgError) as err:
-        raise SystemExit(_("Failed to set 'aliasof' property of : %s") %
-                         aliasname)
+    except (OSError, config.ServiceCfgError, BootmgmtError) as err:
+        print >> sys.stderr, (_("Failed to set 'aliasof' property of : %s") %
+                                aliasname)
+        print >> sys.stderr, err
+        failures.append(err)
     except svc.MultipleUnmountError as err:
         print >> sys.stderr, _("Failed to disable alias")
-        raise SystemExit(err)
+        print >> sys.stderr, err
+        failures.append(err)
     except svc.MountError as err:
         print >> sys.stderr, _("Failed to enable alias")
-        raise SystemExit(err)
+        print >> sys.stderr, err
+        failures.append(err)
     except svc.UnsupportedAliasError as err:
-        raise SystemExit(err)
+        print >> sys.stderr, err
+        failures.append(err)
+
+    # Re-add clients to updated alias
+    arch = aliassvc_arch
+    for clientid in clients.keys():
+        # strip off leading '01'
+        client = clientid[2:]
+        bootargs = None
+        if config.BOOTARGS in clients[clientid]:
+            bootargs = clients[clientid][config.BOOTARGS]
+        # Don't suppress messages, because user may need to update
+        # DHCP configuration
+        try:
+            create_client.create_new_client(arch, aliassvc, client,
+                bootargs=bootargs, suppress_dhcp_msgs=False)
+        except BootmgmtError as err:
+            failures.append(err)
+            print >> sys.stderr, (_('\nError: Unable to recreate client, '
+                                    '%s:\n%s') % (client, err))
+    if failures:
+        return 1
+    return 0
 
 
 def set_imagepath(options):
@@ -207,7 +243,7 @@ def set_imagepath(options):
     new_imagepath = new_imagepath.rstrip('/')
     try:
         service.relocate_imagedir(new_imagepath)
-    except (svc.MountError, aismf.ServicesError) as error:
+    except (svc.MountError, aismf.ServicesError, BootmgmtError) as error:
         raise SystemExit(error)
 
 

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """ boot.py -- Installs and configures boot loader and boot menu
     onto physical systems and installation images.
@@ -41,7 +41,8 @@ from grp import getgrnam
 from pwd import getpwnam
 from shutil import move, copyfile, rmtree
 
-from bootmgmt import bootconfig, BootmgmtUnsupportedPropertyError
+from bootmgmt import bootconfig, BootmgmtUnsupportedPlatformError, \
+    BootmgmtPropertyWriteError, BootmgmtUnsupportedPropertyError
 from bootmgmt.bootconfig import BootConfig, DiskBootConfig, ODDBootConfig, \
     SolarisDiskBootInstance, SolarisODDBootInstance, ChainDiskBootInstance
 from bootmgmt.bootloader import BootLoader
@@ -55,12 +56,23 @@ from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target import Target
 from solaris_install.target.logical import be_list, BE, Zpool
-from solaris_install.target.physical import Disk, Slice
+from solaris_install.target.physical import Disk, FDISK, \
+    Partition, Slice
 from solaris_install.transfer.media_transfer import get_image_grub_title
 
 BOOT_ENV = "boot-env"
 # Character boot device paths eg. c0t0d0s0
 DEVS = "devs"
+
+# Stuff used to set up a USB media image with grub2
+GRUB_SETUP = "/usr/lib/grub2/bios/sbin/grub-setup"
+LOFIADM = "/usr/sbin/lofiadm"
+MBR_IMG_RPATH = "boot/mbr.img"
+
+# For USB we assume a 512b block size. Seems most reasonable for a USB stick
+BLOCKSIZE = 512
+KB = 1024
+MB = (KB * KB)
 
 
 class BootMenu(Checkpoint):
@@ -210,9 +222,9 @@ class BootMenu(Checkpoint):
                 ftype = config_set[0]
                 if ftype == BootConfig.OUTPUT_TYPE_FILE:
                     self._handle_file_type(config_set, dry_run)
-                elif ftype in [BootConfig.OUTPUT_TYPE_BIOS_ELTORITO]:
-                # UEFI - add handlers for the following when supported:
-                #              BootConfig.OUTPUT_TYPE_UEFI_ELTORITO
+                elif ftype in [BootConfig.OUTPUT_TYPE_BIOS_ELTORITO,
+                               BootConfig.OUTPUT_TYPE_UEFI_ELTORITO]:
+                # XXX add handlers for the following when supported:
                 #              BootConfig.OUTPUT_TYPE_HSFS_BOOTBLK
                     self._handle_iso_boot_image_type(config_set, dry_run)
                 else:
@@ -922,9 +934,11 @@ class ISOImageBootMenu(BootMenu):
         """ Constructor for class
         """
         super(ISOImageBootMenu, self).__init__(name)
+        self.ba_build = None
         self.dc_dict = dict()
         self.dc_pers_dict = dict()
         self.pkg_img_path = None
+        self.tmp_dir = None
 
     def init_boot_config(self, autogen=True):
         """ Instantiates the appropriate bootmgmt.bootConfig subclass object
@@ -934,18 +948,49 @@ class ISOImageBootMenu(BootMenu):
                     bootconfig.BootConfig.BCF_ONESHOT)
         self.config = ODDBootConfig(bc_flags,
                                     oddimage_root=self.pkg_img_path)
-        # UEFI Note that we will have to specify additional firmware
-        # targets (uefi64 & SPARC OBP) when pybootmgmt supports them.
-        self.config.boot_loader.setprop('boot-targets', 'bios')
+
+        # Inspect boot loader to determine if it can support creation of a
+        # hybrid BIOS/UEFI bootable ISO image.
+        try:
+            self.config.boot_loader.setprop(BootLoader.PROP_BOOT_TARGS,
+                                            ['bios', 'uefi64'])
+        except BootmgmtUnsupportedPlatformError:
+            self.logger.warning("Boot loader '%s' does not support both " \
+                "BIOS and UEFI64 platforms." % (self.config.boot_loader.name))
+
+        fw_targs = self.config.boot_loader.getprop(BootLoader.PROP_BOOT_TARGS)
+        if isinstance(fw_targs, str):
+            fw_targs = [fw_targs]
+        self.logger.info("Creating ISO boot configuration for firmware " \
+                         "targets: " + ', '.join(fw_targs))
 
         # Apply boot timeout property to boot loader.
         try:
-            self.config.boot_loader.setprop('timeout',
+            self.config.boot_loader.setprop(BootLoader.PROP_TIMEOUT,
                                             self.boot_timeout)
         except BootmgmtUnsupportedPropertyError:
             self.logger.warning("Boot loader type %s does not support the \
-                                'timeout' property. Ignoring." \
-                                % self.config.boot_loader.name)
+                'timeout' property. Ignoring." \
+                % self.config.boot_loader.name)
+
+        # Apply ident file property if required by boot loader:
+        # GRUB2 requires this file, Legacy GRUB doesn't. No big deal
+        if BootLoader.PROP_IDENT_FILE in \
+            self.config.boot_loader.SUPPORTED_PROPS:
+            # read .volsetid and derive a unique ident file name from it
+            vpath = os.path.join(self.ba_build, ".volsetid")
+            with open(vpath, "r") as vpath_fh:
+                volsetid = vpath_fh.read().strip()
+
+            identfile = "." + volsetid
+            identpath = os.path.join(self.pkg_img_path, identfile)
+            self.logger.info("Boot loader unique ident file name: %s" \
+                             % identfile)
+            with open(identpath, "a+") as identf:
+                identf.write("# This file identifies the image root for GRUB2")
+
+            self.config.boot_loader.setprop(BootLoader.PROP_IDENT_FILE,
+                                            "/" + identfile)
 
     def _get_rel_file_path(self):
         """
@@ -997,7 +1042,9 @@ class ISOImageBootMenu(BootMenu):
             not_found_is_err=True)[0].data_dict
 
         try:
+            self.ba_build = self.dc_dict["ba_build"]
             self.pkg_img_path = self.dc_dict["pkg_img_path"]
+            self.tmp_dir = self.dc_dict["tmp_dir"]
         except KeyError, msg:
             raise RuntimeError("Error retrieving a value from the DOC: " + \
                 str(msg))
@@ -1009,12 +1056,99 @@ class ISOImageBootMenu(BootMenu):
         # parsing the BootMods tree of the DOC
         self.boot_title = self.rel_file_title
 
+    def _prepare_usb_boot(self, dry_run=False):
+        """ Creates an embeddable boot image for GRUB2 based USB boot media
+        """
+        # Return if this is not GRUB2
+        if self.config.boot_loader.name != "GRUB2":
+            return
+
+        self.logger.info("Preparing MBR embedded GRUB2 boot image for USB")
+
+        # Create a nice big 10MB lofi file.
+        imagesize = (10 * MB)
+        imagename = os.path.join(self.tmp_dir, "mbr_embedded_grub2")
+
+        with open(imagename, 'w') as imagefile:
+            imagefile.seek(imagesize - 1)
+            imagefile.write('\0')
+
+        if not dry_run:
+            # Create the lofi device
+            lofi_dev = None
+            lofi_rdev = None
+            cmd = [LOFIADM, "-a", imagename]
+            try:
+                p = run(cmd)
+                lofi_dev = p.stdout.strip()
+                lofi_rdev = lofi_dev.replace("lofi", "rlofi")
+
+                uefi_image_size = os.stat(self._uefi_image_name).st_size
+                self.logger.debug("EFI system partition image: %s",
+                                  self._uefi_image_name)
+
+                # write the uefi.img to the lofi character dev at 1MB offset
+                # in 1KB increments, instead of allocating one giant buffer.
+                self.logger.debug("Writing EFI system partition image to: %s",
+                                  lofi_rdev)
+                with open(self._uefi_image_name, 'r') as src:
+                    with open(lofi_rdev, 'w') as dst:
+                        dst.seek(MB)
+                        for i in range(uefi_image_size / KB):
+                            dst.write(src.read(KB))
+                        tail = uefi_image_size % KB
+                        if tail > 0:
+                            dst.write(src.read(tail))
+
+                # Write out an fdisk table. We don't use the standard install
+                # target modules because we want precise control over the
+                # geometry, plus it's not well suited to lofi devices.
+                # Layout:
+                # type ESP, at 1M offset, partition size = uefi_image size
+                esptype = Partition.name_to_num("EFI System")
+                startblock = MB / BLOCKSIZE
+                uefi_image_nblocks = uefi_image_size / BLOCKSIZE
+                fdiskentry = "%d:0:0:0:0:0:0:0:%d:%d" \
+                             % (esptype, startblock, uefi_image_nblocks)
+                self.logger.debug("Creating fdisk table on %s:\n\t%s",
+                                  lofi_rdev, fdiskentry)
+                cmd = [FDISK, "-A", fdiskentry, lofi_rdev]
+                run(cmd)
+
+                # Install the BIOS grub2 core image in the MBR of the lofi dev
+                self.logger.debug("Installing GRUB2 on %s", lofi_rdev)
+                bios_grub_dir = os.path.join(self.pkg_img_path,
+                                             "boot/grub/i386-pc")
+                cmd = [GRUB_SETUP, "-d", bios_grub_dir, "-M", lofi_rdev]
+                run(cmd)
+
+                # Write the first 1MB of the lofi image out to file and store
+                # it in the pkg_img area for inclusion in the ISO
+                usb_image_name = os.path.join(self.pkg_img_path,
+                                              MBR_IMG_RPATH)
+                self.logger.debug("Writing GRUB2 MBR image to: %s",
+                                  usb_image_name)
+                with open(lofi_rdev, 'r') as src:
+                    with open(usb_image_name, 'w') as dst:
+                        for i in range(KB):
+                            dst.write(src.read(KB))
+            finally:
+                # remove the lofi device
+                if lofi_dev is not None:
+                    cmd = [LOFIADM, "-d", lofi_dev]
+                    run(cmd)
+
+            # Remove the backing file for the lofi image
+            os.unlink(imagename)
+            self.logger.info("MBR embedded GRUB2 boot image complete")
+
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class
         """
         self.logger.info("=== Executing Boot Loader Setup Checkpoint ===")
         super(ISOImageBootMenu, self).execute(dry_run)
         self.update_img_info_path()
+        self._prepare_usb_boot(dry_run)
 
     def install_boot_loader(self, dry_run=False):
         """ Install the boot loader and associated boot configuration files.
@@ -1024,9 +1158,12 @@ class ISOImageBootMenu(BootMenu):
                 tempfile.mkdtemp(dir="/tmp", prefix="iso_boot_config_")
         else:
             temp_dir = self.pkg_img_path
+
         # Add dictionary mappings for tokens that commit_boot_config() might
         # return.
         self.boot_tokens[BootConfig.TOKEN_SYSTEMROOT] = self.pkg_img_path
+        self.boot_tokens[ODDBootConfig.TOKEN_ODD_ROOT] = self.pkg_img_path
+
         self.logger.debug("Writing boot configuration to %s" % (temp_dir))
         boot_config_list = self.config.commit_boot_config(temp_dir, None)
         self._handle_boot_config_list(boot_config_list, dry_run)
@@ -1049,13 +1186,41 @@ class ISOImageBootMenu(BootMenu):
         """ Method that copies ISO El Torito and HSFS bootblockimage file types
             to their appropriate targets.
         """
+
+        # XXX: Add in key/val pair to handle the SPARC HSFS BOOTBLK
+        # type here when pybootmgmt supports this firmware type.
+        # For now just it just does BIOS & UEFI ELTORITO.
+        eltorito_dict = {
+            BootConfig.OUTPUT_TYPE_BIOS_ELTORITO: \
+                ("bios-eltorito-img", "BIOS"),
+            BootConfig.OUTPUT_TYPE_UEFI_ELTORITO: \
+                ("uefi-eltorito-img", "UEFI")
+        }
+
         # Store the ISO boot image path in DC's dictionary for later use
         # when constructing the ISO image
         img_type = config[0]
         src = config[1]
+        if config[3] is None:
+            dst = src
+        else:
+            dst = config[3] % self.boot_tokens
+
+        img_val = eltorito_dict.get(img_type)
+        if img_val is None:
+            raise RuntimeError("Unrecognised ISO boot loader image type: %s" \
+                               % img_type)
+        else:
+            img_id, firmware_id = img_val
+
         if not os.path.exists(src):
             raise RuntimeError("Expected  boot image type \'%s\' does not " \
                                "exist at path: %s" % (img_type, src))
+
+        # Keep a reference to the full path name of the UEFI image. We need it
+        # later to set up USB boot.
+        if img_type == BootConfig.OUTPUT_TYPE_UEFI_ELTORITO:
+            self._uefi_image_name = dst
         if dry_run is True:
             self.logger.debug("Deleting El Torito image: %s" % src)
             os.unlink(src)
@@ -1063,40 +1228,24 @@ class ISOImageBootMenu(BootMenu):
 
         if not os.path.abspath(src).startswith(self.pkg_img_path):
             raise RuntimeError("El Torito boot image \'%s\' mislocated "
-                                 "outside of image root: %s" \
-                                 % (src, self.pkg_img_path))
-        if img_type == BootConfig.OUTPUT_TYPE_BIOS_ELTORITO:
-            # bios-eltorito-img name is randomised by pybootmgmt to avoid
-            # name collisions. Rename it to something less conspicuous.
-            dst = os.path.join(self.pkg_img_path,
-                               'boot',
-                               '.bios-eltorito-img')
+                               "outside of image root: %s" \
+                               % (src, self.pkg_img_path))
+        if src != dst:
             os.rename(src, dst)
-            # bios-eltorito-img needs to live in the persistent section
-            # of the DOC to ensure pause/resume works correctly.
-            #
-            # Update the DC_PERS_LABEL DOC object with an entry for
-            # bios-eltorito-img
-            if self.dc_pers_dict:
-                self.doc.persistent.delete_children(name=DC_PERS_LABEL)
+        if self.dc_pers_dict:
+            self.doc.persistent.delete_children(name=DC_PERS_LABEL)
 
-            # Strip out the pkg_img_path prefix from dst. Otherwise
-            # mkisofs will choke because it requires a relative rather
-            # than an absolute path for the eltorito image argument
-            self.dc_pers_dict["bios-eltorito-img"] = \
-                dst.split(self.pkg_img_path + os.sep)[1]
-            self.doc.persistent.insert_children(
-                DataObjectDict(DC_PERS_LABEL,
-                self.dc_pers_dict, generate_xml=True))
-            self.logger.debug("BIOS El Torito boot image: %s" \
-                              % self.dc_pers_dict["bios-eltorito-img"])
-        # UEFI / Pybootmgmt.
-        # Add in blocks to handle UEFI ELTORIO and SPARC HSFS BOOTBLK
-        # types here when pybootmgmt supports these firmware types.
-        # For now just it just does BIOS ELTORITO above.
-        else:
-            raise RuntimeError("Unrecognised ISO boot loader image type: %s" \
-                               % img_type)
+        # Strip out the pkg_img_path prefix from dst. Otherwise
+        # mkisofs will choke because it requires a relative rather
+        # than an absolute path for the eltorito image argument
+        self.dc_pers_dict[img_id] = \
+            dst.split(self.pkg_img_path + os.sep)[1]
+        self.doc.persistent.insert_children(
+            DataObjectDict(DC_PERS_LABEL,
+            self.dc_pers_dict, generate_xml=True))
+
+        self.logger.info("%s El Torito boot image name: %s" \
+                         % (firmware_id, self.dc_pers_dict[img_id]))
 
 
 class AIISOImageBootMenu(ISOImageBootMenu):
@@ -1184,6 +1333,17 @@ class LiveCDISOImageBootMenu(ISOImageBootMenu):
         """ Constructor for class
         """
         super(LiveCDISOImageBootMenu, self).__init__(name)
+
+    def init_boot_config(self, autogen=True):
+        """ Instantiates the appropriate bootmgmt.bootConfig subclass object
+            for LiveCD
+        """
+        super(LiveCDISOImageBootMenu, self).init_boot_config(autogen)
+        # LiveCD specific global bootloader configuration:
+        # - Enable graphical boot splash
+        self.config.boot_loader.setprop(
+            BootLoader.PROP_CONSOLE,
+            BootLoader.PROP_CONSOLE_GFX)
 
     def build_default_entries(self):
         """ Constructs the default boot entries and inserts them into the

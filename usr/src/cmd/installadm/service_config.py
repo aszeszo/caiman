@@ -44,6 +44,7 @@ from solaris_install import CalledProcessError, Popen
 PROP_BOOT_ARGS = 'boot_args'
 PROP_BOOT_FILE = 'boot_file'
 PROP_BOOT_MENU = 'boot_menu'
+PROP_BOOT_CFGFILE = 'boot_cfgfile'
 PROP_DEFAULT_MANIFEST = 'default-manifest'
 PROP_GLOBAL_MENU = 'global_menu'
 PROP_IMAGE_PATH = 'image_path'
@@ -169,19 +170,19 @@ def get_service_props(service_name):
 
     '''
     logging.log(com.XDEBUG, '**** START service_config.get_service_props ****')
-    
+
     cfgp = _read_config_file(service_name)
     if cfgp is None:
         return None
-    
+
     props = dict()
     if cfgp.has_section(SERVICE):
         section_dict = dict(cfgp.items(SERVICE))
         props.update(section_dict)
-    
+
     for prop in props:
         logging.log(com.XDEBUG, '   property: %s=%s', prop, props[prop])
-    
+
     return props
 
 
@@ -482,18 +483,18 @@ def get_service_port(svcname):
     Raises:
         ServiceCfgError if service doesn't exist or if there is a
         problem with the txt_record.
-    
+
     '''
     # get the port from the service's txt_record
     try:
         txt_rec = get_service_props(svcname)[PROP_TXT_RECORD]
     except KeyError as err:
         raise ServiceCfgError(err)
-    
+
     # txt_record is of the form "aiwebserver=example:46503" so split
     # on ":" and take the trailing portion for the port number
     port = txt_rec.rsplit(':')[-1]
-    
+
     return port
 
 
@@ -623,7 +624,7 @@ def create_compatibility_file(smf_port):
 
     Input:
         smf_port - webserver port from smf
-    Return: 
+    Return:
         0 - New COMPATIBILITY_PORTS file has been put into place.
         1 - Existing COMPATIBILITY_PORTS file was not touched.
     '''
@@ -649,7 +650,7 @@ def create_compatibility_file(smf_port):
         # Work file, as a tempfile.TemporaryFile object,
         # is automatically deleted upon close
         work_file.close()
-    
+
     if os.path.exists(COMPATIBILITY_PORTS):
         with open(COMPATIBILITY_PORTS, 'r') as compat:
             compat_data = compat.read()
@@ -688,14 +689,14 @@ def create_main_ports_file(smf_port):
         for ip in valid_networks:
             listen = 'Listen %s:%s\n' % (ip, smf_port)
             work_file.write(listen)
-        
+
         work_file.seek(0)
         work_data = work_file.read()
     finally:
         # Work file, as a tempfile.TemporaryFile object,
         # is automatically deleted upon close
         work_file.close()
-    
+
     if os.path.exists(LISTEN_ADDRESSES):
         with open(LISTEN_ADDRESSES, 'r') as listen:
             listen_data = listen.read()
@@ -705,7 +706,7 @@ def create_main_ports_file(smf_port):
     if work_data == listen_data:
         # use existing configuration file
         return 1
-    
+
     # Truncate existing file, write new data
     with open(LISTEN_ADDRESSES, "w") as listen_file:
         listen_file.write(work_data)
@@ -801,7 +802,7 @@ def _write_service_config(service_name, props):
     # Add version if new file
     if newfile and cfg.has_section(SERVICE):
         cfg.set(SERVICE, PROP_VERSION, CURRENT_VERSION)
-    
+
     if logging.root.isEnabledFor(com.XDEBUG):
         for section in cfg.sections():
             logging.log(com.XDEBUG, '%s %s items are: %s', service_name,

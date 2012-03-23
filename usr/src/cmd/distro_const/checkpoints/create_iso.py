@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ create_iso.py - Generates an ISO media based on the prepared package image
@@ -59,6 +59,7 @@ class CreateISO(Checkpoint):
         self.media_dir = None
 
         self.bios_eltorito = None
+        self.uefi_eltorito = None
         self.add_timestamp = None
         self.distro_name = None
         self.dist_iso = None
@@ -111,7 +112,9 @@ class CreateISO(Checkpoint):
             if dc_pers_dict:
                 self.dc_pers_dict = dc_pers_dict[0].data_dict
             if self.arch == 'i386':
+                # We must have at least a bios eltorito. UEFI may be provided.
                 self.bios_eltorito = self.dc_pers_dict["bios-eltorito-img"]
+                self.uefi_eltorito = self.dc_pers_dict.get("uefi-eltorito-img")
         except KeyError, msg:
             raise RuntimeError("Error retrieving a value from the DOC: " + \
                 str(msg))
@@ -142,14 +145,26 @@ class CreateISO(Checkpoint):
 
         # set the mkisofs_cmd
         if self.arch == "i386":
-            self.mkisofs_cmd = [cli.MKISOFS, "-quiet", "-o", self.dist_iso,
-                                "-b", self.bios_eltorito, "-c",
-                                ".catalog", "-no-emul-boot",
-                                "-boot-load-size", "4", "-boot-info-table",
-                                "-N", "-l", "-R", "-U", "-allow-multidot",
-                                "-no-iso-translate", "-cache-inodes", "-d",
-                                "-D", "-volset", self.volsetid, "-V",
-                                self.partial_distro_name, self.pkg_img_path]
+            # The mkisofs args are split up like this to allow optional
+            # inclusion/exclusion of the uefi_args. The order of the boot
+            # arguments for making a hybrid BIOS/UEFI bootabable is very
+            # rigid and any reordering will almost certainly result in an
+            # unbootable image.
+            base_args = [cli.MKISOFS, "-quiet", "-o", self.dist_iso]
+            ctlg_args = ["-c", ".catalog"]
+            bios_args = ["-b", self.bios_eltorito, "-no-emul-boot",
+                         "-boot-load-size", "4", "-boot-info-table"]
+            uefi_args = ["-eltorito-platform", "efi",
+                         "-eltorito-alt-boot",
+                         "-b", self.uefi_eltorito, "-no-emul-boot"]
+            misc_args = ["-N", "-l", "-R", "-U", "-allow-multidot",
+                         "-no-iso-translate", "-cache-inodes", "-d",
+                         "-D", "-volset", self.volsetid, "-V",
+                         self.partial_distro_name, self.pkg_img_path]
+            self.mkisofs_cmd = base_args + ctlg_args + bios_args
+            if self.uefi_eltorito is not None:
+                self.mkisofs_cmd.extend(uefi_args)
+            self.mkisofs_cmd.extend(misc_args)
         else:
             self.mkisofs_cmd = [cli.MKISOFS, "-quiet", "-o", self.dist_iso,
                                 "-G", bootblock, "-B", "...", "-N", "-l",

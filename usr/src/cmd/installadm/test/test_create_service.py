@@ -29,14 +29,10 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 
 '''
 
-import os
-import osol_install.auto_install.create_service as create_service
-import osol_install.auto_install.dhcp as dhcp
-import osol_install.auto_install.grub as grub
-import osol_install.auto_install.installadm_common as com
-import shutil
-import tempfile
 import unittest
+
+import osol_install.auto_install.create_service as create_service
+import osol_install.auto_install.installadm_common as com
 
 
 class ParseOptions(unittest.TestCase):
@@ -123,43 +119,6 @@ class ParseOptions(unittest.TestCase):
         self.assertEquals(options.srcimage,
                           "pkg:/install-image/solaris-auto-install")
 
-
-class CreateTestService(unittest.TestCase):
-    '''Tests for install service set up.'''
-
-    def setUp(self):
-        '''unit test set up'''
-        self.svc_name = 'my-test-service'
-        self.image_path = tempfile.mkdtemp(dir="/tmp")
-        self.image_info = {'image_version': '3.0', 'grub_min_mem64': '0',
-                           'service_name': 'solaris11u1-i386-05',
-                           'grub_do_safe_default': 'true',
-                           'grub_title': 'Oracle Solaris 11',
-                           'image_size': '744619',
-                           'no_install_grub_title': 'Oracle Solaris 11'}
-        self.srv_address = '$serverIP:5555'
-        self.menu_path = self.image_path
-        self.bootargs = ''
-
-    def tearDown(self):
-        '''teardown'''
-        if os.path.exists(self.image_path):
-            shutil.rmtree(self.image_path)
-
-    def test_menu_permissions(self):
-        '''Ensure that menu.lst is created with correct permissions'''
-
-        # save original umask
-        orig_umask = os.umask(0022)
-        # set too restrictive and too open umask
-        for mask in (0066, 0000):
-            os.umask(mask)
-            grub.setup_grub(self.svc_name, self.image_path, self.image_info,
-                self.srv_address, self.menu_path, self.bootargs)
-            mode = os.stat(self.menu_path + '/' + 'menu.lst').st_mode
-            self.assertEqual(mode, 0100644)
-        # return umask to the original value
-        os.umask(orig_umask)
 
 if __name__ == '__main__':
     unittest.main()
