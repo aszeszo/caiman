@@ -251,5 +251,5 @@ license cr_Sun license=cr_Sun
 # Add manual boot-management version 13 dependency for UEFI/GRUB2 compat.
 # Make sure to remove the pkg.depend.bypass-genererate actions if removing.
 depend type=require \
-    fmri=pkg:/system/library/boot-management@0.5.11,5.11-0.175.1.0.0.13
+    fmri=pkg:/system/library/boot-management@0.5.11,5.11-0.175.1.0.0.12.18901
 depend type=require fmri=system/boot-environment-utilities

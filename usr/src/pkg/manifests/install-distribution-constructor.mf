@@ -182,7 +182,7 @@ depend type=require fmri=compress/p7zip
 depend type=require fmri=media/cdrtools
 # Add manual boot-management version 13 dependency for UEFI/GRUB2 compat.
 depend type=require \
-    fmri=pkg:/system/library/boot-management@0.5.11,5.11-0.175.1.0.0.13
+    fmri=pkg:/system/library/boot-management@0.5.11,5.11-0.175.1.0.0.12.18901
 # /usr/bin/rmformat
 depend type=require fmri=service/storage/media-volume-manager
 # /usr/bin/awk
