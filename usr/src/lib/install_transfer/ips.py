@@ -60,6 +60,9 @@ from solaris_install.transfer.info import ACTION, CONTENTS, \
 PURGE_HISTORY, APP_CALLBACK, IPS_ARGS, UPDATE_INDEX
 from solaris_install.transfer.prog import ProgressMon
 
+LICENSE_ACCEPTED = "automatically accepted"
+LICENSE_NOT_DISP = "not displayed"
+
 PKG_CLIENT_NAME = "transfer module"
 
 global_settings.client_name = PKG_CLIENT_NAME
@@ -642,13 +645,45 @@ class AbstractIPS(Checkpoint):
                             # deal with things such as license acceptance.
                             callback(self.api_inst)
 
+                        licensed = dict()
                         plan = self.api_inst.describe()
                         for pfmri, src, dest, accepted, displayed \
                             in plan.get_licenses():
-                            if not dest.must_accept:
+
+                            if not dest.must_accept and not dest.must_display:
                                 continue
+
+                            # Use just the package name, no publisher or
+                            # version, neater output.
+                            fmri = pfmri.get_name()
+                            licensed[fmri] = list()
+                            if dest.must_accept:
+                                licensed[fmri].append(LICENSE_ACCEPTED)
+                            if dest.must_display:
+                                licensed[fmri].append(LICENSE_NOT_DISP)
+
                             self.api_inst.set_plan_license_status(pfmri,
                                 dest.license, displayed=True, accepted=True)
+
+                        if licensed:
+                            self.logger.info("Please review the licenses "
+                                "for the following packages post-install:")
+                            for fmri in licensed:
+                                if len(licensed[fmri]) == 2:
+                                    # Looks better to output over two lines,
+                                    # when there are two flags to output
+                                    self.logger.info("  %-40s (%s,", fmri,
+                                                     licensed[fmri][0])
+                                    self.logger.info("  %-40s  %s)", "",
+                                                     licensed[fmri][1])
+                                else:
+                                    # Always at least one, otherwise wouldn't
+                                    # be in the dictionary at all.
+                                    self.logger.info("  %-40s (%s)", fmri,
+                                                     licensed[fmri][0])
+                            self.logger.info("Package licenses may be viewed "
+                                "using the command:")
+                            self.logger.info("  pkg info --license <pkg_fmri>")
 
                         # Execute the transfer action
                         self.api_inst.prepare()
