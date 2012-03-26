@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/system/install/gui-install@$(PKGVERS)
@@ -74,6 +74,8 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/progress
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/progress_screen.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/screen_manager.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/screen_manager.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/support_screen.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/support_screen.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/textview_dialog.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/textview_dialog.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/timezone.py
@@ -107,6 +109,7 @@ file path=usr/share/gui-install/help/C/INSTALL_FAILURE_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_LANGUAGE_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_PROGRESS_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_REVIEW_PANEL.txt group=sys
+file path=usr/share/gui-install/help/C/INSTALL_SUPPORT_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_TIMEZONE_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_USERS_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/WELCOME_PANEL.txt group=sys
@@ -259,6 +262,7 @@ file path=usr/share/gui-install/installmessages/zh_TW.UTF-8/install-06.png \
     group=sys
 file path=usr/share/gui-install/magnifier.png group=sys
 file path=usr/share/gui-install/solaris_logo.png group=sys
+file path=usr/share/gui-install/support.xml group=sys
 file path=usr/share/gui-install/users.xml group=sys
 file path=usr/share/gui-install/worldmap.png group=sys
 license cr_Sun license=cr_Sun

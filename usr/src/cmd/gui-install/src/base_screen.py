@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -59,6 +59,7 @@ class BaseScreen(object):
     # referenced at run time
     __STAGE_LABELS = {
         "welcomestagelabel": N_("Welcome"),
+        "supportstagelabel": N_("Support"),
         "diskstagelabel": N_("Disk"),
         "timezonestagelabel": N_("Time Zone"),
         "userstagelabel": N_("Users"),

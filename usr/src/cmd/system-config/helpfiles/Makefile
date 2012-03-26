@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../../Makefile.cmd
@@ -41,6 +41,8 @@ HELP_FILES=	date_time.txt \
 		network.txt \
 		nis.txt \
 		summary.txt \
+                support_main.txt \
+                support_net_config.txt \
 		timezone.txt \
 		users.txt \
 		welcome.txt

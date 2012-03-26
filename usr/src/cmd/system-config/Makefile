@@ -19,7 +19,7 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 include ../Makefile.cmd
 
@@ -41,6 +41,7 @@ PYMODULES=	__init__.py \
 		network_nic_select.py \
 		network_type.py \
 		summary.py \
+                support.py \
 		timezone.py \
 		users.py \
 		welcome.py

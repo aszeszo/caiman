@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
  CDDL HEADER START
-
+  
  The contents of this file are subject to the terms of the
  Common Development and Distribution License (the "License").
  You may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 
 -->
 <!--*- mode: xml -*-->
@@ -58,7 +58,7 @@
             <property name="label" translatable="yes">&lt;span font_desc="Bold" size="x-large" foreground="#587993"&gt;Welcome&lt;/span&gt;</property>
             <property name="use_markup">True</property>
             <accessibility>
-              <relation target="screencontentvbox" type="label-for"/>
+              <relation type="label-for" target="screencontentvbox"/>
             </accessibility>
           </object>
           <packing>
@@ -101,7 +101,7 @@
                     <property name="use_markup">True</property>
                     <property name="ellipsize">end</property>
                     <accessibility>
-                      <relation target="screencontentvbox" type="label-for"/>
+                      <relation type="label-for" target="screencontentvbox"/>
                     </accessibility>
                   </object>
                   <packing>
@@ -201,7 +201,7 @@
                         <property name="can_default">True</property>
                         <property name="receives_default">False</property>
                         <property name="use_stock">True</property>
-                        <signal handler="on_quitbutton_clicked" name="clicked"/>
+                        <signal name="clicked" handler="on_quitbutton_clicked"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -217,7 +217,7 @@
                         <property name="can_default">True</property>
                         <property name="receives_default">False</property>
                         <property name="use_stock">True</property>
-                        <signal handler="on_helpbutton_clicked" name="clicked"/>
+                        <signal name="clicked" handler="on_helpbutton_clicked"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -241,7 +241,7 @@
                         <property name="can_focus">True</property>
                         <property name="can_default">True</property>
                         <property name="receives_default">False</property>
-                        <signal handler="on_backbutton_clicked" name="clicked"/>
+                        <signal name="clicked" handler="on_backbutton_clicked"/>
                         <child>
                           <object class="GtkAlignment" id="alignment1">
                             <property name="visible">True</property>
@@ -293,7 +293,7 @@
                         <property name="can_default">True</property>
                         <property name="has_default">True</property>
                         <property name="receives_default">False</property>
-                        <signal handler="on_nextbutton_clicked" name="clicked"/>
+                        <signal name="clicked" handler="on_nextbutton_clicked"/>
                         <child>
                           <object class="GtkAlignment" id="alignment2">
                             <property name="visible">True</property>
@@ -342,7 +342,7 @@
                         <property name="can_focus">True</property>
                         <property name="can_default">True</property>
                         <property name="receives_default">False</property>
-                        <signal handler="on_upgradebutton_clicked" name="clicked"/>
+                        <signal name="clicked" handler="on_upgradebutton_clicked"/>
                         <child>
                           <object class="GtkAlignment" id="alignment5">
                             <property name="visible">True</property>
@@ -391,7 +391,7 @@
                         <property name="can_focus">True</property>
                         <property name="can_default">True</property>
                         <property name="receives_default">False</property>
-                        <signal handler="on_installbutton_clicked" name="clicked"/>
+                        <signal name="clicked" handler="on_installbutton_clicked"/>
                         <child>
                           <object class="GtkAlignment" id="alignment6">
                             <property name="visible">True</property>
@@ -441,7 +441,7 @@
                         <property name="can_default">True</property>
                         <property name="receives_default">True</property>
                         <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-                        <signal handler="on_rebootbutton_clicked" name="clicked"/>
+                        <signal name="clicked" handler="on_rebootbutton_clicked"/>
                         <child>
                           <object class="GtkAlignment" id="alignment7">
                             <property name="visible">True</property>
@@ -561,21 +561,6 @@
                     <property name="position">2</property>
                   </packing>
                 </child>
-                <!-- Removed Locale label from the screen
-                <child>
-                  <object class="GtkLabel" id="languagestagelabel">
-                    <property name="visible">True</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">&lt;span font_desc="Bold" foreground="#595A5E"&gt;Locale&lt;/span&gt;</property>
-                    <property name="use_markup">True</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">3</property>
-                  </packing>
-                </child>
-                -->
                 <child>
                   <object class="GtkLabel" id="userstagelabel">
                     <property name="visible">True</property>
@@ -590,6 +575,19 @@
                   </packing>
                 </child>
                 <child>
+                  <object class="GtkLabel" id="supportstagelabel">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">&lt;span font_desc="Bold" foreground="#595A5E"&gt;Support&lt;/span&gt;</property>
+                    <property name="use_markup">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">4</property>
+                  </packing>
+                </child>
+                <child>
                   <object class="GtkLabel" id="installationstagelabel">
                     <property name="visible">True</property>
                     <property name="xalign">0</property>
@@ -599,7 +597,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">4</property>
+                    <property name="position">5</property>
                   </packing>
                 </child>
                 <child>
@@ -612,7 +610,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">5</property>
+                    <property name="position">6</property>
                   </packing>
                 </child>
               </object>
@@ -649,8 +647,8 @@
                           <object class="GtkVBox" id="screencontentvbox">
                             <property name="visible">True</property>
                             <accessibility>
-                              <relation target="screentitlesublabel1" type="labelled-by"/>
-                              <relation target="screentitlelabel" type="labelled-by"/>
+                              <relation type="labelled-by" target="screentitlesublabel1"/>
+                              <relation type="labelled-by" target="screentitlelabel"/>
                             </accessibility>
                             <child>
                               <placeholder/>
@@ -677,11 +675,13 @@
         <child>
           <placeholder/>
         </child>
+        <child>
+          <placeholder/>
+        </child>
       </object>
     </child>
   </object>
   <object class="GtkWindow" id="welcomewindow">
-    <property name="visible">False</property>
     <property name="title" translatable="yes">window1</property>
     <child>
       <object class="GtkVBox" id="welcomescreenvbox">
@@ -716,7 +716,7 @@
                 <property name="receives_default">True</property>
                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                 <property name="relief">none</property>
-                <signal handler="on_releasenotesbutton_clicked" name="clicked"/>
+                <signal name="clicked" handler="on_releasenotesbutton_clicked"/>
                 <child>
                   <object class="GtkLabel" id="label13">
                     <property name="visible">True</property>
@@ -743,7 +743,6 @@
     </child>
   </object>
   <object class="GtkWindow" id="upgrade_window">
-    <property name="visible">False</property>
     <property name="title" translatable="yes">window3</property>
     <child>
       <object class="GtkVBox" id="upgrade_vbox">
@@ -825,7 +824,6 @@
     </child>
   </object>
   <object class="GtkWindow" id="languagewindow">
-    <property name="visible">False</property>
     <property name="title" translatable="yes">window6</property>
     <child>
       <object class="GtkTable" id="languagewindowtable">
@@ -850,7 +848,7 @@
                 <property name="can_focus">True</property>
                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                 <accessibility>
-                  <relation target="labelLanguage" type="labelled-by"/>
+                  <relation type="labelled-by" target="labelLanguage"/>
                 </accessibility>
               </object>
             </child>
@@ -858,7 +856,7 @@
           <packing>
             <property name="left_attach">1</property>
             <property name="right_attach">2</property>
-            <property name="x_options"/>
+            <property name="x_options"></property>
           </packing>
         </child>
         <child>
@@ -871,7 +869,7 @@
             <property name="use_underline">True</property>
             <property name="mnemonic_widget">default_combo</property>
             <accessibility>
-              <relation target="language_tree" type="label-for"/>
+              <relation type="label-for" target="language_tree"/>
             </accessibility>
           </object>
           <packing>
@@ -887,14 +885,14 @@
             <property name="use_underline">True</property>
             <property name="mnemonic_widget">default_combo</property>
             <accessibility>
-              <relation target="default_combo" type="label-for"/>
+              <relation type="label-for" target="default_combo"/>
             </accessibility>
           </object>
           <packing>
             <property name="top_attach">1</property>
             <property name="bottom_attach">2</property>
             <property name="x_options">GTK_FILL</property>
-            <property name="y_options"/>
+            <property name="y_options"></property>
           </packing>
         </child>
         <child>
@@ -908,7 +906,7 @@
                 <property name="visible">True</property>
                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                 <accessibility>
-                  <relation target="labelTerritory" type="labelled-by"/>
+                  <relation type="labelled-by" target="labelTerritory"/>
                 </accessibility>
               </object>
             </child>
@@ -919,7 +917,7 @@
             <property name="top_attach">1</property>
             <property name="bottom_attach">2</property>
             <property name="x_options">GTK_FILL</property>
-            <property name="y_options"/>
+            <property name="y_options"></property>
           </packing>
         </child>
       </object>
@@ -1097,7 +1095,7 @@
                     <property name="receives_default">True</property>
                     <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                     <property name="relief">none</property>
-                    <signal handler="on_logbutton_clicked" name="clicked"/>
+                    <signal name="clicked" handler="on_logbutton_clicked"/>
                     <child>
                       <object class="GtkLabel" id="finishlogbuttonlabel">
                         <property name="visible">True</property>

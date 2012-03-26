@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/system/install/configuration@$(PKGVERS)
@@ -102,6 +102,12 @@ file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/network_info.pyc \
     mode=0444
 file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/support_info.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/support_info.pyc \
+    mode=0444
+file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/system_info.py \
     mode=0444
 file \
@@ -118,6 +124,12 @@ file \
     mode=0444
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/summary.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/support.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/support.pyc \
     mode=0444
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/timezone.py \
@@ -148,6 +160,8 @@ file path=usr/share/sysconfig/help/C/network.txt group=sys
 file path=usr/share/sysconfig/help/C/network_manual.txt group=sys
 file path=usr/share/sysconfig/help/C/nis.txt group=sys
 file path=usr/share/sysconfig/help/C/summary.txt group=sys
+file path=usr/share/sysconfig/help/C/support_main.txt group=sys
+file path=usr/share/sysconfig/help/C/support_net_config.txt group=sys
 file path=usr/share/sysconfig/help/C/timezone.txt group=sys
 file path=usr/share/sysconfig/help/C/users.txt group=sys
 file path=usr/share/sysconfig/help/C/welcome.txt group=sys

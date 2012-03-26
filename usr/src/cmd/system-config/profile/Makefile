@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../../Makefile.cmd
@@ -33,6 +33,7 @@ PYMODULES=	__init__.py \
 		ip_address.py \
 		nameservice_info.py \
 		network_info.py \
+                support_info.py \
 		system_info.py \
 		user_info.py
 

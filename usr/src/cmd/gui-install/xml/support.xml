@@ -1,0 +1,763 @@
+<?xml version="1.0"?>
+<!--
+ CDDL HEADER START
+  
+ The contents of this file are subject to the terms of the
+ Common Development and Distribution License (the "License").
+ You may not use this file except in compliance with the License.
+
+ You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+ or http://www.opensolaris.org/os/licensing.
+ See the License for the specific language governing permissions
+ and limitations under the License.
+
+ When distributing Covered Code, include this CDDL HEADER in each
+ file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+ If applicable, add the following below this CDDL HEADER, with the
+ fields enclosed by brackets "[]" replaced with your own identifying
+ information: Portions Copyright [yyyy] [name of copyright owner]
+
+ CDDL HEADER END
+
+ Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+
+-->
+<!--*- mode: xml -*-->
+<interface>
+  <requires lib="gtk+" version="2.16"/>
+  <!-- interface-naming-policy toplevel-contextual -->
+  <object class="GtkWindow" id="support_window">
+    <property name="title" translatable="yes">installdiskwindow</property>
+    <child>
+      <object class="GtkVBox" id="support_top_level">
+        <property name="border_width">12</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">10</property>
+        <child>
+          <object class="GtkAlignment" id="support_header_align">
+            <property name="visible">True</property>
+            <property name="xalign">0</property>
+            <property name="yalign">0</property>
+            <property name="yscale">0</property>
+            <child>
+              <object class="GtkVBox" id="support_header_vbox">
+                <property name="visible">True</property>
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkLabel" id="support_header_line1">
+                    <property name="width_request">600</property>
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">Provide your email address to be informed of security issues, install the product and initiate configuration manager.</property>
+                    <property name="use_markup">True</property>
+                    <property name="wrap">True</property>
+                    <property name="max_width_chars">80</property>
+                  </object>
+                  <packing>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="support_header_line2">
+                    <property name="visible">True</property>
+                  </object>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="support_header_line3">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">Please see &lt;a href="http://www.oracle.com/support/policies.html"&gt;http://www.oracle.com/support/policies.html&lt;/a&gt; for details.</property>
+                    <property name="use_markup">True</property>
+                    <signal name="activate_link" handler="support_header_label_activate_link_cb"/>
+                  </object>
+                  <packing>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="support_header_line4">
+                    <property name="visible">True</property>
+                  </object>
+                  <packing>
+                    <property name="position">3</property>
+                  </packing>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkAlignment" id="support_registration_section">
+            <property name="visible">True</property>
+            <property name="xalign">0</property>
+            <property name="yalign">0</property>
+            <property name="yscale">0</property>
+            <property name="left_padding">40</property>
+            <child>
+              <object class="GtkTable" id="support_registration_table1">
+                <property name="visible">True</property>
+                <property name="n_rows">4</property>
+                <property name="n_columns">2</property>
+                <property name="row_spacing">10</property>
+                <child>
+                  <object class="GtkAlignment" id="support_email_label_align">
+                    <property name="visible">True</property>
+                    <property name="right_padding">10</property>
+                    <child>
+                      <object class="GtkLabel" id="support_email_label">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Email:&lt;/span&gt;</property>
+                        <property name="use_markup">True</property>
+                        <property name="use_underline">True</property>
+                        <property name="mnemonic_widget">support_email_entry</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="x_options">GTK_FILL</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkAlignment" id="support_email_entry_align">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <child>
+                      <object class="GtkEntry" id="support_email_entry">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="invisible_char">&#x25CF;</property>
+                        <accessibility>
+                          <relation type="described-by" target="support_header_line1"/>
+                          <relation type="described-by" target="support_header_line3"/>
+                          <relation type="described-by" target="support_email_subtitle_label"/>
+                        </accessibility>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkAlignment" id="support_email_subtitle_align">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <child>
+                      <object class="GtkLabel" id="support_email_subtitle_label">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">Easier for you if you use your My Oracle Support email address/username.</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkAlignment" id="support_authenticate_align">
+                    <property name="visible">True</property>
+                    <child>
+                      <object class="GtkCheckButton" id="support_authenticate_checkbox">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">False</property>
+                        <property name="draw_indicator">True</property>
+                        <signal name="toggled" handler="support_authenticate_checkbox_toggled_cb"/>
+                        <child>
+                          <object class="GtkAlignment" id="support_authenticate_checkbox_inner_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkLabel" id="support_authenticate_checkbox_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_I wish to receive security updates via My Oracle Support.&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                                <property name="mnemonic_widget">support_authenticate_checkbox</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">2</property>
+                    <property name="bottom_attach">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <object class="GtkAlignment" id="support_authenticate_section">
+                    <property name="visible">True</property>
+                    <child>
+                      <object class="GtkTable" id="support_authenticate_table">
+                        <property name="visible">True</property>
+                        <property name="n_columns">2</property>
+                        <child>
+                          <object class="GtkAlignment" id="support_password_label_align">
+                            <property name="visible">True</property>
+                            <property name="right_padding">10</property>
+                            <child>
+                              <object class="GtkLabel" id="support_password_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_My Oracle Support Password:&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                                <property name="mnemonic_widget">support_password_entry</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="x_options">GTK_FILL</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_password_entry_align">
+                            <property name="visible">True</property>
+                            <property name="xalign">0</property>
+                            <child>
+                              <object class="GtkEntry" id="support_password_entry">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="visibility">False</property>
+                                <property name="invisible_char">&#x25CF;</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="right_attach">2</property>
+                          </packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">3</property>
+                    <property name="bottom_attach">4</property>
+                  </packing>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkAlignment" id="support_new_access_seperator_align">
+            <property name="visible">True</property>
+            <property name="xalign">0</property>
+            <property name="yalign">0</property>
+            <property name="yscale">0</property>
+            <property name="top_padding">20</property>
+            <child>
+              <object class="GtkHSeparator" id="support_net_access_separator">
+                <property name="visible">True</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkAlignment" id="support_net_access_title_align">
+            <property name="visible">True</property>
+            <property name="xalign">0</property>
+            <property name="yalign">0</property>
+            <property name="yscale">0</property>
+            <child>
+              <object class="GtkLabel" id="support_net_access_title_label">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">Network for support registration:</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkAlignment" id="support_net_access_section">
+            <property name="visible">True</property>
+            <property name="xalign">0</property>
+            <property name="yalign">0</property>
+            <property name="yscale">0</property>
+            <property name="left_padding">40</property>
+            <child>
+              <object class="GtkTable" id="support_net_access_table">
+                <property name="visible">True</property>
+                <property name="n_rows">5</property>
+                <property name="n_columns">2</property>
+                <property name="row_spacing">5</property>
+                <child>
+                  <object class="GtkAlignment" id="support_no_proxy_radio_align">
+                    <property name="visible">True</property>
+                    <child>
+                      <object class="GtkRadioButton" id="support_no_proxy_radio">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">False</property>
+                        <property name="active">True</property>
+                        <property name="draw_indicator">True</property>
+                        <signal name="toggled" handler="support_no_proxy_radio_toggled_cb"/>
+                        <child>
+                          <object class="GtkAlignment" id="support_no_proxy_inner_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkLabel" id="support_no_proxy_label">
+                                <property name="visible">True</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;No pro_xy - direct connect to the internet&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                                <property name="mnemonic_widget">support_no_proxy_radio</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="right_attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkAlignment" id="support_proxy_radio_align">
+                    <property name="visible">True</property>
+                    <child>
+                      <object class="GtkRadioButton" id="support_proxy_radio">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">False</property>
+                        <property name="draw_indicator">True</property>
+                        <property name="group">support_no_proxy_radio</property>
+                        <signal name="toggled" handler="support_proxy_radio_toggled_cb"/>
+                        <child>
+                          <object class="GtkAlignment" id="support_proxy_inner_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkLabel" id="support_proxy_label">
+                                <property name="visible">True</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Proxy - configure proxy information&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkAlignment" id="support_proxy_section">
+                    <property name="visible">True</property>
+                    <property name="top_padding">10</property>
+                    <property name="bottom_padding">10</property>
+                    <property name="left_padding">30</property>
+                    <child>
+                      <object class="GtkTable" id="support_proxy_table">
+                        <property name="visible">True</property>
+                        <property name="n_rows">3</property>
+                        <property name="n_columns">5</property>
+                        <property name="row_spacing">10</property>
+                        <child>
+                          <object class="GtkAlignment" id="support_proxy_hostname_label_align">
+                            <property name="visible">True</property>
+                            <property name="right_padding">10</property>
+                            <child>
+                              <object class="GtkLabel" id="support_proxy_hostname_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Hostname:&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                                <property name="mnemonic_widget">support_proxy_hostname_entry</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="x_options">GTK_FILL</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_proxy_hostname_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkEntry" id="support_proxy_hostname_entry">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="invisible_char">&#x25CF;</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="right_attach">3</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_proxy_port_label_align">
+                            <property name="visible">True</property>
+                            <property name="left_padding">10</property>
+                            <property name="right_padding">10</property>
+                            <child>
+                              <object class="GtkLabel" id="support_proxy_port_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;P_ort:&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                                <property name="mnemonic_widget">support_proxy_port_entry</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">3</property>
+                            <property name="right_attach">4</property>
+                            <property name="x_options">GTK_FILL</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_proxy_port_entry_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkEntry" id="support_proxy_port_entry">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="invisible_char">&#x25CF;</property>
+                                <property name="width_chars">5</property>
+                                <signal name="insert_text" handler="support_proxy_port_entry_insert_text_cb"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">4</property>
+                            <property name="right_attach">5</property>
+                            <property name="x_options">GTK_FILL</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_proxy_username_label_align">
+                            <property name="visible">True</property>
+                            <property name="right_padding">10</property>
+                            <child>
+                              <object class="GtkLabel" id="support_proxy_username_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Username:&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                                <property name="mnemonic_widget">support_proxy_username_entry</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="right_attach">2</property>
+                            <property name="top_attach">1</property>
+                            <property name="bottom_attach">2</property>
+                            <property name="x_options">GTK_FILL</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_proxy_username_entry_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkEntry" id="support_proxy_username_entry">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="invisible_char">&#x25CF;</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">2</property>
+                            <property name="right_attach">3</property>
+                            <property name="top_attach">1</property>
+                            <property name="bottom_attach">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_proxy_password_label_align">
+                            <property name="visible">True</property>
+                            <property name="right_padding">10</property>
+                            <child>
+                              <object class="GtkLabel" id="support_proxy_password_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Pass_word:&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                                <property name="mnemonic_widget">support_proxy_password_entry</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="right_attach">2</property>
+                            <property name="top_attach">2</property>
+                            <property name="bottom_attach">3</property>
+                            <property name="x_options">GTK_FILL</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_proxy_password_entry_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkEntry" id="support_proxy_password_entry">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="visibility">False</property>
+                                <property name="invisible_char">&#x25CF;</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">2</property>
+                            <property name="right_attach">3</property>
+                            <property name="top_attach">2</property>
+                            <property name="bottom_attach">3</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">2</property>
+                    <property name="bottom_attach">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkAlignment" id="support_aggregation_radio_align">
+                    <property name="visible">True</property>
+                    <child>
+                      <object class="GtkRadioButton" id="support_aggregation_radio">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">False</property>
+                        <property name="draw_indicator">True</property>
+                        <property name="group">support_no_proxy_radio</property>
+                        <signal name="toggled" handler="support_aggregation_radio_toggled_cb"/>
+                        <child>
+                          <object class="GtkAlignment" id="support_aggregation_inner_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkLabel" id="support_aggregation_radio_label">
+                                <property name="visible">True</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Aggregration Hubs - specify hubs used for centralized support data&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                                <property name="mnemonic_widget">support_aggregation_radio</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">3</property>
+                    <property name="bottom_attach">4</property>
+                  </packing>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <object class="GtkAlignment" id="support_aggregation_section">
+                    <property name="visible">True</property>
+                    <property name="top_padding">10</property>
+                    <property name="bottom_padding">10</property>
+                    <property name="left_padding">30</property>
+                    <child>
+                      <object class="GtkTable" id="support_aggregation_table">
+                        <property name="visible">True</property>
+                        <property name="n_rows">2</property>
+                        <property name="n_columns">2</property>
+                        <property name="row_spacing">10</property>
+                        <child>
+                          <object class="GtkAlignment" id="support_ocm_label_align">
+                            <property name="visible">True</property>
+                            <property name="right_padding">10</property>
+                            <child>
+                              <object class="GtkLabel" id="support_ocm_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_OCM Hub URL:&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                                <property name="mnemonic_widget">support_ocm_entry</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="x_options">GTK_FILL</property>
+                            <property name="y_options">GTK_FILL</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_ocm_entry_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkEntry" id="support_ocm_entry">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="invisible_char">&#x25CF;</property>
+                                <signal name="focus_out_event" handler="support_ocm_entry_focus_out_event_cb"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="right_attach">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_asr_label_align">
+                            <property name="visible">True</property>
+                            <property name="right_padding">10</property>
+                            <child>
+                              <object class="GtkLabel" id="support_asr_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;ASR Manager _URL:&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="use_underline">True</property>
+                                <property name="mnemonic_widget">support_asr_entry</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="top_attach">1</property>
+                            <property name="bottom_attach">2</property>
+                            <property name="x_options">GTK_FILL</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="support_asr_entry_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkEntry" id="support_asr_entry">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="invisible_char">&#x25CF;</property>
+                                <signal name="focus_out_event" handler="support_asr_entry_focus_out_event_cb"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="right_attach">2</property>
+                            <property name="top_attach">1</property>
+                            <property name="bottom_attach">2</property>
+                          </packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">4</property>
+                    <property name="bottom_attach">5</property>
+                  </packing>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">4</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkAlignment" id="support_status_section">
+            <property name="visible">True</property>
+            <property name="yalign">1</property>
+            <property name="yscale">0</property>
+            <property name="bottom_padding">10</property>
+            <property name="left_padding">10</property>
+            <child>
+              <object class="GtkLabel" id="support_status_label">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="yalign">1</property>
+                <property name="label" translatable="yes">Status:</property>
+                <property name="use_markup">True</property>
+                <property name="selectable">True</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="position">5</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

@@ -1,0 +1,71 @@
+Support Registration
+
+This panel prompts you to specify how the Oracle Configuration Manager (OCM) and Automated Service Request (ASR) utilities should be configured.
+
+* OCM sends periodic data to the Oracle support organization describing a system's software configuration.
+
+* ASR sends data to the Oracle support organization when a Fault Management Architecture (FMA) event occurs, indicating a hardware or software issue.
+
+Procedure
+
+Enter support information as follows:
+
+EMAIL
+
+By default, an anonymous email address, anonymous@oracle.com, is provided.  You have the following options:
+
+* Using this anonymous address with no password, anonymous system configuration will be uploaded to the Oracle support organization. My Oracle Support (MOS) will receive information about the installed system's configuration, but will not receive any of your customer information.
+
+* You can replace the anonymous email address with your My Oracle Support login ID and add your My Oracle Support password.  Use this option if you want to see your customer information in My Oracle Support and receive security updates.  With this option, ASR will also be started.
+
+* If you delete the anonymous email address and leave that field blank, OCM will be started in a disconnected mode.  No data will be sent to My Oracle Support.
+
+* If you delete the anonymous email address and replace it with another email address, other than your MOS login ID, OCM will send data to Oracle support in an unauthenticated mode.
+
+Note: You can register, re-register, or cancel registration of your system with My Oracle Support after the installation.
+
+MY ORACLE SUPPORT PASSWORD
+
+If you wish to receive security updates via My Oracle Support, then check the checkbox and enter a My Oracle Support password which validates an entered My Oracle Support email address.
+
+Note: When entering a password, only a MOS email with a MOS password will validate.
+
+NETWORK FOR SUPPORT REGISTRATION
+
+This selects the network configuration to be used when OCM and ASR relay your system data to the Oracle support organization.
+
+Select from one of the following options:
+
+* No proxy - OCM and ASR data are sent to the Oracle support organization without going through a dedicated intermediary proxy or hub system.  Select "No Proxy" if there is an existing system-wide proxy that you want to use, or no proxy is needed.
+
+* Proxy - OCM and ASR data are sent to the Oracle support organization through a single proxy server.
+
+* Aggregation Hubs -  OCM and ASR data each go through aggregation systems (or hubs) to pool the data and forward it on to the Oracle support organization.  An ASR hub is also known as an ASR Manager.
+
+PROXY CONFIGURATION
+
+Select the Proxy option and provide proxy information if a special proxy is needed in order for the OCM and ASR services to contact the Oracle support organization.  If there is already an established system-wide proxy which you want the OCM and ASR services to use, or if no special proxy is needed, then leave these fields blank and select "No Proxy".
+
+Leave proxy username and proxy password fields blank if they are not needed.
+
+* HOSTNAME: A proxy server is a conduit from a local network to the internet.  Provide the hostname of the proxy server.
+
+* PORT: Port on the proxy server for communications.  This value will vary depending on how the proxy server is configured.  Must be blank if the hostname field is empty.  Must be filled in if the hostname field is filled in.
+
+* USERNAME: Enter if proxy is secure and requires authentication.  Optional: Enter only if needed.
+
+* PASSWORD: Required only if username is specified.
+
+HUB CONFIGURATION
+
+Select the Aggregation Hubs option and complete the hub field for a service only if that service will be behind a hub.  A service with a blank hub field will use a direct Internet connection.
+
+* OCM HUB URL: URL of the OCM hub.
+
+* ASR HUB URL: URL of the ASR manager hub.
+
+FOR MORE INFORMATION
+
+For further information about Oracle Configuration Manager, see the "Oracle Configuration Manager Installation and Administration Guide". See also http://www.oracle.com/support/policies.html.
+
+For further information about ASR, see the documentation included at http://www.oracle.com/asr.

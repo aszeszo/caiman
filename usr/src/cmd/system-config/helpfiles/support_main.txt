@@ -1,0 +1,46 @@
+SUPPORT - REGISTRATION
+
+This panel prompts you to specify how the Oracle Configuration Manager (OCM) and Automated Service Request (ASR) utilities should be configured.
+
+* OCM sends periodic data to the Oracle support organization describing a system's software configuration.
+
+* ASR sends data to the Oracle support organization when a Fault Management Architecture (FMA) event occurs, indicating a hardware or software issue.
+
+
+PROCEDURE  
+
+To exit this help panel, press F3.  Then, in the support panel, enter support information as follows:
+
+EMAIL FIELD  
+
+By default, an anonymous email address, anonymous@oracle.com, is provided.  You have the following options:
+
+* Using this anonymous address with no password, anonymous system configuration will be uploaded to the Oracle support organization. My Oracle Support (MOS) will receive information about the installed system's configuration, but will not receive any of your customer information.
+
+* You can replace the anonymous email address with your My Oracle Support login ID and add your My Oracle Support password.  Use this option if you want to see your customer information in My Oracle Support and receive security updates.  With this option, ASR will also be started.
+
+* If you delete the anonymous email address and leave that field blank, OCM will be started in a disconnected mode.  No data will be sent to My Oracle Support.
+
+* If you delete the anonymous email address and replace it with another email address, other than your MOS login ID, OCM will send data to Oracle support in an unauthenticated mode.
+
+Note: You can register, re-register, or cancel registration of your system with My Oracle Support after the installation.
+
+MY ORACLE SUPPORT PASSWORD FIELD 
+
+Enter the My Oracle Support password which validates an entered My Oracle Support email address.
+
+Note: When entering a password, only a MOS email with a MOS password will validate.
+
+
+FOR MORE INFORMATION
+
+For further information about Oracle Configuration Manager, see the "Oracle Configuration Manager Installation and Administration Guide". See also http://www.oracle.com/support/policies.html.
+
+For further information about ASR, see the documentation included at http://www.oracle.com/asr.
+
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each panel to navigate between panels. Use the arrow keys to move through the text on each panel.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

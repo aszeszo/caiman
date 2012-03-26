@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 FILES= 	confirmation.xml \
@@ -28,6 +28,7 @@ FILES= 	confirmation.xml \
 	gui-install.xml \
 	installation.xml \
 	installationdisk.xml \
+	support.xml \
 	users.xml
 
 ROOTFILES=      $(FILES:%=$(ROOTGUIINST)/%)

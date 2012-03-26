@@ -69,13 +69,15 @@ SC_GROUP_DATETIME = 'date_time'
 SC_GROUP_LOCATION = 'location'
 # user and root account
 SC_GROUP_USERS = 'users'
+# Phone-home support technologies
+SC_GROUP_SUPPORT = 'support'
 # pseudo-group - includes all available groups
 SC_GROUP_SYSTEM = 'system'
 
 # list of configuration groups
 SC_ALL_GROUPS = [SC_GROUP_IDENTITY, SC_GROUP_NETWORK, SC_GROUP_NS,
                  SC_GROUP_KBD, SC_GROUP_LOCATION, SC_GROUP_DATETIME,
-                 SC_GROUP_USERS]
+                 SC_GROUP_USERS, SC_GROUP_SUPPORT]
 
 # all valid configuration groups including 'system' pseudo-group
 SC_VALID_GROUPS = SC_ALL_GROUPS + [SC_GROUP_SYSTEM]
@@ -126,6 +128,10 @@ from solaris_install.sysconfig.nameservice import NSDNSChooser, NSAltChooser, \
                                                   NSLDAPProxyBindChooser, \
                                                   NSLDAPProxyBindInfo, \
                                                   NSNISAuto, NSNISIP
+from solaris_install.sysconfig.support import SupportMOSScreen, \
+                                              SupportNetConfigScreen, \
+                                              SupportProxyScreen, \
+                                              SupportHubScreen
 from solaris_install.sysconfig.summary import SummaryScreen
 from solaris_install.sysconfig.timezone import TimeZone
 from solaris_install.sysconfig.users import UserScreen
@@ -239,6 +245,12 @@ def get_all_screens(main_win):
     # (root password as well as initial user account) is displayed.
     result.append(UserScreen(main_win, show_user_account=True))
 
+    # Support screens for OCM/ASR
+    result.append(SupportMOSScreen(main_win))
+    result.append(SupportNetConfigScreen(main_win))
+    result.append(SupportProxyScreen(main_win))
+    result.append(SupportHubScreen(main_win))
+
     return result
 
 
@@ -275,6 +287,13 @@ def get_screens_from_groups(main_win):
     # initial user
     if configure_group(SC_GROUP_USERS):
         result.append(UserScreen(main_win))
+
+    # support
+    if configure_group(SC_GROUP_SUPPORT):
+        result.append(SupportMOSScreen(main_win))
+        result.append(SupportNetConfigScreen(main_win))
+        result.append(SupportProxyScreen(main_win))
+        result.append(SupportHubScreen(main_win))
 
     return result
 
@@ -804,10 +823,10 @@ def parse_unconfig_args(parser, args):
                         sys.exit(SU_FATAL_ERR)
 
                     # Place profile in the temporary site profile area.
-                    orig_umask = os.umask(0377) 
+                    orig_umask = os.umask(0377)
                     shutil.copyfile(profile_file,
                                     os.path.join(custom_profile_dir, pfile))
-                    os.umask(orig_umask) 
+                    os.umask(orig_umask)
                     profile_dir_is_empty = False
 
             # If no profile was found in given directory, abort.
@@ -825,7 +844,7 @@ def parse_unconfig_args(parser, args):
             orig_umask = os.umask(0377)
             shutil.copyfile(options.profile, os.path.join(custom_profile_dir,
                             os.path.basename(options.profile)))
-            os.umask(orig_umask) 
+            os.umask(orig_umask)
 
     #
     # if there is a request to re-configure system in interactive way

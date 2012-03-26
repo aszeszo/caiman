@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -33,6 +33,7 @@ USER_LABEL = "user_account"
 NETWORK_LABEL = "nic"
 NAMESERVICE_LABEL = "nsv"
 SYSTEM_LABEL = 'system_info'
+SUPPORT_LABEL = "support"
 
 
 def from_engine():
@@ -87,13 +88,14 @@ class ConfigProfile(DataObject):
     '''Config profile will hold SMFConfig objects as children'''
 
     LABEL = "sysconfig"
-    
-    def __init__(self, nic=None, system=None, user_infos=None):
+
+    def __init__(self, nic=None, system=None, user_infos=None, support=None):
         super(ConfigProfile, self).__init__(self.LABEL)
 
         self.system = system
         self.nic = nic
         self.users = user_infos
+        self.support = support
         self.generates_xml_for_children = True
 
     # pylint: disable-msg=E0202
@@ -143,10 +145,24 @@ class ConfigProfile(DataObject):
             self.insert_children([nsvinfo])
 
     @property
+    def support(self):
+        '''Retrieve SupportInfo child object'''
+        return self.get_first_child(name=SUPPORT_LABEL)
+
+    @support.setter
+    def support(self, supportinfo):
+        '''Replace SupportInfo child object with supportinfo'''
+        old = self.support
+        if old:
+            self.remove_children(old)
+        if supportinfo:
+            self.insert_children([supportinfo])
+
+    @property
     def users(self):
         '''Retrieve UserInfoContainer child object'''
         return self.get_first_child(name=USER_LABEL)
-    
+
     @users.setter
     def users(self, user_infos):
         '''Replace UserInfo child object with user_infos'''
@@ -155,12 +171,12 @@ class ConfigProfile(DataObject):
             self.remove_children(old)
         if user_infos:
             self.insert_children(user_infos)
-    
+
     def to_xml(self):
         '''Generate an SC profile XML tree'''
         element = etree.Element('service_bundle', type='profile',
                               name=self.name)
-        
+
         if self.users:
             element.extend(self.users.to_xml())
         if self.system:
@@ -172,6 +188,9 @@ class ConfigProfile(DataObject):
         if self.nameservice:
             element.extend(self.nameservice.to_xml())
 
+        if self.support:
+            element.extend(self.support.to_xml())
+
         return element
 
     @classmethod
@@ -182,7 +201,7 @@ class ConfigProfile(DataObject):
     def can_handle(cls, xml_node):
         return False
 
-    
+
 class SMFConfig(DataObject):
     '''Represent a single SMF service. Stores SMFInstances
        or SMFPropertyGroups'''
@@ -205,7 +224,7 @@ class SMFConfig(DataObject):
     def can_handle(cls, xml_node):
         return False
 
-    
+
 class SMFInstance(DataObject):
     '''Represent an instance of SMF service. Stores SMFPropertyGroups'''
 
@@ -369,7 +388,7 @@ class SMFProperty(DataObject):
 
         for attr in ['proptype', 'propname', 'propval']:
             val = getattr(self, attr)
-            if val:
+            if val is not None:
                 elem_kwargs[obj_attr2xml_attr[attr]] = str(val)
 
         # pylint: disable-msg=W0142

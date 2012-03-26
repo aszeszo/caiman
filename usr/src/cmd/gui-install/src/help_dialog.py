@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -44,6 +44,7 @@ HELPFILES = ['WELCOME_PANEL.txt',
              'INSTALL_DISK_PANEL.txt',
              'INSTALL_TIMEZONE_PANEL.txt',
              'INSTALL_USERS_PANEL.txt',
+             'INSTALL_SUPPORT_PANEL.txt',
              'INSTALL_REVIEW_PANEL.txt',
              'INSTALL_PROGRESS_PANEL.txt',
              'FINISH_PANEL.txt',

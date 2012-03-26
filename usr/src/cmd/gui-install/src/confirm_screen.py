@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -42,6 +42,8 @@ from solaris_install.gui_install.gui_install_common import \
     empty_container, modal_dialog, COLOR_WHITE, RELEASE, GLADE_ERROR_MSG
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.logger import INSTALL_LOGGER_NAME
+from solaris_install.sysconfig.profile import from_engine
+from solaris_install.sysconfig.profile.support_info import SupportInfo
 from solaris_install.target import Target
 from solaris_install.target.physical import Disk, Partition
 from solaris_install.target.size import Size
@@ -75,11 +77,12 @@ class ConfirmScreen(BaseScreen):
         self.timezonevbox = self.builder.get_object("timezonevbox")
         self.languagesvbox = self.builder.get_object("languagesvbox")
         self.accountvbox = self.builder.get_object("accountvbox")
+        self.supportvbox = self.builder.get_object("supportvbox")
 
         if None in [self.confirmviewport, self.nextbutton, self.installbutton,
             self.licenseagreementlinkbutton, self.licensecheck,
             self.diskvbox, self.softwarevbox, self.timezonevbox,
-            self.languagesvbox, self.accountvbox]:
+            self.languagesvbox, self.accountvbox, self.supportvbox]:
             modal_dialog(_("Internal error"), GLADE_ERROR_MSG)
             raise RuntimeError(GLADE_ERROR_MSG)
 
@@ -234,6 +237,26 @@ class ConfirmScreen(BaseScreen):
         for lang in profile.languages:
             text_str += " %s" % lang
         add_detail_line(self.languagesvbox, text_str)
+        self.logger.info('\t' + text_str)
+
+        empty_container(self.supportvbox, destroy=True)
+        support = from_engine().support
+        support_str = ""
+        if not support.mos_email and not support.mos_password:
+            support_str += _("No support configured")
+        else:
+            if not support.mos_password:
+                support_str += _("Anonymous support")
+            else:
+                support_str += _("My Oracle Support")
+
+            if support.netcfg == SupportInfo.PROXY:
+                support_str += " " + _("via Proxy")
+            elif support.netcfg == SupportInfo.HUB:
+                support_str += " " + _("via Hub")
+        text_str = _("Support configuration: %s") % support_str
+        add_detail_line(self.supportvbox, text_str)
+        self.logger.info("-- Support --")
         self.logger.info('\t' + text_str)
 
         empty_container(self.accountvbox, destroy=True)

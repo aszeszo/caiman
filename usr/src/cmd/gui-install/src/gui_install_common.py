@@ -35,10 +35,12 @@ import linecache
 import logging
 import os
 import sys
+import threading
 
 import gtk
 
-from solaris_install import post_install_logs_path
+from solaris_install import CalledProcessError, post_install_logs_path, \
+    run
 from solaris_install.logger import INSTALL_LOGGER_NAME
 
 # Define "_()" for gettext
@@ -81,6 +83,7 @@ LOG_LEVEL_INPUT = 5
 LOG_NAME_INPUT = "INPUT"
 
 RELEASE = _("Oracle Solaris")
+INTERNAL_ERR_MSG = _("Internal error")
 
 COLOR_WHITE = gtk.gdk.Color("white")
 
@@ -127,7 +130,7 @@ def exit_gui_install(logname=None, errcode=0):
     sys.exit(errcode)
 
 
-def modal_dialog(title, text, two_buttons=False):
+def modal_dialog(title, text, two_buttons=False, yes_no=False):
     ''' Display a modal dialog box.
 
         Params:
@@ -135,16 +138,25 @@ def modal_dialog(title, text, two_buttons=False):
         - text, the Dialog Box message string
         - two_buttons, if False (the default) only provide a single CLOSE
           button to terminate the dialog (in this case the return value
-          will always be False); if True provide OK and CANCEL buttons
+          will always be False); if True, provide two options for user to
+          select;  see yes_no for further details.
+        - yes_no, only applicable if two_buttons is True; if yes_no is
+          False (default), then the two buttons will be OK and CANCEL buttons
           and the return value will be True if OK is pressed or False if
           CANCEL is pressed.
+          if yes_no is True, then the two buttons will be YES and NO buttons
+          and the return value will be True is YES is pressed or False if
+          NO is pressed.
 
         Returns:
         True or False
     '''
 
     if two_buttons:
-        buttons = gtk.BUTTONS_OK_CANCEL
+        if yes_no:
+            buttons = gtk.BUTTONS_YES_NO
+        else:
+            buttons = gtk.BUTTONS_OK_CANCEL
     else:
         buttons = gtk.BUTTONS_CLOSE
 
@@ -157,14 +169,20 @@ def modal_dialog(title, text, two_buttons=False):
     dialog.set_markup(msg)
 
     if two_buttons:
-        dialog.set_default_response(gtk.RESPONSE_OK)
+        if yes_no:
+            dialog.set_default_response(gtk.RESPONSE_YES)
+        else:
+            dialog.set_default_response(gtk.RESPONSE_OK)
 
     # display the dialog
     response = dialog.run()
     dialog.destroy()
 
-    if response == gtk.RESPONSE_OK:
-        return True
+    if two_buttons:
+        if response == gtk.RESPONSE_OK:
+            return True
+        elif response == gtk.RESPONSE_YES:
+            return True
     return False
 
 
@@ -223,3 +241,57 @@ def N_(message):
     '''
 
     return message
+
+
+def open_browser(uri=None):
+    '''
+        Run web browser with optional uri in a separate thread.
+    '''
+    thread = _RunBrowserThread(uri)
+
+
+def make_url(value):
+    ''' Transform value into a valid URL if not already one.
+    '''
+    if value is None or not value or value.find("://") != -1:
+        return value
+    return "http://" + value
+
+
+class _RunBrowserThread(threading.Thread):
+    '''
+        Thread class for running web browser.
+    '''
+
+    def __init__(self, uri):
+        ''' Initializer method - called from constructor.
+
+            Params:
+            - uri, URI to open in browser, or None, if you
+              just wish to start the browser.
+
+            Returns: Nothing
+        '''
+        threading.Thread.__init__(self)
+
+        self.uri = uri
+
+        # invoke run()
+        self.start()
+
+    def run(self):
+        ''' Override run method from parent class.
+
+            Runs Firefox.
+        '''
+
+        cmd = [FIREFOX]
+        if self.uri is not None:
+            cmd.append(self.uri)
+
+        try:
+            run(cmd)
+        except CalledProcessError, err:
+            logger = logging.getLogger(INSTALL_LOGGER_NAME)
+            logger.error("ERROR: executing command [%s] failed: [%s]", cmd,
+                         err)

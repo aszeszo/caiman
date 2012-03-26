@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -34,10 +34,8 @@ import solaris_install.sysconfig.profile
 
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME
-from solaris_install.sysconfig.nameservice import NameService
-from solaris_install.sysconfig.profile.nameservice_info import NameServiceInfo
 from solaris_install.sysconfig.profile.network_info import NetworkInfo
-from solaris_install.sysconfig.profile.user_info import UserInfo
+from solaris_install.sysconfig.profile.support_info import SupportInfo
 from solaris_install.sysconfig.summary import nameservice_summary
 from solaris_install.target.libdiskmgt import const as libdiskmgt_const
 from solaris_install.target.size import Size
@@ -57,37 +55,36 @@ class SummaryScreen(BaseScreen):
     '''Display a summary of the install profile to the user
     InnerWindow.__init__ is sufficient to initalize an instance
     of SummaryScreen
-    
     '''
-    
+
     HEADER_TEXT = _("Installation Summary")
     PARAGRAPH = _("Review the settings below before installing."
                                 " Go back (F3) to make changes.")
-    
+
     HELP_DATA = (TUI_HELP + "/%s/summary.txt",
                  _("Installation Summary"))
-    
+
     INDENT = 2
-    
+
     def set_actions(self):
         '''Replace the default F2_Continue with F2_Install'''
         install_action = Action(curses.KEY_F2, _("Install"),
                                 self.main_win.screen_list.get_next)
         self.main_win.actions[install_action.key] = install_action
-    
+
     def _show(self):
         '''Prepare a text summary and display it to the user in a ScrollWindow
-        
+
         '''
 
         global LOGGER
         LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
-        
+
         self.sysconfig = solaris_install.sysconfig.profile.from_engine()
-        
+
         y_loc = 1
         y_loc += self.center_win.add_paragraph(SummaryScreen.PARAGRAPH, y_loc)
-        
+
         y_loc += 1
         summary_text = self.build_summary()
 
@@ -103,13 +100,13 @@ class SummaryScreen(BaseScreen):
         area.columns = self.win_size_x
         scroll_region = ScrollWindow(area, window=self.center_win)
         scroll_region.add_paragraph(summary_text, start_x=SummaryScreen.INDENT)
-        
+
         self.center_win.activate_object(scroll_region)
-    
+
     def build_summary(self):
         '''Build a textual summary from the DOC data'''
         lines = []
-        
+
         lines.append(_("Software: %s") % self.get_release())
         lines.append("")
         lines.append(self.get_disk_summary())
@@ -137,19 +134,22 @@ class SummaryScreen(BaseScreen):
         lines.append(_("Network:"))
         lines.extend(self.get_networks())
         self._get_nameservice(lines)
-        
+        lines.append("")
+        lines.append(_("Support configuration:"))
+        lines.extend(self.get_support())
+
         return "\n".join(lines)
-    
+
     def get_networks(self):
         '''Build a summary of the networks from the DOC data,
         returned as a list of strings
-        
+
         '''
         network_summary = []
         network_summary.append(_("  Computer name: %s") %
                                self.sysconfig.system.hostname)
         nic = self.sysconfig.nic
-        
+
         if nic.type == NetworkInfo.AUTOMATIC:
             network_summary.append(_("  Network Configuration: Automatic"))
         elif nic.type == NetworkInfo.NONE:
@@ -162,7 +162,7 @@ class SummaryScreen(BaseScreen):
             if nic.gateway:
                 network_summary.append(_("    Router: %s") % nic.gateway)
         return network_summary
-    
+
     def _get_nameservice(self, summary):
         ''' Find all name services information and append to summary '''
         # append lines of name service info to summary
@@ -171,7 +171,7 @@ class SummaryScreen(BaseScreen):
     def get_users(self):
         '''Build a summary of the user information, and return it as a list
         of strings
-        
+
         '''
         root = self.sysconfig.users.root
         primary = self.sysconfig.users.user
@@ -183,13 +183,13 @@ class SummaryScreen(BaseScreen):
         else:
             user_summary.append(_("  No user account"))
         return user_summary
-    
+
     def get_disk_summary(self):
         '''Return a string summary of the disk selection'''
 
         doc = InstallEngine.get_instance().doc
         disk = get_desired_target_disk(doc)
-        
+
         disk_string = list()
 
         disk_size_str = locale.format("%.1f",
@@ -209,7 +209,7 @@ class SummaryScreen(BaseScreen):
                 locale_part_str = _("Partition: ") + part_size_str + " " +\
                     str(libdiskmgt_const.PARTITION_ID_MAP[part_data.part_type])
                 disk_string.append(locale_part_str)
-        
+
             if part_data is None or not part_data.in_zpool:
                 slice_data = get_solaris_slice(doc)
 
@@ -223,12 +223,12 @@ class SummaryScreen(BaseScreen):
                 disk_string.append(locale_slice_str)
 
         return "\n".join(disk_string)
-    
+
     def get_tz_summary(self):
         '''Return a string summary of the timezone selection'''
         timezone = self.sysconfig.system.tz_timezone
         return _("Time Zone: %s") % timezone
-    
+
     @staticmethod
     def get_release():
         '''Read in the release information from /etc/release'''
@@ -245,3 +245,87 @@ class SummaryScreen(BaseScreen):
             if release_file is not None:
                 release_file.close()
         return release.strip()
+
+    def get_support(self):
+        '''Return a string summary of the support selection.'''
+        support_summary = []
+        support = self.sysconfig.support
+
+        if support.netcfg == SupportInfo.NOSVC:
+            support_summary.append(_("  OCM and ASR services are not "
+                                     "installed."))
+            return support_summary
+
+        ocm_level = None
+        asr_level = None
+
+        if support.mos_email:
+            if support.ocm_mos_password or support.ocm_ciphertext:
+                ocm_level = "auth"
+            elif support.ocm_available:
+                ocm_level = "unauth"
+            if support.asr_mos_password or support.asr_private_key:
+                asr_level = "auth"
+
+        if (ocm_level == None and asr_level == None):
+            support_summary.append(_("  No telemetry will be "
+                                     "sent automatically"))
+        elif ocm_level == "unauth":
+            # No need to check ASR; ocm_level == unauth implies no password
+            # given, so asr_level will never be auth here.
+            support_summary.append(_("  Telemetry will be sent and associated "
+                                     "with email address:"))
+            support_summary.append("       %s" % support.mos_email)
+            support_summary.append(_("    but will not be registered with My "
+                                     "Oracle Support because"))
+            support_summary.append(_("    no password was saved."))
+        else:
+            # Equivalent to (ocm_level == "auth" or asr_level == "auth")
+            support_summary.append(_("  Telemetry will be sent and will be "
+                                     "registered with My Oracle Support"))
+            support_summary.append(_("    using email address:"))
+            support_summary.append("       %s" % support.mos_email)
+
+            # Use the presence of OCM ciphertext to assume that successful OCM
+            # validation took place.
+            if support.ocm_ciphertext:
+                support_summary.append(_("  MOS credentials validated "
+                                         "for OCM"))
+            elif support.ocm_available:
+                support_summary.append(_("  MOS credentials NOT validated "
+                                         "for OCM"))
+
+            # Use the presence of ASR private_key to assume that successful ASR
+            # validation took place.
+            if support.asr_private_key:
+                support_summary.append(_("  MOS credentials validated "
+                                         "for ASR"))
+            elif support.asr_available:
+                support_summary.append(_("  MOS credentials NOT validated "
+                                         "for ASR"))
+
+            # Display different messages for different situations.
+            if ((support.ocm_available and not support.ocm_ciphertext) or
+                (support.asr_available and not support.asr_private_key)):
+                # Installer environment.
+                support_summary.append(_("  Validation will be attempted "
+                                         "again when target (re)boots."))
+        if support.netcfg == SupportInfo.PROXY:
+            if support.proxy_user:
+                proxy_line = (_("  Secure proxy "))
+            else:
+                proxy_line = (_("  Proxy "))
+            proxy_line += (_("specified: host: %s" %
+                             support.proxy_hostname))
+            if support.proxy_port:
+                proxy_line += (_("  port: %s" % support.proxy_port))
+            if support.proxy_user:
+                proxy_line += (_("  user: %s" % support.proxy_user))
+            support_summary.append(proxy_line)
+        elif support.netcfg == SupportInfo.HUB:
+            if support.ocm_hub:
+                support_summary.append(_("  OCM hub: %s" % support.ocm_hub))
+            if support.asr_hub:
+                support_summary.append(_("  ASR hub: %s" % support.asr_hub))
+
+        return support_summary

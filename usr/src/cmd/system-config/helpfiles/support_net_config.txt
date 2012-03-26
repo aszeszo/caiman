@@ -1,0 +1,57 @@
+SUPPORT - CONFIGURATION
+
+In this series of panels, provide the network configuration to be used when OCM and ASR relay your system data to the Oracle support organization.
+
+* OCM sends periodic data to the Oracle support organization describing a system's software configuration.  
+
+* ASR sends data to the Oracle support organization when a Fault Management Architecture (FMA) event occurs, indicating a hardware or software issue. 
+
+
+NETWORK CONFIGURATION
+
+In the Network Configuration panel, select from one of the following options:
+
+* No proxy - OCM and ASR data are sent to the Oracle support organization without going through a dedicated intermediary proxy or hub system.  Select "No Proxy" if there is an existing system-wide proxy that you want to use, or no proxy is needed.
+
+* Proxy - OCM and ASR data are sent to the Oracle support organization through a single proxy server.
+
+* Aggregation Hubs -  OCM and ASR data each go through aggregation systems (or hubs) to pool the data and forward it on to the Oracle support organization.  An ASR hub is also known as an ASR Manager.
+
+Press F2 to continue to the next panel. 
+
+
+PROXY CONFIGURATION
+
+If you selected Proxy in the Network Configuration panel, then, in this panel, complete HTTP proxy information.  Provide proxy information if a special proxy is needed in order for the OCM and ASR services to contact the Oracle support organization.  If there is already an established system-wide proxy which you want the OCM and ASR services to use, or if no special proxy is needed, then leave these fields blank, press F3 to return to the previous panel, and select "No Proxy".
+
+Leave proxy username and proxy password fields blank if they are not needed.
+
+* HTTP PROXY HOSTNAME: A proxy server is a conduit from a local network to the internet.  Provide the Hostname of the proxy server.
+
+* HTTP PROXY PORT: Port on the proxy server for communications.  This value will vary depending on how the proxy server is configured.  Must be blank if the PROXY HOSTNAME field is empty.  Must be filled in if the PROXY HOSTNAME field is filled in.
+
+* HTTP PROXY USERNAME: Enter if proxy is secure and requires authentication.  Optional: Enter only if needed.
+
+* HTTP PROXY PASSWORD: Required only if HTTP Proxy Username is specified.
+
+Press F2 to continue to the next panel.
+
+
+HUB CONFIGURATION
+
+If you selected Aggregation Hubs in the prior panel, complete the hubs information in this panel.
+
+Local aggregation hubs are used to funnel information to Oracle from a single  endpoint.  Complete the hub fields only if the client system's service will be behind a hub.  A service with a blank hub field will use a direct internet connection.
+
+* OCM HUB URL: URL of the OCM hub.
+
+* ASR HUB URL: URL of the ASR manager hub.
+
+Press F2 to continue to the next panel.
+
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each panel to navigate between panels. Use the arrow keys to move through the text on each panel.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

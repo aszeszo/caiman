@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -28,26 +28,24 @@ Display a summary of the user's selections
 
 import curses
 import logging
-import os 
 
 from solaris_install.logger import INSTALL_LOGGER_NAME
-from solaris_install.engine import InstallEngine
 from solaris_install.sysconfig import _, SCI_HELP, configure_group, \
                                       SC_GROUP_IDENTITY, SC_GROUP_KBD, \
                                       SC_GROUP_LOCATION, SC_GROUP_NETWORK, \
-                                      SC_GROUP_NS, SC_GROUP_USERS
+                                      SC_GROUP_NS, SC_GROUP_SUPPORT, \
+                                      SC_GROUP_USERS
 from solaris_install.sysconfig.nameservice import NameService
 import solaris_install.sysconfig.profile
 from solaris_install.sysconfig.profile.nameservice_info import NameServiceInfo
 from solaris_install.sysconfig.profile.network_info import NetworkInfo
-from solaris_install.sysconfig.profile.user_info import UserInfo
+from solaris_install.sysconfig.profile.support_info import SupportInfo
 
 from terminalui.action import Action
 from terminalui.base_screen import BaseScreen
 from terminalui.i18n import convert_paragraph
 from terminalui.window_area import WindowArea
 from terminalui.scroll_window import ScrollWindow
-
 
 LOGGER = None
 
@@ -109,7 +107,7 @@ class SummaryScreen(BaseScreen):
             return ""
         else:
             summary_text = []
-        
+
             # display summary only for configured areas
             # locale and timezone belong to SC_GROUP_LOCATION group
             if configure_group(SC_GROUP_LOCATION):
@@ -150,7 +148,13 @@ class SummaryScreen(BaseScreen):
                 summary_text.extend(self.get_networks())
             if configure_group(SC_GROUP_NS):
                 self._get_nameservice(summary_text)
-        
+
+            # support configuration
+            if configure_group(SC_GROUP_SUPPORT):
+                summary_text.append("")
+                summary_text.append(_("Support configuration:"))
+                summary_text.extend(self.get_support())
+
             return "\n".join(summary_text)
 
     def get_networks(self):
@@ -168,7 +172,7 @@ class SummaryScreen(BaseScreen):
         if not configure_group(SC_GROUP_NETWORK):
             return network_summary
 
-        nic = self.sysconfig.nic       
+        nic = self.sysconfig.nic
         if nic.type == NetworkInfo.AUTOMATIC:
             network_summary.append(_("  Network Configuration: Automatic"))
         elif nic.type == NetworkInfo.NONE:
@@ -210,6 +214,92 @@ class SummaryScreen(BaseScreen):
         timezone = self.sysconfig.system.tz_timezone
         return _("Time Zone: %s") % timezone
 
+    def get_support(self):
+        '''Return a string summary of the support selection.'''
+        support_summary = []
+        support = self.sysconfig.support
+
+        if support.netcfg == SupportInfo.NOSVC:
+            support_summary.append(_("  Not generating a Support profile as "
+                                     "OCM and ASR services are not "
+                                     "installed."))
+            return support_summary
+
+        ocm_level = None
+        asr_level = None
+
+        if support.mos_email:
+            if support.ocm_mos_password or support.ocm_ciphertext:
+                ocm_level = "auth"
+            elif support.ocm_available:
+                ocm_level = "unauth"
+            if support.asr_mos_password or support.asr_private_key:
+                asr_level = "auth"
+
+        if (ocm_level == None and asr_level == None):
+            support_summary.append(_("  No telemetry will be "
+                                     "sent automatically"))
+        elif ocm_level == "unauth":
+            # No need to check ASR; ocm_level == unauth implies no password
+            # given, so asr_level will never be auth here.
+            support_summary.append(_("  Telemetry will be sent and associated "
+                                     "with email address:"))
+            support_summary.append("       %s" % support.mos_email)
+            support_summary.append(_("    but will not be registered with My "
+                                     "Oracle Support because"))
+            support_summary.append(_("    no password was saved."))
+        else:
+            # Equivalent to (ocm_level == "auth" or asr_level == "auth")
+            support_summary.append(_("  Telemetry will be sent and will be "
+                                     "registered with My Oracle Support"))
+            support_summary.append(_("    using email address:"))
+            support_summary.append("       %s" % support.mos_email)
+
+            # Use the presence of OCM ciphertext to assume that successful OCM
+            # validation took place.
+            if support.ocm_ciphertext:
+                support_summary.append(_("  MOS credentials validated "
+                                         "for OCM"))
+            elif support.ocm_available:
+                support_summary.append(_("  MOS credentials NOT validated "
+                                         "for OCM"))
+
+            # Use the presence of ASR private_key to assume that successful ASR
+            # validation took place.
+            if support.asr_private_key:
+                support_summary.append(_("  MOS credentials validated "
+                                         "for ASR"))
+            elif support.asr_available:
+                support_summary.append(_("  MOS credentials NOT validated "
+                                         "for ASR"))
+
+            # Display different messages for different situations.
+            if ((support.ocm_available and not support.ocm_ciphertext) or
+                (support.asr_available and not support.asr_private_key)):
+                # Installed systems may have different network config.
+                support_summary.append(_("  Validation will be attempted "
+                                         "again on (re)boot of "
+                                         "target system(s)"))
+        if support.netcfg == SupportInfo.PROXY:
+            if support.proxy_user:
+                proxy_line = (_("  Secure proxy "))
+            else:
+                proxy_line = (_("  Proxy "))
+            proxy_line += (_("specified: host: %s" %
+                             support.proxy_hostname))
+            if support.proxy_port:
+                proxy_line += (_("  port: %s" % support.proxy_port))
+            if support.proxy_user:
+                proxy_line += (_("  user: %s" % support.proxy_user))
+            support_summary.append(proxy_line)
+        elif support.netcfg == SupportInfo.HUB:
+            if support.ocm_hub:
+                support_summary.append(_("  OCM hub: %s" % support.ocm_hub))
+            if support.asr_hub:
+                support_summary.append(_("  ASR hub: %s" % support.asr_hub))
+
+        return support_summary
+
 
 def nameservice_summary(nameservice, summary):
     '''sppend name service summary information
@@ -235,7 +325,7 @@ def nameservice_summary(nameservice, summary):
         summary.append(_("Domain: %s") % nameservice.domain)
         summary.append(_("LDAP profile: ") + nameservice.ldap_profile)
         summary.append(_("LDAP server's IP: ") + nameservice.ldap_ip)
-        summary.append(_("LDAP search base: ") + 
+        summary.append(_("LDAP search base: ") +
                        nameservice.ldap_search_base)
         if nameservice.ldap_proxy_bind == \
                 NameServiceInfo.LDAP_CHOICE_PROXY_BIND:

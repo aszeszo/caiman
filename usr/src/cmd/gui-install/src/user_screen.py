@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -98,7 +98,8 @@ class UserScreen(BaseScreen):
         relation_set.add(relation)
 
         # Setup Accessibility relationship for the password
-        self.atk_passwordinfolabel = self.userpasswordinfolabel.get_accessible()
+        self.atk_passwordinfolabel = \
+            self.userpasswordinfolabel.get_accessible()
         atk_userpasswordlabel = userpasswordlabel1.get_accessible()
         atk_parent = self.password.get_accessible()
 
@@ -408,7 +409,7 @@ class UserScreen(BaseScreen):
             self.saved_msg_type = 'password'
             error_dialog('password', msg)
             self.validation_occurring = False
-            raise NotOkToProceedError(str(err))
+            raise NotOkToProceedError(msg)
 
         hostname = self.hostname.get_text()
         hostname_msg = self.validate_hostname(hostname, self.hostname)

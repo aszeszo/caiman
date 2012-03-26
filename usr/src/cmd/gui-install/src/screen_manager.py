@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -44,6 +44,7 @@ from solaris_install.gui_install.gui_install_common import exit_gui_install, \
     modal_dialog, COLOR_WHITE, GLADE_DIR, GLADE_ERROR_MSG
 from solaris_install.gui_install.help_dialog import HelpDialog
 from solaris_install.gui_install.progress_screen import ProgressScreen
+from solaris_install.gui_install.support_screen import SupportScreen
 from solaris_install.gui_install.timezone_screen import TimeZoneScreen
 from solaris_install.gui_install.user_screen import UserScreen
 from solaris_install.gui_install.welcome_screen import WelcomeScreen
@@ -53,6 +54,7 @@ MAIN_GLADE = "gui-install.xml"
 DISK_GLADE = "installationdisk.xml"
 TIMEZONE_GLADE = "date-time-zone.xml"
 USER_GLADE = "users.xml"
+SUPPORT_GLADE = "support.xml"
 CONFIRM_GLADE = "confirmation.xml"
 PROGRESS_GLADE = "installation.xml"
 FAILURE_GLADE = "failure.xml"
@@ -84,6 +86,7 @@ class ScreenManager(object):
             self.builder.add_from_file(GLADE_DIR + "/" + DISK_GLADE)
             self.builder.add_from_file(GLADE_DIR + "/" + TIMEZONE_GLADE)
             self.builder.add_from_file(GLADE_DIR + "/" + USER_GLADE)
+            self.builder.add_from_file(GLADE_DIR + "/" + SUPPORT_GLADE)
             self.builder.add_from_file(GLADE_DIR + "/" + CONFIRM_GLADE)
             self.builder.add_from_file(GLADE_DIR + "/" + PROGRESS_GLADE)
             self.builder.add_from_file(GLADE_DIR + "/" + FAILURE_GLADE)
@@ -111,6 +114,7 @@ class ScreenManager(object):
         self._disk_screen = DiskScreen(self.builder)
         self._timezone_screen = TimeZoneScreen(self.builder)
         self._user_screen = UserScreen(self.builder)
+        self._support_screen = SupportScreen(self.builder)
         self._confirm_screen = ConfirmScreen(self.builder)
         self._progress_screen = ProgressScreen(self.builder, self.finishapp)
         self._finish_screen = FinishScreen(self.builder, logname, self.quitapp)
@@ -121,6 +125,7 @@ class ScreenManager(object):
             self._disk_screen,
             self._timezone_screen,
             self._user_screen,
+            self._support_screen,
             self._confirm_screen,
             self._progress_screen,
             self._finish_screen,
@@ -202,6 +207,25 @@ class ScreenManager(object):
                 self._disk_screen.installationdisk_partitiondiskradio_toggled,
             "installationdisk_wholediskradio_toggled":
                 self._disk_screen.installationdisk_wholediskradio_toggled,
+            #
+            # Support Registration screen:
+            #
+            "support_header_label_activate_link_cb":
+                self._support_screen.details_link_activated,
+            "support_authenticate_checkbox_toggled_cb":
+                self._support_screen.authenticate_checkbox_toggled,
+            "support_no_proxy_radio_toggled_cb":
+                self._support_screen.no_proxy_radio_toggled,
+            "support_proxy_radio_toggled_cb":
+                self._support_screen.proxy_radio_toggled,
+            "support_proxy_port_entry_insert_text_cb":
+                self._support_screen.proxy_port_insert_text,
+            "support_aggregation_radio_toggled_cb":
+                self._support_screen.aggregation_radio_toggled,
+            "support_ocm_entry_focus_out_event_cb":
+                self._support_screen.url_field_changed,
+            "support_asr_entry_focus_out_event_cb":
+                self._support_screen.url_field_changed,
         }
         warnings.filterwarnings("ignore", category=RuntimeWarning)
         missing_handlers = self.builder.connect_signals(signal_map)
@@ -242,7 +266,23 @@ class ScreenManager(object):
                             "label4", "unreadablepartslabel",
                             "partsfoundlabel", "custominfolabel", "label20",
                             "partitionsizelabel", "partitiontypelabel",
-                            "partitionavaillabel", "diskwarninglabel"]:
+                            "partitionavaillabel", "diskwarninglabel",
+                            "support_header_line1",
+                            "support_header_line3",
+                            "support_email_label",
+                            "support_email_subtitle_label",
+                            "support_authenticate_checkbox_label",
+                            "support_password_label",
+                            "support_net_access_title_label",
+                            "support_no_proxy_label",
+                            "support_proxy_label",
+                            "support_proxy_hostname_label",
+                            "support_proxy_port_label",
+                            "support_proxy_username_label",
+                            "support_proxy_password_label",
+                            "support_aggregation_radio_label",
+                            "support_ocm_label",
+                            "support_asr_label"]:
             # get a handle to the label
             needs_translation = self.builder.get_object(object_name)
             # replace the current label text with the translated text
