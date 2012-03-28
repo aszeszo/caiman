@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Use tee(1) when posting messages to both console and log file
@@ -43,6 +43,7 @@ GREP=/usr/bin/grep
 HEAD=/usr/bin/head
 SVCADM=/usr/sbin/svcadm
 SVCCFG=/usr/sbin/svccfg
+WGET=/usr/bin/wget
 
 DHCPINFO=/sbin/dhcpinfo
 BOOTSERVER=BootSrvA
@@ -358,6 +359,39 @@ fi
 #
 if [ "$AI_MANIFEST_LOCATION" = "prompt" ]; then
 	do_get_manifest </dev/console >/dev/console 2>&1
+#
+# if not default and something specified assume either local or remote file
+# specified to be used as the manifest.
+elif [ "$AI_MANIFEST_LOCATION" != "default" ] && \
+     [ "$AI_MANIFEST_LOCATION" != "" ]; then
+	case "$AI_MANIFEST_LOCATION" in
+		http://*|ftp://*|tftp://*)
+			# Use wget to retrieve remote manifest
+			mkdir -p "$AI_MANIFESTDIR"
+			if [[ $? -ne 0 ]]; then
+				printf "\nFailed to create $AI_MANIFESTDIR. Exiting\n"
+				exit $SMF_EXIT_ERR_FATAL
+			fi
+			$WGET "$AI_MANIFEST_LOCATION" -O "$AI_MANIFEST_FILE" >/dev/msglog 2>&1
+			;;
+		file://*)
+			AI_MANIFEST_FILE="${AI_MANIFEST_LOCATION#*://}"
+			;;
+		*)
+			AI_MANIFEST_FILE="$AI_MANIFEST_LOCATION"
+			;;
+	esac
+
+	if [ -s "$AI_MANIFEST_FILE" ]; then
+		cp "$AI_MANIFEST_FILE" "$AI_MANIFEST"
+		$FILE "$AI_MANIFEST" | $GREP -q executable && $CHMOD +x "$AI_MANIFEST"
+		print "Using specified install manifest : $AI_MANIFEST_LOCATION" | \
+		    $TEE_LOGTOCONSOLE
+	else
+		print "Could not locate specified manifest : $AI_MANIFEST_LOCATION" | \
+		    $TEE_LOGTOCONSOLE
+		exit $SMF_EXIT_ERR_FATAL
+	fi
 #
 # Else no "prompt" bootarg, and we're booted from media; use the
 # default manifest on the media.
