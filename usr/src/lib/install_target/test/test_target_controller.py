@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import platform
@@ -33,7 +33,8 @@ from StringIO import StringIO
 from solaris_install.engine.test import engine_test_utils
 from solaris_install.target import Target
 from solaris_install.target.logical import Vdev
-from solaris_install.target.physical import Disk, Partition, Slice
+from solaris_install.target.physical import Disk, GPTPartition, Partition, \
+    Slice
 from solaris_install.target.size import Size
 from solaris_install.target.controller import TargetController, BadDiskError
 
@@ -191,9 +192,14 @@ class TestTargetController(unittest.TestCase):
             "incorrect disk selected")
 
     def test_existing_partitions(self):
-        '''Validate that existing partitions can be presevered.'''
+        '''Validate that existing MBR partitions can be presevered.'''
         discovered_disks = self._get_discovered_disks()
         tc = TargetController(self.doc)
+
+        # Set disk.label to VTOC explicitly. If there is no label set
+        # then TargetController will default it to GPT and remove the
+        # MBR partitions.
+        discovered_disks[3].label = "VTOC"
         selected_disks = tc.select_disk(discovered_disks[3])
         tc.apply_default_layout(selected_disks[0], False, False)
 
@@ -205,7 +211,6 @@ class TestTargetController(unittest.TestCase):
             len(selected_disks[0].get_children(class_type=Partition)),
             2,
             "disk should still have 2 partitions")
-
 
     def test_clears_existing_partitions(self):
         '''Validate that existing partitions are removed with wipe_disk set.'''
@@ -221,11 +226,22 @@ class TestTargetController(unittest.TestCase):
             "there should be 1 Disk returned")
         self.assertEqual(selected_disks[0].ctd, discovered_disks[3].ctd,
             "incorrect disk returned")
-        self.assertEqual(
-            len(selected_disks[0].get_children(class_type=Partition)),
-            1,
-            "disk should only have 1 partition now")
 
+        # Since this is X86, wiping the disk and applying default layout
+        # should result in a GPT partitioned disk with 3 GPTPartitions:
+        # 1 - EFI system or BIOS boot depending on firmware
+        # 2 - Solaris
+        # 3 - Solaris reserved
+        partitions = selected_disks[0].get_children(class_type=GPTPartition)
+
+        self.assertEqual(len(partitions), 3,
+            "disk should only have 1 partition now")
+        self.assertEqual(partitions[0].guid, selected_disks[0].sysboot_guid,
+            "GPTPartition 1 is not the correct type for boot")
+        self.assertTrue(partitions[1].is_solaris,
+            "GPTPartition 2 is not a solaris partition")
+        self.assertTrue(partitions[2].is_reserved,
+            "GPTPartition 3 is not a reserved partition")
 
     def test_reset_layout(self):
         '''Validate that existing partitions are restored with reset_layout.'''
@@ -234,14 +250,26 @@ class TestTargetController(unittest.TestCase):
 
         discovered_disks = self._get_discovered_disks()
         tc = TargetController(self.doc, debug=True)
+
+        # Set disk.label to VTOC explicitly. If there is no label set
+        # then TargetController will default it to GPT and remove the
+        # MBR partitions.
+        discovered_disks[3].label = "VTOC"
+
         selected_disks = tc.select_disk(discovered_disks[3])
         self.assertEqual(len(selected_disks), 1,
             "there should be 1 Disk returned")
+
+        # When wipe_disk is True the default layout becomes GPT based rather
+        # than VTOC.
         tc.apply_default_layout(selected_disks[0], use_whole_disk=False, \
                                 wipe_disk=True)
+        self.assertEqual(selected_disks[0].label, "GPT",
+            "disk should have a GPT label now. Has %s instead." \
+            % selected_disks[0].label)
         self.assertEqual(
-            len(selected_disks[0].get_children(class_type=Partition)),
-            1, "disk should have 1 partition now")
+            len(selected_disks[0].get_children(class_type=GPTPartition)),
+            3, "disk should have 3 GPT partitions now")
         copy_disks = tc.reset_layout(selected_disks[0], use_whole_disk=False)
 
         self.assertEqual(len(copy_disks), 1,
@@ -251,7 +279,6 @@ class TestTargetController(unittest.TestCase):
         self.assertEqual(
             len(copy_disks[0].get_children(class_type=Partition)),
             2, "disk should have 2 partitions again")
-
 
     def test_selecting_specific_disks(self):
         '''Validate that 2 specific disks can be selected.'''
@@ -314,6 +341,13 @@ class TestTargetController(unittest.TestCase):
         '''Validate that selected disks can be reset separately'''
         discovered_disks = self._get_discovered_disks()
         tc = TargetController(self.doc)
+
+        # Set disk.label to VTOC explicitly. If there is no label set
+        # then TargetController will default it to GPT and remove the
+        # MBR partitions.
+        for i in [1, 2]:
+            discovered_disks[i].label = "VTOC"
+
         selected_disks = tc.select_disk(
             [discovered_disks[1], discovered_disks[2]])
 
@@ -338,6 +372,13 @@ class TestTargetController(unittest.TestCase):
         '''Validate that all selected disks can be reset'''
         discovered_disks = self._get_discovered_disks()
         tc = TargetController(self.doc)
+
+        # Set disk.label to VTOC explicitly. If there is no label set
+        # then TargetController will default it to GPT and remove the
+        # MBR partitions.
+        for i in [1, 2]:
+            discovered_disks[i].label = "VTOC"
+
         selected_disks = tc.select_disk(
             [discovered_disks[1], discovered_disks[2]])
 
@@ -385,11 +426,17 @@ class TestTargetController(unittest.TestCase):
             use_whole_disk=True)
 
         desired_disks = self._get_desired_disks()
-        # There should be at least one partition since we create this in
-        # _fixup_disk().
+
+        # There should be 0 partitions. ZFS handles whole disk mode for GPT
+        partitions = desired_disks[0].get_children(class_type=Partition)
         self.assertEqual(
-            len(desired_disks[0].get_children(class_type=Partition)), 1,
-            "selected disk should have 1 partitions")
+            len(partitions), 0,
+            "selected whole_disk mode disk should have 0 partitions")
+
+        partitions = desired_disks[0].get_children(class_type=GPTPartition)
+        self.assertEqual(
+            len(partitions), 0,
+            "selected whole_disk mode disk should have 0 GPT partitions")
 
     def test_disks_associated_with_vdev(self):
         '''Validate selected disks are associated with a Vdev'''
@@ -426,8 +473,6 @@ class TestTargetController(unittest.TestCase):
                 else:
                     self.assertTrue(not bootslice,
                         "No root slice associated with vdev")
-
-
 
 
 if __name__ == '__main__':

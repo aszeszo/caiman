@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """ logical.py -- library containing class definitions for logical DOC objects,
 including Zpool, Filesystem, and Zvol
@@ -89,15 +89,19 @@ class Logical(DataObject):
         nodump = element.get("nodump")
 
         logical = Logical("logical")
-        if noswap is not None and noswap.lower() == "true":
-            logical.noswap = True
-        else:
-            logical.noswap = False
+        if noswap is not None:
+            try:
+                logical.noswap = {"true": True, "false": False}[noswap.lower()]
+            except KeyError:
+                raise ParsingError("Logical  element's noswap attribute " +
+                                   "must be either 'true' or 'false'")
 
-        if nodump is not None and nodump.lower() == "true":
-            logical.nodump = True
-        else:
-            logical.nodump = False
+        if nodump is not None:
+            try:
+                logical.nodump = {"true": True, "false": False}[nodump.lower()]
+            except KeyError:
+                raise ParsingError("Logical  element's nodump attribute " +
+                                   "must be either 'true' or 'false'")
 
         return logical
 
@@ -186,13 +190,12 @@ class Zpool(DataObject):
         if action is not None:
             zpool.action = action
         if is_root is not None:
-            if is_root.lower() == "true":
-                zpool.is_root = True
-            elif is_root.lower() == "false":
-                zpool.is_root = False
-            else:
+            try:
+                zpool.is_root = {"true": True, "false": False}[is_root.lower()]
+            except KeyError:
                 raise ParsingError("Zpool element's is_root attribute must " +
                                    "be either 'true' or 'false'")
+
         if mountpoint is not None:
             zpool.mountpoint = mountpoint
         return zpool
@@ -260,6 +263,9 @@ class Zpool(DataObject):
         create flag
         """
         cmd = [ZPOOL, "create", "-f"]
+        if self.is_root:
+            cmd.append("-B")
+
         if options:
             cmd.extend(options)
 
@@ -502,11 +508,9 @@ class Filesystem(DataObject):
                 filesystem.mountpoint = None
 
         if in_be is not None:
-            if in_be.lower() == "true":
-                filesystem.in_be = True
-            elif in_be.lower() == "false":
-                filesystem.in_be = False
-            else:
+            try:
+                filesystem.in_be = {"true": True, "false": False}[in_be.lower()]
+            except KeyError:
                 raise ParsingError("Filesystem element's in_be attribute " +
                                    "must be either 'true' or 'false'")
 

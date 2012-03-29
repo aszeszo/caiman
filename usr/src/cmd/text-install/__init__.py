@@ -29,6 +29,7 @@ Text / (n)Curses based UI for installing Oracle Solaris
 import gettext
 import os
 
+from solaris_install import Popen, gpt_firmware_check
 from solaris_install.getconsole import get_console, SERIAL_CONSOLE
 
 #
@@ -45,6 +46,10 @@ console_type = get_console()
 #
 if console_type != SERIAL_CONSOLE:
     os.environ["LC_MESSAGES"] = "C"
+
+# If True means this system is GPT boot capable. Typically False
+# only if using an older OBP on SPARC.
+can_use_gpt = gpt_firmware_check()
 
 # Variables used by modules this module imports
 # Defined here to avoid circular import errors
@@ -71,10 +76,10 @@ BOOT_ARCHIVE = "boot-archive"
 TRANSFER_FILES = "transfer-ti-files"
 CREATE_SNAPSHOT = "create-snapshot"
 
+
 import curses
 import locale
 import logging
-import os
 import platform
 import signal
 import subprocess
@@ -94,11 +99,13 @@ from solaris_install.target.libbe.be import be_list
 from solaris_install.target.size import Size
 from solaris_install.text_install.disk_selection import DiskScreen
 from solaris_install.text_install.fdisk_partitions import FDiskPart
+from solaris_install.text_install.gpt_partitions import GPTPart
 from solaris_install.text_install.install_progress import InstallProgress
 from solaris_install.text_install.install_status import InstallStatus, \
-                                                     RebootException
+    RebootException
 from solaris_install.text_install.log_viewer import LogViewer
-from solaris_install.text_install.partition_edit_screen import PartEditScreen
+from solaris_install.text_install.partition_edit_screen import \
+    GPTPartEditScreen, PartEditScreen
 from solaris_install.text_install.summary import SummaryScreen
 from solaris_install.text_install.ti_install_utils import InstallData
 from solaris_install.text_install.welcome import WelcomeScreen
@@ -157,15 +164,17 @@ def setup_logging(logname, log_level):
 def make_screen_list(main_win, target_controller, install_data):
     '''Initialize the screen list. On x86, add screens for editing slices
     within a partition. Also, trigger the target discovery thread.
-    
     '''
     
-    result = []
+    result = list()
     result.append(WelcomeScreen(main_win, install_data))
+
     disk_screen = DiskScreen(main_win, target_controller)
     result.append(disk_screen)
     result.append(FDiskPart(main_win, target_controller))
+    result.append(GPTPart(main_win, target_controller))
     result.append(PartEditScreen(main_win, target_controller))
+    result.append(GPTPartEditScreen(main_win, target_controller))
     if platform.processor() == "i386":
         result.append(FDiskPart(main_win, target_controller,
                                 x86_slice_mode=True))
@@ -190,9 +199,7 @@ def _reboot_cmds(is_x86):
     '''Generate list of cmds to try fast rebooting'''
     cmds = list()
     
-    all_be = be_list()
-
-    for be_name, be_pool, root_ds, is_active in all_be:
+    for be_name, be_pool, root_ds, is_active in be_list():
         if is_active:
             if is_x86:
                 cmds.append([REBOOT, "-f", "--", root_ds])
@@ -200,8 +207,8 @@ def _reboot_cmds(is_x86):
                 # SPARC requires "-Z" before the root dataset
                 cmds.append([REBOOT, "-f", "--", "-Z", root_ds])
 
-    # Fallback reboot. If the subprocess.call(..) command above fails,
-    # simply do a standard reboot.
+    # Fallback reboot. If the subprocess.call(..) command above fails, simply
+    # do a standard reboot.
     cmds.append([REBOOT])
     return cmds
 
@@ -236,7 +243,6 @@ def prepare_engine(options):
     # The values specified are used as arguments for registering the
     # checkpoint.  If function signature for any of the checkpoints are
     # is modified, these values need to be modified as well.
-
     eng.register_checkpoint(TARGET_DISCOVERY,
                             "solaris_install/target/discovery",
                             "TargetDiscovery")

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import difflib
@@ -246,18 +246,11 @@ class TestTargetSelectionTestCase(unittest.TestCase):
 
         expected_xml = '''\
         <target name="desired">
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c18t3d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="FUJITSU" dev_chassis="SYS" \
-        dev_size="143364060secs"/>
+        dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="143363072secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="143361536secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         ..<logical noswap="false" nodump="false">
         ....<zpool name="rpool" action="create" is_root="true">
@@ -310,18 +303,11 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ......</zvol>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="myrpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c18t3d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="FUJITSU" dev_chassis="SYS" \
-        dev_size="143364060secs"/>
+        dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="143363072secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
-        ........<size val="143361536secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         </target>
         '''
@@ -345,17 +331,10 @@ class TestTargetSelectionTestCase(unittest.TestCase):
 
         expected_xml = '''\
         <target name="desired">
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c18t2d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="FUJITSU" dev_chassis="SYS" \
-        dev_size="143358286secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="143357440secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="143355904secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool" action="create" is_root="true">
@@ -401,18 +380,11 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="myrpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c18t3d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="FUJITSU" dev_chassis="SYS" \
-        dev_size="143364060secs"/>
+        dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="143363072secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
-        ........<size val="143361536secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         </target>
         '''
@@ -439,29 +411,15 @@ class TestTargetSelectionTestCase(unittest.TestCase):
 
         expected_xml = '''\
         <target name="desired">
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c18t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="SEAGATE" dev_chassis="SYS" \
-        dev_size="286728120secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="286727168secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="286725632secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c18t2d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="FUJITSU" dev_chassis="SYS" \
-        dev_size="143358286secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="143357440secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="143355904secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool" action="create" is_root="true">
@@ -573,17 +531,10 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c18t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="SEAGATE" dev_chassis="SYS" \
-        dev_size="286728120secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="286727168secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="286725632secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<disk whole_disk="false">
         ....<disk_name name="c18t2d0" name_type="ctd"/>
@@ -636,29 +587,15 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="myrpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c18t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="SEAGATE" dev_chassis="SYS" \
-        dev_size="286728120secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="286727168secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
-        ........<size val="286725632secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="myrpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c18t2d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="FUJITSU" dev_chassis="SYS" \
-        dev_size="143358286secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="143357440secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
-        ........<size val="143355904secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         </target>
         '''
@@ -698,17 +635,10 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="myrpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c18t1d0" name_type="ctd"/>
         ....<disk_prop dev_type="scsi" dev_vendor="SEAGATE" dev_chassis="SYS" \
-        dev_size="286728120secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="286727168secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
-        ........<size val="286725632secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         </target>
         '''

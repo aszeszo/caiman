@@ -70,7 +70,8 @@ BOOT_MODS_XML = '''
   </boot_mods>
 </root>'''
 
-# Physical target representation for X86 tests
+# Physical target representation for X86 tests.
+# Consists of one VTOC slice boot device and one GPT partition boot device
 PHYS_X86_XML = \
 '''<disk whole_disk="false">
     <disk_name name="c600d600" name_type="ctd"/>
@@ -86,15 +87,14 @@ PHYS_X86_XML = \
   <disk whole_disk="false">
     <disk_name name="c700d700" name_type="ctd"/>
     <disk_prop dev_type="FIXED" dev_size="777777777secs"/>
-    <partition action="preserve" name="1" part_type="191">
+    <gpt_partition action="create" name="5" part_type="Solaris"
+        in_zpool="rpool">
       <size val="33527655secs" start_sector="16065"/>
-      <slice name="0" action="preserve" force="false" in_zpool="rpool">
-        <size val="33479459secs" start_sector="16065"/>
-      </slice>
-    </partition>
+    </gpt_partition>
   </disk>'''
 
 # Physical target representation for SPARC tests
+# Consists of one VTOC slice boot device and one GPT partition boot device
 PHYS_SPARC_XML = '''
 <root>
   <disk whole_disk="false">
@@ -108,9 +108,10 @@ PHYS_SPARC_XML = '''
   <disk whole_disk="false">
     <disk_name name="c700d700" name_type="ctd"/>
     <disk_prop dev_type="FIXED" dev_size="777777777secs"/>
-      <slice name="0" action="preserve" force="false" in_zpool="rpool">
-        <size val="33479459secs" start_sector="16065"/>
-      </slice>
+    <gpt_partition action="create" name="5" part_type="Solaris"
+        in_zpool="rpool">
+      <size val="33527655secs" start_sector="16065"/>
+    </gpt_partition>
   </disk>
 </root>'''
 
@@ -289,18 +290,28 @@ class SystemBootMenuTestCase(BootMenuTestCaseBase):
                     % (iit, self.boot_menu.boot_title))
                 os.unlink(self.boot_menu.img_info_path)
 
+            boot_targets = self.boot_menu.boot_target
+
             # Check that the vtoc slice object was identified as a boot device
             # Slice should be slice 0 belonging to disk c600d600
             # ie. c600d700s0
-            boot_targets = self.boot_menu.boot_target
             boot_slice = boot_targets[DEVS][0]
             self.failUnlessEqual(boot_slice, 'c600d600s0',
-                "%s target boot device slice object doesn't match "\
+                "%s target boot device slice object doesn't match " \
                 "manifest entry:\n" \
                 "(Manifest slice device: c600d600s0, SystemBootMenu slice " \
-                "slice device: %s)\n" % (arch, boot_slice))
+                "device: %s)\n" % (arch, boot_slice))
 
-            # UEFI Further checks for gpt_partitions should be included here.
+            # Check that the gpt_partition object was identified as a boot
+            # device. GPT partition should be 's5' belonging to disk c700d700
+            # ie. c700d700s5
+            boot_gptpart = boot_targets[DEVS][1]
+            self.failUnlessEqual(boot_gptpart, 'c700d700s5',
+                "%s target boot device gpt_partition object doesn't match " \
+                "manifest entry:\n" \
+                "(Manifest GPT partition device: c700d700s5, " \
+                "SystemBootMenu GPT partition device: %s)\n" \
+                % (arch, boot_gptpart))
 
             # Check the BE sub element of the logical node of target too
             boot_env = boot_targets[BOOT_ENV]
@@ -348,51 +359,14 @@ class SystemBootMenuTestCase(BootMenuTestCaseBase):
         self.boot_menu.build_default_entries()
         self.boot_menu.install_boot_loader(dry_run=True)
 
-    def test_copy_sparc_bootlst(self):
-        """ Unit tests copying of the SPARC bootlst binary.
-            Can only be partially tested on X86.
+    def test_set_firmware_boot_device(self):
+        """ Tests setting of the firmware boot-device list
+            This test performs limited actions because of it's destructive
+            nature.
         """
-        if self.arch == 'sparc':
-            self.boot_menu._parse_doc()
-            self.boot_menu._copy_sparc_bootlst(dry_run=True)
-
-    def test_create_sparc_boot_menu(self):
-        """ Test creation of the SPARC menu.lst file
-        """
-        self.tearDown()
-        self.arch = 'sparc'
-        self.setUp()
         self.boot_menu._parse_doc_target(dry_run=True)
-        self.boot_menu._create_sparc_boot_menu(dry_run=True)
-        self.tearDown()
-
-    def test_install_sparc_bootblk(self):
-        """ Test installation of the SPARC bootblk binary via installboot(1M)
-        """
-        # Make sure the method thinks it's runnning on SPARC
-        self.tearDown()
-        self.arch = 'sparc'
-        self.setUp()
-        self.boot_menu._parse_doc_target(dry_run=True)
-        self.boot_menu._install_sparc_bootblk(dry_run=True)
-        # Make sure it raises a RuntimeError on X86
-        self.boot_menu.arch = 'i386'
-        self.assertRaises(RuntimeError,
-                          self.boot_menu._install_sparc_bootblk,
-                          dry_run=True)
-
-    def test_set_sparc_prom_boot_device(self):
-        """ Tests setting of the prom boot-device variable on SPARC
-            This test is limited because reading from /dev/openprom
-            requires root priviliges which causes a non-fatal exception
-            in the called method.
-        """
-        # Make sure the method thinks it's runnning on SPARC
-        self.tearDown()
-        self.arch = 'sparc'
-        self.setUp()
-        self.boot_menu._parse_doc_target(dry_run=True)
-        self.boot_menu._set_sparc_prom_boot_device(dry_run=True)
+        self.boot_menu.init_boot_config()
+        self.boot_menu._set_firmware_boot_device(dry_run=True)
 
     def test_execute(self):
         """ Test that runs the entire checkpoint as an install application

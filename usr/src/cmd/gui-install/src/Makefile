@@ -33,10 +33,12 @@ PROGS=		gui-install
 PYMODULES=	__init__.py \
 	base_screen.py \
 	confirm_screen.py \
+	disk_panel.py \
 	disk_screen.py \
 	failure_screen.py \
 	fdisk_panel.py \
 	finish_screen.py \
+	gpt_panel.py \
 	gui_install_common.py \
 	help_dialog.py \
 	install_profile.py \

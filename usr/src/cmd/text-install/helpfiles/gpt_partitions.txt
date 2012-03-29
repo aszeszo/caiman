@@ -1,0 +1,27 @@
+GPT PARTITIONS
+
+This screen displays the GPT partitions for the storage device that you selected in the previous screen.  The partitions are listed in layout order.
+
+PROCEDURE
+
+To exit this help screen, press F3.  Then, in the installer screen, use the arrow keys to highlight either "Use the whole disk" or "Use a partition on the disk."
+
+    * If you select "Use the whole disk," the installer records that choice and proceeds to the next task.
+
+    * If you select "Use a partition on the disk," the next screen enables you to select which partition to use for hte installation and to make changes to the partition layout.
+
+    CAUTION: The "Use the whole disk" selection erases the entire disk during installation.  The disk is overwritten with the Oracle Solaris OS.
+
+    NOTE:  If the OBP does not support booting from GPT Partitions on SPARC, the "Use a partition on the disk" option will not be available for selection.  If the user wishes to manually lay out the disk, they must exit the installer and run:
+
+    /usr/sbin/format -L vtoc -d <c#t#d#>
+
+    to apply a VTOC label to the disk.  Once the disk has a VTOC label, manual layout can proceed as normal.
+
+Press F2 to continue to the next screen.
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

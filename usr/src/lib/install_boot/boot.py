@@ -45,6 +45,7 @@ from bootmgmt import bootconfig, BootmgmtUnsupportedPlatformError, \
     BootmgmtPropertyWriteError, BootmgmtUnsupportedPropertyError
 from bootmgmt.bootconfig import BootConfig, DiskBootConfig, ODDBootConfig, \
     SolarisDiskBootInstance, SolarisODDBootInstance, ChainDiskBootInstance
+from bootmgmt.bootinfo import SystemFirmware
 from bootmgmt.bootloader import BootLoader
 from solaris_install import DC_LABEL, DC_PERS_LABEL, \
     CalledProcessError, Popen, run
@@ -56,12 +57,13 @@ from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target import Target
 from solaris_install.target.logical import be_list, BE, Zpool
-from solaris_install.target.physical import Disk, FDISK, \
+from solaris_install.target.physical import Disk, FDISK, GPTPartition, \
     Partition, Slice
+from solaris_install.target.vdevs import _get_vdev_mapping
 from solaris_install.transfer.media_transfer import get_image_grub_title
 
 BOOT_ENV = "boot-env"
-# Character boot device paths eg. c0t0d0s0
+# Boot GPT partition or slice devices eg. c0t0d0s0
 DEVS = "devs"
 
 # Stuff used to set up a USB media image with grub2
@@ -221,7 +223,7 @@ class BootMenu(Checkpoint):
             for config_set in boot_config:
                 ftype = config_set[0]
                 if ftype == BootConfig.OUTPUT_TYPE_FILE:
-                    self._handle_file_type(config_set, dry_run)
+                    self._handle_file_type(config_set)
                 elif ftype in [BootConfig.OUTPUT_TYPE_BIOS_ELTORITO,
                                BootConfig.OUTPUT_TYPE_UEFI_ELTORITO]:
                 # XXX add handlers for the following when supported:
@@ -231,7 +233,7 @@ class BootMenu(Checkpoint):
                     raise RuntimeError("Unrecognized boot loader " \
                                        "file type: %s" % ftype)
 
-    def _handle_file_type(self, config, dry_run):
+    def _handle_file_type(self, config):
         """ Method that copies generic file types to their appropriate targets.
         """
         ftype, src, objref, dest, uid, gid, mode = config
@@ -252,9 +254,7 @@ class BootMenu(Checkpoint):
 
         real_dest = dest % (self.boot_tokens)
         par_dir = os.path.abspath(os.path.join(real_dest, os.path.pardir))
-        if dry_run is True:
-            os.unlink(src)
-            return
+
         try:
             if not os.path.exists(par_dir):
                 self.logger.debug("Creating boot configuration folder: %s" \
@@ -337,52 +337,19 @@ class SystemBootMenu(BootMenu):
         # Note that 'platform' tuple is not supplied here since we want to
         # go with the running system arch/firmware, which bootmgmt defaults to.
         self.config = DiskBootConfig(bc_flags,
-                                     rpname=target_be.parent.name,
-                                     tldpath=self.pool_tld_mount,
-                                     zfspath=target_be.mountpoint)
+            rpname=target_be.parent.name,
+            tldpath=self.pool_tld_mount,
+            zfspath=target_be.mountpoint,
+            set_bootfs_on_commit=True)
 
         # Apply boot timeout property to boot loader.
         try:
-            self.config.boot_loader.setprop('timeout',
+            self.config.boot_loader.setprop(BootLoader.PROP_TIMEOUT,
                                             self.boot_timeout)
         except BootmgmtUnsupportedPropertyError:
             self.logger.warning("Boot loader type %s does not support the \
                                 'timeout' property. Ignoring." \
                                 % self.config.boot_loader.name)
-
-    def execute(self, dry_run=False):
-        """ Primary execution method used by the Checkpoint parent class
-        """
-        # UEFI The divergent code paths for sparc and X86 is a temporary
-        # workaround for the lack of sparc support in the bootmgmt module.
-        # When this is addressed, I expect to revert to just calling the
-        # parent class method.
-        if self.arch == 'sparc':
-            # For sparc, generate a manual menu.lst and copy the bootlst
-            # binary into the boot dataset.
-            self.parse_doc(dry_run)
-            # Check to make sure that a non-dry run attempt is not
-            # executed on a live system
-            if self.boot_target[BOOT_ENV].mountpoint == '/' and \
-                not dry_run:
-                raise RuntimeError("Boot checkpoint can not be executed on" \
-                                     "live systems except with dry run mode")
-            self._set_bootfs_pool_prop(dry_run)
-            self._install_sparc_bootblk(dry_run)
-            self._set_sparc_prom_boot_device(dry_run)
-            self._create_sparc_boot_menu(dry_run)
-            self._copy_sparc_bootlst(dry_run)
-        else:
-            super(SystemBootMenu, self).execute(dry_run)
-
-    def _set_bootfs_pool_prop(self, dry_run):
-        """ Set the bootfs property on the boot pool, activating the BE.
-            XXX: This should really be ultimately handled by pybootmgmt
-        """
-        pool = self.boot_target[BOOT_ENV].parent
-        self.logger.debug("Setting bootfs zpool property on %s to %s" \
-                          % (pool.name, self.target_bootfs))
-        pool.set("bootfs", self.target_bootfs, dry_run)
 
     def _get_x86_console(self):
         """
@@ -437,114 +404,45 @@ class SystemBootMenu(BootMenu):
                              % propname)
         return propname_val
 
-    def _create_sparc_boot_menu(self, dry_run):
-        """ Create a boot menu.lst file on a SPARC system.
+    def _set_firmware_boot_device(self, dry_run):
+        """ Set the boot device in the system firmware on SPARC and UEFI64
+            This performs no action on BIOS systems, which lack this feature.
         """
-        # Attempt to create the path to where the menu.lst file will reside
-        boot_menu_path = os.path.join(self.pool_tld_mount, 'boot')
-        if dry_run:
-            # Override boot_menu_path to temporary storage
-            temp_dir = tempfile.mkdtemp(dir="/tmp", prefix="sparc_boot_menu_")
-            boot_menu_path = os.path.join(temp_dir,
-                boot_menu_path.strip(os.path.sep))
-        boot_menu = os.path.join(boot_menu_path, 'menu.lst')
-        sparc_title_line = 'title %s\n' % self.boot_title
-        bootfs_line = 'bootfs ' + self.target_bootfs + '\n'
-        self.logger.debug("Creating SPARC boot menu file: %s" \
-                          % boot_menu)
-        if not os.path.isdir(boot_menu_path):
-            os.makedirs(boot_menu_path, 0755)
+        firmware = self.config.boot_loader.firmware
 
-        try:
-            with open(boot_menu, 'w') as menu_lst:
-                menu_lst.write(sparc_title_line)
-                menu_lst.write(bootfs_line)
-            os.chmod(boot_menu,
-                     stat.S_IREAD | stat.S_IWRITE | \
-                     stat.S_IRGRP | stat.S_IROTH)
-            # Requires root privilige so bypass on dry_run
-            if not dry_run:
-                os.chown(boot_menu, 0, 3)  # chown root:sys
-        except IOError, msg:
-            raise RuntimeError(msg)
-        if dry_run:
-            rmtree(temp_dir)
+        # Skip on BIOS since it lacks this capability
+        if firmware.fw_name == 'bios':
+            return
 
-    def _copy_sparc_bootlst(self, dry_run):
-        """ Copy the bootlst file on a SPARC system.
-            On SPARC systems a bootlst file is maintained at:
-            /platform/`uname -m`/bootlst
+        # XXX Seth
+        # Eventually we will use the common firmware.setprop() method to set
+        # the boot device on both SPARC and UEFI. For now SPARC still uses our
+        # own implementation until implemented in pybootmgmt.
 
-            It needs to be copied to:
-            <rootpool>/platform/`uname -m`/bootlst
-        """
-        bootlst_src = os.path.join(self.boot_target[BOOT_ENV].mountpoint,
-            'platform', platform.machine(),
-            'bootlst')
+        # SPARC firmware is AKA Open Boot Prom (OBP)
+        if firmware.fw_name == 'obp':
+            self._set_sparc_prom_boot_device(dry_run)
 
-        # Copy file bootlst from basedir to the rootpool
-        bootlst_dir = os.path.join(self.pool_tld_mount,
-                                   'platform', platform.machine())
-        if dry_run:
-            # Override bootlst_dir to temporary storage
-            temp_dir = tempfile.mkdtemp(dir="/tmp", prefix="sparc_bootlst_")
-            bootlst_dir = os.path.join(temp_dir,
-                                       bootlst_dir.strip(os.path.sep))
-        bootlst_dst = os.path.join(bootlst_dir, 'bootlst')
-        self.logger.debug("Copying SPARC bootlst file: %s" \
-                          % bootlst_src)
+        elif firmware.fw_name == 'uefi64':
+            # Construct boot device path names
+            boot_devs = [os.path.join('/dev/dsk', dev) \
+                for dev in self.boot_target[DEVS]]
 
-        # Create the destination directory if it does not already exist.
-        if not os.path.isdir(bootlst_dir):
-            os.makedirs(bootlst_dir, 0755)
+            if dry_run:
+                return
 
-        # Copy the bootlst
-        copyfile(bootlst_src, bootlst_dst)
-        os.chmod(bootlst_dst,
-                 stat.S_IREAD | stat.S_IWRITE | \
-                 stat.S_IRGRP | stat.S_IROTH)
-        # Requires root privilige so bypass on dry_run
-        if dry_run:
-            rmtree(bootlst_dir)
-        else:
-            os.chown(bootlst_dst, 0, 3)  # chown root:sys
-
-    def _install_sparc_bootblk(self, dry_run):
-        """ Runs installboot(1M) command on SPARC architectures to
-            install the zfs bootblock program.
-        """
-        # This method is only supported on SPARC platforms.
-        if self.arch != 'sparc':
-            raise RuntimeError("Can not install SPARC bootblk on a non-" \
-                                 "SPARC architecture system")
-        boot_devs = list()
-        boot_devs = [os.path.join('/dev/rdsk', dev) \
-            for dev in self.boot_target[DEVS]]
-
-        if len(boot_devs) < 1:
-            raise RuntimeError("No devices to install SPARC bootblk onto!")
-
-        self.logger.info("Installing SPARC bootblk to root pool devices: %s" \
-                          % str(boot_devs))
-
-        bootblk_src = os.path.join(self.boot_target[BOOT_ENV].mountpoint,
-                                   'platform', platform.machine(),
-                                   'lib', 'fs', 'zfs', 'bootblk')
-        sub_cmd = ["/usr/sbin/installboot", "-F", "zfs", bootblk_src]
-
-        for dev in boot_devs:
-            cmd = sub_cmd[:]
-            cmd.append(dev)
-            self.logger.debug("Executing: %s" % cmd)
-            if not dry_run:
-                Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+            try:
+                firmware.setprop(SystemFirmware.PROP_BOOT_DEVICE, boot_devs)
+            except BootmgmtPropertyWriteError as bpw:
+                # Don't treat this as fatal, the user can manually select the
+                # boot device on reboot.
+                self.logger.warning("Failed to set UEFI firmware boot " \
+                                    "device:\n%s" % str(bpw))
 
     def _set_sparc_prom_boot_device(self, dry_run):
         """ Set the SPARC boot-device parameter using eeprom.
-            If the root pool is mirrored, sets the boot-device
-            parameter as a sequence of the devices forming the
-            root pool.
+            If the root pool is mirrored, sets the boot-device parameter as a
+            sequence of the devices forming the root pool.
         """
         self.logger.info("Setting openprom boot-device")
         prom_device = "/dev/openprom"
@@ -553,11 +451,8 @@ class SystemBootMenu(BootMenu):
         opromdev2promname = oioc | 15  # Convert devfs path to prom path
         oprommaxparam = 32768
 
-        boot_devs = list()
         boot_devs = [os.path.join('/dev/dsk', dev) \
             for dev in self.boot_target[DEVS]]
-        if len(boot_devs) < 1:
-            raise RuntimeError("No boot devices identified!")
 
         cur_prom_boot_devs = list()
         new_prom_boot_devs = list()
@@ -695,7 +590,7 @@ class SystemBootMenu(BootMenu):
         if osconsole is not None and curosconsole != osconsole:
             self.logger.info('Setting console boot device property to %s' \
                              % osconsole)
-            instance.boot_vars.setprop('console', osconsole)
+            instance.boot_vars.setprop(BootLoader.PROP_CONSOLE, osconsole)
 
         # Detect the gui-install client by checking for it's profile object
         # in the DOC
@@ -789,16 +684,33 @@ class SystemBootMenu(BootMenu):
                                % (pool.name, self.pool_tld_mount))
 
         # Figure out the boot device names in ctd notation
-        # XXX Will need to check for UEFI/GPT partitions here in future
         for disk in target.get_children(class_type=Disk):
-            # Look for slices that are in the boot/root pool and store
-            # their ctd device names. "slice" is a python reserved word
-            # so use "slc" to represent slice instead.
-            slices = disk.get_descendants(class_type=Slice, max_depth=2)
-            boot_slices = [slc for slc in slices if \
-                           slc.in_zpool == root_pool.name]
-            bdevs = ['%ss%s' % (disk.ctd, slc.name) for slc in boot_slices]
+            if disk.whole_disk and disk.label == "GPT":
+                # extract the vdevs from the root pool and extend the
+                # boot_target list
+                vdevs = _get_vdev_mapping(root_pool.name)
+                for entry in vdevs.values():
+                    for vdev in entry:
+                        if vdev.startswith('/dev/dsk/'):
+                            vdev = vdev.lstrip('/dev/dsk/')
+                        self.boot_target[DEVS].append(vdev)
+                break
+
+            # Look for either GPT partitions or slices that are in the boot/
+            # root pool and store their ctd device names.
+            # node(s) refers to one or the other type within the context
+            # of each disk.
+            nodes = disk.get_children(class_type=GPTPartition)
+            if not nodes:
+                nodes = disk.get_descendants(class_type=Slice, max_depth=2)
+            boot_nodes = [node for node in nodes if \
+                           node.in_zpool == root_pool.name]
+            bdevs = ['%ss%s' % (disk.ctd, node.name) for node in boot_nodes]
             self.boot_target[DEVS].extend(bdevs)
+
+        if not self.boot_target[DEVS]:
+            raise RuntimeError("Could not find any boot devices to " \
+                               "install the boot loader onto.")
 
         title_line = linecache.getline(self._get_rel_file_path(), 1)
         self.rel_file_title = title_line.strip()
@@ -877,6 +789,9 @@ class SystemBootMenu(BootMenu):
         """ Install the boot loader and associated boot
             configuration files
         """
+        if not self.boot_target[DEVS]:
+            raise RuntimeError("No boot devices identified!")
+
         boot_rdevs = [os.path.join('/dev/rdsk', dev) \
             for dev in self.boot_target[DEVS]]
 
@@ -902,8 +817,8 @@ class SystemBootMenu(BootMenu):
             if self.boot_target[BOOT_ENV].mountpoint == '/':
                 raise RuntimeError("Boot checkpoint can not be executed on " \
                                      "a live system except with dry run mode")
-            # XXX Pybootmgmt ought to be creating this directory tree when
-            # doing a physical boot loader installation onto the disk.
+            # XXX Seth: Pybootmgmt ought to be creating this directory tree
+            # when doing a physical boot loader installation onto the disk.
             # While it's being fixed, create the directories ourselves to
             # make legacy Grub installation work.
             if not dry_run and self.config.boot_loader.name == "Legacy GRUB":
@@ -918,9 +833,10 @@ class SystemBootMenu(BootMenu):
                              % str(boot_rdevs))
             self.config.commit_boot_config(
                 boot_devices=boot_rdevs)
-        # XXX Pybootmgmt ought to do this but doesn't currently so
-        # set up the bootfs property on the boot pool.
-        self._set_bootfs_pool_prop(dry_run)
+
+            self.logger.info("Setting boot devices in firmware")
+            self._set_firmware_boot_device(dry_run)
+
         if dry_run:
             rmtree(temp_dir)
 

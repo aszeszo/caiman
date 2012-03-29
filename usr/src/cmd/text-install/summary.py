@@ -41,7 +41,8 @@ from solaris_install.target.libdiskmgt import const as libdiskmgt_const
 from solaris_install.target.size import Size
 from solaris_install.text_install import _, RELEASE, TUI_HELP, LOCALIZED_GB
 from solaris_install.text_install.ti_target_utils import \
-    get_desired_target_disk, get_solaris_partition, get_solaris_slice
+    get_desired_target_disk, get_solaris_gpt_partition, \
+    get_solaris_partition, get_solaris_slice
 from terminalui.action import Action
 from terminalui.base_screen import BaseScreen
 from terminalui.i18n import convert_paragraph
@@ -201,13 +202,21 @@ class SummaryScreen(BaseScreen):
 
         if not disk.whole_disk:
 
-            part_data = get_solaris_partition(doc)
+            if disk.label != "VTOC":
+                part_data = get_solaris_gpt_partition(doc)
+                if part_data is not None:
+                    type_str = str(part_data.part_type)
+            else:
+                part_data = get_solaris_partition(doc)
+                if part_data is not None:
+                    type_str = str(libdiskmgt_const.PARTITION_ID_MAP[
+                                   part_data.part_type])
             if part_data is not None:
                 part_size_str = locale.format("%.1f",
                     part_data.size.get(Size.gb_units)) + LOCALIZED_GB
 
                 locale_part_str = _("Partition: ") + part_size_str + " " +\
-                    str(libdiskmgt_const.PARTITION_ID_MAP[part_data.part_type])
+                    type_str
                 disk_string.append(locale_part_str)
 
             if part_data is None or not part_data.in_zpool:

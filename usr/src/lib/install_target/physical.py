@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ physical.py -- library containing class definitions for physical DOC
@@ -35,20 +35,28 @@ import platform
 import tempfile
 
 from multiprocessing import Manager
+from uuid import UUID
 
 from lxml import etree
 
-from solaris_install import Popen, run
+from bootmgmt.bootinfo import SystemFirmware
+from solaris_install import CalledProcessError, Popen, run
 from solaris_install.data_object import DataObject, ParsingError
+from solaris_install.target.cuuid import cUUID, UUID2cUUID
 from solaris_install.target.libadm import const, cstruct, extvtoc
 from solaris_install.target.libdiskmgt import const as ldm_const
 from solaris_install.target.libdiskmgt import diskmgt
+from solaris_install.target.libefi import const as efi_const
+from solaris_install.target.libefi import efi
+from solaris_install.target.libefi.cstruct import EFI_MAXPAR
 from solaris_install.target.shadow.physical import LOGICAL_ADJUSTMENT, \
-    ShadowPhysical
+    ShadowPhysical, EFI_BLOCKSIZE_LCM
 from solaris_install.target.size import Size
 
 FDISK = "/usr/sbin/fdisk"
 FORMAT = "/usr/sbin/format"
+FSTYP = "/usr/sbin/fstyp"
+PCFSMKFS = "/usr/lib/fs/pcfs/mkfs"
 SWAP = "/usr/sbin/swap"
 UMOUNT = "/usr/sbin/umount"
 
@@ -97,13 +105,444 @@ def fill_left(obj, desired_size, left_gap):
         return desired_size - left_gap.size.sectors
 
 
+class DiskNotEmpty(Exception):
+    """ User-defined Exception raised when attempting to relabel a disk that
+    has children (GPTPartition, Partitions, or Slices)
+    """
+
+
+class DuplicatePartition(Exception):
+    """ User-defined Exception raised when attempting to add an MBR EFI_SYSTEM
+    partition when it already exists.
+
+    """
+    def __init__(self, duplicate, msg=None):
+        super(DuplicatePartition, self).__init__(msg)
+        self._dup = duplicate
+
+    @property
+    def duplicate(self):
+        return self._dup
+
+
+class DuplicateGPTPartition(Exception):
+    """ User-defined Exception raised when attempting to add an EFI_RESERVED
+    when it already exists or when adding either of EFI_BIOS_BOOT or
+    EFI_SYSTEM when one of those already exist.
+    """
+    def __init__(self, duplicate, msg=None):
+        super(DuplicateGPTPartition, self).__init__(msg)
+        self._dup = duplicate
+
+    @property
+    def duplicate(self):
+        return self._dup
+
+
 class InsufficientSpaceError(Exception):
     """ User-defined Exception raised when attempting to change the size of a
     Slice or Partition object
     """
 
-    def __init__(self, available_size):
+    def __init__(self, available_size, msg=None):
+        super(InsufficientSpaceError, self).__init__(msg)
         self.available_size = available_size
+
+
+class NoPartitionSlotsFree(Exception):
+    """ User-defined Exception raised when attempting to add an EFI_SYSTEM
+    partition when no slots are left available for
+    the partition.
+    """
+
+
+class NoGPTPartitionSlotsFree(Exception):
+    """ User-defined Exception raised when attempting to add an EFI_SYSTEM
+    or EFI_BIOS_BOOT partition when no slots are left available for
+    the partition.
+    """
+
+
+class GPTPartition(DataObject):
+    def __init__(self, name):
+        super(GPTPartition, self).__init__(name)
+        # set the default partition type to Solaris
+        self.action = "create"
+        self.force = False
+
+        self.size = Size("0b")
+        self.start_sector = 0
+
+        self._guid = efi_const.EFI_USR  # cUUID of partition type GUID
+        self.uguid = None  # cUUID of unique partition GUID
+        self.flag = 0
+
+        # in_use value from libdiskmgt
+        self.in_use = None
+
+        # zpool and vdev references
+        self.in_zpool = None
+        self.in_vdev = None
+
+        # True if the partition contains a PCFS/FAT filesystem
+        self._is_pcfs_formatted = None
+
+    def to_xml(self):
+        gpart = etree.Element("gpt_partition")
+        gpart.set("name", str(self.name))
+        gpart.set("action", self.action)
+        gpart.set("force", str(self.force).lower())
+
+        # For legibility try and set part_type to an alias.
+        for (alias, guid) in efi_const.PARTITION_GUID_ALIASES.iteritems():
+            if guid == self.guid:
+                part_type = alias
+                break
+        else:
+            part_type = "{%s}" % (self.guid)
+        gpart.set("part_type", part_type)
+
+        if self.in_zpool is not None:
+            gpart.set("in_zpool", self.in_zpool)
+        if self.in_vdev is not None:
+            gpart.set("in_vdev", self.in_vdev)
+
+        size = etree.SubElement(gpart, "size")
+        size.set("val", str(self.size.sectors) + Size.sector_units)
+        size.set("start_sector", str(self.start_sector))
+
+        return gpart
+
+    @classmethod
+    def can_handle(cls, element):
+        """ Returns True if element has:
+        - the tag 'gpt_partition'
+        - a 'name' attribute
+
+        otherwise return False
+        """
+        if element.tag != "gpt_partition":
+            return False
+        if element.get("name") is None:
+            return False
+        return True
+
+    @classmethod
+    def from_xml(cls, element):
+        name = element.get("name")
+        part_type = element.get("part_type")
+        action = element.get("action")
+        force = element.get("force")
+        in_zpool = element.get("in_zpool")
+        in_vdev = element.get("in_vdev")
+
+        gpart = GPTPartition(name)
+
+        if force is not None:
+            try:
+                gpart.force = {"true": True, "false": False}[force.lower()]
+            except KeyError:
+                raise ParsingError("GPTPartition elements force attribute " +
+                                   "must be either 'true' or 'false'")
+
+        size = element.find("size")
+        if size is not None:
+            gpart.size = Size(size.get("val"))
+            start_sector = size.get("start_sector")
+            if start_sector is not None:
+                # ensure we can cast a supplied value to an integer
+                try:
+                    start_sector = int(start_sector)
+                except:
+                    # catch any failure
+                    raise ParsingError("GPTPartition size element has "
+                                       "invalid 'start_sector' attribute")
+            gpart.start_sector = start_sector
+
+        gpart.action = action
+
+        if part_type is None:
+            raise ParsingError("Missing GPT Partition type")
+
+        # Partition type can be specified as one of:
+        # - A supported alias (eg. "esp")
+        # - A supported long name (eg. "EFI System Partition")
+        # - A supported GUID (eg. '{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}')
+        try:
+            gpart.guid = part_type
+        except (ValueError, TypeError):
+            raise ParsingError("'%s' is not a supported GPT partition " \
+                               "type" % part_type)
+
+        if in_zpool is not None:
+            gpart.in_zpool = in_zpool
+        if in_vdev is not None:
+            gpart.in_vdev = in_vdev
+
+        return gpart
+
+    @classmethod
+    def alias_to_guid(cls, alias_name):
+        """ alias_to_guid - given a GPT partition alias, lookup
+            the corresponding partition GUID.
+        """
+        return efi_const.PARTITION_GUID_ALIASES.get(alias_name)
+
+    @classmethod
+    def guid_to_name(cls, gpart_guid):
+        """ guid_to_name - given a GPT partition GUID, lookup
+            the corresponding partition name
+        """
+        data = efi_const.PARTITION_GUID_PTAG_MAP.get(gpart_guid)
+        if data is not None:
+            return data[0]
+
+    @classmethod
+    def guid_to_ptag(cls, gpart_guid):
+        """ guid_to_ptag - given a GPT partition GUID, lookup
+            the corresponding partition P_TAG
+        """
+        data = efi_const.PARTITION_GUID_PTAG_MAP.get(gpart_guid)
+        if data is not None:
+            return data[1]
+
+    @classmethod
+    def name_to_guid(cls, gpart_name):
+        """ name_to_guid - given a GPT partition name, lookup
+            the corresponding partition GUID
+        """
+        for (p_guid, (p_name, p_tag)) in \
+            efi_const.PARTITION_GUID_PTAG_MAP.iteritems():
+            if p_name.upper() == gpart_name.upper():
+                return p_guid
+        return None
+
+    @classmethod
+    def name_to_ptag(cls, gpart_name):
+        """ name_to_ptag - given a GPT partition name, lookup
+            the corresponding partition P_TAG
+        """
+        for (p_guid, (p_name, p_tag)) in \
+            efi_const.PARTITION_GUID_PTAG_MAP.iteritems():
+            if p_name.upper() == gpart_name.upper():
+                return p_tag
+        return None
+
+    def format_pcfs(self):
+        """ format_pcfs() - method to format a GPT partition with a FAT/pcfs
+        filesystem. This should be used when creating a new EFI system
+        partition on the disk
+        """
+        rdsk_dev = "/dev/rdsk/%ss%s" % (self.parent.ctd, self.name)
+        cmd = [PCFSMKFS, rdsk_dev]
+        run(cmd, stdin=open("/dev/zero", "r"))
+
+    def resize(self, size, size_units=Size.gb_units, start_sector=None):
+        """ resize() - method to resize a GPTPartition object.
+
+        start_sector is optional.  If not provided, use the existing
+        start_sector.
+        """
+        if start_sector is None:
+            start_sector = self.start_sector
+
+        # delete the existing GPTPartition from the parent's shadow list
+        self.delete()
+
+        # re-insert it with the new size
+        resized_gpart = self.parent.add_gptpartition(self.name,
+            start_sector, size, size_units=size_units,
+            partition_type=self.guid, in_zpool=self.in_zpool,
+            in_vdev=self.in_vdev)
+
+        return resized_gpart
+
+    def change_type(self, new_type):
+        """ change_type() - method to change the partition type of a
+        GPTPartition object
+        """
+        # delete the existing GPT partition from the parent's shadow list
+        self.delete()
+
+        # Insert the new one, preserving existing size parameters
+        new_gptpartition = self.parent.add_gptpartition(self.name,
+            self.start_sector, self.size.sectors, size_units=Size.sector_units,
+            partition_type=new_type, in_zpool=self.in_zpool,
+            in_vdev=self.in_vdev)
+
+        return new_gptpartition
+
+    @property
+    def guid(self):
+        """ guid returns the cUUID object that represents the identifier for
+            this partition.
+        """
+        return self._guid
+
+    @guid.setter
+    def guid(self, val):
+        """ attempt to set the guid for this GPT partition being as flexible
+            as possible.
+        """
+        if val is None:
+            raise ValueError("'None' is an invalid GUID value")
+
+        # always store it as cUUID so its ready for libefi
+        if isinstance(val, cUUID):
+            guid = val
+
+        elif isinstance(val, UUID):
+            guid = UUID2cUUID(val)
+
+        elif isinstance(val, int):
+            # they gave us a ptag
+            for (p_guid, (p_name, p_tag)) in \
+                efi_const.PARTITION_GUID_PTAG_MAP.iteritems():
+                if p_tag == val:
+                    guid = p_guid
+                    break
+            else:
+                raise ValueError("%d not a known tag" % (val))
+
+        elif isinstance(val, basestring):
+            guid = GPTPartition.alias_to_guid(val)
+            if guid is None:
+                guid = GPTPartition.name_to_guid(val)
+            if guid is None:
+                guid = cUUID(val)  # will raise ValueError if it can't convert
+        else:
+            raise TypeError("unable to convert '%s' object to cUUID" %
+                (type(val)))
+
+        self._guid = guid
+
+    @property
+    def part_type(self):
+        """ Friendly string or None"""
+        name, p_tag = efi_const.PARTITION_GUID_PTAG_MAP.get(self.guid,
+                                                            (None, None))
+        return name
+
+    @part_type.setter
+    def part_type(self, val):
+        """ they really just meant to set guid (which accepts just about
+        anything)
+        """
+        self.guid = val
+
+    @property
+    def tag(self):
+        """ integer tag for libefi corresponding to self.guid or None"""
+        name, p_tag = efi_const.PARTITION_GUID_PTAG_MAP.get(self.guid,
+                                                            (None, None))
+        return p_tag
+
+    @tag.setter
+    def tag(self, val):
+        """ they really just meant to set guid (which accepts just about
+        anything)
+        """
+        self.guid = val
+
+    @property
+    def is_bios_boot(self):
+        """ is_bios_boot() - instance property to return a Boolean value of
+        True if the GPT partition GUID is a BIOS boot partition
+        """
+        return self.guid == efi_const.EFI_BIOS_BOOT
+
+    @property
+    def is_efi_system(self):
+        """ is_efi_system() - instance property to return a Boolean value of
+        True if the GPT partition GUID is an EFI system partition
+        """
+        return self.guid == efi_const.EFI_SYSTEM
+
+    @property
+    def is_pcfs_formatted(self):
+        """ is_pcfs_formatted() instance property
+        Returns:
+        - True if the GPT partition guid is formatted with a pcfs filesystem.
+        - False if the GPT partition is not formatted with a pcfs filesystem.
+        - None if unknown
+        This test is useful in conjuction with the is_efi_system property to
+        determine if an existing EFI system partition  can be reused to store
+        the Solaris UEFI boot program. If False, a format using mkfs on the
+        partition would be required.
+        """
+        return self._is_pcfs_formatted
+
+    @property
+    def is_solaris(self):
+        """ is_solaris() - instance property to return a Boolean value of True
+        if the GPT partition GUID is a Solaris partition
+        """
+        return self.guid == efi_const.EFI_USR
+
+    @property
+    def is_reserved(self):
+        """ is_reserved() - instance property to return a Boolean value of True
+        if the GPT partition GUID is a Solaris Reserved partition
+        """
+        return self.guid == efi_const.EFI_RESERVED
+
+    @property
+    def is_unused(self):
+        """ is_reserved() - instance property to return a Boolean value of True
+        if the GPT partition GUID is a Solaris Reserved partition
+        """
+        return self.guid == efi_const.EFI_UNUSED
+
+    def get_gap_before(self):
+        """ Returns the HoleyObject gap that occurs immediately before this
+        GPTPartition, or None if there is no such gap.
+        """
+        if self.parent is not None:
+            gaps = self.parent.get_gaps()
+            # An 'adjacent' before gap is one that ends exactly one block
+            # before the start block of this partition
+            for gap in gaps:
+                if gap.start_sector + gap.size.sectors - \
+                    self.start_sector == 0:
+                    return gap
+
+        return None
+
+    def get_gap_after(self):
+        """ Returns the HoleyObject gap that occurs immediately after this
+        GPTPartition, or None if there is no such gap
+        """
+        if self.parent is not None:
+            gaps = self.parent.get_gaps()
+            # An 'adjacent' after gap is one that starts exactly one block
+            # after the end block of this partition
+            for gap in gaps:
+                if self.start_sector + \
+                    self.size.sectors - gap.start_sector == 0:
+                    return gap
+
+        return None
+
+    def __repr__(self):
+        p = "GPTPartition: name=%s; action=%s, force=%s" \
+            % (self.name, self.action, self.force)
+        if self.part_type is not None:
+            p += "; part_type=%s" % self.part_type
+        if self.tag is not None:
+            p += ", tag=%d" % self.tag
+        if self.flag is not None:
+            p += ", flag=%d" % self.flag
+        if self.in_use is not None:
+            p += ", in_use=%s" % self.in_use
+        if self.in_zpool is not None:
+            p += "; in_zpool=%s" % self.in_zpool
+        if self.in_vdev is not None:
+            p += "; in_vdev=%s" % self.in_vdev
+
+        p += "; size=%s; start_sector=%s" % \
+            (str(self.size), str(self.start_sector))
+
+        return p
 
 
 class Partition(DataObject):
@@ -133,6 +572,9 @@ class Partition(DataObject):
         # zpool and vdev references
         self.in_zpool = None
         self.in_vdev = None
+
+        # True if the partition contains a PCFS/FAT filesystem
+        self._is_pcfs_formatted = None
 
         # turn self._children into a shadow list
         self._children = ShadowPhysical(self)
@@ -227,6 +669,15 @@ class Partition(DataObject):
         """ delete_slice() - method to delete a specific Slice object
         """
         self.delete_children(name=slc.name, class_type=Slice)
+
+    def format_pcfs(self):
+        """ format_pcfs() - method to format a partition with a FAT/pcfs
+        filesystem. This should be used when creating a new EFI system
+        partition on the disk
+        """
+        rdsk_dev = "/dev/rdsk/%sp%s" % (self.parent.ctd, self.name)
+        cmd = [PCFSMKFS, rdsk_dev]
+        run(cmd, stdin=open("/dev/zero", "r"))
 
     def resize_slice(self, slc, size, size_units=Size.gb_units):
         """ resize_slice() - method to resize a Slice child.
@@ -385,6 +836,63 @@ class Partition(DataObject):
 
         return holes
 
+    def get_gap_before(self):
+        """ Returns the HoleyObject gap that occurs immediately before this
+        partition, or None if there no such gap.
+
+        If the partition is logical, only logical gaps (gaps within an
+        EXTENDED partition) are considered; otherwise, only Disk gaps (gaps
+        between primary partitions are considered.
+        """
+
+        if self.parent is not None:
+            if self.is_logical:
+                gaps = self.parent.get_logical_partition_gaps()
+                # An 'adjacent' logical gap is one that is within
+                # the "logical adjustment" + 1 sectors of this partition
+                adjacent_size = LOGICAL_ADJUSTMENT + 1
+            else:
+                gaps = self.parent.get_gaps()
+                # An 'adjacent' primary gap is one that is within
+                # one cylinder of this partition
+                adjacent_size = self.parent.geometry.cylsize
+
+            for gap in gaps:
+                if abs(gap.start_sector + gap.size.sectors - \
+                       self.start_sector) <= adjacent_size:
+                    return gap
+
+        return None
+
+    def get_gap_after(self):
+        """ Returns the HoleyObject gap that occurs immediately after this
+        partition, or None if there is no such gap.
+
+        If the partition is logical, only logical gaps (gaps within an
+        EXTENDED partition) are considered; otherwise, only Disk gaps (gaps
+        between primary partitions) are considered.
+        """
+
+        if self.parent is not None:
+            if self.is_logical:
+                gaps = self.parent.get_logical_partition_gaps()
+                # An 'adjacent' logical gap is one that is within
+                # the "logical adjustment" + 1 sectors of this partition
+                adjacent_size = LOGICAL_ADJUSTMENT + 1
+            else:
+                gaps = self.parent.get_gaps()
+                # An 'adjacent' primary gap is one that is within
+                # one cylinder of this partition
+                adjacent_size = self.parent.geometry.cylsize
+
+            for gap in gaps:
+                if abs(self.start_sector + \
+                    self.size.sectors - gap.start_sector) <= \
+                    adjacent_size:
+                    return gap
+
+        return None
+
     def create_entire_partition_slice(self, name="0", in_zpool=None,
                                       in_vdev=None, tag=None, force=False):
         """ create_entire_partition_slice - method to clear out all existing
@@ -435,6 +943,20 @@ class Partition(DataObject):
             sum([c.size.sectors for c in self._children])) + Size.sector_units)
 
     @property
+    def is_pcfs_formatted(self):
+        """ is_pcfs_formatted() instance property
+        Returns:
+        - True if the partition is formatted with a pcfs filesystem.
+        - False if the partition is not formatted with a pcfs filesystem.
+        - None if unknown
+        This test is useful in conjuction with the is_efi_system property to
+        determine if an existing EFI system partition  can be reused to store
+        the Solaris UEFI boot program. If False, a format using mkfs on the
+        partition would be required.
+        """
+        return self._is_pcfs_formatted
+
+    @property
     def is_primary(self):
         """ is_primary() - instance property to return a Boolean value of True
         if the partition is a primary partition
@@ -458,6 +980,15 @@ class Partition(DataObject):
         if the partition is a extended partition
         """
         if self.is_primary and self.part_type in Partition.EXTENDED_ID_LIST:
+            return True
+        return False
+
+    @property
+    def is_efi_system(self):
+        """ is_solaris() - instance property to return a Boolean value of True
+        if the partition is an EFI system partition
+        """
+        if self.part_type == 239:
             return True
         return False
 
@@ -602,20 +1133,16 @@ class Slice(DataObject):
         slc = Slice(name)
 
         if force is not None:
-            if force.lower() == "true":
-                slc.force = True
-            elif force.lower() == "false":
-                slc.force = False
-            else:
+            try:
+                slc.force = {"true": True, "false": False}[force.lower()]
+            except KeyError:
                 raise ParsingError("Slice element's force attribute must " +
                                    "be either 'true' or 'false'")
 
         if is_swap is not None:
-            if is_swap.lower() == "true":
-                slc.is_swap = True
-            elif is_swap.lower() == "false":
-                slc.is_swap = False
-            else:
+            try:
+                slc.is_swap = {"true": True, "false": False}[is_swap.lower()]
+            except KeyError:
                 raise ParsingError("Slice element's is_swap attribute must " +
                                    "be either 'true' or 'false'")
 
@@ -647,7 +1174,7 @@ class Slice(DataObject):
 
         start_sector is optional.  If not provided, use the existing
         start_sector.
-        
+
         NOTE: the resulting new size is not checked to ensure the resized
         Slice 'fits' within the current available space.  To ensure proper
         'fit', use Disk.resize_slice() or Partition.resize_slice()
@@ -688,6 +1215,8 @@ class Disk(DataObject):
     """class for modifying disk layout
     """
 
+    reserved_guids = (efi_const.EFI_RESERVED,)
+
     def __init__(self, name, validate_children=True):
         """ constructor for the class
         """
@@ -708,6 +1237,9 @@ class Disk(DataObject):
         # is the Disk a cdrom drive?
         self.iscdrom = False
 
+        # does the Disk require an EFI system MBR partition. Ignore for GPT
+        self.requires_mbr_efi_partition = False
+
         # Geometry object for this disk
         self.geometry = DiskGeometry()
 
@@ -721,13 +1253,27 @@ class Disk(DataObject):
         self.in_vdev = None
 
         # whole disk attribute
-        self.whole_disk = False
+        self._whole_disk = False
 
         # disk label
-        self.label = None
+        self._label = None
 
         # write cache
         self.write_cache = False
+
+        # Firmware specific required guids for GPT boot disks
+        firmware = SystemFirmware.get()
+        sysboot_guid = None
+        required_guids = list(Disk.reserved_guids)
+        if firmware.fw_name == 'uefi64':
+            sysboot_guid = efi_const.EFI_SYSTEM
+            required_guids.append(efi_const.EFI_SYSTEM)
+            self.requires_mbr_efi_partition = True
+        elif firmware.fw_name == 'bios':
+            sysboot_guid = efi_const.EFI_BIOS_BOOT
+            required_guids.append(efi_const.EFI_BIOS_BOOT)
+        self._sysboot_guid = sysboot_guid
+        self._required_guids = tuple(required_guids)
 
         # active and passive aliases
         self.active_ctds = list()
@@ -805,11 +1351,10 @@ class Disk(DataObject):
         if in_vdev is not None:
             disk.in_vdev = in_vdev
         if whole_disk is not None:
-            if whole_disk.lower() == "true":
-                disk.whole_disk = True
-            elif whole_disk.lower() == "false":
-                disk.whole_disk = False
-            else:
+            try:
+                disk.whole_disk = {"true": True,
+                                   "false": False}[whole_disk.lower()]
+            except KeyError:
                 raise ParsingError("Disk element's whole_disk attribute " +
                                    "must be either 'true' or 'false'")
 
@@ -860,6 +1405,99 @@ class Disk(DataObject):
         return disk
 
     @property
+    def label(self):
+        """ Returns the disk label. Currently "GPT" and "VTOC" are recognized.
+        """
+        return self._label
+
+    @label.setter
+    def label(self, val):
+        """ Attempt to set the disk label.
+
+        The disk must be empty of child (DOS) Partitions or Slices if val is
+        "GPT" or empty of GPTPartitions if val is "VTOC" or a a DiskNotEmpty
+        exception is raised.
+
+        val must be either one of "GPT" or  "VTOC" otherwise ValueError is
+        raised.
+        """
+        if val not in ["GPT", "VTOC"]:
+            raise ValueError("%s is not a recognized disk label" % (val))
+
+        if val == "GPT":
+            for obj in [Partition, Slice]:
+                children = self.get_children(class_type=obj)
+                if children:
+                    raise DiskNotEmpty
+        else:
+            children = self.get_children(class_type=GPTPartition)
+            if children:
+                raise DiskNotEmpty
+
+        self._label = val
+
+    @property
+    def whole_disk(self):
+        """ Returns the whole_disk mode value (True or False)
+        """
+        return self._whole_disk
+
+    @whole_disk.setter
+    def whole_disk(self, use_whole_disk):
+        """ Attempt to set the whole_disk mode on the disk
+
+        If use_whole_disk is true, the disk must be empty of child
+        GPTPartitions, Partitions or Slice objects or a DiskNotEmpty exception
+        is raised.
+
+        use_whole_disk must be either True or False
+        """
+
+        if use_whole_disk:
+            for obj in [GPTPartition, Partition, Slice]:
+                children = self.get_children(class_type=obj)
+                if children:
+                    raise DiskNotEmpty
+            self._whole_disk = True
+        else:
+            self._whole_disk = False
+
+    @property
+    def gpt_primary_table_size(self):
+        """ Returns the Size value that a GPT header including protective MBR
+        and GPE partition entries would occupy on this disk
+        """
+        # Value, per UEFI spec is the sum of:
+        # + 1 block for the MBR
+        # + 1 block for the GPT header
+        # + (128 x 128 bytes) for partition entries
+        blocks = 1 + 1 + \
+            (efi_const.EFI_MIN_ARRAY_SIZE / self.geometry.blocksize)
+
+        return Size(str(blocks) + \
+                    Size.sector_units,
+                    blocksize=self.geometry.blocksize)
+
+    @property
+    def gpt_backup_table_size(self):
+        """ Returns the Size value that a GPT header including GPE partition
+        entries would occupy on this disk
+        """
+        # Value, per UEFI spec is the sum of:
+        # + 1 block for the GPT header
+        # + (128 x 128 bytes) for partition entries
+        blocks = 1 + \
+            (efi_const.EFI_MIN_ARRAY_SIZE / self.geometry.blocksize)
+
+        return Size(str(blocks) + \
+                    Size.sector_units,
+                    blocksize=self.geometry.blocksize)
+
+    @property
+    def gpt_partitions(self):
+        return self.get_children(class_type=GPTPartition)
+
+    @property
     def primary_partitions(self):
         """ primary_partitions() - instance property to return all primary
         partitions on this Disk
@@ -877,23 +1515,51 @@ class Disk(DataObject):
         partitions = self.get_children(class_type=Partition)
         return [part for part in partitions if part.is_logical]
 
+    @property
+    def required_guids(self):
+        ''' Instance proprerty to return the tuple of additional required
+            partition type GUIDS besides the obvious Solaris partition.
+        '''
+        return self._required_guids
+
+    @property
+    def sysboot_guid(self):
+        ''' Instance proprerty to return the GUID of the required system
+            boot partition (EFI system or BIOS boot partition) or None for
+            SPARC
+        '''
+        return self._sysboot_guid
+
     def get_next_partition_name(self, primary=True):
         """ get_next_partition_name() - method to return the next available
         partition name as a string
 
-        primary - boolean argument representing which kind of partition to
-        check.  If True, only check primary partitions.  If False, check
-        logical partitions
-        """
-        primary_set = set(range(1, const.FD_NUMPART + 1))
-        logical_set = set(range(5, const.FD_NUMPART + const.MAX_EXT_PARTS + 1))
+        Supports both GPT and legacy MBR Partition types
 
-        if primary:
-            available_set = primary_set - \
-                set([int(p.name) for p in self.primary_partitions])
+        primary - boolean argument representing which kind of MBR partition to
+        check.
+            If True AND Disk has an MBR label, only check primary partitions.
+            If False, check logical partitions.
+            Ignored on GPT labeled Disks
+        """
+        if self.label == "VTOC":
+            # MBR-VTOC Disk label
+            primary_set = set(range(1, const.FD_NUMPART + 1))
+            logical_set = set(range(5, const.FD_NUMPART + \
+                              const.MAX_EXT_PARTS + 1))
+
+            if primary:
+                available_set = primary_set - \
+                    set([int(p.name) for p in self.primary_partitions])
+            else:
+                available_set = logical_set - \
+                    set([int(p.name) for p in self.logical_partitions])
         else:
-            available_set = logical_set - \
-                set([int(p.name) for p in self.logical_partitions])
+            # Solaris userland limits EFI label to 7 free partitions plus the
+            # "reserved" Solaris partion: number '8'
+            gpt_set = set(range(0, efi_const.EFI_NUMUSERPAR))
+            available_set = gpt_set - \
+                set([int(p.name) for p in self.gpt_partitions])
 
         if not available_set:
             return None
@@ -1009,6 +1675,94 @@ class Disk(DataObject):
 
         return name, summary
 
+    def add_gptpartition(self, index, start_sector, size,
+                         size_units=Size.gb_units,
+                         partition_type=efi_const.EFI_USR,
+                         in_zpool=None, in_vdev=None, force=False):
+        """ add_gptpartition() - method to create a GPTPartition object
+        and add it as a child of the Disk object
+        """
+        # create a new GPTPartition object
+        new_gpart = GPTPartition(index)
+
+        new_gpart.guid = partition_type
+
+        new_gpart.size = Size(str(size) + str(size_units),
+                              blocksize=self.geometry.blocksize)
+        new_gpart.start_sector = start_sector
+        new_gpart.in_zpool = in_zpool
+        new_gpart.in_vdev = in_vdev
+        new_gpart.force = force
+
+        # add the new GPTPartition object as a child
+        self.insert_children(new_gpart)
+
+        return new_gpart
+
+    def delete_gptpartition(self, gpart):
+        """ delete_gptpartition() - method to delete a specific
+        GPTPartition object
+        """
+        self.delete_children(name=gpart.name, class_type=GPTPartition)
+
+    def resize_gptpartition(self, gpt_partition, size,
+                            size_units=Size.gb_units):
+        """ resize_gptpartition() - method to resize a GPTPartition child.
+        """
+        # create a new_size object
+        new_size = Size(str(size) + str(size_units),
+                        blocksize=self.geometry.blocksize)
+
+        # check to see if the resized Partition is simply decreasing in size
+        if new_size <= gpt_partition.size:
+            # simply call GPTPartition.resize
+            return gpt_partition.resize(size, size_units)
+
+        # find the previous and next gap
+        previous_gap = None
+        next_gap = None
+        available_size = copy.copy(gpt_partition.size)
+        end_sector = gpt_partition.start_sector + gpt_partition.size.sectors
+
+        # Since we are using LBA, immediately adjacent gaps should align
+        # exactly with the start and end of gpt_partition respectively.
+        for gap in self.get_gaps():
+            if gap.start_sector + gap.size.sectors - \
+                   gpt_partition.start_sector == 0:
+                previous_gap = gap
+                available_size += previous_gap.size
+            elif gpt_partition.start_sector + gpt_partition.size.sectors - \
+               gap.start_sector == 0:
+                next_gap = gap
+                available_size += next_gap.size
+                end_sector = next_gap.start_sector + next_gap.size.sectors
+
+        # try to fill in both sides of the Partition
+        remaining_space = new_size.sectors - gpt_partition.size.sectors
+
+        if next_gap is not None:
+            # try to consume space from the right first
+            remaining_space = fill_right(gpt_partition, remaining_space,
+                                         next_gap)
+            if not remaining_space:
+                # the size of the Partition is increasing but not impacting the
+                # next object so call resize
+                return gpt_partition.resize(size, size_units)
+
+        # consume additional space from the left, if needed
+        if remaining_space and previous_gap is not None:
+            # continue to consume from the left
+            remaining_space = fill_left(gpt_partition, remaining_space,
+                                        previous_gap)
+
+        if remaining_space:
+            # there's no room to increase this Partition
+            raise InsufficientSpaceError(available_size)
+
+        new_start_sector = end_sector - new_size.sectors
+        return gpt_partition.resize(size, size_units,
+                                    start_sector=new_start_sector)
+
     def add_partition(self, index, start_sector, size,
                       size_units=Size.gb_units,
                       partition_type=Partition.name_to_num("Solaris2"),
@@ -1025,7 +1779,8 @@ class Disk(DataObject):
         new_partition = Partition(index)
         new_partition.part_type = partition_type
         new_partition.bootid = bootid
-        new_partition.size = Size(str(size) + str(size_units))
+        new_partition.size = Size(str(size) + str(size_units),
+                                  blocksize=self.geometry.blocksize)
         new_partition.start_sector = start_sector
         new_partition.in_zpool = in_zpool
         new_partition.in_vdev = in_vdev
@@ -1108,7 +1863,8 @@ class Disk(DataObject):
         """
         # create a new Slice object
         new_slice = Slice(index)
-        new_slice.size = Size(str(size) + str(size_units))
+        new_slice.size = Size(str(size) + str(size_units),
+                              blocksize=self.geometry.blocksize)
         new_slice.start_sector = start_sector
         new_slice.in_zpool = in_zpool
         new_slice.in_vdev = in_vdev
@@ -1175,20 +1931,538 @@ class Disk(DataObject):
         new_start_sector = end_sector - new_size.sectors
         return slc.resize(size, size_units, start_sector=new_start_sector)
 
-    def get_gaps(self):
-        """ get_gaps() - method to return a list of Holey Objects
+    def add_gpt_system(self, donor=None):
+        """ Add default system/bios boot for x86 if this is a GPT disk
+
+            Params
+            - donor
+              a GPTPartition object on the same disk that can be resized as
+              a last resort if the disk doesn't have enough contiguous free
+              space to contain the system partition.
+
+            Returns tuple: (sys_part, donor)
+            - sys_part
+              The appropriate EFI system or BIOS system that was created.
+            - donor
+              The donor partition which may have been partially or fully used
+              to create space for the system partition. Callers should check
+              the returned copy of donor.
+        """
+        if self.kernel_arch == "sparc":
+            return None, None
+
+        if self.label == "VTOC":
+            raise ValueError("Can't add EFI_SYSTEM/EFI_BIOS_BOOT" \
+                             "to a VTOC labeled disk")
+
+        gparts = self.get_children(class_type=GPTPartition)
+
+        # Make sure we don't already have one.
+        # Note that it must occupy a slot between s0 - s6 otherwise it
+        # will not be mountable and therefore be unusable.
+        sys = filter(lambda gpe: (gpe.action != "delete") and
+                                 (gpe.guid == self.sysboot_guid) and
+                                 (int(gpe.name) < efi_const.EFI_NUMUSERPAR),
+                     gparts)
+
+        if sys:
+            raise DuplicateGPTPartition(sys[0], "attempt to add "
+                "EFI_SYSTEM/EFI_BIOS_BOOT when disk already has one")
+
+        # Get the lowest available slot
+        index = self.get_next_partition_name()
+        if index is None:
+            raise NoGPTPartitionSlotsFree("attempt to add EFI_SYSTEM/ "
+                "EFI_BIOS_BOOT to disk with no empty partition slots")
+
+        sys_size = Size(str(efi_const.EFI_DEFAULT_SYSTEM_SIZE) + \
+                        Size.byte_units,
+                        self.geometry.blocksize)
+
+        gaps = self.get_gaps()
+
+        # next is like filter but we only explore the list up to
+        # the first match (or if there are none the whole list).
+        gap = next((hole for hole in gaps if hole.size >= sys_size), None)
+        if gap is not None:
+            # we found a suitable gap for the system partition
+            gptsys_start = gap.start_sector
+        else:
+            if donor is None:
+                raise InsufficientSpaceError(0, "Insufficient space for "
+                    "EFI_SYSTEM/EFI_BIOS_BOOT partition")
+            else:
+                # We need to use some space belonging to the donor partition.
+                # donor must belong to the same disk object
+                if not self.name_matches(donor.parent):
+                    raise ValueError("Donor partition does not belong " \
+                        "to this disk: %s" % str(self))
+
+                # donor must be a solaris partition as it is the only one
+                # that we support resizing of.
+                if not donor.is_solaris:
+                    raise ValueError("Donor partition must be a solaris " \
+                        "partition. Invalid partition type: %s" \
+                        % str(donor.part_type))
+
+                # donor must not have the preserve action set
+                if donor.action == "preserve":
+                    raise ValueError("Donor partition is a preserved and " \
+                                       "cannot not be resized")
+
+                # XXX - the size of donor should be checked, however it will
+                # get validated for minimum size requirements as the Solaris
+                # installation partition in all current usage.
+
+                # Find an adjacent gap before the donor partition. Use as much
+                # free space from it as possible before consuming space from
+                # the donor.
+                for hole in gaps:
+                    if hole.start_sector + hole.size.sectors \
+                        - donor.start_sector == 0:
+                        gap = hole
+                        shortage = sys_size.sectors - gap.size.sectors
+                        gptsys_start = gap.start_sector
+                        break
+                else:
+                    shortage = sys_size.sectors
+                    gptsys_start = donor.start_sector
+
+                # Take what we need from donor to make up the shortage
+                newsize = donor.size.sectors - shortage
+                newstart_sector = donor.start_sector + shortage
+                donor = donor.resize(newsize,
+                    size_units=Size.sector_units,
+                    start_sector=newstart_sector)
+
+        sys_part = self.add_gptpartition(str(index), gptsys_start,
+            sys_size.sectors, size_units=Size.sector_units,
+            partition_type=self.sysboot_guid, force=True)
+
+        return sys_part, donor
+
+    def add_gpt_reserve(self, donor=None):
+        """ Add default EFI_RESERVED to disk if this is a GPT disk
+
+            Returns tuple: (resv_part, donor)
+            - sys_part
+              The Solaris reserved partition that was created.
+            - donor
+              The donor partition which may have been partially or fully used
+              to create space for the reserved partition. Callers should check
+              the returned copy of donor.
+        """
+        if self.label == "VTOC":
+            raise ValueError("Can't add Solaris reserved partition " \
+                               "to a VTOC labeled disk")
+
+        gparts = self.get_children(class_type=GPTPartition)
+
+        # Make sure we don't already have one
+        resv = filter(lambda gpe: gpe.is_reserved and gpe.action != "delete",
+                      gparts)
+        if resv:
+            raise DuplicateGPTPartition(resv[0], "attempt to add "
+                "EFI_RESERVED when disk already has one")
+
+        # This should ideally be partition 8. Otherwise we have to use the
+        # highest available index under 7, which is the "whole disk" partition.
+        used = [int(gpe.name) for gpe in gparts]
+        for index in [efi_const.EFI_PREFERRED_RSVPAR] + \
+                     range(efi_const.EFI_NUMUSERPAR - 1, -1, -1):
+            if index not in used:
+                break
+        else:
+            raise NoGPTPartitionSlotsFree("attempt to add EFI_SYSTEM/"
+                "EFI_BIOS_BOOT to disk with no empty partition slots")
+
+        # Check to make sure we get a clean block size multiple
+        if EFI_BLOCKSIZE_LCM % self.geometry.blocksize != 0:
+            # Unexpected block size (ie. not a multiple of 512,
+            # or > EFI_BLOCKSIZE_LCM)
+            # Don't try to do anything fancy.
+            block_multiplier = 1
+        else:
+            block_multiplier = EFI_BLOCKSIZE_LCM / self.geometry.blocksize
+
+        # The reserved part HAS to be >=16384 sectors, so increment it up
+        # to account for any rounding down that might happen to it.
+        resv_sectors = efi_const.EFI_MIN_RESV_SIZE + block_multiplier
+
+        # We want to place the reserved partition as close to the end of the
+        # disk as possible so sort the gaps in reverse order by start sector
+        unsortedgaps = self.get_gaps()
+        gaps = sorted(unsortedgaps,
+                      key=lambda gap: gap.start_sector, reverse=True)
+
+        # next is like filter but we only explore the list up to
+        # the first match (or if there are none the whole list).
+        gap = next((hole for hole in gaps if \
+                    hole.size.sectors >= resv_sectors),
+                    None)
+
+        if gap is not None:
+            # Fill the gap up from the end rather than the beginning
+            resv_start = gap.start_sector + gap.size.sectors - resv_sectors
+        else:
+            if donor is None:
+                raise InsufficientSpaceError("Insufficient space for "
+                    "Solaris reserved partition")
+            else:
+                # We need to use some space belonging to the donor partition.
+                # donor must belong to the same disk object
+                if not self.name_matches(donor.parent):
+                    raise ValueError("Donor partition does not belong " \
+                        "to this disk: %s" % str(self))
+
+                # donor must be a solaris partition as it is the only one
+                # that we support resizing of.
+                if not donor.is_solaris:
+                    raise ValueError("Donor partition must be a solaris " \
+                        "partition. Invalid partition type: %s" \
+                        % str(donor.part_type))
+
+                # donor must not have the preserve action set
+                if donor.action == "preserve":
+                    raise ValueError("Donor partition is a preserved and " \
+                                       "cannot not be resized")
+
+                # XXX - the size of donor should be checked, however it will
+                # get validated for minimum size requirements as the Solaris
+                # installation partition in all current usage.
+
+                # Find an adjacent gap after the donor partition. Use as much
+                # free space from it as possible before consuming space from
+                # the donor.
+                for hole in gaps:
+                    if donor.start_sector + donor.size.sectors \
+                        - hole.start_sector == 0:
+                        gap = hole
+                        shortage = resv_sectors - gap.size.sectors
+                        resv_start = gap.start_sector - shortage
+                        break
+                else:
+                    shortage = resv_sectors
+                    resv_start = donor.start_sector + donor.size.sectors \
+                        - resv_sectors
+
+                # Take what we need from donor to make up the shortage
+                newsize = donor.size.sectors - shortage
+                donor = donor.resize(newsize, size_units=Size.sector_units)
+
+        resv_part = self.add_gptpartition(str(index), resv_start,
+            resv_sectors, Size.sector_units,
+            partition_type=efi_const.EFI_RESERVED, force=True)
+
+        return resv_part, donor
+
+    def add_mbr_system(self, solaris2_part=None):
+        """ Add, if required, an EFI system partition x86 to an MBR/DOS
+            partitioned disk
+
+            An MBR/DOS EFI system partition is required if and only if the
+            system is UEFI and attempting to install onto an MBR/DOS
+            partitioned disk.
+
+            Preference is given to using a logical partition slot rather
+            than a primary slot because the small amount of space required by
+            the EFI system partition and the very limited number of primary
+            partition slots available makes for poor use of primary slots and
+            helps avoid large, unusable primary partition gaps.
+
+            Params
+            - solaris2_part
+              a Solaris2 Partition object on the same disk that can be resized
+              or converted if the disk doesn't have enough contiguous free
+              space or partition slots to contain the EFI system partition.
+
+            Returns tuple: (sys_part, donor)
+            - efi_part
+              The EFI system partition that was created. The EFI system
+              partition returned will be a logical partition to conserve
+              available primary partition slots.
+            - solaris2_part
+              The Solaris2 partition which may have been modified to create
+              space for the system partition. Callers should check the
+              returned copy of donor as it may have been resized and/or
+              converted from primary to logical type to make room for the EFI
+              system partition
+        """
+
+        # Not applicable to SPARC or BIOS systems
+        if not self.requires_mbr_efi_partition:
+            return None, solaris2_part
+
+        if self.label == "GPT":
+            raise ValueError("Can't add MBR EFI System partition to a " \
+                             "GPT labeled disk")
+
+        if solaris2_part:
+            # Chuck out the solaris2_part if it does not belong to this disk
+            if not self.name_matches(solaris2_part.parent):
+                raise ValueError("solaris2_part argument does not belong " \
+                                 "to this disk: %s" % str(self))
+
+            # Chuck out the solaris2_part if it is not actually Solaris2.
+            if solaris2_part.action != 'create' and \
+                not solaris2_part.is_solaris:
+                raise ValueError("solaris2_part argument must be a valid "
+                                 "Solaris2 partition: %s" \
+                                 % str(solaris2_part))
+
+        parts = self.get_children(class_type=Partition)
+
+        # Make sure we don't already have one.
+        efisys = filter(lambda part: part.action != "delete" and
+                                     part.is_efi_system,
+                        parts)
+
+        if efisys:
+            raise DuplicatePartition(efisys[0], "attempt to add an MBR EFI " \
+                "System partition to disk that already has one")
+
+        # See if the disk has an extended partition. We will try to squeeze
+        # the EFI System partition in there.
+        extended_part = None
+        for part in parts:
+            if part.is_extended and part.action != "delete":
+                extended_part = part
+                break
+
+        efisys_size = Size(str(efi_const.EFI_DEFAULT_SYSTEM_SIZE) + \
+                           Size.byte_units,
+                           self.geometry.blocksize)
+        efisys_type = Partition.name_to_num("EFI System")
+
+        if extended_part:
+            # Already have an extended partition.
+            # We need a logical gap and a slot to create a logical EFI system
+            # partition.
+            index = self.get_next_partition_name(primary=False)
+            bestfit = None
+            efisys_start = None
+            if index:
+                for gap in self.get_logical_partition_gaps():
+                    # Look for the smallest gap that's big enough
+                    if gap.size >= efisys_size:
+                        if not bestfit or gap.size < bestfit.size:
+                            bestfit = gap
+                if bestfit:
+                    efisys_start = gap.start_sector
+
+            if not efisys_start:
+                # No existing logical gap or slot. Before attempting to consume
+                # part of solaris2_part, see if there is a primary partition
+                # slot free, and a gap.
+                if not index:
+                    # There is no free logical slot, so look for a primary one
+                    # instead.
+                    index = self.get_next_partition_name()
+                    if not index:
+                        # No logical or primary slots - Well and truly hosed.
+                        raise NoPartitionSlotsFree
+
+                    # We have a primary slot, just need to find a gap
+                    gaps = self.get_gaps()
+                    for gap in gaps:
+                        if gap.size >= efisys_size:
+                            if not bestfit or gap.size < bestfit.size:
+                                bestfit = gap
+
+                    if bestfit:
+                        # Found a suitable primary gap
+                        efisys_start = bestfit.start_sector
+
+                # At this point we have a logical slot but no usable logical
+                # gap. See if the Solaris2 partition is logical.
+                # If so we can carve a gap out of that.
+                if not efisys_start:
+                    if not solaris2_part or not solaris2_part.is_logical:
+                        # No gaps and no solaris2_part that we can consume
+                        # so give up
+                        raise InsufficientSpaceError(0, "Insufficient space " \
+                            "for EFI system partition")
+
+                    # Resize our logical Solaris2 partition
+                    # Look for a gap immediately before the Solaris2 partition
+                    # and use as much free space from it as possible before
+                    # consuming space from the Solaris2 partition
+                    s2_pre_gap = solaris2_part.get_gap_before()
+                    if s2_pre_gap:
+                        shortage = efisys_size.sectors - \
+                            s2_pre_gap.size.sectors
+                        efisys_start = s2_pre_gap.start_sector
+                    else:
+                        shortage = efisys_size.sectors
+                        efisys_start = solaris2_part.start_sector
+
+                    # Take what we need from solaris2_part to make up the
+                    # shortage
+                    new_s2_size = solaris2_part.size.sectors - shortage
+                    new_s2_start = solaris2_part.start_sector + shortage
+                    solaris2_part = solaris2_part.resize(new_s2_size,
+                        size_units=Size.sector_units,
+                        start_sector=new_s2_start)
+
+            efisys_part = self.add_partition(index,
+                efisys_start,
+                efisys_size.sectors,
+                size_units=Size.sector_units,
+                partition_type=efisys_type)
+
+        else:
+            # No extended partition. Convert the Solaris2 partition. The
+            # Solaris2 partition MUST be a primary partition at this point
+            # since we failed to find an extended partition above.
+            new_extended_part = solaris2_part.change_type(
+                Partition.name_to_num("DOS Extended"))
+
+            # Add the EFI system partition first. Don't need to check the
+            # partition index returned as there are guaranteed to be no
+            # logicals at this point. Index will be 5
+            gaps = self.get_logical_partition_gaps()
+            index = self.get_next_partition_name(primary=False)
+            efisys_part = self.add_partition(index,
+                gaps[0].start_sector,
+                efisys_size.sectors,
+                size_units=Size.sector_units,
+                partition_type=efisys_type)
+
+            # Re-calculate gaps to get the starting point of the new
+            # Solaris2 partition.
+            # <paranoia>
+            # There should be only one but just in case some rounding
+            # adjumstment created an unexpected tiny gap, process the list and
+            # use the biggest gap.
+            # </paranoia>
+            index = self.get_next_partition_name(primary=False)
+            biggest_gap = None
+            for gap in self.get_logical_partition_gaps():
+                if biggest_gap is None or \
+                    gap.size.sectors > biggest_gap.size.sectors:
+                    biggest_gap = gap
+
+            solaris2_part = self.add_partition(index,
+                biggest_gap.start_sector,
+                biggest_gap.size.sectors,
+                size_units=Size.sector_units,
+                partition_type=Partition.name_to_num("Solaris2"),
+                in_zpool=solaris2_part.in_zpool,
+                in_vdev=solaris2_part.in_vdev)
+
+        return efisys_part, solaris2_part
+
+    def add_required_partitions(self, donor):
+        """ Add, if required, an EFI system partition (fdisk or GPT),
+            and a reserved partition.
+
+            Returns tuple: (efi_sys, resv, donor)
+            - efi_sys
+              either a Partitioin or GPTPartition or None to be used
+              as the EFI system partition. None is returned if the
+              system does not require an EFI System partition.
+            - resv
+              a GPTPartition to be used by ZFS or None if the system
+              does not require a reserved GPTPartition
+            - donor
+              The donor you passed in or None.
+        """
+
+        def check_efi_sys(part):
+            # If an EFI system partition check that it's PCFS formatted and
+            # change its action to "create" so Instantiation will format.
+            if part.is_efi_system:
+                # If an EFI system partition check that it's PCFS formatted
+                # and change its action to "create" so Instantiation will
+                # format.
+                if not part.is_pcfs_formatted:
+                    part.action = "create"
+
+        if self.label == "VTOC":
+            try:
+                efi_sys, donor = self.add_mbr_system(donor)
+            except DuplicatePartition as err:
+                # Great - there is at least one that can be used.
+                efi_sys = err.duplicate
+                check_efi_sys(efi_sys)
+
+            resv = None
+        else:
+            try:
+                efi_sys, donor = self.add_gpt_system(donor)
+            except DuplicateGPTPartition as err:
+                # Great - there is at least one that can be used.
+                efi_sys = err.duplicate
+                check_efi_sys(efi_sys)
+
+            try:
+                resv, donor = self.add_gpt_reserve(donor)
+            except DuplicateGPTPartition as err:
+                resv = err.duplicate
+
+        return (efi_sys, resv, donor)
+
+    def _get_gpt_gaps(self):
+        """ _get_gpt_gaps() - method to return a list of Holey Objects on a
+        GPT labeled disk.
+        """
+        # create a list of sector usage by this disk.
+        usage = list()
+        for child in self._children:
+            # skip partitions or slices marked for deletion
+            if child.action == "delete":
+                continue
+            usage.append(child.start_sector)
+            usage.append(child.start_sector + child.size.sectors - 1)
+
+        # sort the usage list and add bookends
+        usage.sort()
+
+        # insert bookend and usage value pair to corden off the area reserved
+        # for the primary GPT table.
+        usage[0:0] = [0L, 0L, self.gpt_primary_table_size.sectors - 1]
+
+        # The disk's end bookend is effectively the start of the backup GPT
+        # table
+        usage.append(self.disk_prop.dev_size.sectors - \
+            self.gpt_backup_table_size.sectors)
+
+        holes = list()
+        i = 0
+
+        # Any potential gap must be at least as big as the standard block
+        # alignment unit
+        if EFI_BLOCKSIZE_LCM % self.geometry.blocksize != 0:
+            # Unexpected block size (ie. not a multiple of 512,
+            # or > EFI_BLOCKSIZE_LCM)
+            # Don't try to do anything fancy.
+            min_block_count = 1
+        else:
+            min_block_count = EFI_BLOCKSIZE_LCM / self.geometry.blocksize
+
+        while i < len(usage) - 1:
+            start_sector = usage[i]
+
+            # subtract i+1 to get the size of this hole.
+            size = usage[i + 1] - usage[i] - 1
+
+            # Ignore any hole which is smaller than the standard block
+            # alignment unit
+            if size >= min_block_count:
+                holes.append(HoleyObject(start_sector + 1,
+                    Size(str(size) + Size.sector_units)))
+
+            # step across the size of the child
+            i += 2
+
+        return holes
+
+    def _get_vtoc_gaps(self):
+        """ _get_vtoc_gaps() - method to return a list of Holey Objects
         (depending on architecture) available on the Disk.
 
         Backup slices (V_BACKUP) and logical partitions (if x86) are skipped.
         """
-        # the Disk must have a disk_prop.dev_size attribute
-        if not hasattr(self.disk_prop, "dev_size"):
-            return list()
-
-        if not self._children:
-            # return a list of the size of the disk
-            return[HoleyObject(0, self.disk_prop.dev_size)]
-
         # create a list of sector usage by this disk.
         usage = list()
         for child in self._children:
@@ -1221,8 +2495,8 @@ class Disk(DataObject):
             size = usage[i + 1] - usage[i]
 
             # if the size is 0 (for a starting sector of 0) or 1 (for adjacent
-            # children), there's no gap, so skip it.  Also skip any hole which
-            # is smaller than the cylinder boundary
+            # children), there's no gap, so skip it.
+            # Also skip any hole which is smaller than the cylinder boundary
             if size not in [0, 1] and size > self.geometry.cylsize:
                 # do not correct for holes that start at 0
                 if start_sector == 0:
@@ -1236,11 +2510,11 @@ class Disk(DataObject):
             i += 2
 
         # now that the holes are calculated, adjust any holes whose start
-        # sector does not fall on a cylinder boundary.
+        # sector does not fall on a cylinder or block multiple boundary.
         final_list = list()
         for hole in holes:
             if hole.start_sector % self.geometry.cylsize != 0:
-                # celing the start_sector to the next cylinder boundary
+                # celing the start_sector to the next min_size_unit boundary
                 new_start_sector = \
                     ((hole.start_sector / self.geometry.cylsize) * \
                     self.geometry.cylsize) + self.geometry.cylsize
@@ -1254,7 +2528,7 @@ class Disk(DataObject):
                                  Size.sector_units)
 
             # check the start_sector of the gap.  If it starts at zero, adjust
-            # it to start at the first cylinder boundary instead
+            # it to start at the first cylinder boundary
             if hole.start_sector == 0:
                 hole.start_sector = self.geometry.cylsize
                 hole.size = \
@@ -1274,8 +2548,45 @@ class Disk(DataObject):
 
         return final_list
 
+    def get_gaps(self):
+        """ get_gaps() - method to return a list of Holey Objects, depending
+        depending (primarily) on disk label, available on the Disk.
+        If disk.label is unset, an attempt will be made to identify the disk
+        label based on contents of the disk.
+        """
+        # the Disk must have a disk_prop.dev_size attribute
+        if not hasattr(self.disk_prop, "dev_size"):
+            return list()
+
+        if self.label == "GPT":
+            # Let gap code determine initial hole as there are headers
+            # on both ends of the disk.
+            return self._get_gpt_gaps()
+
+        elif self.label == "VTOC":
+            if not self._children:  # Short circuit for childless VTOC disk
+                return[HoleyObject(0, self.disk_prop.dev_size)]
+
+            else:
+                return self._get_vtoc_gaps()
+
+        elif self.label is None:
+            # No label so examine children. Try VTOC first.
+            for obj in [Partition, Slice]:
+                children = self.get_children(class_type=obj)
+                if children:
+                    return self._get_vtoc_gaps()
+
+            # Now try GPT
+            children = self.get_children(class_type=GPTPartition)
+            if self.children:
+                return self._get_gpt_gaps()
+
+            # Still nothing. Just return a list of the size of the disk
+            return[HoleyObject(0, self.disk_prop.dev_size)]
+
     def get_logical_partition_gaps(self):
-        """ get_logical_parittion_gaps() - method to return a list of Holey
+        """ get_logical_partition_gaps() - method to return a list of Holey
         Objects available within the extended partition of the disk
         """
         # check for an extended partition
@@ -1466,6 +2777,117 @@ class Disk(DataObject):
             run(cmd)
         os.unlink(tmp_part_file)
 
+        # Format the EFI system partition if necessary
+        sys_part = next((part for part in part_list if part.is_efi_system),
+            None)
+        if sys_part is not None and sys_part.action == "create":
+            sys_part.format_pcfs()
+
+    def _update_gpt_struct(self, gpt_struct, gpart_list):
+        """ gpt_struct must be already pre allocated an intialised with the
+        correct number of partitions matching gpart_list by calling
+        efi_init() prior to invocation of this method
+        """
+
+        # Populate GPT Partitions according to input from DOC
+        for gpart in gpart_list:
+            if gpart.is_unused:
+                # Skip "Unused" partitions. efi_write() chokes on it. This
+                # suggests the client didn't clean up target DOC cleanly.
+                self.logger.warning('Ignoring invalid "Unused" type GPT ' \
+                                    'partition: %s' % str(gpart))
+                continue
+            efi_part = gpt_struct.contents.efi_parts[int(gpart.name)]
+            efi_part.p_start = gpart.start_sector
+            efi_part.p_size = gpart.size.sectors
+            efi_part.p_flag = gpart.flag
+            efi_part.p_guid = gpart.guid
+            if gpart.uguid is not None:
+                efi_part.p_uguid = gpart.uguid
+            # XXX
+            # libefi will only create a GPT partition using the supplied GUID
+            # if p_tag is set to the special value: 0xFF. Bugster CR: 7117104
+            efi_part.p_tag = 0xFF
+
+    def _update_gptpartition_table(self, gpart_list, dry_run):
+        """ _update_gptpartition_table()
+        method to initialise and write a DK_GPT structure with the desired
+        partition information.
+        """
+        # check for a GPT label
+        if self.label == "VTOC":
+            self.logger.debug("Unable to change a VTOC labeled disk (%s)"
+                              % self.ctd)
+            return
+
+        rdsk_dev = "/dev/rdsk/%ss0" % self.ctd
+        max_gpart_num = -1
+        # Find the highest numbered GPT partition. We have to account for
+        # undefined partitions numbers for efi_init() and initialize
+        # the DK_GPT structure with the highest numbered partition in order
+        # to map partition name to partition number correctly
+        for gpart in gpart_list:
+            max_gpart_num = max(int(gpart.name), max_gpart_num)
+
+        # gpart.name is zero based so increment by + 1 to get correct size
+        num_gparts = max_gpart_num + 1
+        if num_gparts <= 0:
+            return
+
+        # Scan gpart_list to check that all preserved partitions have the
+        # unique GUID set. If they aren't we have to find them from libefi.
+        # This will typically occur if the preserved partition is specified
+        # in an AI manifest rather than copied over from target discovery by
+        # the interactive installers.
+        # Not preserving the uguid breaks UEFI boot of other operating
+        # systems.
+        no_uguid = next((p for p in gpart_list if \
+                        p.action == "preserve" and p.uguid is None),
+                        None)
+
+        if not dry_run:
+            fh = os.open(rdsk_dev, os.O_RDWR | os.O_NDELAY)
+            try:
+                if no_uguid:
+                    try:
+                        orig_gptp = efi.efi_read(fh)
+                        orig_gpt = orig_gptp.contents
+                        for gpart in gpart_list:
+                            # Client is responsible for ensuring that a
+                            # partition with action "preserve" represents an
+                            # actual existing partition on the disk.
+                            if gpart.action == "preserve":
+                                index = int(gpart.name)
+                                if index >= orig_gpt.efi_nparts:
+                                    raise RuntimeError("GPT partition with " \
+                                        "preserve action does not exist on " \
+                                        "disk: %s\nPartition: %s" \
+                                        % (gpart.parent.ctd, str(gpart)))
+
+                                efi_part = orig_gpt.efi_parts[index]
+                                gpart.uguid = copy.copy(efi_part.p_uguid)
+                    finally:
+                        efi.efi_free(orig_gptp)
+
+                gptp = efi.efi_init(fh, num_gparts)
+                try:
+                    # Update the DK_GPT with the desired GPT Partition layout.
+                    self._update_gpt_struct(gptp, gpart_list)
+                    self.logger.debug("GPT layout for efi_write():")
+                    self.logger.debug(_pretty_print_dk_gptp(gptp))
+                    # Write the new DK_GPT struct out
+                    efi.efi_write(fh, gptp)
+                finally:
+                    efi.efi_free(gptp)
+            finally:
+                os.close(fh)
+
+            # Format the EFI system partition if necessary
+            sys_part = next((gpe for gpe in gpart_list if gpe.is_efi_system),
+                None)
+            if sys_part is not None and sys_part.action == "create":
+                sys_part.format_pcfs()
+
     def _update_vtoc_struct(self, vtoc_struct, slice_list, nsecs):
         """ _update_vtoc_struct() - method to update a vtoc_struct object with
         values from Slice objects from the DOC
@@ -1481,8 +2903,6 @@ class Disk(DataObject):
         slices = [base_structure] * const.V_NUMPAR
 
         # Create slice 2 (BACKUP) - contains all available space.
-        # XXX This is only valid for VTOC label and needs to be
-        # addressed when adding support for GPT label.
         backup = cstruct.extpartition()
         backup.p_tag = const.V_BACKUP
         backup.p_flag = const.V_UNMNT
@@ -1607,10 +3027,7 @@ class Disk(DataObject):
             self.label = "VTOC"
 
     def _label_disk(self, dry_run):
-        """ _label_disk() - method to label the disk.
-
-        XXX:  GPT labels are not completely handled.  Need to revisit for later
-        GPT work.
+        """ _label_disk() - method to label the disk with a VTOC label
         """
         cmd = [FORMAT, "-d", self.ctd]
         if not dry_run:
@@ -1807,3 +3224,30 @@ class Iscsi(DataObject):
         if self.target_port is not None:
             s += "; target_port=%s" % self.target_port
         return s
+
+
+def _pretty_print_dk_gptp(dk_gptp):
+    dk_gpt = dk_gptp.contents
+    s = "dk_gpt struct:\n"
+    s += "--------------\n"
+    s += "efi_version:   \t" + str(dk_gpt.efi_version) + '\n'
+    s += "efi_nparts:    \t" + str(dk_gpt.efi_nparts) + '\n'
+    s += "efi_part_size: \t" + str(dk_gpt.efi_part_size) + '\n'
+    s += "efi_lbasize:   \t" + str(dk_gpt.efi_lbasize) + '\n'
+    s += "efi_last_lba:  \t" + str(dk_gpt.efi_last_lba) + '\n'
+    s += "efi_last_u_lba:\t" + str(dk_gpt.efi_last_u_lba) + '\n'
+    s += "efi_disk_uguid:\t" + str(dk_gpt.efi_disk_uguid) + '\n'
+    s += "efi_flags:     \t" + str(dk_gpt.efi_flags) + '\n'
+    s += "efi_altern_lba:\t" + str(dk_gpt.efi_altern_lba) + '\n'
+    s += '\n'
+
+    for i in range(dk_gpt.efi_nparts):
+        s += "efi_part #" + str(i) + ":\n"
+        s += "\tp_start:\t" + str(dk_gpt.efi_parts[i].p_start) + '\n'
+        s += "\tp_size: \t" + str(dk_gpt.efi_parts[i].p_size) + '\n'
+        s += "\tp_guid: \t" + str(dk_gpt.efi_parts[i].p_guid) + '\n'
+        s += "\tp_tag:  \t" + str(dk_gpt.efi_parts[i].p_tag) + '\n'
+        s += "\tp_flag: \t" + str(dk_gpt.efi_parts[i].p_flag) + '\n'
+        s += "\tp_name: \t" + str(dk_gpt.efi_parts[i].p_name) + '\n'
+        s += "\tp_uguid:\t" + str(dk_gpt.efi_parts[i].p_uguid) + '\n'
+    return s

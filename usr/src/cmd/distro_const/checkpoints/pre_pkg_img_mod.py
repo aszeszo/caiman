@@ -193,7 +193,7 @@ class PrePkgImgMod(Checkpoint):
             full_path = os.path.join(self.pkg_img_path, df)
             dest_path = os.path.join(self.save_path, df)
             if not os.path.exists(full_path):
-                self.logger.error("WARNING:  unable to find " + full_path + 
+                self.logger.error("WARNING:  unable to find " + full_path +
                                   " to save for later restoration!")
                 continue
 

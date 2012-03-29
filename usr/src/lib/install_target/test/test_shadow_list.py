@@ -38,23 +38,30 @@ import osol_install.errsvc as errsvc
 from osol_install.liberrsvc import ES_DATA_EXCEPTION
 
 from solaris_install import Popen
+from solaris_install.engine import InstallEngine
+from solaris_install.engine.test.engine_test_utils import \
+    get_new_engine_instance, reset_engine
 from solaris_install.target import Target
 from solaris_install.target.physical import Disk, DiskGeometry, DiskProp, \
-    InsufficientSpaceError, Partition, Slice
+    GPTPartition, InsufficientSpaceError, Partition, Slice
 from solaris_install.target.libadm.const import MAX_EXT_PARTS, V_NUMPAR, V_USR
+from solaris_install.target.libefi.const import EFI_NUMUSERPAR
 from solaris_install.target.logical import BE, Logical, Vdev, Zpool
-from solaris_install.target.shadow.physical import LOGICAL_ADJUSTMENT, \
-    ShadowPhysical
+from solaris_install.target.shadow.physical import EFI_BLOCKSIZE_LCM, \
+    LOGICAL_ADJUSTMENT, ShadowPhysical
 from solaris_install.target.shadow.logical import ShadowLogical
 from solaris_install.target.shadow.zpool import ShadowZpool
 from solaris_install.target.size import Size
 from solaris_install.target.vdevs import _get_vdev_mapping
 
 
-GBSECTOR = long(1024 * 1024 * 1024 / 512)  # 1 GB of sectors
 BLOCKSIZE = 512
 BLOCKSIZE_4K = 4096
 CYLSIZE = 16065
+GBSECTOR = long(1024 * 1024 * 1024 / BLOCKSIZE)  # 1GB of 512B sectors
+GB4KSECTOR = long(1024 * 1024 * 1024 / BLOCKSIZE_4K)  # 1GB of 4K sectors
+# 1GB of 128K sectors
+GB128KSECTOR = long(1024 * 1024 * 1024 / EFI_BLOCKSIZE_LCM)
 
 
 class TestZpool(unittest.TestCase):
@@ -408,6 +415,272 @@ class TestZvol(unittest.TestCase):
         error = errsvc._ERRORS[0]
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
             ShadowLogical.NodumpMismatchError))
+
+
+class TestGPTPartition(unittest.TestCase):
+    def setUp(self):
+        self.blocksize = BLOCKSIZE
+        self.gbsector = GBSECTOR
+        self.disk = Disk("test disk")
+        self.disk.ctd = "c12345t0d0"
+        self.disk.geometry = DiskGeometry(self.blocksize, None)
+        self.disk.label = "GPT"
+
+        # 100GB disk
+        self.disk.disk_prop = DiskProp()
+        self.disk.disk_prop.dev_size = Size(
+            str(self.gbsector * 100) + Size.sector_units,
+            blocksize=self.blocksize)
+        self.disk.disk_prop.blocksize = self.blocksize
+
+        # reset the errsvc
+        errsvc.clear_error_list()
+
+    def tearDown(self):
+        self.disk.delete_children()
+        self.disk.delete()
+
+        # reset the errsvc
+        errsvc.clear_error_list()
+
+    def test_add_single_gptpartition(self):
+        self.disk.add_gptpartition(1, 0, 100.01, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+
+    def test_duplicate_gptpartition(self):
+        # add 2 1GB partition with the same index but different starting sector
+        self.disk.add_gptpartition(1, 0, 1, Size.gb_units)
+        self.disk.add_gptpartition(1, self.gbsector, 1, Size.gb_units)
+
+        # verify there is only one error in the errsvc list and that it is the
+        # proper error
+        self.assertEqual(len(errsvc._ERRORS), 1)
+        error = errsvc._ERRORS[0]
+        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
+            ShadowPhysical.DuplicateGPTPartitionNameError))
+
+    def test_overlapping_starting_sector(self):
+        # add a 10 GB partition
+        self.disk.add_gptpartition(0, 256, 10, Size.gb_units)
+        # add an 11 GB partition
+        self.disk.add_gptpartition(1, 256, 11, Size.gb_units)
+
+        # verify there is only one error in the errsvc list and that it is the
+        # proper error
+        self.assertEqual(len(errsvc._ERRORS), 1)
+        error = errsvc._ERRORS[0]
+        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
+                        ShadowPhysical.OverlappingGPTPartitionError))
+
+    def test_overlapping_ending_sector(self):
+        # add a 9 GB partition on the second cylinder boundary
+        self.disk.add_gptpartition(0, 256, 9, Size.gb_units)
+        # add a 10 GB partition on the first cylinder boundary
+        self.disk.add_gptpartition(1, 256 + self.gbsector, 10, Size.gb_units)
+
+        # verify there is only one error in the errsvc list and that it is the
+        # proper error
+        self.assertEqual(len(errsvc._ERRORS), 1)
+        error = errsvc._ERRORS[0]
+        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
+                        ShadowPhysical.OverlappingGPTPartitionError))
+
+    def test_delete_gptpartition(self):
+        p1 = self.disk.add_gptpartition(1, 0, 1, Size.gb_units)
+        p2 = self.disk.add_gptpartition(2, self.gbsector + 1, 1, Size.gb_units)
+
+        # verify there are 2 entries in the _children
+        self.assertEqual(len(self.disk._children), 2)
+
+        # delete partition 2
+        p2.delete()
+
+        # verify there is only one entry in the _children and the proper
+        # GPT partition was removed.
+        self.assertEqual(len(self.disk._children), 1)
+        self.assertEqual(self.disk._children[0].name, 1)
+
+    def test_delete_gptpartition_from_disk(self):
+        p1 = self.disk.add_gptpartition(1, 0, 1, Size.gb_units)
+        p2 = self.disk.add_gptpartition(2, self.gbsector + 1, 1, Size.gb_units)
+
+        # verify there are 2 entries in the _children
+        self.assertEqual(len(self.disk._children), 2)
+
+        # delete partition 2
+        self.disk.delete_gptpartition(p2)
+
+        # verify there is only one entry in the _children and the proper
+        # GPTpartition was removed.
+        self.assertEqual(len(self.disk._children), 1)
+        self.assertEqual(self.disk._children[0].name, 1)
+
+    def test_resize_gptpartition(self):
+        # rnderr takes into account alignment adjustments that may
+        # be performed on the partition size and start sector.
+        rnderr = EFI_BLOCKSIZE_LCM / self.blocksize
+
+        # create a 1 GB partition
+        p1 = self.disk.add_gptpartition(1, 44, 1, Size.gb_units)
+        self.disk.insert_children(p1)
+
+        upper = self.gbsector
+        lower = upper - rnderr
+        actual = p1.size.sectors
+        # verify the size of the slice is within the expected size range
+        # accounting for alignment rounding err
+        if not (lower <= actual <= upper):
+            print("%d < %d <= %d" % (lower, actual, upper))
+            raise AssertionError("GPTPartision size %d is not in " \
+                "expected range: %d - %d" % (actual, lower, upper))
+
+        # resize it to 5 GB
+        new_p1 = p1.resize(5, Size.gb_units)
+        upper = 5 * self.gbsector
+        lower = upper - rnderr
+        actual = new_p1.size.sectors
+        # verify the size of the slice is within the expected size range
+        # accounting for alignment rounding err
+        if not (lower <= actual <= upper):
+            print("%d < %d <= %d" % (lower, actual, upper))
+            raise AssertionError("GPTPartition size %d is not in " \
+                "expected range: %d - %d" % (actual, lower, upper))
+
+    def test_in_zpool_conflict_with_parent(self):
+        # set the in_zpool attribute in the disk
+        self.disk.in_zpool = "tank"
+
+        # create a 1 GB partition
+        p1 = self.disk.add_gptpartition(1, 0, 1,
+                                        Size.gb_units, in_zpool="tank")
+
+        # verify there is only one error in the errsvc list and that it is the
+        # proper error
+        self.assertEqual(len(errsvc._ERRORS), 1)
+        error = errsvc._ERRORS[0]
+        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
+            ShadowPhysical.OverlappingGPTPartitionZpoolError))
+
+    def test_in_vdev_conflict_with_parent(self):
+        # set the in_vdev attribute in the disk
+        self.disk.in_vdev = "a label"
+
+        # create a 1 GB GPT partition
+        self.disk.add_gptpartition(1, 0, 1, Size.gb_units, in_vdev="a label")
+
+        # verify there is only one error in the errsvc list and that it is the
+        # proper error
+        self.assertEqual(len(errsvc._ERRORS), 1)
+        error = errsvc._ERRORS[0]
+        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
+            ShadowPhysical.OverlappingGPTPartitionVdevError))
+
+    def test_change_type(self):
+        p = self.disk.add_gptpartition(1, 0, 1, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+        self.assertEqual(p.guid, GPTPartition.name_to_guid("Solaris"))
+
+        new_p = p.change_type(GPTPartition.name_to_guid(
+                              "EFI System Partition"))
+        self.assertFalse(errsvc._ERRORS)
+        self.assertEqual(new_p.guid, \
+            GPTPartition.name_to_guid("EFI System Partition"))
+
+    def test_whole_disk_is_true(self):
+        self.disk.whole_disk = True
+        self.disk.add_gptpartition(1, 0, 10, Size.gb_units,
+            partition_type=GPTPartition.name_to_guid("Solaris"))
+
+        # verify there is only one error in the errsvc list and that it is the
+        # proper error
+        self.assertEqual(len(errsvc._ERRORS), 1)
+        error = errsvc._ERRORS[0]
+        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
+                                   ShadowPhysical.WholeDiskIsTrueError))
+
+    def test_whole_disk_is_false(self):
+        self.disk.whole_disk = False
+        self.disk.add_gptpartition(1, 0, 10, Size.gb_units,
+            partition_type=GPTPartition.name_to_guid("Solaris"))
+
+        # verify that there are no errors
+        self.assertFalse(errsvc._ERRORS)
+
+    def test_disk_remaining_space(self):
+        p = self.disk.add_gptpartition(1, 0, 5, Size.gb_units)
+        self.assertEqual(self.disk.remaining_space.sectors, \
+            self.disk.disk_prop.dev_size.sectors - p.size.sectors)
+
+    def test_invalid_start_sector(self):
+        self.disk.add_gptpartition(1, -16065, 1, Size.gb_units)
+
+        # verify there is only one error in the errsvc list and that it is the
+        # proper error
+        self.assertEqual(len(errsvc._ERRORS), 1)
+        error = errsvc._ERRORS[0]
+        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
+            ShadowPhysical.InvalidGPTPartitionStartSectorError))
+
+    def test_invalid_gptpartition_guid(self):
+        # create a partition with an invalid partition guid.
+        # name_to_guid() of an invalid partition ID will return None
+        self.assertRaises(ValueError,
+            self.disk.add_gptpartition,
+            0, 1, 1, Size.gb_units,
+            partition_type=GPTPartition.name_to_guid("INVALID PARTITION ID"))
+
+    def test_get_next_partition_name(self):
+        self.assertEqual(self.disk.get_next_partition_name(), "0")
+
+        # add another GPTPartition
+        next_part = self.disk.add_gptpartition(0, 0, 10, Size.gb_units,
+           partition_type=GPTPartition.name_to_guid("Solaris"))
+
+        self.assertFalse(errsvc._ERRORS)
+        self.assertEqual(len(self.disk.gpt_partitions), 1)
+        self.assertEqual(self.disk.get_next_partition_name(), "1")
+
+        # ignore any insertion errors for testing get_next_partition_name
+        for i in range(1, EFI_NUMUSERPAR):
+            self.disk.add_gptpartition(i, self.gbsector * i, 1, Size.gb_units)
+
+        # verify get_next_partition_name returns None when there are no
+        # available GPT partitions
+        self.assertEqual(self.disk.get_next_partition_name(), None)
+
+    def test_insert_gptpartition_over_deleted_gptpartition_of_same_name(self):
+        # add a 1GB GPT partition at start_sector 0 and set the action to
+        # delete
+        p = self.disk.add_gptpartition(1, 0, 1, Size.gb_units)
+        p.action = "delete"
+
+        # insert another GPT partition with the same name
+        self.disk.add_gptpartition(1, 0, 2, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+
+
+class Test128KBlockSizeGPTPartition(TestGPTPartition):
+    """ This unittest class is identical to TestGPTPartition except
+    that it initialises the disk with a native 128KB block/sector size
+    """
+    # FIXME - doesn't seem to get executed anymore
+    def setup(self):
+        self.blocksize = EFI_BLOCKSIZE_LCM
+        self.gbsector = GB128KSECTOR
+        self.disk = Disk("test disk")
+        self.disk.ctd = "c12345t0d0"
+        self.disk.geometry = DiskGeometry(self.blocksize, None)
+        self.disk.label = "GPT"
+
+        # 100GB disk
+        self.disk.disk_prop = DiskProp()
+        self.disk.disk_prop.dev_size = Size(
+            str(self.gbsector * 100) + Size.sector_units,
+            blocksize=self.blocksize)
+        self.disk.disk_prop.blocksize = self.blocksize
+
+        # reset the errsvc
+        errsvc.clear_error_list()
 
 
 class TestPartition(unittest.TestCase):
@@ -2014,7 +2287,7 @@ class TestFinalValidation(unittest.TestCase):
         # reset the errsvc
         errsvc.clear_error_list()
 
-    def test_simple(self):
+    def test_simple_vtoc_slice(self):
         # insert the smallest required objects:   one disk, one active solaris2
         # partition and one slice with in_zpool set to the root pool name, one
         # BE under the root pool
@@ -2023,6 +2296,38 @@ class TestFinalValidation(unittest.TestCase):
         p = self.disk1.add_partition(1, 0, 10, Size.gb_units,
                                      bootid=Partition.ACTIVE)
         p.add_slice(0, 0, 1, in_zpool="rpool")
+
+        # "rpool" boot pool with one BE
+        zpool = self.logical.add_zpool("rpool", is_root=True)
+        zpool.insert_children(BE())
+
+        self.target.insert_children([self.disk1, self.logical])
+
+        self.assertTrue(self.target.final_validation())
+
+    def test_simple_gpt_partition(self):
+        # insert the smallest required objects:   one disk, and one gpt
+        # partition with in_zpool set to the root pool name, one BE under the
+        # root pool
+
+        # 10 gb gpt partition
+        self.disk1.add_gptpartition(1, 0, 10, Size.gb_units, in_zpool="rpool")
+
+        # "rpool" boot pool with one BE
+        zpool = self.logical.add_zpool("rpool", is_root=True)
+        zpool.insert_children(BE())
+
+        self.target.insert_children([self.disk1, self.logical])
+
+        self.assertTrue(self.target.final_validation())
+
+    def test_simple_whole_disk(self):
+        # insert the smallest required objects:   one GPT labelled disk
+        # in_zpool set to the root pool name, one BE under the root pool
+
+        self.disk1.label = "GPT"
+        self.disk1.whole_disk = True
+        self.disk1.in_zpool = "rpool"
 
         # "rpool" boot pool with one BE
         zpool = self.logical.add_zpool("rpool", is_root=True)
@@ -2141,45 +2446,90 @@ class TestFinalValidation(unittest.TestCase):
 
         self.assertFalse(self.target.final_validation())
 
+    def test_no_rootpool_slice(self):
+        self.disk1.whole_disk = False
+
+        # 10 gb partition
+        p = self.disk1.add_partition(1, 0, 10, Size.gb_units,
+                                     bootid=Partition.ACTIVE)
+
+        # "rpool" boot pool with one BE
+        zpool = self.logical.add_zpool("rpool", is_root=True)
+        zpool.insert_children(BE())
+
+        self.target.insert_children([self.disk1, self.logical])
+        self.assertFalse(self.target.final_validation())
+
+    def test_no_rootpool_gpt(self):
+
+        # 10 gb gpt partition without GPT set
+        self.disk1.add_gptpartition
+        self.disk1.add_gptpartition(1, 0, 10, Size.gb_units)
+
+        # "rpool" boot pool with one BE
+        zpool = self.logical.add_zpool("rpool", is_root=True)
+        zpool.insert_children(BE())
+
+        self.target.insert_children([self.disk1, self.logical])
+        self.assertFalse(self.target.final_validation())
+
+    def test_no_rootpool_whole_disk(self):
+        self.disk1.whole_disk = True
+        self.disk1.in_zpool = None
+        self.disk1.in_vdev = None
+
+        # "rpool" boot pool with one BE
+        zpool = self.logical.add_zpool("rpool", is_root=True)
+        zpool.insert_children(BE())
+
+        self.target.insert_children([self.disk1, self.logical])
+        self.assertFalse(self.target.final_validation())
+
 
 class TestInUse(unittest.TestCase):
 
     def setUp(self):
-        # find the list of vdevs for the root pool
-        cmd = ["/usr/sbin/zpool", "list", "-H", "-o", "name,bootfs"]
-        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE)
-        for line in p.stdout.splitlines():
-            (name, bootfs) = line.split()
-            if bootfs != "-":
-                root_pool = name
-                break
-        else:
-            raise SkipTest("unable to find root pool name")
+        # In use checking is performed by comparing the desired object
+        # against the original in the discovered tree. So set that up.
 
-        # find the list of vdevs that compose the 'rpool' zpool
-        rpool_map = _get_vdev_mapping(root_pool)
+        # Construct a DOC tree with discovered and desired target sub-trees
+        self.engine = get_new_engine_instance()
+        self.doc = InstallEngine.get_instance().data_object_cache
 
-        # take the first key in the rpool_map and use the first slice that
-        # makes up that key's mapping
-        self.in_use_slice = rpool_map[rpool_map.keys()[0]][0]
-        (self.ctd, _none, self.index) = \
-            self.in_use_slice.split("/")[-1].partition("s")
+        target_discovered = Target(Target.DISCOVERED)
+        target_desired = Target(Target.DESIRED)
+        self.doc.persistent.insert_children(target_discovered)
+        self.doc.volatile.insert_children(target_desired)
 
-        # construct a disk DOC object from the in_use_slice
-        self.disk = Disk("test disk")
-        self.disk.ctd = self.ctd
-        self.disk.geometry = DiskGeometry(BLOCKSIZE, CYLSIZE)
-        self.disk.label = "VTOC"
-
-        # 100GB disk
-        self.disk.disk_prop = DiskProp()
-        self.disk.disk_prop.dev_size = Size(
+        # construct a 100GB disk DOC object
+        disk = Disk("disk")  # Must be "disk" or shadow validation won't see it
+        disk.ctd = "c12345t0d0"
+        disk.geometry = DiskGeometry(BLOCKSIZE, CYLSIZE)
+        disk.label = "VTOC"
+        disk.disk_prop = DiskProp()
+        disk.disk_prop.dev_size = Size(
             str(GBSECTOR * 100) + Size.sector_units)
-        self.disk.disk_prop.blocksize = BLOCKSIZE
+        disk.disk_prop.blocksize = BLOCKSIZE
+
+        target_discovered.insert_children(disk)
+
+        # Make a copy of disk for the desired tree
+        self.disk = copy.deepcopy(disk)
+        target_desired.insert_children(self.disk)
+
+        # Construct a slice that is in use on the discovered tree
+        self.index = 0
+        slc = disk.add_slice(self.index, 0, 1, Size.gb_units)
+        slc.in_use = {'used_by': ['active_zpool'], 'used_name': ['zpool']}
+        slc.action = "preserve"
 
     def tearDown(self):
-        self.disk.delete_children()
-        self.disk.delete()
+        self.doc.persistent.delete_children()
+        self.doc.persistent.delete()
+        self.doc.volatile.delete_children()
+        self.doc.volatile.delete()
+        if self.engine is not None:
+            reset_engine(self.engine)
 
         # reset the errsvc
         errsvc.clear_error_list()
@@ -2189,6 +2539,7 @@ class TestInUse(unittest.TestCase):
 
         # verify there is only one error in the errsvc list and that it is the
         # proper error
+
         self.assertEqual(len(errsvc._ERRORS), 1)
         error = errsvc._ERRORS[0]
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
@@ -2240,7 +2591,7 @@ class TestSize(unittest.TestCase):
 
 class Test4KBlocksize(unittest.TestCase):
     def setUp(self):
-        self.disk = Disk("test disk")
+        self.disk = Disk("testdisk")
         self.disk.ctd = "c12345t0d0"
         self.disk.geometry = DiskGeometry(BLOCKSIZE_4K, CYLSIZE)
         self.disk.label = "VTOC"
@@ -2268,7 +2619,7 @@ class Test4KBlocksize(unittest.TestCase):
 
         # verify the start_sector and size are consistent
         self.assertEqual(p.start_sector, CYLSIZE)
-        self.assertEqual(p.size.sectors, (10 * GBSECTOR / CYLSIZE * CYLSIZE))
+        self.assertEqual(p.size.sectors, (10 * GB4KSECTOR / CYLSIZE * CYLSIZE))
 
     def test_add_single_slice(self):
         # add a simple 10Gb slice
@@ -2277,4 +2628,4 @@ class Test4KBlocksize(unittest.TestCase):
 
         # verify the start_sector and size are consistent
         self.assertEqual(s.start_sector, CYLSIZE)
-        self.assertEqual(s.size.sectors, (10 * GBSECTOR / CYLSIZE * CYLSIZE))
+        self.assertEqual(s.size.sectors, (10 * GB4KSECTOR / CYLSIZE * CYLSIZE))

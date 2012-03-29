@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ instantiation.py - target instantiation checkpoint.  Parses the Data Object
@@ -36,10 +36,12 @@ from copy import copy
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.target import Target
+from solaris_install.target.libadm.const import V_ROOT
 from solaris_install.target.libdiskmgt.diskmgt import DKIOCSETWCE
 from solaris_install.target.logical import BE, DatasetOptions, Filesystem, \
     Options, PoolOptions, Vdev, Zvol, Zpool
-from solaris_install.target.physical import Disk, Partition, Slice
+from solaris_install.target.physical import Disk, GPTPartition, Partition, \
+    Slice
 
 
 class TargetInstantiation(Checkpoint):
@@ -111,13 +113,40 @@ class TargetInstantiation(Checkpoint):
                 finally:
                     os.close(fd)
 
-            # get the list of fdisk partitions and slices on the disk
+            # get the list of GPT & fdisk partitions and slices on the disk
+            gptpartition_list = disk.get_descendants(class_type=GPTPartition)
             partition_list = disk.get_descendants(class_type=Partition)
             slice_list = disk.get_descendants(class_type=Slice)
 
-            update_partition_table = False
             label_disk = True
 
+            # GPT
+            update_gptpartition_table = False
+            if gptpartition_list:
+                dup_gptpartition_list = copy(gptpartition_list)
+                for gptpartition in dup_gptpartition_list:
+                    # look for a partition name of None.  If it exists, raise
+                    # an exception
+                    if gptpartition.name is None:
+                        raise RuntimeError("Invalid name for GPT " +
+                                           "Partition: " + str(gptpartition))
+
+                    # update the GPT partition table and EFI label the disk
+                    # only if a GPT partition is being created or destroyed.
+                    #
+                    # don't update the GPT partition table or EFI label
+                    # if 'preserve' is set on the GPT partition
+                    if gptpartition.action == "create":
+                        update_gptpartition_table = True
+                    elif gptpartition.action == "delete":
+                        gptpartition_list.pop(gptpartition_list.index(
+                                              gptpartition))
+                        update_gptpartition_table = True
+                    elif gptpartition.action == "preserve":
+                        label_disk = False
+
+            # MBR
+            update_partition_table = False
             if partition_list:
                 dup_partition_list = copy(partition_list)
                 for partition in dup_partition_list:
@@ -141,6 +170,7 @@ class TargetInstantiation(Checkpoint):
                         ["preserve", "use_existing_solaris2"]:
                         label_disk = False
 
+            # VTOC
             update_vtoc = False
             swap_slice_list = list()
             if slice_list:
@@ -164,12 +194,24 @@ class TargetInstantiation(Checkpoint):
                     if slc.is_swap:
                         swap_slice_list.append(slc)
 
+                # locate the name of the root pool, defaulting to "rpool"
+                rpn = next((rp.name for rp in self.logical_list if rp.is_root),
+                            "rpool")
+                for slc in filter(lambda slc: slc.in_zpool == rpn, slice_list):
+                    slc.tag = V_ROOT
+
             if update_partition_table:
                 disk._update_partition_table(partition_list, self.dry_run)
-            if label_disk:
+            if disk.label == "VTOC" and label_disk:
                 # if no slices or partitions are marked 'preserve'
                 # label the disk
                 disk._label_disk(self.dry_run)
+
+            # for GPT labeled disks, _update_gptpartition_table will format the
+            # disk
+            if update_gptpartition_table:
+                disk._update_gptpartition_table(gptpartition_list,
+                                                self.dry_run)
             if update_vtoc:
                 disk._update_slices(slice_list, self.dry_run)
             if swap_slice_list:
@@ -220,7 +262,7 @@ class TargetInstantiation(Checkpoint):
         zpool or vdev name from the DOC
         """
         vdev_list = list()
-        for class_type in [Disk, Partition, Slice]:
+        for class_type in [Disk, GPTPartition, Partition, Slice]:
             dev_list = self.target.get_descendants(class_type=class_type)
             for dev in [d for d in dev_list if d.in_zpool == zpool_name]:
                 # in_zpool will already match the zpool name.  For in_vdev,
@@ -229,6 +271,8 @@ class TargetInstantiation(Checkpoint):
                    (in_type == "in_vdev" and dev.in_vdev == vdev_name):
                     if isinstance(dev, Disk):
                         vdev_list.append(dev.ctd)
+                    elif isinstance(dev, GPTPartition):
+                        vdev_list.append(dev.parent.ctd + "s%s" % dev.name)
                     elif isinstance(dev, Partition):
                         vdev_list.append(dev.parent.ctd + "p%s" % dev.name)
                     elif isinstance(dev, Slice):

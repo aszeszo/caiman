@@ -19,14 +19,13 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
 Contains the Welcome Screen for the Text Installer
 '''
 
-from solaris_install.engine import InstallEngine
 from solaris_install.text_install import _, RELEASE, TUI_HELP
 from terminalui.base_screen import BaseScreen
 
@@ -43,15 +42,17 @@ class WelcomeScreen(BaseScreen):
                      "Operating System (OS) on SPARC or x86 systems.\n\n"
                      "The installation log will be at %(log)s.\n\n"
                      "How to navigate through this installer:")
-    BULLET_ITEMS = [_("Use the function keys listed at the bottom of each "
-                 "screen to move from screen to screen and to perform "
-                 "other operations."),
-               _("Use the up/down arrow keys to change the selection "
-                 "or to move between input fields."),
-               _("If your keyboard does not have function keys, or "
-                 "they do not respond, press ESC; the legend at the "
-                 "bottom of the screen will change to show the ESC keys"
-                 " for navigation and other functions.")]
+    BULLET_ITEMS = [
+        _("Use the function keys listed at the bottom of each "
+          "screen to move from screen to screen and to perform "
+          "other operations."),
+        _("Use the up/down arrow keys to change the selection "
+          "or to move between input fields."),
+        _("If your keyboard does not have function keys, or "
+          "they do not respond, press ESC; the legend at the "
+          "bottom of the screen will change to show the ESC keys"
+          " for navigation and other functions.")
+    ]
     BULLET = "- "
     HELP_DATA = (TUI_HELP + "/%s/welcome.txt",
                  _("Welcome and Navigation Instructions"))
@@ -59,11 +60,11 @@ class WelcomeScreen(BaseScreen):
     def __init__(self, main_win, install_data):
         super(WelcomeScreen, self).__init__(main_win)
         self.install_data = install_data
-    
+
     def set_actions(self):
         '''Remove the F3_Back Action from the first screen'''
         self.main_win.actions.pop(self.main_win.back_action.key, None)
-    
+
     def _show(self):
         '''Display the static paragraph WELCOME_TEXT'''
         
@@ -74,6 +75,7 @@ class WelcomeScreen(BaseScreen):
         text = WelcomeScreen.WELCOME_TEXT % fmt
         y_loc += self.center_win.add_paragraph(text, start_y=y_loc)
         x_loc = len(WelcomeScreen.BULLET)
+
         for bullet in WelcomeScreen.BULLET_ITEMS:
             self.center_win.add_text(WelcomeScreen.BULLET, start_y=y_loc)
             y_loc += self.center_win.add_paragraph(bullet, start_y=y_loc,

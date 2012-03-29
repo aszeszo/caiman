@@ -30,11 +30,13 @@ technologies should go here.
 
 '''
 
+import ctypes as C
 import errno
 import functools
 import gettext
 import logging
 import os
+import platform
 import re
 import shutil
 import sys
@@ -45,6 +47,7 @@ from select import select
 
 from data_object import DataObject
 
+from bootmgmt.bootinfo import SystemFirmware
 from solaris_install.logger import INSTALL_LOGGER_NAME
 
 
@@ -470,3 +473,28 @@ def path_matches_dtd(path):
     global __dtd_path_regexp
 
     return __dtd_path_regexp.match(path) is not None
+
+
+def get_system_memory():
+    '''Returns the amount of memory available in the system in MB
+       Basically just as prtconf does.
+    '''
+    memory = os.sysconf('SC_PAGESIZE') * os.sysconf('SC_PHYS_PAGES')
+
+    # round it like prtconf did to nearest MB
+    mb = 2 ** 20  # can't import Size
+    return (memory + mb - 1) / mb
+
+
+def gpt_firmware_check():
+    ''' Check to see if the system supports GPT labeled boot disks'''
+
+    if platform.processor() == "sparc":
+        gpt_capable = False
+        if hasattr(SystemFirmware, "PROP_GPT_SUPPORTED"):
+            firmware = SystemFirmware.get()
+            gpt_capable = firmware.getprop(SystemFirmware.PROP_GPT_SUPPORTED)
+        return gpt_capable
+    else:
+        # x86 will always be GPT bootable due to GRUB2
+        return True

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """
 Python package for targets
@@ -41,8 +41,9 @@ from solaris_install.data_object.simple import SimpleXmlHandlerBase
 from solaris_install.data_object.cache import DataObject, DataObjectCache
 
 
-__all__ = ["cgc", "controller", "discovery", "instantiation", "libdiskmgt",
-           "libnvpair", "logical", "physical", "varshared", "vdevs"]
+__all__ = ["cgc", "controller", "cuuid", "discovery", "instantiation",
+           "libdiskmgt", "libnvpair", "logical", "physical", "varshared",
+           "vdevs"]
 
 CRO_LABEL = "croinfo output"
 
@@ -86,45 +87,71 @@ class Target(SimpleXmlHandlerBase):
                 raise Target.InvalidError("DOC object which caused the " +
                                           "failure: " + str(child))
 
+    def validate_fdisk_partitions(self, partition_list):
+        """ validate_fdisk_partitions() - method to validate the desired target
+        tree's fdisk partitions
+        """
+
+        old_solaris = physical.Partition.name_to_num("Solaris/Linux swap")
+        solaris2 = physical.Partition.name_to_num("Solaris2")
+        found_old_solaris = False
+        for partition in partition_list:
+            # look for the old solaris partition id (130)
+            if partition.part_type == old_solaris:
+                found_old_solaris = True
+
+            # if the partition is a solaris2 partition (191), verify
+            # it's an active primary partition or a logical partition
+            if partition.part_type == solaris2:
+                if partition.bootid == physical.Partition.ACTIVE or \
+                   partition.is_logical:
+                    break
+        else:
+            # check to see if an older solaris partition was found.  If
+            # so, warn the user before failing
+            if found_old_solaris:
+                self.logger.warning("Only found an older 'solaris' "
+                                    "partition.  Consider using "
+                                    "fdisk to change the partition ID "
+                                    "to 'solaris2'")
+
+            raise Target.InvalidError("No active 'Solaris2' partitions found")
+
+    def validate_gpt_partitions(self, gpt_partition_list):
+        """ validate_gpt_partitions() - method to validate the desired target
+        tree's GPT partitions
+        """
+
+        for gpt_partition in gpt_partition_list:
+            if gpt_partition.is_solaris:
+                break
+        else:
+            raise Target.InvalidError("No 'solaris' GPT Partition found")
+
     def final_validation(self):
         """ final_validiation() - method to validate the entire Target sub-tree
         """
+
         try:
-            # for x86, check for at least one active Solaris2 partition
-            # specified
-            if platform.processor() == "i386":
-                old_solaris = \
-                    physical.Partition.name_to_num("Solaris/Linux swap")
-                solaris2 = physical.Partition.name_to_num("Solaris2")
-                p_list = self.get_descendants(class_type=physical.Partition)
-                found_old_solaris = False
-                for partition in p_list:
-                    # look for the old solaris partition id (130)
-                    if partition.part_type == old_solaris:
-                        found_old_solaris = True
+            # Look first for GPT partitions.  If found, verify one of the
+            # partitions has a Solaris GUID
+            gpt_list = self.get_descendants(class_type=physical.GPTPartition)
+            if gpt_list:
+                self.validate_gpt_partitions(gpt_list)
 
-                    # if the partition is a solaris2 partition (191), verify
-                    # it's an active primary partition or a logical partition
-                    if partition.part_type == solaris2:
-                        if partition.bootid == physical.Partition.ACTIVE or \
-                           partition.is_logical:
-                            break
-                else:
-                    # check to see if an older solaris partition was found.  If
-                    # so, warn the user before failing
-                    if found_old_solaris:
-                        self.logger.warning("Only found an older 'solaris' "
-                                            "partition.  Consider using "
-                                            "fdisk to change the partition ID "
-                                            "to 'solaris2'")
-
-                    raise Target.InvalidError("No active 'Solaris2' "
-                                              "partitions found")
+            # for x86, check for at least one active Solaris2 partition or, if
+            # GPT Partitions are used, a GPT partition with a Solaris GUID
+            elif platform.processor() == "i386":
+                partition_list = self.get_descendants(
+                    class_type=physical.Partition)
+                if partition_list:
+                    self.validate_fdisk_partitions(partition_list)
 
             # verify one zpool is specified with is_root set to "true"
             zpool_list = self.get_descendants(class_type=logical.Zpool)
             for zpool in zpool_list:
                 if zpool.is_root:
+                    root_pool = zpool.name
                     # XXX Do we really need this check for whole_disk?
                     # a zpool is configured to be the root pool.  Now find any
                     # Disk objects where whole_disk is set to true and ensure
@@ -133,14 +160,15 @@ class Target(SimpleXmlHandlerBase):
                     disk_list = self.get_descendants(class_type=physical.Disk)
                     for disk in disk_list:
                         if disk.whole_disk:
-                            if disk.in_zpool == zpool.name:
+                            if disk.in_zpool == root_pool and \
+                               disk.label != "GPT":
                                 raise Target.InvalidError("%s " % disk.ctd +
                                    "has 'whole_disk' set to 'true', but " +
                                    "is part of the root pool")
 
                     # verify this root pool has one BE associated with it
                     if not zpool.get_children(class_type=logical.BE):
-                        raise Target.InvalidError("%s " % zpool.name +
+                        raise Target.InvalidError("%s " % root_pool +
                             "has no Boot Environments associated with it")
 
                     # if the code has gotten this far, the zpool is a valid
@@ -150,6 +178,30 @@ class Target(SimpleXmlHandlerBase):
                 raise Target.InvalidError("A root pool must be specified.  " +
                                           "No zpools are marked as a root " +
                                           "pool")
+
+            # verify the root pool has at least one slice, one gpt_partition or
+            # one whole_disk associated with it.
+            found = False
+            for disk in self.get_descendants(class_type=physical.Disk):
+                if disk.whole_disk and disk.in_zpool == root_pool:
+                    # whole disk case - GPT labelled disks
+                    found = True
+                    break
+
+            if not found:
+                gpt_list = \
+                    self.get_descendants(class_type=physical.GPTPartition)
+                slice_list = self.get_descendants(class_type=physical.Slice)
+
+                for obj_list in [gpt_list, slice_list]:
+                    for child in obj_list:
+                        if child.in_zpool == root_pool:
+                            found = True
+                            break
+
+                if not found:
+                    raise Target.InvalidError("The root pool has no physical "
+                        "objects associated with it.")
 
             # reset the errsvc completely
             errsvc.clear_error_list()

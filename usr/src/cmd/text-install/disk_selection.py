@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -33,6 +33,8 @@ import platform
 
 import osol_install.errsvc as errsvc
 import osol_install.liberrsvc as liberrsvc
+
+from bootmgmt.bootinfo import SystemFirmware
 from solaris_install.text_install import _, RELEASE, TUI_HELP, \
     TARGET_DISCOVERY, TRANSFER_PREP, LOCALIZED_GB
 from solaris_install.text_install.disk_window import DiskWindow, \
@@ -41,8 +43,10 @@ from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target import Target
 from solaris_install.target.controller import FALLBACK_IMAGE_SIZE
-from solaris_install.target.physical import Disk, Partition, Slice
+from solaris_install.target.physical import Disk, GPTPartition, Partition, \
+    Slice
 from solaris_install.target.size import Size
+from solaris_install.text_install import can_use_gpt
 from solaris_install.text_install.ti_target_utils import MAX_VTOC
 from solaris_install.transfer.media_transfer import get_image_size
 from terminalui.base_screen import BaseScreen, QuitException, UIMessage
@@ -73,14 +77,16 @@ class DiskScreen(BaseScreen):
     DISK_SEEK_TEXT = _("Seeking disks on system")
     FOUND_x86 = _("The following partitions were found on the disk.")
     FOUND_SPARC = _("The following slices were found on the disk.")
+    FOUND_GPT = _("The following GPT partitions were found on the disk.")
     PROPOSED_x86 = _("A partition table was not found. The following is "
                      "proposed.")
     PROPOSED_SPARC = _("A VTOC label was not found. The following "
                        "is proposed.")
-    PROPOSED_GPT = _("A GPT labeled disk was found. The following is "
+    PROPOSED_GPT = _("A GPT labeled disk was not found. The following is "
                      "proposed.")
     TOO_SMALL = "<"
     TOO_BIG = ">"
+    INVALID_DISK = "!"
     GPT_LABELED = _("GPT labeled disk")
     NO_DISKS = _("No disks found. Additional device drivers may "
                  "be needed.")
@@ -93,17 +99,18 @@ class DiskScreen(BaseScreen):
                     (10, _(" Size(GB)")),
                     (6, _("Boot")),
                     (44, _("Device")),
-                    (3, "")] #blank header for the notes column
+                    (3, "")]  # blank header for the notes column
     VENDOR_LEN = 15
 
     SPINNER = ["\\", "|", "/", "-"]
     
     DISK_WARNING_HEADER = _("Warning")
     DISK_WARNING_TOOBIG = _("Only the first %.1fTB can be used.")
-    DISK_WARNING_GPT = _("You have chosen a GPT labeled disk. Installing "
-                         "onto a GPT labeled disk will cause the loss "
-                         "of all existing data and the disk will be "
-                         "relabeled as SMI.")
+    DISK_WARNING_RELABEL = _("You have chosen a GPT labeled disk. Installing "
+                             "onto this disk requires it to be relabeled as "
+                             "SMI. This causes IMMEDIATE LOSS of all data "
+                             "on the disk. Select Continue only if you are "
+                             "prepared to erase all data on this disk now.")
 
     CANCEL_BUTTON = _("Cancel")
     CONTINUE_BUTTON = _("Continue")
@@ -122,16 +129,20 @@ class DiskScreen(BaseScreen):
         else:
             self.found_text = DiskScreen.FOUND_SPARC
             self.proposed_text = DiskScreen.PROPOSED_SPARC
+
+        self.gpt_found_text = DiskScreen.FOUND_GPT
+        self.gpt_proposed_text = DiskScreen.PROPOSED_GPT
         
         disk_header_text = []
         for header in DiskScreen.DISK_HEADERS:
             header_str = fit_text_truncate(header[1], header[0] - 1,
                                            just="left")
             disk_header_text.append(header_str)
+
         self.disk_header_text = " ".join(disk_header_text)
-        self.max_disk_size = (Size(MAX_VTOC)).get(Size.tb_units)
+        self.max_vtoc_disk_size = (Size(MAX_VTOC)).get(Size.tb_units)
         self.disk_warning_too_big = \
-            DiskScreen.DISK_WARNING_TOOBIG % self.max_disk_size
+            DiskScreen.DISK_WARNING_TOOBIG % self.max_vtoc_disk_size
         
         self.disks = []
         self.existing_pools = []
@@ -153,6 +164,7 @@ class DiskScreen(BaseScreen):
     
     def determine_minimum(self):
         '''Returns minimum install size, fetching first if needed'''
+
         self.determine_size_data()
         return self._minimum_size
     
@@ -160,6 +172,7 @@ class DiskScreen(BaseScreen):
     
     def determine_recommended(self):
         '''Returns recommended install size, fetching first if needed'''
+
         self.determine_size_data()
         return self._recommended_size
     
@@ -168,14 +181,15 @@ class DiskScreen(BaseScreen):
     def determine_size_data(self):
         '''Retrieve the minimum and recommended sizes and generate the string
         to present that information.
-        
         '''
+        
         if self._minimum_size is None or self._recommended_size is None:
             self._recommended_size = get_recommended_size(self.tc)
             self._minimum_size = get_minimum_size(self.tc)
     
     def get_size_line(self):
         '''Returns the line of text displaying the min/recommended sizes'''
+
         if self._size_line is None:
             rec_size_str = locale.format("%.1f",
                 self.recommended_size.get(Size.gb_units)) + LOCALIZED_GB
@@ -189,10 +203,10 @@ class DiskScreen(BaseScreen):
     size_line = property(get_size_line)
     
     def wait_for_disks(self):
-        '''Block while waiting for libtd to finish. Catch F9 and quit
-        if needed
-        
+        '''Block while waiting for target discovery to finish. Catch F9 and
+        quit if needed
         '''
+        
         self.main_win.actions.pop(curses.KEY_F2, None)
         self.main_win.actions.pop(curses.KEY_F6, None)
         self.main_win.actions.pop(curses.KEY_F3, None)
@@ -220,7 +234,7 @@ class DiskScreen(BaseScreen):
 
         # check the result of target discovery
         if self._target_discovery_status is not InstallEngine.EXEC_SUCCESS:
-            err_data = (errsvc.get_errors_by_mod_id(TARGET_DISCOVERY))[0]
+            err_data = errsvc.get_errors_by_mod_id(TARGET_DISCOVERY)[0]
             LOGGER.error("Target discovery failed")
             err = err_data.error_data[liberrsvc.ES_DATA_EXCEPTION]
             LOGGER.error(err)
@@ -228,12 +242,10 @@ class DiskScreen(BaseScreen):
                 "discovery. See log for details.") % err)
 
     def _td_callback(self, status, errsvc):
-        '''Callback function for Target Discovery checkpoint execution.
-           The status value is saved to be interpreted later.
-           This function sets the self._target_discovery_completed 
-           value to true so the wait_for_disks() function will know
-           to stop displaying the spinner.
- 
+        '''Callback function for Target Discovery checkpoint execution.  The
+        status value is saved to be interpreted later.  This function sets the
+        self._target_discovery_completed value to true so the wait_for_disks()
+        function will know to stop displaying the spinner.
         '''
 
         self._target_discovery_status = status
@@ -243,7 +255,6 @@ class DiskScreen(BaseScreen):
         '''Create a list of disks to choose from and create the window
         for displaying the partition/slice information from the selected
         disk
-        
         '''
 
         self.wait_for_disks()
@@ -274,19 +285,18 @@ class DiskScreen(BaseScreen):
                 LOGGER.debug("Unable to get image size") 
                 self._image_size = FALLBACK_IMAGE_SIZE
 
-        # initialize the target controller so the min/max size for
-        # the installation can be calculated.  Explicitly do not
-        # want to select an initial disk at this time in case
-        # none of the disks discovered is usable.  The target controller
-        # initialization needs to be done everytime we show the disk selection
-        # screen so the desired target node in the DOC can be re-populated
-        # with information from target discovery.
+        # initialize the target controller so the min/max size for the
+        # installation can be calculated.  Explicitly do not want to select an
+        # initial disk at this time in case none of the disks discovered is
+        # usable.  The target controller initialization needs to be done
+        # everytime we show the disk selection screen so the desired target
+        # node in the DOC can be re-populated with information from target
+        # discovery.
         self.tc.initialize(image_size=self._image_size, no_initial_disk=True)
          
-        # Go through all the disks found and find ones that have
-        # enough space for installation.  At the same time, see if any
-        # existing disk is the boot disk.  If a boot disk is found, move
-        # it to the front of the list
+        # Go through all the disks found and find ones that have enough space
+        # for installation.  At the same time, see if any existing disk is the
+        # boot disk.  If a boot disk is found, move it to the front of the list
         num_usable_disks = 0
         boot_disk = None
         for disk in self.disks:
@@ -296,6 +306,7 @@ class DiskScreen(BaseScreen):
                 if disk.is_boot_disk():
                     boot_disk = disk
                 num_usable_disks += 1
+
         if boot_disk is not None:
             self.disks.remove(boot_disk)
             self.disks.insert(0, boot_disk)
@@ -321,13 +332,12 @@ class DiskScreen(BaseScreen):
         self.center_win.window.hline(y_loc, self.center_win.border_size[1] + 1,
                                      curses.ACS_HLINE,
                                      textwidth(self.disk_header_text))
-        
+
         y_loc += 1
         disk_win_area = WindowArea(4, textwidth(self.disk_header_text) + 2,
                                    y_loc, 0)
         disk_win_area.scrollable_lines = len(self.disks) + 1
-        self.disk_win = ScrollWindow(disk_win_area,
-                                     window=self.center_win)
+        self.disk_win = ScrollWindow(disk_win_area, window=self.center_win)
         
         disk_item_area = WindowArea(1, disk_win_area.columns - 2, 0, 1)
         disk_index = 0
@@ -404,6 +414,20 @@ class DiskScreen(BaseScreen):
                 notes_field = DiskScreen.TOO_BIG.center(len_notes)
                 disk_text_fields.append(notes_field)
 
+            # check the blocksize of the disk.  If it's not 512 bytes and we
+            # have an EFI firmware on x86, make the disk unselectable by the
+            # user.  See PSARC 2008/769
+            elif platform.processor() == "i386" and \
+                 disk.geometry.blocksize != 512:
+                firmware = SystemFirmware.get()
+                if firmware.fw_name == "uefi64":
+                    selectable = False
+                    notes_field = DiskScreen.INVALID_DISK.center(len_notes)
+                    disk_text_fields.append(notes_field)
+                    LOGGER.debug("marking disk %s unselectable as its "
+                                 "blocksize is not 512 bytes on an UEFI "
+                                 "firmware x86 system.", disk.ctd)
+
             disk_text = " ".join(disk_text_fields)
 
             disk_item_area.y_loc = disk_index
@@ -428,9 +452,8 @@ class DiskScreen(BaseScreen):
         self.disk_win.activate_object(self.selected_disk_index)
     
     def on_change_screen(self):
-        ''' Save the index of the current selected object
-        in case the user returns to this screen later
-        
+        ''' Save the index of the current selected object in case the user
+        returns to this screen later
         '''
 
         # Save the index of the selected object
@@ -441,23 +464,23 @@ class DiskScreen(BaseScreen):
         LOGGER.debug(self.doc.persistent)
     
     def start_discovery(self):
-
         # start target discovery
         if not self._target_discovery_completed:
             errsvc.clear_error_list()
-
             self.engine.execute_checkpoints(pause_before=TRANSFER_PREP,
                                             callback=self._td_callback)
 
     def validate(self):
         '''Validate the size of the disk.'''
 
-        warning_txt = []
+        warning_txt = list()
 
         disk = self.disk_detail.ui_obj.doc_obj
         disk_size_gb = disk.disk_prop.dev_size.get(Size.gb_units)
-        max_size_gb = Size(MAX_VTOC).get(Size.gb_units)
-        if disk_size_gb > max_size_gb:
+        max_vtoc_size_gb = Size(MAX_VTOC).get(Size.gb_units)
+        # Disk size warning should only be displayed if we are restricted to
+        # VTOC boot disks.
+        if not can_use_gpt and disk_size_gb > max_vtoc_size_gb:
             warning_txt.append(self.disk_warning_too_big)
         warning_txt = " ".join(warning_txt)
         
@@ -469,43 +492,76 @@ class DiskScreen(BaseScreen):
                                           DiskScreen.CONTINUE_BUTTON)
             
             if not result:
-                raise UIMessage() # let user select different disk
-            
+                raise UIMessage()  # let user select different disk
             # if user didn't quit it is always OK to ignore disk size,
             # that will be forced less than the maximum in partitioning.
-        
 
-def on_activate(disk=None, disk_select=None):
+        warning_txt = list()
+
+        # We also need to warn the user if we need to relabel the disk from
+        # GPT to SMI-VTOC
+        if disk.label == "GPT" and not can_use_gpt:
+            warning_txt.append(DiskScreen.DISK_WARNING_RELABEL)
+        warning_txt = " ".join(warning_txt)
+
+        if warning_txt:
+            # warn the user and give user a chance to change
+            result = self.main_win.pop_up(DiskScreen.DISK_WARNING_HEADER,
+                                          warning_txt,
+                                          DiskScreen.CANCEL_BUTTON,
+                                          DiskScreen.CONTINUE_BUTTON)
+            
+            if not result:
+                raise UIMessage()  # let user select different disk
+
+            # if user didn't Cancel it is  OK to relabel the disk.
+            # This is one of the lesser known (and potentially dangerous) 
+            # features of target controller: select_disk() with
+            # use_whole_disk=True can force a relabeling of the disk from GPT
+            # to VTOC is necessary for booting from the disk
+            disk = self.tc.select_disk(disk, use_whole_disk=True)[0]
+
+            # The DiskWindow object needs its disk reference updated too
+            self.disk_detail.set_disk_info(disk_info=disk)
+
+
+def on_activate(disk, disk_select):
     '''When a disk is selected, pass its data to the disk_select_screen'''
+
     max_x = disk_select.win_size_x - 1
 
     LOGGER.debug("on activate..disk=%s", disk)
 
-    # See whether the disk is blank
-    if platform.processor() == "i386":
-        parts = disk.get_children(class_type=Partition)
+    gpt_partitions = disk.get_children(class_type=GPTPartition)
+    if gpt_partitions:
+        display_text = disk_select.gpt_found_text
     else:
-        parts = disk.get_children(class_type=Slice)
+        if platform.processor() == "i386":
+            fdisk_partitions = disk.get_children(class_type=Partition)
+            if fdisk_partitions:
+                display_text = disk_select.found_text
+            else:
+                display_text = disk_select.gpt_proposed_text
+        else:
+            slices = disk.get_children(class_type=Slice)
+            if slices:
+                display_text = disk_select.found_text
+            else:
+                display_text = disk_select.gpt_proposed_text
 
-    if not parts:
-        display_text = disk_select.proposed_text
-    else:
-        display_text = disk_select.found_text
-
-    #
-    # if length of display_text is shorter than max_x, pad rest
-    # of string up to max_x with white space, so, when shorter strings
-    # are displayed after longer ones, the "rest" of the longer string
-    # gets erased.
-    #
+    # if length of display_text is shorter than max_x, pad rest of string up to
+    # max_x with white space, so, when shorter strings are displayed after
+    # longer ones, the "rest" of the longer string gets erased.
     need_pad_len = max_x - len(display_text)
     if need_pad_len > 0: 
         display_text += " " * need_pad_len
 
     # Add the selected disk to the target controller so appropriate defaults
     # can be filled in, if necessary
-    selected_disk = (disk_select.tc.select_disk(disk))[0]
-    selected_disk.whole_disk = False # assume we don't want to use whole disk
+    selected_disk = disk_select.tc.select_disk(disk)[0]
+
+    # assume we don't want to use whole disk
+    selected_disk.whole_disk = False
 
     disk_select.center_win.add_paragraph(display_text, 11, 1, max_x=max_x)
     disk_select.disk_detail.set_disk_info(disk_info=selected_disk)

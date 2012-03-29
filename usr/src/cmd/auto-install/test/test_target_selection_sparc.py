@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import difflib
@@ -482,7 +482,7 @@ class TestTargetSelectionTestCase(unittest.TestCase):
         self.__run_simple_test(test_manifest_xml, expected_xml,
             fail_ex_str="If whole_disk is False, you need to "
                         "provide information for"
-                        " partitions or slices")
+                        " gpt_partitions or slices")
 
     def test_target_selection_multiple_whole_disk_mixed_no_logicals(self):
         '''Test Success if 1 whole & 1 partitioned disk, no logicals'''

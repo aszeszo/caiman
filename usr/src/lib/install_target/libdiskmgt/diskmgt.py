@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """ Python packge with ctypes wrapper for libdiskmgt.so (undocumented).
 """
@@ -31,15 +31,12 @@ import errno
 import fcntl
 import numbers
 import os
-import platform
 
 from solaris_install.target.cgc import CTypesStructureRef
-from solaris_install.target.libadm import extvtoc
 from solaris_install.target.libdiskmgt import cfunc, const, cstruct
 from solaris_install.target.libdiskmgt.attributes import DMDriveAttr,\
     DMControllerAttr, DMMediaAttr, DMSliceAttr, DMPartAttr, DMPathAttr,\
     DMAliasAttr, DMBusAttr
-from solaris_install.target.libnvpair import nvl
 from solaris_install.target.libnvpair.cfunc import nvlist_free
 
 """

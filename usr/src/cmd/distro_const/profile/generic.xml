@@ -20,7 +20,7 @@
    
     CDDL HEADER END
    
-    Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+    Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 
     Base service profile customized for all live images.
 -->
@@ -29,6 +29,10 @@
       svc.startd(1M) services
   -->
   <service name='system/boot-archive-update' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <!-- There can be no deferred boot loader installation in installation environments -->
+  <service name='system/boot-loader-update' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
   <!-- Fast reboot on panic is inappropriate in installation environments -->

@@ -26,27 +26,43 @@
 
 ''' target_selection.py - Select Install Target(s)
 '''
+from collections import Iterable
 import copy
 import os
 import platform
 import re
 import traceback
 
+from bootmgmt.bootinfo import SystemFirmware
 from operator import attrgetter
 import osol_install.errsvc as errsvc
 import osol_install.liberrsvc as liberrsvc
+from solaris_install import gpt_firmware_check
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
+from solaris_install.target.libefi.const import EFI_USR, EFI_SYSTEM, \
+    EFI_BIOS_BOOT, EFI_RESERVED, PARTITION_GUID_PTAG_MAP, EFI_NUMUSERPAR, \
+    EFI_PREFERRED_RSVPAR
+from solaris_install.target.libefi.cstruct import EFI_MAXPAR
 from solaris_install.target import Target, vdevs
 from solaris_install.target.controller import TargetController, \
-    DEFAULT_VDEV_NAME, SwapDumpGeneralError, SwapDumpSpaceError
+    DEFAULT_VDEV_NAME, DEFAULT_ZPOOL_NAME, SwapDumpGeneralError, \
+    SwapDumpSpaceError
 from solaris_install.target.logical import Logical, Zpool, Vdev, BE, Zvol, \
     Filesystem, DatasetOptions, PoolOptions
-from solaris_install.target.physical import Disk, Iscsi, Partition, Slice
+from solaris_install.target.physical import Disk, Iscsi, GPTPartition, \
+    Partition, Slice, InsufficientSpaceError, NoPartitionSlotsFree, \
+    NoGPTPartitionSlotsFree
 from solaris_install.target.shadow.physical import ShadowPhysical
 from solaris_install.target.size import Size
 
 DISK_RE = "c\d+(?:t\d+)?d\d+"
+
+import sys
+
+
+def is_iterable(obj):  # move to common?
+    return isinstance(obj, Iterable)
 
 
 class SelectionError(Exception):
@@ -95,9 +111,21 @@ class TargetSelection(Checkpoint):
         self._discovered_zpool_map = dict()
         self._remaining_zpool_map = dict()
 
-        self.__reset_maps()
+        self._cpu = platform.processor()
+        self._gpt_capable = gpt_firmware_check()
 
-    def __reset_maps(self):
+        self._firmware = SystemFirmware.get().fw_name
+        self._reset_maps()
+
+    @property
+    def cpu(self):
+        return self._cpu
+
+    @property
+    def gpt_capable(self):
+        return self._gpt_capable
+
+    def _reset_maps(self):
         '''Reset all local map information to default values
         '''
         # Whether swap/dump is to be created, noswap = Don't create swap
@@ -130,7 +158,7 @@ class TargetSelection(Checkpoint):
         self._dataset_options = dict()  # Map of zpool names to DatasetOptions
         self._disk_map = dict()      # Map of disks to Disk objects
 
-    def __find_disk(self, disk):
+    def _find_disk(self, disk):
         '''Find a disk matching some criteria
 
            Disk can be identified in the following order of preference :
@@ -174,23 +202,14 @@ class TargetSelection(Checkpoint):
 
         return None
 
-    @staticmethod
-    def __is_iterable(obj):
-        '''Test if an object is iterable'''
-        try:
-            i = iter(obj)
-            return True
-        except TypeError:
-            return False
-
-    def __pretty_print_disk(self, disk):
+    def _pretty_print_disk(self, disk):
         '''Print disk identifier rather than whole disk's str()'''
-        if self.__is_iterable(disk):
+        if is_iterable(disk):
             ret_str = ""
             for _disk in disk:
                 if len(ret_str) != 0:
                     ret_str += ", "
-                ret_str += self.__pretty_print_disk(_disk)
+                ret_str += self._pretty_print_disk(_disk)
                 return ret_str
         else:
             if isinstance(disk, Disk):
@@ -232,7 +251,7 @@ class TargetSelection(Checkpoint):
 
         return str(disk)
 
-    def __handle_vdev(self, vdev):
+    def _handle_vdev(self, vdev):
         '''Create Vdev object
         '''
         self.logger.debug("Processing Vdev '%s', redundancy='%s'" %
@@ -241,7 +260,7 @@ class TargetSelection(Checkpoint):
         new_vdev = copy.copy(vdev)
         return new_vdev
 
-    def __handle_filesystem(self, fs):
+    def _handle_filesystem(self, fs):
         '''Create Filesystem Object
         '''
         self.logger.debug("Processing Filesystem '%s', action='%s', "
@@ -251,13 +270,13 @@ class TargetSelection(Checkpoint):
 
         # Handle options children
         for options in fs.children:
-            new_options = self.__handle_options(options)
+            new_options = self._handle_options(options)
             if new_options is not None:
                 new_fs.insert_children(new_options)
 
         return new_fs
 
-    def __handle_zvol(self, zvol):
+    def _handle_zvol(self, zvol):
         '''Create Zvol object
         '''
         self.logger.debug("Processing Zvol '%s', action='%s', use='%s'" %
@@ -267,13 +286,13 @@ class TargetSelection(Checkpoint):
         # Handle options children
 
         for options in zvol.children:
-            new_options = self.__handle_options(options)
+            new_options = self._handle_options(options)
             if new_options is not None:
                 new_zvol.insert_children(new_options)
 
         return new_zvol
 
-    def __handle_options(self, options):
+    def _handle_options(self, options):
         '''Create Zpool or Dataset Options object
         '''
         self.logger.debug("Processing Options '%s'" %
@@ -282,7 +301,7 @@ class TargetSelection(Checkpoint):
         new_options = copy.copy(options)
         return new_options
 
-    def __handle_pool_options(self, pool_options):
+    def _handle_pool_options(self, pool_options):
         '''Create PoolOptions object
         '''
         self.logger.debug("Processing Pool Options '%s'" %
@@ -292,13 +311,13 @@ class TargetSelection(Checkpoint):
 
         # Handle options children
         for options in pool_options.children:
-            new_options = self.__handle_options(options)
+            new_options = self._handle_options(options)
             if new_options is not None:
                 new_pool_options.insert_children(new_options)
 
         return new_pool_options
 
-    def __handle_dataset_options(self, dataset_options):
+    def _handle_dataset_options(self, dataset_options):
         '''Create DatasetOption object
         '''
         self.logger.debug("Processing Dataset Options '%s'" %
@@ -308,13 +327,13 @@ class TargetSelection(Checkpoint):
 
         # Handle options children
         for options in dataset_options.children:
-            new_options = self.__handle_options(options)
+            new_options = self._handle_options(options)
             if new_options is not None:
                 new_dataset_options.insert_children(new_options)
 
         return new_dataset_options
 
-    def __handle_be(self, be):
+    def _handle_be(self, be):
         '''Create BE object, set mountpoint to that passed in
            to target_selection init.
         '''
@@ -325,13 +344,13 @@ class TargetSelection(Checkpoint):
 
         # Handle options children
         for options in be.children:
-            new_options = self.__handle_options(options)
+            new_options = self._handle_options(options)
             if new_options is not None:
                 new_be.insert_children(new_options)
 
         return new_be
 
-    def __handle_zpool(self, zpool, logical):
+    def _handle_zpool(self, zpool, logical):
         '''Process all zpool children, handling each child object type
            and returning Zpool object
         '''
@@ -350,7 +369,7 @@ class TargetSelection(Checkpoint):
         logical.insert_children(new_zpool)
         for child in zpool.children:
             if isinstance(child, Vdev):
-                new_vdev = self.__handle_vdev(child)
+                new_vdev = self._handle_vdev(child)
                 if new_vdev is not None:
                     vdev_key = new_zpool.name + ":" + new_vdev.name
                     if vdev_key not in self._vdev_map:
@@ -367,7 +386,7 @@ class TargetSelection(Checkpoint):
                     raise SelectionError("Failed to copy Vdev.")
 
             elif isinstance(child, Filesystem):
-                new_fs = self.__handle_filesystem(child)
+                new_fs = self._handle_filesystem(child)
                 if new_fs is not None:
                     if new_fs.action == "preserve" and \
                         new_zpool.action not in self.PRESERVED:
@@ -391,7 +410,7 @@ class TargetSelection(Checkpoint):
                     raise SelectionError("Failed to copy Filesystem.")
 
             elif isinstance(child, Zvol):
-                new_zvol = self.__handle_zvol(child)
+                new_zvol = self._handle_zvol(child)
                 if new_zvol is not None:
                     if new_zvol.action in self.PRESERVED and \
                         new_zpool.action not in self.PRESERVED:
@@ -433,7 +452,7 @@ class TargetSelection(Checkpoint):
 
                             # Cannot delete a dump zvol
                             if new_zvol.action == "delete":
-                                self.__raise_dump_zvol_deletion_exception()
+                                self._raise_dump_zvol_deletion_exception()
                             self._dump_zvol = new_zvol
 
                         self._zvol_map[zvol_key] = new_zvol
@@ -448,7 +467,7 @@ class TargetSelection(Checkpoint):
                     raise SelectionError("Failed to copy Zvol.")
 
             elif isinstance(child, PoolOptions):
-                new_pool_options = self.__handle_pool_options(child)
+                new_pool_options = self._handle_pool_options(child)
                 if new_pool_options is not None:
                     # Can only specify one pool_options per zpool
                     if new_zpool.name not in self._pool_options:
@@ -465,7 +484,7 @@ class TargetSelection(Checkpoint):
 
             elif isinstance(child, DatasetOptions):
                 # Validate only one dataset options
-                new_dataset_options = self.__handle_dataset_options(child)
+                new_dataset_options = self._handle_dataset_options(child)
                 if new_dataset_options is not None:
                     # Can only specify one dataset_options per zpool
                     if new_zpool.name not in self._dataset_options:
@@ -484,7 +503,7 @@ class TargetSelection(Checkpoint):
                 if not zpool.is_root:
                     raise SelectionError("BE cannot be part of non root "
                         "pool '%s'" % (zpool.name))
-                new_be = self.__handle_be(child)
+                new_be = self._handle_be(child)
                 if new_be is not None:
                     # BE can only be specified once in entire manifest
                     if self._be is None:
@@ -520,7 +539,7 @@ class TargetSelection(Checkpoint):
 
         return new_zpool
 
-    def __handle_preserved_zpool(self, discovered_zpool, zpool):
+    def _handle_preserved_zpool(self, discovered_zpool, zpool):
         '''
             Process all zpool children, handling each child object type
             and returning Zpool object.
@@ -560,7 +579,7 @@ class TargetSelection(Checkpoint):
             " is_root='%s', mountpoint='%s'" % (zpool.action, zpool.name,
             zpool.action, zpool.is_root, zpool.mountpoint))
 
-        discovered_bes = self.__get_discovered_be(zpool)
+        discovered_bes = self._get_discovered_be(zpool)
         this_be = None
 
         discovered_zpool.action = zpool.action
@@ -571,7 +590,7 @@ class TargetSelection(Checkpoint):
                     "zpool '%s'." % (zpool.name))
 
             elif isinstance(child, Filesystem):
-                new_fs = self.__handle_filesystem(child)
+                new_fs = self._handle_filesystem(child)
                 if new_fs is not None:
                     fs_key = zpool.name + ":" + new_fs.name
                     # Check if this filesystem already exists as zvol
@@ -604,7 +623,7 @@ class TargetSelection(Checkpoint):
                     raise SelectionError("Failed to process Filesystem.")
 
             elif isinstance(child, Zvol):
-                new_zvol = self.__handle_zvol(child)
+                new_zvol = self._handle_zvol(child)
                 if new_zvol is not None:
                     zvol_key = zpool.name + ":" + new_zvol.name
 
@@ -636,7 +655,7 @@ class TargetSelection(Checkpoint):
                                     (new_zvol.name))
                             elif discovered_zvol.use == "dump":
                                 # Cannot delete a dump zvol
-                                self.__raise_dump_zvol_deletion_exception()
+                                self._raise_dump_zvol_deletion_exception()
 
                             elif new_zvol.use == "dump":
                                 # Can only specify one Dump Zvol
@@ -710,7 +729,7 @@ class TargetSelection(Checkpoint):
                 if not zpool.is_root:
                     raise SelectionError("BE cannot be part of non root "
                         "pool '%s'" % (zpool.name))
-                new_be = self.__handle_be(child)
+                new_be = self._handle_be(child)
                 if new_be is not None:
                     # Ensure this boot environment does not exist on
                     # this preserved/use_existing zpool
@@ -744,7 +763,7 @@ class TargetSelection(Checkpoint):
             else:
                 raise SelectionError("Invalid zpool sub element")
 
-    def __handle_logical(self, logical):
+    def _handle_logical(self, logical):
         '''Create Logical structure from manifest, validating
            zpools and contents in the process
         '''
@@ -766,7 +785,7 @@ class TargetSelection(Checkpoint):
             if isinstance(zpool, Zpool):
                 if zpool.action in self.PRESERVED:
                     preserving_zpools = True
-                    disc_zpool = self.__get_discovered_zpool(zpool)
+                    disc_zpool = self._get_discovered_zpool(zpool)
                     if disc_zpool is None:
                         raise SelectionError("Failed to find zpool '%s' in "
                             "discovered logical tree." % (zpool.name))
@@ -777,12 +796,12 @@ class TargetSelection(Checkpoint):
                             "'use_existing' on pool '%s' is invalid. '%s' "
                             "is not a root pool." % (zpool.name, zpool.name))
 
-                    new_zpool = self.__handle_zpool(disc_zpool, new_logical)
+                    new_zpool = self._handle_zpool(disc_zpool, new_logical)
 
                     # Copy physical devices to desired
-                    self.__copy_zpool_discovered_devices(new_zpool)
+                    self._copy_zpool_discovered_devices(new_zpool)
                 else:
-                    new_zpool = self.__handle_zpool(zpool, new_logical)
+                    new_zpool = self._handle_zpool(zpool, new_logical)
 
                 if new_zpool is not None:
                     if new_zpool.name not in self._zpool_map:
@@ -802,14 +821,14 @@ class TargetSelection(Checkpoint):
                             (new_zpool.name))
 
                 if zpool.action in self.PRESERVED:
-                    self.__handle_preserved_zpool(new_zpool, zpool)
+                    self._handle_preserved_zpool(new_zpool, zpool)
             else:
                 raise SelectionError("Invalid logical child.")
 
         if preserving_zpools:
             # Need to update all devices, and remove any references to
             # Zpools that do not exist.
-            self.__remove_invalid_zpool_references(new_logical)
+            self._remove_invalid_zpool_references(new_logical)
 
         if self._zpool_map is None or len(self._zpool_map) == 0:
             self._nozpools = True
@@ -828,7 +847,7 @@ class TargetSelection(Checkpoint):
 
         return new_logical
 
-    def __raise_dump_zvol_deletion_exception(self):
+    def _raise_dump_zvol_deletion_exception(self):
         '''
             Dump zvol's cannot be unassigned from being a dump device.
             Bug 6910925 is addressing this issue, however until resolved
@@ -842,7 +861,7 @@ class TargetSelection(Checkpoint):
         raise SelectionError("Dump device cannot be unassigned. Due to "
             "RFE 6910925. See install_log for workaround.")
 
-    def __remove_invalid_zpool_references(self, logical):
+    def _remove_invalid_zpool_references(self, logical):
         '''
             Process all physical devices, remove any references to in_zpool
             in_vdev referencing pools not in this logical tree.
@@ -855,7 +874,7 @@ class TargetSelection(Checkpoint):
         # any these disks/devices are assigned to.
         # If the pool does not exist in this logical, then reset their
         # in_zpool and in_vdev attributes to None
-        new_desired_target = self.__get_new_desired_target()
+        new_desired_target = self._get_new_desired_target()
         desired_disks = new_desired_target.get_descendants(class_type=Disk)
 
         for disk in desired_disks:
@@ -882,16 +901,16 @@ class TargetSelection(Checkpoint):
                             slc.in_vdev = None
 
         # Add all these disks to map
-        self.__add_disks_to_map(desired_disks)
+        self._add_disks_to_map(desired_disks)
 
-    def __add_disks_to_map(self, disks):
+    def _add_disks_to_map(self, disks):
         '''
             Given a single disk, or list of disks, add them to the internal
             disk map, raising an exception if disk or any of its active ctd
             aliases have already been added.
         '''
         # convert disks to a list if it's not one already
-        if not isinstance(disks, list):
+        if not is_iterable(disks):
             disks = [disks]
 
         for disk in disks:
@@ -900,7 +919,7 @@ class TargetSelection(Checkpoint):
                 # manifest!
                 raise SelectionError(
                     "Disk '%s' matches already used disk '%s'." %
-                    (self.__pretty_print_disk(disk), disk.ctd))
+                    (self._pretty_print_disk(disk), disk.ctd))
             self._disk_map[disk.ctd] = disk
 
             # also add all active ctd aliases for this disk to make sure we
@@ -909,7 +928,7 @@ class TargetSelection(Checkpoint):
             for active_ctd in disk.active_ctds:
                 self._disk_map[active_ctd] = disk
 
-    def __get_discovered_be(self, zpool):
+    def _get_discovered_be(self, zpool):
         '''
             Retrieve the list of boot environments for a specific discovered
             zpool.
@@ -924,7 +943,7 @@ class TargetSelection(Checkpoint):
         found_be = discovered_zpools[0].get_descendants(class_type=BE)
         return found_be
 
-    def __get_discovered_zpool(self, zpool):
+    def _get_discovered_zpool(self, zpool):
         '''
             Process list of discovered zpools for matching zpool.
             Return None if not found or zpool object if found.
@@ -943,7 +962,7 @@ class TargetSelection(Checkpoint):
 
         return found_zpool
 
-    def __copy_zpool_discovered_devices(self, zpool):
+    def _copy_zpool_discovered_devices(self, zpool):
         '''
             For zpools being preserved, copy all devices associated with
             this zpool into desired tree.
@@ -955,7 +974,7 @@ class TargetSelection(Checkpoint):
             Throw exception if after processing all physical devices, and
             none were found for this zpool.
         '''
-        new_desired_target = self.__get_new_desired_target()
+        new_desired_target = self._get_new_desired_target()
         discovered = self.doc.persistent.get_first_child(Target.DISCOVERED)
         discovered_disks = discovered.get_descendants(class_type=Disk)
 
@@ -995,7 +1014,7 @@ class TargetSelection(Checkpoint):
             if disk_copy is not None and disk_found:
                 # If this is the root pool, make sure solaris partition
                 # is marked as Active, Final Validation fails otherwise
-                if zpool.is_root and platform.processor() == 'i386':
+                if zpool.is_root and self.cpu == 'i386':
                     solaris2_part_type = Partition.name_to_num("Solaris2")
                     for disk_kid in disk_copy.children:
                         if isinstance(disk_kid, Partition) and \
@@ -1009,7 +1028,7 @@ class TargetSelection(Checkpoint):
             raise SelectionError("Failed to find any discovered devices for "
                 "zpool '%s'." % (zpool.name))
 
-    def __validate_zpool_actions(self, zpool):
+    def _validate_zpool_actions(self, zpool):
         '''Perform some validation on zpool actions against
            root pool and existing zpool's.
            Ensure pool name does not exist as a current directory, it pool does
@@ -1018,7 +1037,7 @@ class TargetSelection(Checkpoint):
 
         if zpool.exists:
             # Get zpool discovered object
-            discovered_zpool = self.__get_discovered_zpool(zpool)
+            discovered_zpool = self._get_discovered_zpool(zpool)
 
             if discovered_zpool is None:
                 if self.dry_run:
@@ -1057,7 +1076,7 @@ class TargetSelection(Checkpoint):
 
                 # Preserving a root pool, let's make sure there is
                 # sufficient space left in this pool for a solaris install
-                zpool_available_size = self.__get_existing_zpool_size(zpool)
+                zpool_available_size = self._get_existing_zpool_size(zpool)
                 if zpool_available_size < self.controller.minimum_target_size:
                     raise SelectionError("Preserved root pool '%s' has "
                         "available space of '%s', which is insufficient "
@@ -1088,7 +1107,7 @@ class TargetSelection(Checkpoint):
                         raise SelectionError("Pool name '%s' is not valid, "
                             "directory exists with this name." % (zpool.name))
 
-    def __get_existing_zpool_size(self, zpool):
+    def _get_existing_zpool_size(self, zpool):
         '''Retrieve the size available for this zpool via the "size"
            zpool property. Returned size is a Size object.
         '''
@@ -1100,7 +1119,7 @@ class TargetSelection(Checkpoint):
 
         return retsize
 
-    def __get_zpool_available_size(self, zpool):
+    def _get_zpool_available_size(self, zpool):
         '''Process all the devices in the first toplevel of this zpool
            returning what the available size for this zpool if created.
 
@@ -1114,20 +1133,26 @@ class TargetSelection(Checkpoint):
         if zpool.action in self.PRESERVED:
             # Pool is being preserved so no devices in desired,
             # Get size from discovered disks instead
-            retsize = self.__get_existing_zpool_size(zpool)
+            retsize = self._get_existing_zpool_size(zpool)
         else:
             # Get available size from desired targets
             for vdev in zpool.children:
                 if isinstance(vdev, Vdev):
-                    vdev_devices = self.__get_vdev_devices(zpool.name,
+                    vdev_devices = self._get_vdev_devices(zpool.name,
                         vdev.name, self._disk_map)
                     if vdev.redundancy in self.TOPLEVEL_REDUNDANCY:
                         if vdev_devices:
                             for device in vdev_devices:
-                                if retsize is None:
-                                    retsize = copy.copy(device.size)
+                                if hasattr(device, "size"):
+                                    dsize = copy.copy(device.size)
                                 else:
-                                    devsize = copy.copy(device.size)
+                                    dsize = copy.copy(
+                                        device.disk_prop.dev_size)
+
+                                if retsize is None:
+                                    retsize = dsize
+                                else:
+                                    devsize = dsize
                                     if vdev.redundancy == "none":
                                         # Concatenate device sizes together
                                         retsize = Size(str(retsize.byte_value +
@@ -1150,7 +1175,7 @@ class TargetSelection(Checkpoint):
 
         return retsize
 
-    def __validate_swap_and_dump(self, desired):
+    def _validate_swap_and_dump(self, desired):
         '''Ensure at least one swap and one dump device exist in logical
            tree.
 
@@ -1179,9 +1204,9 @@ class TargetSelection(Checkpoint):
                     # To install to.
                     try:
                         (swap_type, swap_size, dump_type, dump_size) = \
-                            self.controller.calc_swap_dump_size(\
+                            self.controller.calc_swap_dump_size(
                                 self.controller.minimum_target_size,
-                                self.__get_zpool_available_size(zpool))
+                                self._get_zpool_available_size(zpool))
                     except (SwapDumpGeneralError, SwapDumpSpaceError) as ex:
                         raise SelectionError("Error determining swap/dump "
                             "requirements.")
@@ -1191,9 +1216,9 @@ class TargetSelection(Checkpoint):
                         # Swap does not exist so attempt to create
                         if swap_type == self.controller.SWAP_DUMP_ZVOL and \
                             swap_size > Size("0b"):
-                            zvol_name = self.__get_unique_dataset_name(zpool,
-                                                                       "swap")
-                            self.__create_swap_dump_zvol(zpool, zvol_name,
+                            zvol_name = self._get_unique_dataset_name(zpool,
+                                                                      "swap")
+                            self._create_swap_dump_zvol(zpool, zvol_name,
                                 "swap", swap_size)
                             swap_added = True
 
@@ -1201,11 +1226,11 @@ class TargetSelection(Checkpoint):
                         # Dump does not exist so attempt to create
                         if dump_type == self.controller.SWAP_DUMP_ZVOL and \
                             dump_size > Size("0b"):
-                            zvol_name = self.__get_unique_dataset_name(zpool,
-                                                                       "dump")
+                            zvol_name = self._get_unique_dataset_name(zpool,
+                                                                      "dump")
                             # Since the dump zvol is specified implicitly, do
                             # not fail installation because of creation error.
-                            self.__create_swap_dump_zvol(zpool, zvol_name,
+                            self._create_swap_dump_zvol(zpool, zvol_name,
                                 "dump", dump_size, create_failure_ok=True)
                             dump_added = True
 
@@ -1219,7 +1244,7 @@ class TargetSelection(Checkpoint):
                     self.logger.warning("Failed to add default dump zvol to "
                         "root pool, possibly because of insufficient space.")
 
-    def __get_unique_dataset_name(self, zpool, dataset_name):
+    def _get_unique_dataset_name(self, zpool, dataset_name):
         '''
             Ensure this dataset name does not exist in this zpool.
             If it does, then append N to end until unique.
@@ -1240,7 +1265,7 @@ class TargetSelection(Checkpoint):
 
         return unique_name
 
-    def __create_swap_dump_zvol(self, zpool, zvol_name, zvol_use, zvol_size,
+    def _create_swap_dump_zvol(self, zpool, zvol_name, zvol_use, zvol_size,
                                 create_failure_ok=False):
         '''Create a swap or dump Zvol on a zpool.
 
@@ -1262,7 +1287,7 @@ class TargetSelection(Checkpoint):
             zvol.create_failure_ok = create_failure_ok
             self._dump_zvol = zvol
 
-    def __validate_logical(self, desired):
+    def _validate_logical(self, desired):
         '''Process Logical components of desired tree ensuring:
            - mirror, at least two devices
            - logmirror, at least two devices
@@ -1294,7 +1319,7 @@ class TargetSelection(Checkpoint):
             found_swap = False
             found_dump = False
             self._remaining_zpool_map = \
-                self.__compile_remaining_existing_devices_map(logical)
+                self._compile_remaining_existing_devices_map(logical)
             for zpool in logical.children:
                 if zpool.is_root:
                     if found_root_pool:
@@ -1304,7 +1329,7 @@ class TargetSelection(Checkpoint):
 
                         # Ensure Root pool size is large enough to install to
                         zpool_available_size = \
-                            self.__get_zpool_available_size(zpool)
+                            self._get_zpool_available_size(zpool)
                         if zpool_available_size < \
                             self.controller.minimum_target_size:
                             raise SelectionError("Root pool '%s' has "
@@ -1316,12 +1341,12 @@ class TargetSelection(Checkpoint):
 
                 # Perform some validations on zpool
                 # Check if this zpool already exists etc
-                self.__validate_zpool_actions(zpool)
+                self._validate_zpool_actions(zpool)
 
                 found_toplevel = False
                 for child in zpool.children:
                     if isinstance(child, Vdev):
-                        self.__validate_vdev(zpool, child)
+                        self._validate_vdev(zpool, child)
 
                         # Ensure something other than log/cache/spare is set
                         if child.redundancy in self.TOPLEVEL_REDUNDANCY and \
@@ -1405,17 +1430,16 @@ class TargetSelection(Checkpoint):
             if not found_be:
                 raise SelectionError("No BE specified.")
 
-    def __validate_vdev(self, zpool, child):
+    def _validate_vdev(self, zpool, child):
         '''
             Validate Vdev
             - Ensure correct number of devices for redundancy
             - Root pool contains correct redundancy type
             - Preserved pool contains no devices
         '''
-        vdev_devices = self.__get_vdev_devices(zpool.name,
+        vdev_devices = self._get_vdev_devices(zpool.name,
             child.name, self._disk_map)
-        self.__validate_vdev_devices(zpool, child,
-            vdev_devices)
+        self._validate_vdev_devices(zpool, child, vdev_devices)
 
         if not zpool.action in self.PRESERVED:
             if not vdev_devices:
@@ -1513,7 +1537,7 @@ class TargetSelection(Checkpoint):
                 "zpool '%s', child '%s'" % \
                 (child.redundancy, zpool.name, child.name))
 
-    def __validate_vdev_devices(self, zpool, vdev, vdev_devices):
+    def _validate_vdev_devices(self, zpool, vdev, vdev_devices):
         '''
             Given a list of devices being used in this zpool/vdev, validate
             that these devices are not already being used in another zpool
@@ -1542,6 +1566,9 @@ class TargetSelection(Checkpoint):
                     tmp_disk = device.parent
             elif isinstance(device, Partition):
                 tmp_part = device
+                tmp_disk = device.parent
+            elif isinstance(device, GPTPartition):
+                tmp_slice = device
                 tmp_disk = device.parent
             else:
                 tmp_disk = device
@@ -1593,7 +1620,7 @@ class TargetSelection(Checkpoint):
                     " on zpool '%s' is less then minimum zpool device "
                     "size of 64MB." % (key_parts[2], vdev.name, key_parts[0]))
 
-    def __compile_remaining_existing_devices_map(self, logical):
+    def _compile_remaining_existing_devices_map(self, logical):
         '''
             Process list of self._discovered_zpool_map, along with
             all the zpools being defined in desired.logical, and come
@@ -1615,7 +1642,7 @@ class TargetSelection(Checkpoint):
 
         return remaining_map
 
-    def __get_existing_zpool_map(self):
+    def _get_existing_zpool_map(self):
         '''
             For all zpools that have been discovered, get dictionary of
             devices for each zpool and populate private variable
@@ -1640,7 +1667,7 @@ class TargetSelection(Checkpoint):
                     # Get device ctd from end of device path
                     device_ctd = device.split('/')[-1]
 
-                    # Create a dummy disk object for __find_disk() to work with
+                    # Create a dummy disk object for _find_disk() to work with
                     disk = Disk("foo")
 
                     # Retrieve the disk only portion of the ctd
@@ -1650,7 +1677,7 @@ class TargetSelection(Checkpoint):
 
                         # Attempt to find a matching discovered disk
                         # this should always be successful
-                        discovered_disk = self.__find_disk(disk)
+                        discovered_disk = self._find_disk(disk)
                         if discovered_disk is not None:
                             devkey = zpool.name + ":" + disk.ctd + ":" + \
                                      device_ctd
@@ -1667,7 +1694,7 @@ class TargetSelection(Checkpoint):
                         zpool_map[devkey] = disk
         return zpool_map
 
-    def __validate_disks(self, desired):
+    def _validate_disks(self, desired):
         '''Process Disk components of desired tree ensuring:
            A device is uniquely identifiable as belonging to a zpool
            either via in_zpool and/or in_vdev being specified. A parent
@@ -1677,7 +1704,7 @@ class TargetSelection(Checkpoint):
            - Disk validation :
                Whole-Disk, has kids - fail
                Whole-Disk, no kids, not identifiable - fail
-               Whole-Disk, in root pool - fail
+               Whole-Disk, in root pool and is VTOC - fail
 
                Not Whole-Disk, no kids - fail
                Not Whole-Disk, has kids, is identifiable - fail as kids should
@@ -1686,7 +1713,8 @@ class TargetSelection(Checkpoint):
 
                Two disks with same name, fail
 
-               Disk has children, either partitions or slices must be VTOC
+               Disk has children, for partitions or slices must be VTOC
+               Disk has children, for GPT Partitions must be GPT label
 
            - Partition validation :
                - To get to validate a partition, disk parent must be not
@@ -1720,87 +1748,123 @@ class TargetSelection(Checkpoint):
 
                - two slices with same name on same disk, or partition, fail
                - At least one root pool slice must exist.
+
+           - GPT Partition validation :
+               - To get to validate a partition, disk parent must be not
+                 whole disk, and parent disk is not identifiable
+               - Disk label needs to be "GPT" and not "VTOC"
+               - Any action other than create is ignored
+               - Multiple Solaris GPT Partitions is allowed
+               - two GPT Partitions with same name on same disk, fail
+               - At least one root pool GPT Partition must exist.
         '''
 
         # Get Disk sections
         disks = desired.get_children(class_type=Disk)
         self.logger.debug("Validating DESIRED Disks")
         self.logger.debug("Disks(Desired) =\n%s\n" %
-            (self.__pretty_print_disk(disks)))
+            (self._pretty_print_disk(disks)))
 
         tmp_disk_map = list()       # List of disk ctd's
-        tmp_partition_map = list()  # list of disk:partiton
+        tmp_partition_map = list()  # list of disk:partition
         tmp_slice_map = list()  # list of disk:slice or disk:partition:slice
-        root_slice_found = False
+        tmp_gptpartition_map = list()  # list of disk:gpt_partition
+        root_partyslice_found = False
 
         for disk in disks:
-            if self.__check_disk_in_root_pool(disk) and disk.label != "VTOC":
-                raise SelectionError(
-                    "Root pool Disk '%s' must contain VTOC label not '%s' ." %
-                    (self.__pretty_print_disk(disk), disk.label))
+            if not self.gpt_capable:
+                # OBP can't boot from GPT, make sure root pool is on VTOC
+                if self._check_disk_in_root_pool(disk) and \
+                   disk.label != "VTOC":
+                    raise SelectionError(
+                        "Root pool Disk '%s' must contain VTOC label "
+                        "not '%s'." % (self._pretty_print_disk(disk),
+                        disk.label))
 
-            # Sparc disk with slices must be VTOC labeled
-            # X86 disk with partitions must also be VTOC labeled
-            if disk.has_children and disk.label != "VTOC":
-                if isinstance(disk.children[0], Slice):
-                    raise SelectionError(
-                        "Disk '%s' with %s slice(s) must contain VTOC label "
-                        "not '%s' ." % (self.__pretty_print_disk(disk),
-                        str(len(disk.children)), disk.label))
+            # XXX PSARC 2008/769 (Search: "pcfs")
+            if self._firmware == 'uefi64' and \
+               disk.geometry.blocksize != 512 and \
+               self._check_disk_in_root_pool(disk):
+                raise SelectionError(
+                    "Root pool disk needs pcfs(7fs) for UEFI System "
+                    "partition, but blocksize %d is not 512" % \
+                    (disk.geometry.blocksize))
+
+            # VTOC labeled disks can only have Slice children on SPARC and
+            # Partition children on x86
+            if disk.has_children:
+                if disk.label == "VTOC":
+                    if disk.kernel_arch == "sparc":
+                        if not isinstance(disk.children[0], Slice):
+                            raise SelectionError(
+                                "VTOC Disk '%s' must contain slice(s) and not "
+                                "%s" % (self._pretty_print_disk(disk),
+                                        type(disk.children[0])))
+                    else:
+                        if not isinstance(disk.children[0], Partition):
+                            raise SelectionError(
+                                "VTOC Disk '%s' must contain partition(s) "
+                                "and not %s" % (self._pretty_print_disk(disk),
+                                                type(disk.children[0])))
                 else:
-                    raise SelectionError(
-                        "Disk '%s' with %s partition(s) must contain VTOC "
-                        "label not '%s' ." % (self.__pretty_print_disk(disk),
-                        str(len(disk.children)), disk.label))
+                    if not isinstance(disk.children[0], GPTPartition):
+                        raise SelectionError(
+                            "GPT Disk '%s' must contain gpt_partition(s) and "
+                            "not %s" % (self._pretty_print_disk(disk),
+                                        type(disk.children[0])))
 
             # Validate in_zpool specified and in_vdev not, but > 1 vdevs
             if disk.ctd in tmp_disk_map:
                 raise SelectionError(
-                    "Disk '%s' specified more than once." %
-                    (self.__pretty_print_disk(disk)))
+                    "Disk '%s' specified more than once." % \
+                    (self._pretty_print_disk(disk)))
 
             # Add disk to temporary list map
             tmp_disk_map.append(disk.ctd)
 
             if disk.whole_disk:
                 # Whole disk cannot be in root pool
-                if self.__check_in_root_pool(disk):
-                    raise SelectionError("Disk '%s', Using whole disk "
-                        "and located in root pool not valid." % \
-                        (self.__pretty_print_disk(disk)))
+                if self._check_in_root_pool(disk):
+                    if disk.label == "VTOC":
+                        raise SelectionError("Disk '%s', Using whole disk "
+                            "and located in root pool not valid." % \
+                            (self._pretty_print_disk(disk)))
+                    else:
+                        # Whole disk GPT in root pool has partyslice
+                        root_partyslice_found = True
 
                 # Whole disk cannot have children specified.
                 if disk.has_children:
                     raise SelectionError("Disk '%s', Using whole disk "
                         "and has partition/slice specified is not valid." % \
-                        (self.__pretty_print_disk(disk)))
+                        (self._pretty_print_disk(disk)))
 
                 # Disk is not uniquely identifiable
-                if not self.__device_is_identifiable(disk):
+                if not self._device_is_identifiable(disk):
                     raise SelectionError("Disk '%s', Using whole disk "
                         "and not logically uniquely identifiable. "
                         "in_zpool '%s', in_vdev '%s'" % \
-                        (self.__pretty_print_disk(disk), disk.in_zpool,
+                        (self._pretty_print_disk(disk), disk.in_zpool,
                         disk.in_vdev))
             else:
                 # Not Whole-Disk, no kids - fail
                 if len(disk.children) == 0:
                     raise SelectionError("Disk '%s' Not using whole disk "
                         "and no partition/slice specified which is invalid."
-                        % (self.__pretty_print_disk(disk)))
+                        % (self._pretty_print_disk(disk)))
 
                 # Not Whole-Disk, has kids, is identifiable - fail
                 if disk.has_children and \
-                    self.__device_is_identifiable(disk):
+                    self._device_is_identifiable(disk):
                     raise SelectionError("Disk '%s', Not using whole disk, "
                         "has children and is logically uniquely identifiable"
                         " which is invalid.  in_zpool '%s', in_vdev '%s'" % \
-                        (self.__pretty_print_disk(disk), disk.in_zpool,
+                        (self._pretty_print_disk(disk), disk.in_zpool,
                         disk.in_vdev))
 
                 # Not whole-disk, has kids, not identifiable - good
                 if disk.has_children and \
-                    not self.__device_is_identifiable(disk):
+                    not self._device_is_identifiable(disk):
                     # Process kids, identify should be set there
                     solaris_partition_found = False
                     for disk_kid in disk.children:
@@ -1811,7 +1875,7 @@ class TargetSelection(Checkpoint):
                                 raise SelectionError("Partition '%s' "
                                     "specified twice on disk '%s'." % \
                                     (disk_kid.name,
-                                    self.__pretty_print_disk(disk)))
+                                    self._pretty_print_disk(disk)))
                             tmp_partition_map.append(partkey)
 
                             # Ensure only one solaris partition resides on disk
@@ -1820,7 +1884,7 @@ class TargetSelection(Checkpoint):
                                 if solaris_partition_found:
                                     raise SelectionError("Disk '%s' cannot "
                                         "contain multiple Solaris partitions."
-                                        % (self.__pretty_print_disk(disk)))
+                                        % (self._pretty_print_disk(disk)))
                                 solaris_partition_found = True
 
                             # Slice check only exists once on this disk/part.
@@ -1829,20 +1893,20 @@ class TargetSelection(Checkpoint):
                                     ":" + slc.name
                                 if slicekey in tmp_slice_map:
                                     raise SelectionError("Slice '%s' "
-                                        "specified twice within partiton '%s'"
+                                        "specified twice within partition '%s'"
                                         " on disk '%s'." % \
                                         (slc.name, disk_kid.name,
-                                        self.__pretty_print_disk(disk)))
+                                        self._pretty_print_disk(disk)))
                                 tmp_slice_map.append(slicekey)
 
                                 # Is identifiable, make sure not set for swap
-                                if self.__device_is_identifiable(slc) and \
+                                if self._device_is_identifiable(slc) and \
                                     slc.is_swap:
                                     raise SelectionError("Slice '%s' in disk "
                                         "'%s' cannot be assigned to swap and "
                                         "be part of a zpool. in_zpool '%s', "
                                         "in_vdev '%s'" % (slc.name,
-                                        self.__pretty_print_disk(disk),
+                                        self._pretty_print_disk(disk),
                                         slc.in_zpool, slc.in_vdev))
 
                         # Slice check only exists once on this disk
@@ -1852,24 +1916,34 @@ class TargetSelection(Checkpoint):
                                 raise SelectionError("Slice '%s' "
                                     "specified twice on disk '%s'." % \
                                     (disk_kid.name,
-                                    self.__pretty_print_disk(disk)))
+                                    self._pretty_print_disk(disk)))
                             tmp_slice_map.append(slicekey)
 
                             # Is identifiable, make sure not set for swap
-                            if self.__device_is_identifiable(disk_kid) and \
+                            if self._device_is_identifiable(disk_kid) and \
                                 disk_kid.is_swap:
                                 raise SelectionError("Slice '%s' in disk "
                                     "'%s' cannot be assigned to swap and "
                                     "be part of a zpool. in_zpool '%s', "
                                     "in_vdev '%s'" % (disk_kid.name,
-                                    self.__pretty_print_disk(disk),
+                                    self._pretty_print_disk(disk),
                                     disk_kid.in_zpool, disk_kid.in_vdev))
+
+                        # GPTPartition checks
+                        elif isinstance(disk_kid, GPTPartition):
+                            gptkey = disk.ctd + ":" + disk_kid.name
+                            if gptkey in tmp_gptpartition_map:
+                                raise SelectionError("GPT Partition '%s' "
+                                    "specified twice on disk '%s'." % \
+                                    (disk_kid.name,
+                                    self._pretty_print_disk(disk)))
+                            tmp_gptpartition_map.append(gptkey)
 
                         # Not partition/slice throw error
                         else:
                             raise SelectionError("Invalid child element on "
                                 "disk '%s' : '%s'." %
-                                (self.__pretty_print_disk(disk), disk_kid))
+                                (self._pretty_print_disk(disk), disk_kid))
 
                         # Partition, create or use_existing action
                         if isinstance(disk_kid, Partition) and \
@@ -1877,7 +1951,7 @@ class TargetSelection(Checkpoint):
                            ["create", "use_existing_solaris2"]:
 
                             # identifiable, has kids
-                            if self.__device_is_identifiable(disk_kid) and \
+                            if self._device_is_identifiable(disk_kid) and \
                                 disk_kid.has_children:
                                 raise SelectionError("Partition '%s' on disk "
                                     "'%s' is logically uniquely "
@@ -1885,24 +1959,24 @@ class TargetSelection(Checkpoint):
                                     "which is invalid. "
                                     "in_zpool '%s', in_vdev '%s'" % \
                                     (disk_kid.name,
-                                    self.__pretty_print_disk(disk),
+                                    self._pretty_print_disk(disk),
                                     disk_kid.in_zpool, disk_kid.in_vdev))
 
                             # identifiable, no kids, in root pool
-                            if self.__device_is_identifiable(disk_kid) and \
+                            if self._device_is_identifiable(disk_kid) and \
                                 len(disk_kid.children) == 0 and \
-                                 self.__check_in_root_pool(disk_kid):
+                                 self._check_in_root_pool(disk_kid):
                                 raise SelectionError("Partition '%s' on disk "
                                     "'%s' is logically uniquely "
                                     "identifiable with no slice children "
                                     "but is on root pool which is invalid. "
                                     "in_zpool '%s', in_vdev '%s'" % \
                                     (disk_kid.name,
-                                    self.__pretty_print_disk(disk),
+                                    self._pretty_print_disk(disk),
                                     disk_kid.in_zpool, disk_kid.in_vdev))
 
                             # not identifiable, no kids - fail
-                            if not self.__device_is_identifiable(disk_kid) \
+                            if not self._device_is_identifiable(disk_kid) \
                                and len(disk_kid.children) == 0 \
                                and disk_kid.is_solaris:
                                 raise SelectionError("Partition '%s' on disk "
@@ -1911,20 +1985,20 @@ class TargetSelection(Checkpoint):
                                     "whish is invalid. "
                                     "in_zpool '%s', in_vdev '%s'" % \
                                     (disk_kid.name,
-                                    self.__pretty_print_disk(disk),
+                                    self._pretty_print_disk(disk),
                                     disk_kid.in_zpool, disk_kid.in_vdev))
 
                             # has kids, check if root pool slice is here
                             # Creation of VTOC slices not in a pool is allowed.
-                            if not self.__device_is_identifiable(disk_kid) \
+                            if not self._device_is_identifiable(disk_kid) \
                                and disk_kid.has_children:
                                 for slc in disk_kid.children:
                                     if isinstance(slc, Slice) and \
                                         slc.action == "create":
                                         # X86 Slice not identifiable
-                                        if self.__device_is_identifiable(slc) \
-                                            and self.__check_in_root_pool(slc):
-                                            root_slice_found = True
+                                        if self._device_is_identifiable(slc) \
+                                            and self._check_in_root_pool(slc):
+                                            root_partyslice_found = True
                                     elif not isinstance(slc, Slice):
                                         raise SelectionError("Invalid child "
                                           "element on partition '%s' : "
@@ -1935,17 +2009,27 @@ class TargetSelection(Checkpoint):
                         elif isinstance(disk_kid, Slice) and \
                             disk_kid.action == "create":
                             # Sparc Slice identifiable and in root pool
-                            if self.__device_is_identifiable(disk_kid) and \
-                               self.__check_in_root_pool(disk_kid):
-                                root_slice_found = True
+                            if self._device_is_identifiable(disk_kid) and \
+                               self._check_in_root_pool(disk_kid):
+                                root_partyslice_found = True
+
+                        # GPTPartition, create action, check if in root pool.
+                        # The DTD will prevent the creation of both a Slice and
+                        # GPTPartition child for Disk objects.
+                        elif isinstance(disk_kid, GPTPartition) and \
+                            disk_kid.action == "create":
+                            # GPTPartition identifiable and in root pool
+                            if self._device_is_identifiable(disk_kid) and \
+                               self._check_in_root_pool(disk_kid):
+                                root_partyslice_found = True
 
         # At least one root slice must be found over all disks
-        if not root_slice_found:
-            raise SelectionError("Could not find root pool slice on any disk. "
-                "Valid Solaris installations must contain at least one "
-                "root pool slice.")
+        if not root_partyslice_found:
+            raise SelectionError("Could not find root pool slice or GPT "
+                "Partition on any disk.  Valid Solaris installations must "
+                "contain at least one root pool slice/GPT Partition.")
 
-    def __device_is_identifiable(self, device):
+    def _device_is_identifiable(self, device):
         '''A device can be uniquely identified by using one or both of
            it's in_zpool and in_vdev attributes.
 
@@ -1981,7 +2065,7 @@ class TargetSelection(Checkpoint):
 
             unique_zpool = self._zpool_map[device.in_zpool]
 
-            pool_vdevs = self.__get_vdevs_in_zpool(device.in_zpool)
+            pool_vdevs = self._get_vdevs_in_zpool(device.in_zpool)
             if len(pool_vdevs) > 1:
                 self.logger.debug("Device '%s' identification failed. "
                     "More than one vdev in zpool. "
@@ -2038,7 +2122,7 @@ class TargetSelection(Checkpoint):
 
         return (unique_zpool, unique_vdev)
 
-    def __get_vdevs_in_zpool(self, zpoolname):
+    def _get_vdevs_in_zpool(self, zpoolname):
         '''Given a zpool name, retrieve the list of vdevs in this
            pool from the vdev_map.
         '''
@@ -2064,7 +2148,7 @@ class TargetSelection(Checkpoint):
 
         return vdev_redundancies.keys()
 
-    def __get_vdev_devices(self, zpool_name, vdev_name, device_map):
+    def _get_vdev_devices(self, zpool_name, vdev_name, device_map):
         '''Get list of devices with this vdev name.
            If not set then recursively check for in_vdev setting on children.
 
@@ -2082,21 +2166,21 @@ class TargetSelection(Checkpoint):
 
         if isinstance(device_map, dict):
             tmp_device_map = device_map.values()
-        elif self.__is_iterable(device_map):
+        elif is_iterable(device_map):
             tmp_device_map = device_map
         else:
             # Return now, as nothing to traverse
             return vdev_devices
 
         for device in tmp_device_map:
-            identity_tuple = self.__device_is_identifiable(device)
+            identity_tuple = self._device_is_identifiable(device)
             if identity_tuple:
                 if (isinstance(device, Disk) or
                     isinstance(device, Partition)) and device.has_children:
                     # If disk or partition and has children, and is
                     # identifiable this is an error, as one/all of the
                     # children should contain identifying information
-                    device_str = self.__get_device_type_string(device)
+                    device_str = self._get_device_type_string(device)
                     raise SelectionError("%s '%s' is uniquely identifiable "
                         "and it has children. Invalid, as children should "
                         "contain identifying information. "
@@ -2113,7 +2197,7 @@ class TargetSelection(Checkpoint):
                 if device.in_zpool is not None or device.in_vdev is not None:
                     # Throw exception, as cannot identify uniquely yet
                     # some logical identification information present
-                    device_str = self.__get_device_type_string(device)
+                    device_str = self._get_device_type_string(device)
 
                     if isinstance(device, Slice):
                         # Only raise exception if not a swap slice and
@@ -2133,7 +2217,7 @@ class TargetSelection(Checkpoint):
                 if (isinstance(device, Disk) or
                     isinstance(device, Partition)) and device.has_children:
                     # Device has children which should identify location
-                    tmp_devices = self.__get_vdev_devices(zpool_name,
+                    tmp_devices = self._get_vdev_devices(zpool_name,
                         vdev_name, device.children)
                     for dev in tmp_devices:
                         vdev_devices.append(dev)
@@ -2141,7 +2225,7 @@ class TargetSelection(Checkpoint):
         return vdev_devices
 
     @staticmethod
-    def __get_device_type_string(device):
+    def _get_device_type_string(device):
         '''Get a descriptive string for the device'''
         if isinstance(device, Disk):
             device_str = "Disk"
@@ -2151,7 +2235,7 @@ class TargetSelection(Checkpoint):
             device_str = "Slice"
         return device_str
 
-    def __check_disk_in_root_pool(self, disk):
+    def _check_disk_in_root_pool(self, disk):
         '''Tests if a specified disk is in the root pool
            if the disk does not have in_zpool, in_vdev specified
            then start processing children. If no chilcren throw
@@ -2159,20 +2243,20 @@ class TargetSelection(Checkpoint):
            Check all children, and if any one of them are in the root
            pool return true, otherwise return false.
         '''
-        if self.__check_in_root_pool(disk):
+        if self._check_in_root_pool(disk):
             return True
         elif disk.has_children:
             for disk_kid in disk.children:
-                if self.__check_in_root_pool(disk_kid):
+                if self._check_in_root_pool(disk_kid):
                     return True
 
                 if isinstance(disk_kid, Partition) and disk_kid.children > 0:
                     for slc in disk_kid.children:
-                        if self.__check_in_root_pool(slc):
+                        if self._check_in_root_pool(slc):
                             return True
         return False
 
-    def __check_in_root_pool(self, device):
+    def _check_in_root_pool(self, device):
         '''Tests if a device (disk/partition/slice) is in the root pool.
         '''
 
@@ -2185,22 +2269,161 @@ class TargetSelection(Checkpoint):
         if device.in_zpool is None and \
            rpool_vdev_id in self._vdev_map:
             # Assumption is we've validated the uniqueness of vdev
-            # specification in the object earlier in __check_valid_zpool_vdev()
+            # specification in the object earlier in _check_valid_zpool_vdev()
             return True
 
         return False
 
-    def __handle_partition(self, partition, new_disk, discovered_disk):
+    def _handle_gpt_partition(self, gpe, new_disk, discovered_disk):
+        '''Handle the GPT partition as specified in the manifest.
+
+           Will return a new GPTPartition object to be inserted in the DESIRED
+           tree such that Target Instantiation is able to perform.
+        '''
+
+        try:
+            position = int(gpe.name)
+        except ValueError:
+            raise SelectionError('Invalid Partition name: "%s"' % (gpe.name))
+
+        # Solaris only understands 0-6 and 8. gpt7 is the new s2.
+        # libefi only writes down 0-8 inclusive.
+        # we would like 0 to be EFI_SYSTEM or EFI_BIOS_BOOT and 8 to be
+        # EFI_RESERVED. But neither are required.
+        if position not in range(0, EFI_NUMUSERPAR):
+            if not (EFI_PREFERRED_RSVPAR == position and \
+                    gpe.guid == EFI_RESERVED):
+                raise SelectionError(
+                    'Invalid Partition name: "%s"' % (gpe.name))
+
+        if position == EFI_NUMUSERPAR:
+            raise SelectionError(
+                'Reserved Partition name (indicates whole disk): 7')
+
+        # valid to be on x86 or sparc
+        existing = discovered_disk.get_first_child(gpe.name,
+            class_type=GPTPartition)
+
+        if gpe.action == "delete":
+            if existing is None:
+                self.logger.warn(
+                    "Attempt to delete non-existant GPT partition "
+                    "%s on disk %s ignored" % (gpe.name,
+                    self._pretty_print_disk(discovered_disk)))
+                return  # nothing more to do
+            else:
+                new_gpe = copy.copy(existing)
+                new_gpe.action = "delete"
+                new_gpe.in_zpool = None
+                new_gpe.in_vdev = None
+
+        elif gpe.action == "preserve":
+            if existing is None:
+                raise SelectionError(
+                    "Cannont preserve GPT partition %s that doesn't exist"
+                    "on disk %s" % (gpe.name,
+                    self._pretty_print_disk(discovered_disk)))
+            else:
+                new_gpe = copy.copy(existing)
+                new_gpe.action = "preserve"
+
+        else:
+            if gpe.action != "create":
+                raise SelectionError(
+                    "Unexpected action '%s' on GPT partition %s" %
+                    (gpe.action, gpe.name))
+
+            if existing is not None and existing.action != "delete":
+                self.logger.warn(
+                    "Creating GPT partition %s on disk %s will destroy "
+                    "existing data." % (gpe.name,
+                    self._pretty_print_disk(discovered_disk)))
+
+            # create it in any case
+            new_gpe = copy.copy(gpe)
+
+            # in_zpool and in_vdev attributes determine if its in
+            # root pool. No need to check or set bootid
+
+            gaps = new_disk.get_gaps()
+
+            # unspecified start sector: go find gap that we can use
+            if new_gpe.size.sectors != 0 and \
+               new_gpe.start_sector in (0, None):
+                # choose first gap with size >= what we are seeking
+                try:
+                    gap = filter(lambda hole: hole.size >= new_gpe.size,
+                                 gaps)[0]
+                    new_gpe.start_sector = gap.start_sector
+                except IndexError:
+                    # none found, we will just accept largest
+                    raise SelectionError("Failed to find gap on disk"
+                        " of sufficient size to put partition"
+                        " %s in to" % (new_gpe.name))
+
+            # unspecified size: use largest gap.
+            if new_gpe.size.sectors == 0:
+                try:
+                    gap = max(gaps, key=lambda hole: hole.size)
+                except ValueError:
+                    # there are no gaps
+                    raise SelectionError("Failed to find gap on disk to put "
+                        "partition %s in to" % (new_gpe.name))
+
+                new_gpe.start_sector = gap.start_sector
+                new_gpe.size = gap.size
+
+            # Only process solaris partitions
+            if gpe.is_solaris:
+                # GPTPartitions never have slices
+
+                # If it's a root pool, or we have a partition that's not in
+                # a pool we assume it should be in the root pool.
+                if self._check_in_root_pool(gpe) \
+                   or (gpe.in_zpool is None and \
+                       gpe.in_vdev is None and \
+                       self._root_pool is not None):
+
+                    # Assume it should be in the root pool since
+                    # nothing specific provided in the manifest
+                    new_gpe.in_zpool = self._root_pool.name
+                    if self._root_vdev is not None:
+                        new_gpe.in_vdev = self._root_vdev.name
+
+        # Generic processing for all cases
+
+        # Insert partition now, since shadowlist validation will require
+        # that the disk be known for partitions or children.
+        new_disk.insert_children(new_gpe)
+
+        errors = errsvc.get_all_errors()
+        # Found errors and they cannot be ignored
+        if errors:
+            # Print desired contents to log
+            existing_desired = \
+                self.doc.persistent.get_first_child(Target.DESIRED)
+            if existing_desired:
+                self.logger.debug("Desired =\n%s\n" % \
+                    (str(existing_desired)))
+            self.logger.debug("Partition =\n%s\n" % (str(new_gpe)))
+            errstr = \
+                "Following errors occurred processing partition :\n%s" % \
+                (str(errors[0]))
+            raise SelectionError(errstr)
+
+        return new_gpe
+
+    def _handle_partition(self, partition, new_disk, discovered_disk):
         '''Handle the partition as specified in the manifest.
 
            Will return a new Partition object to be inserted in the DESIRED
            tree such that Target Instantiation is able to perform.
         '''
         # Ensure this is an i386 machine if partitions are specified.
-        if platform.processor() != "i386":
+        if self.cpu != "i386":
             raise SelectionError(
                 "Cannot specify partitions on %s machine architecture." % \
-                (platform.processor()))
+                (self.cpu))
 
         existing_partition = discovered_disk.get_first_child(
             partition.name, class_type=Partition)
@@ -2213,14 +2436,14 @@ class TargetSelection(Checkpoint):
                     self.logger.warn(
                         "Attempt to delete non-existant partition"
                         " %s on disk %s ignored" % (partition.name,
-                        self.__pretty_print_disk(discovered_disk)))
+                        self._pretty_print_disk(discovered_disk)))
                     # Return now since there's nothing to do.
                     return
                 else:
                     raise SelectionError(
                         "Cannot %s partition %s that doesn't exist on disk %s"
                         % (partition.action, partition.name,
-                           self.__pretty_print_disk(discovered_disk)))
+                           self._pretty_print_disk(discovered_disk)))
             else:
                 # Do nothing, just copy over.
                 new_partition = copy.copy(existing_partition)
@@ -2237,7 +2460,7 @@ class TargetSelection(Checkpoint):
                     "Creating partition %s on disk %s will "
                     "destroy existing data." % \
                     (partition.name,
-                     self.__pretty_print_disk(discovered_disk)))
+                     self._pretty_print_disk(discovered_disk)))
 
             new_partition = copy.copy(partition)
         else:
@@ -2296,7 +2519,7 @@ class TargetSelection(Checkpoint):
                 raise SelectionError(
                     "Partition %s has a size larger than the disk %s" %
                     (new_partition.name,
-                    self.__pretty_print_disk(discovered_disk)))
+                    self._pretty_print_disk(discovered_disk)))
 
             # Insert partition now, since shadowlist validation will require
             # that the disk be known for partitions or children.
@@ -2325,7 +2548,7 @@ class TargetSelection(Checkpoint):
                 if not partition.has_children:
                     # If it's a root pool, or we have a partition that's not in
                     # a pool we assume it should be in the root pool.
-                    if self.__check_in_root_pool(partition) \
+                    if self._check_in_root_pool(partition) \
                        or (partition.in_zpool is None and \
                            partition.in_vdev is None and \
                            self._root_pool is not None):
@@ -2354,8 +2577,8 @@ class TargetSelection(Checkpoint):
                             new_partition.in_vdev = None
 
                 else:
-                    self.__handle_slices(partition.children,
-                                         new_partition, existing_partition)
+                    self._handle_slices(partition.children,
+                                        new_partition, existing_partition)
         else:
             # Insert partition now, since shadowlist validation will require
             # that the disk be known for partitions or children.
@@ -2363,7 +2586,7 @@ class TargetSelection(Checkpoint):
 
         return new_partition
 
-    def __handle_slice(self, orig_slice, parent_object, existing_parent_obj):
+    def _handle_slice(self, orig_slice, parent_object, existing_parent_obj):
         '''Handle the slice as specified in the manifest.
 
            Will return a new Slice object to be inserted in the DESIRED
@@ -2391,13 +2614,13 @@ class TargetSelection(Checkpoint):
                             "Attempt to delete non-existant slice"
                             " %s on disk %s ignored" %
                             (orig_slice.name,
-                            self.__pretty_print_disk(parent_object)))
+                            self._pretty_print_disk(parent_object)))
                     else:
                         self.logger.warn(
                             "Attempt to delete non-existant slice"
                             " %s on partition '%s', disk %s ignored" %
                             (orig_slice.name, parent_object.name,
-                            self.__pretty_print_disk(parent_object.parent)))
+                            self._pretty_print_disk(parent_object.parent)))
                     # Return now since there's nothing to do.
                     return None
                 else:
@@ -2405,13 +2628,13 @@ class TargetSelection(Checkpoint):
                         raise SelectionError(
                             "Cannot %s slice %s that doesn't exist on disk %s"
                             % (orig_slice.action, orig_slice.name,
-                            self.__pretty_print_disk(parent_object)))
+                            self._pretty_print_disk(parent_object)))
                     else:
                         raise SelectionError(
                             "Cannot %s slice %s that doesn't exist on "
                             "partition %s, disk %s" % (orig_slice.action,
                             orig_slice.name, parent_object.name,
-                            self.__pretty_print_disk(parent_object.parent)))
+                            self._pretty_print_disk(parent_object.parent)))
             else:
                 # Do nothing, just copy over.
                 new_slice = copy.copy(existing_slice)
@@ -2430,13 +2653,13 @@ class TargetSelection(Checkpoint):
                         "Creating slice %s on disk %s will "
                         "destroy existing data." % \
                         (orig_slice.name,
-                        self.__pretty_print_disk(parent_object)))
+                        self._pretty_print_disk(parent_object)))
                 else:
                     self.logger.warn(
                         "Creating slice %s on partition %s, disk %s will "
                         "destroy existing data." % \
                         (orig_slice.name, parent_object.name,
-                        self.__pretty_print_disk(parent_object.parent)))
+                        self._pretty_print_disk(parent_object.parent)))
 
             new_slice = copy.copy(orig_slice)
         else:
@@ -2450,7 +2673,7 @@ class TargetSelection(Checkpoint):
                     raise SelectionError(
                         "Slice %s has a size larger than the disk %s" %
                         (new_slice.name,
-                         self.__pretty_print_disk(parent_object)))
+                         self._pretty_print_disk(parent_object)))
             else:
                 # It's a partition
                 if parent_object.size is not None and \
@@ -2495,7 +2718,7 @@ class TargetSelection(Checkpoint):
 
         return new_slice
 
-    def __handle_slices(self, slices, new_parent_obj, existing_parent_obj):
+    def _handle_slices(self, slices, new_parent_obj, existing_parent_obj):
         '''Process list of slices and attach to new_parent_obj as children.
 
            Returns a list of new slices.
@@ -2534,8 +2757,8 @@ class TargetSelection(Checkpoint):
         # Need to handle all preserved slices first inserting them into
         # new parent, this ensures get_gaps works for newly created slices
         for orig_slice in [s for s in slices if s.action == "preserve"]:
-            new_slice = self.__handle_slice(orig_slice, new_parent_obj,
-                                            existing_parent_obj)
+            new_slice = self._handle_slice(orig_slice, new_parent_obj,
+                                           existing_parent_obj)
             if new_slice is not None:
                 new_parent_obj.insert_children(new_slice)
 
@@ -2545,8 +2768,8 @@ class TargetSelection(Checkpoint):
         first_large_slice = None
         found_zpool_vdev_slice = False
         for orig_slice in [s for s in slices if s.action != "preserve"]:
-            new_slice = self.__handle_slice(orig_slice, new_parent_obj,
-                                            existing_parent_obj)
+            new_slice = self._handle_slice(orig_slice, new_parent_obj,
+                                           existing_parent_obj)
             if new_slice is not None:
                 new_parent_obj.insert_children(new_slice)
                 if new_slice.in_zpool is None and \
@@ -2577,7 +2800,7 @@ class TargetSelection(Checkpoint):
                 raise SelectionError(
                     "No slice large enough to install to was found on disk")
 
-    def __handle_disk(self, disk):
+    def _handle_disk(self, disk):
         '''Handle a disk object.
 
            Find the disk in the discovered tree, take a copy, and then if
@@ -2588,26 +2811,26 @@ class TargetSelection(Checkpoint):
         '''
 
         self.logger.debug("Processing disk : %s" %
-            self.__pretty_print_disk(disk))
+            self._pretty_print_disk(disk))
 
         ret_disk = None
         errsvc.clear_error_list()
 
-        discovered_disk = self.__find_disk(disk)
+        discovered_disk = self._find_disk(disk)
 
         if discovered_disk is None:
             raise SelectionError(
                "Unable to locate the disk '%s' on the system." %
-                self.__pretty_print_disk(disk))
+                self._pretty_print_disk(disk))
 
         if discovered_disk.ctd in self._disk_map:
             # Seems that the disk is specified more than once in the manifest!
             raise SelectionError(
                 "Disk '%s' matches already used disk '%s'." %
-                (self.__pretty_print_disk(disk), discovered_disk.ctd))
+                (self._pretty_print_disk(disk), discovered_disk.ctd))
 
         # Check that in_zpool and in_vdev values from manifest are valid
-        self.__check_valid_zpool_vdev(disk)
+        self._check_valid_zpool_vdev(disk)
         self._wipe_disk = False
 
         # create an anonymous function for testing if an object is an Iscsi DOC
@@ -2621,7 +2844,7 @@ class TargetSelection(Checkpoint):
             # Traditional whole_disk scenario where we apply default layout
             # Only copy the disk, not it's children.
             disk_copy = copy.copy(discovered_disk)
-            self.__add_disks_to_map(disk_copy)
+            self._add_disks_to_map(disk_copy)
             self.logger.debug("Using Whole Disk")
             if disk.in_zpool is None and disk.in_vdev is None:
                 self.logger.debug("Zpool/Vdev not specified")
@@ -2634,7 +2857,7 @@ class TargetSelection(Checkpoint):
                     # Assign to real root pool if one exists
                     disk.in_zpool = self._root_pool.name
 
-            if not self.__check_in_root_pool(disk):
+            if not self._check_in_root_pool(disk):
                 self.logger.debug("Disk Not in root pool")
                 # We can leave it for ZFS to partition itself optimally
                 disk_copy.whole_disk = True
@@ -2642,21 +2865,26 @@ class TargetSelection(Checkpoint):
                 disk_copy.in_zpool = disk.in_zpool
                 disk_copy.in_vdev = disk.in_vdev
             else:
-                disk_copy.whole_disk = False
-                disk_copy.label = "VTOC"
-                self.logger.debug("Disk in root pool")
-
-                # Layout disk using partitions since root pools can't use
-                # EFI/GPT partitioned disks to boot from yet.
-                self.logger.debug("Whole Disk, applying default layout")
                 root_vdev = None
                 if self._root_vdev is not None:
                     root_vdev = self._root_vdev.name
                 elif disk.in_vdev is not None:
-                    # If the disk specified a vdev, copy it.
                     root_vdev = disk.in_vdev
-                self.controller.apply_default_layout(disk_copy, False, True,
-                    in_zpool=self._root_pool.name, in_vdev=root_vdev)
+
+                root_pool = None
+                if self._root_pool is not None:
+                    root_pool = self._root_pool.name
+                elif disk.in_zpool is not None:
+                    root_pool = disk.in_zpool
+
+                self.logger.debug("Disk in root pool")
+                self.logger.debug("Whole Disk, applying default layout")
+                disk_copy.label = self.gpt_capable and "GPT" or "VTOC"
+                self.controller.apply_default_layout(disk_copy,
+                    use_whole_disk=(disk_copy.label == "GPT"),
+                    wipe_disk=True, in_zpool=self._root_pool.name,
+                    in_vdev=root_vdev)
+
             ret_disk = disk_copy
         else:
             if disk.whole_disk and disk.has_children:
@@ -2668,38 +2896,109 @@ class TargetSelection(Checkpoint):
             # merging of partitions and slices from manifest with existing
             # layouts is only done if not wiping the disk.
             disk_copy = copy.copy(discovered_disk)
-            self.__add_disks_to_map(disk_copy)
+            self._add_disks_to_map(disk_copy)
 
             # Get partitions and slices from manifest version of Disk
             partitions = disk.get_children(class_type=Partition)
             slices = disk.get_children(class_type=Slice)
+            gpt_partitions = disk.get_children(class_type=GPTPartition)
 
             # Do some basic sanity checks
 
             # If not partitions, but have slices, fail now, if i386
-            if platform.processor() == "i386" and not partitions and slices:
+            if self.cpu == "i386" and not partitions and slices:
                 raise SelectionError("Invalid specification of slices "
                         "outside of partition on the %s platform"
-                        % (platform.processor()))
+                        % (self.cpu))
 
             # If partitions, fail now, if not i386
-            if platform.processor() != "i386" and partitions:
+            if self.cpu != "i386" and partitions:
                 raise SelectionError("Invalid specification of partitions "
-                        "on this %s platform" % (platform.processor()))
+                        "on this %s platform" % (self.cpu))
 
-            if (platform.processor() == "i386" and not partitions) or \
-               (platform.processor() != "i386" and not slices):
-                raise SelectionError(
-                    "If whole_disk is False, you need to provide"
-                    " information for partitions or slices")
+            if self.cpu == "i386":
+                if partitions and gpt_partitions:
+                    raise SelectionError(
+                        "Both partition(s) and gpt_partition(s) specified")
+                if not partitions and not gpt_partitions:
+                    raise SelectionError(
+                        "If whole_disk is False, you need to provide "
+                        "information for gpt_partitions or partitions")
+            else:
+                if slices and gpt_partitions:
+                    raise SelectionError(
+                        "Both slice(s) and gpt_partition(s) specified")
+                if not slices and not gpt_partitions:
+                    raise SelectionError(
+                        "If whole_disk is False, you need to provide "
+                        "information for gpt_partitions or slices")
 
-            # Disk with children either x86 or sparc must at the moment
-            # have a VTOC label, GPT is only supported on whole disk
-            # scenario with no children. Set label to be VTOC
-            if disk_copy.label != "VTOC":
+            if disk_copy.label != "VTOC" and not gpt_partitions:
                 disk_copy._set_vtoc_label_and_geometry(self.dry_run)
+                self._wipe_disk = True  # can't preserve GPT Partitions
 
-            if partitions:  # On X86
+            if gpt_partitions:  # could be x86 or sparc
+
+                disk_copy.label = "GPT"
+
+                # remove any user specified actions on special partitions.
+                gpt_partitions = filter(lambda gpe: gpe.guid not in (
+                                            EFI_SYSTEM, EFI_BIOS_BOOT,
+                                            EFI_RESERVED),
+                                        gpt_partitions)
+
+                # split up our gpt_partitions into groups based on action.
+                preserve, create, delete, unknown = (list(), list(),
+                                                     list(), list())
+                for gpe in gpt_partitions:
+                    {"preserve": preserve,
+                     "create": create,
+                     "delete": delete,
+                    }.get(gpe.action, unknown).append(gpe)
+
+                # First handle any preserved partitions.
+                for gpe in preserve:
+                    self._handle_gpt_partition(gpe, disk_copy,
+                        discovered_disk)
+                    # Insertion to disk done in _handle_gpt_partition
+
+                # Now look at the old disk for "system" or "reserved" and
+                # preserve all that are found.
+                exist = discovered_disk.get_children(class_type=GPTPartition)
+                special = filter(lambda gpe: gpe.guid in (EFI_RESERVED,
+                                             discovered_disk.sysboot_guid),
+                                 exist)
+                for gpe in special:
+                    self._handle_gpt_partition(gpe, disk_copy,
+                        discovered_disk)
+
+                # Next add system partitions if they weren't preserved.
+                try:
+                    disk_copy.add_required_partitions(donor=None)
+                except InsufficientSpaceError as err:
+                    raise SelectionError("%s: %s" % (err.message,
+                        self._pretty_print_disk(discovered_disk)))
+                except NoGPTPartitionSlotsFree:
+                    # only system has to be mountable, never reserved
+                    raise SelectionError("No free slots available for boot "
+                        "partition." % \
+                        (self._pretty_print_disk(discovered_disk)))
+
+                # Handle the create, which must not bump into special or
+                # preserved. ShadowList will prevent this. Handle delete
+                # at the same time as that just adds them to DOC for later
+                # inspection.
+                for gpe in create + delete:
+                    self._handle_gpt_partition(gpe, disk_copy,
+                        discovered_disk)
+
+                # At this point we have disk with GPT partitions but probably
+                # in a jumbled order, resort by action and name. This just
+                # makes it easier to see what happened in desired tree.
+                disk_copy._children.sort(key=lambda gpe: gpe.action)
+                disk_copy._children.sort(key=lambda gpe: int(gpe.name))
+
+            elif partitions:  # On X86
                 # Process partitions, checking for use_existing_solaris2
                 for partition in partitions:
                     # If there is no name specified only seek if no name
@@ -2717,7 +3016,7 @@ class TargetSelection(Checkpoint):
                             raise SelectionError(
                                 "Cannot find a pre-existig Solaris "
                                 "partition on disk %s"
-                                % (self.__pretty_print_disk(discovered_disk)))
+                                % (self._pretty_print_disk(discovered_disk)))
                         else:
                             # Found existing solaris partition to process
                             tmp_partition = copy.copy(solaris_partition)
@@ -2836,8 +3135,18 @@ class TargetSelection(Checkpoint):
                             continue
 
                     # Ensure partition is set to be in temporary root pool
-                    # __handle_partition() relies on this.
+                    # _handle_partition() relies on this.
                     if partition.is_solaris:
+                        try:
+                            efi_sys, resv, partition = \
+                                disk_copy.add_required_partitions(partition)
+                        except InsufficientSpaceError as err:
+                            raise SelectionError("%s: %s" % (err.message,
+                                self._pretty_print_disk(discovered_disk)))
+                        except NoPartitionSlotsFree:
+                            raise SelectionError("No free slots available for "
+                                "EFI system partition.")
+
                         if self._is_generated_root_pool \
                            and not partition.has_children \
                            and partition.action == "create" \
@@ -2848,10 +3157,25 @@ class TargetSelection(Checkpoint):
                             partition.in_vdev = self._root_vdev.name
 
                     # Process partitions, and contained slices
-                    new_partition = self.__handle_partition(partition,
+                    new_partition = self._handle_partition(partition,
                         disk_copy, discovered_disk)
 
-                    # Insertion to disk done in __handle_partition()
+                    # Insertion to disk done in _handle_partition()
+
+                # This is most likely going to fail. We only get here, however,
+                # if the user is switching from BIOS to UEFI and trying to use
+                # existing solaris partition.
+                try:
+                    efi_sys, resv, partition = \
+                        disk_copy.add_required_partitions(donor=None)
+                except InsufficientSpaceError as err:
+                    raise SelectionError("%s: %s: install would not be able "
+                        "to preserve Solaris2 partition" % (err.message,
+                        self._pretty_print_disk(discovered_disk)))
+                except NoPartitionSlotsFree:
+                    raise SelectionError("No free slots available for "
+                        "EFI system partition: install would not be able to "
+                        "preserve Solaris2 partition")
 
             else:
                 # Can assume we're on SPARC machine now.
@@ -2859,7 +3183,6 @@ class TargetSelection(Checkpoint):
                     # There is only one slice we need to check to see if
                     # it's slice "2". If it is we need to add a slice "0"
                     # and set in_vdev and in_zpool.
-                    # TODO: This will need to be updated for GPT when ready
                     # Add a slice
                     start = 1  # Will be rounded up to cylinder by TI
                     slice_size = \
@@ -2872,12 +3195,12 @@ class TargetSelection(Checkpoint):
                     if self._root_pool is not None:
                         new_slice.in_zpool = self._root_pool.name
                 else:
-                    self.__handle_slices(slices, disk_copy, discovered_disk)
+                    self._handle_slices(slices, disk_copy, discovered_disk)
 
             ret_disk = disk_copy
 
         self.logger.debug("Finished processing disk : %s" %
-            self.__pretty_print_disk(disk))
+            self._pretty_print_disk(disk))
 
         # Check error service for errors
         errors = errsvc.get_all_errors()
@@ -2903,7 +3226,7 @@ class TargetSelection(Checkpoint):
 
         return ret_disk
 
-    def __create_temp_logical_tree(self, existing_logicals):
+    def _create_temp_logical_tree(self, existing_logicals):
         '''Create a set of logicals that we will use should there be no other
            logicals defined in the manifest.
         '''
@@ -2943,7 +3266,7 @@ class TargetSelection(Checkpoint):
 
         return logical
 
-    def __cleanup_temp_logical(self, logical, existing_logicals):
+    def _cleanup_temp_logical(self, logical, existing_logicals):
         if not self._is_generated_root_pool:
             return
 
@@ -2962,11 +3285,11 @@ class TargetSelection(Checkpoint):
         self._root_vdev = None
         self._be = None
 
-    def __handle_target(self, target):
+    def _handle_target(self, target):
         '''Process target section in manifest'''
 
         # Reset all local map information
-        self.__reset_maps()
+        self._reset_maps()
 
         new_desired_target = None
         logical_inserted = False
@@ -2978,10 +3301,10 @@ class TargetSelection(Checkpoint):
         # It's possible that there are no logicial sections.
         if logicals:
             for logical in logicals:
-                new_logical = self.__handle_logical(logical)
+                new_logical = self._handle_logical(logical)
                 if new_logical is not None:
                     if new_desired_target is None:
-                        new_desired_target = self.__get_new_desired_target()
+                        new_desired_target = self._get_new_desired_target()
                     new_desired_target.insert_children(new_logical)
 
         if new_desired_target is None:
@@ -3011,7 +3334,7 @@ class TargetSelection(Checkpoint):
                 # A matching disk in the discovered tree
                 discovered_disks = list()
                 for disk in disks:
-                    dd = self.__find_disk(disk)
+                    dd = self._find_disk(disk)
                     if dd is not None:
                         discovered_disks.append(dd)
 
@@ -3022,16 +3345,12 @@ class TargetSelection(Checkpoint):
                 selected_disks = self.controller.select_disk(discovered_disks,
                     use_whole_disk=True)
 
-                for disk in selected_disks:
-                    # Ensure we're using VTOC labelling until GPT integrated
-                    disk.label = "VTOC"
-
                 # Target Controller will insert default root pool need to
                 # Set this for validation of name later on
                 self._is_generated_root_pool = True
 
                 # Need to update the logical map, as new one just created
-                new_desired_target = self.__get_new_desired_target()
+                new_desired_target = self._get_new_desired_target()
 
                 # Get New Logical sections
                 logicals = new_desired_target.get_children(class_type=Logical)
@@ -3045,22 +3364,23 @@ class TargetSelection(Checkpoint):
                             logical.noswap = self._noswap
                             logical.nodump = self._nodump
                         # No need to insert into new_desired, already there
-                        self.__handle_logical(logical)
+                        self._handle_logical(logical)
 
                 # Update disk map
-                self.__add_disks_to_map(selected_disks)
+                self._add_disks_to_map(selected_disks)
 
                 skip_disk_processing = True
 
+        # No disks specified or at least one was not whole_disk
         if not skip_disk_processing:
             if self._root_pool is None:
                 # There is no zpool, so we will add one temporarily
                 # This will allow us to fill-in the in_zpool/in_vdev for disks
                 # that don't have any explicitly set already.
-                tmp_logical = self.__create_temp_logical_tree(logicals)
+                tmp_logical = self._create_temp_logical_tree(logicals)
 
                 if new_desired_target is None:
-                    new_desired_target = self.__get_new_desired_target()
+                    new_desired_target = self._get_new_desired_target()
                 if tmp_logical not in logicals or self._nozpools:
                     # Insert new logical into desired tree
                     new_desired_target.insert_children(tmp_logical)
@@ -3076,21 +3396,23 @@ class TargetSelection(Checkpoint):
             # It's also possible to have no disks, if so install to first
             # available disk that is large enough to install to.
             # Should be cycling through manifest disks or discovered disks
-            # looking at __handle_disk
+            # looking at _handle_disk
             disks = target.get_children(class_type=Disk)
 
             # If no Disks, but have a logical section, then we need to
             # auto-select, and add disk.
             if not disks and self._root_pool is not None and \
                 self._root_pool.action not in self.PRESERVED:
-                disk_copy = copy.copy(self.controller.select_initial_disk())
+                initial_disks = copy.copy(
+                    self.controller.select_initial_disk())
 
-                if disk_copy is not None:
+                if initial_disks is not None:
+                    selected_disks = self.controller.select_disk(initial_disks,
+                        use_whole_disk=True)
+
                     self.logger.info("Selected Disk(s) : %s" % \
-                        (self.__pretty_print_disk(disk_copy)))
-                    # Ensure we're using a VTOC label
-                    disk_copy.label = "VTOC"
-                    pool_vdevs = self.__get_vdevs_in_zpool(
+                        (self._pretty_print_disk(selected_disks)))
+                    pool_vdevs = self._get_vdevs_in_zpool(
                         self._root_pool.name)
                     root_vdev_name = None
                     if self._root_vdev is not None:
@@ -3103,17 +3425,14 @@ class TargetSelection(Checkpoint):
                     elif len(pool_vdevs) == 1:
                         root_vdev_name = pool_vdevs[0].name
 
-                    # Ensure using whole-disk in a way suitable for root pool
-                    self.controller.apply_default_layout(disk_copy, False,
-                        True, in_zpool=self._root_pool.name,
-                        in_vdev=root_vdev_name)
+                    for disk in selected_disks:
+                        self.controller.apply_default_layout(disk,
+                            use_whole_disk=(disk.label == "GPT"),
+                            wipe_disk=True, in_zpool=self._root_pool.name,
+                            in_vdev=root_vdev_name)
+                        self._disk_map[disk.ctd] = disk
 
-                    if new_desired_target is None:
-                        new_desired_target = self.__get_new_desired_target()
-                    new_desired_target.insert_children(disk_copy)
-
-                    self._disk_map[disk_copy.ctd] = disk_copy
-
+            # disks in manifest
             for disk in disks:
                 if self._is_generated_root_pool:
                     # Fail if manifest has disk references to temporary pool we
@@ -3124,10 +3443,10 @@ class TargetSelection(Checkpoint):
                             "Invalid selection of non-existent pool"
                             " or vdev for disk")
 
-                new_disk = self.__handle_disk(disk)
+                new_disk = self._handle_disk(disk)
                 if new_disk is not None:
                     if new_desired_target is None:
-                        new_desired_target = self.__get_new_desired_target()
+                        new_desired_target = self._get_new_desired_target()
                     new_desired_target.insert_children(new_disk)
 
             # If disks were added to temporary root pool, make it permanent
@@ -3135,21 +3454,21 @@ class TargetSelection(Checkpoint):
                 # At this point any slices that were specified but don't
                 # contain identifiable info, will cause no devices to be
                 # returned.
-                vdev_devices = self.__get_vdev_devices(self._root_pool.name,
-                                                       self._root_vdev.name,
-                                                       self._disk_map)
+                vdev_devices = self._get_vdev_devices(self._root_pool.name,
+                                                      self._root_vdev.name,
+                                                      self._disk_map)
                 if vdev_devices is not None and vdev_devices:
                     # Keep root pool since we used it.
                     self._is_generated_root_pool = False
                 else:
-                    self.__cleanup_temp_logical(logical, logicals)
+                    self._cleanup_temp_logical(logical, logicals)
 
         if new_desired_target is not None:
             self.logger.debug("Validating desired =\n%s\n" %
                 (str(new_desired_target)))
-            self.__validate_swap_and_dump(new_desired_target)
-            self.__validate_logical(new_desired_target)
-            self.__validate_disks(new_desired_target)
+            self._validate_swap_and_dump(new_desired_target)
+            self._validate_logical(new_desired_target)
+            self._validate_disks(new_desired_target)
             # Do final validation before passing to Target Instantiation
             if not new_desired_target.final_validation():
                 errors = errsvc.get_all_errors()
@@ -3194,7 +3513,7 @@ class TargetSelection(Checkpoint):
            Controller to do the selection of the disk to install to.
 
            If there are targets, we will process them by traversing the tree
-           using __handle_XXXX methods for each object type.
+           using _handle_XXXX methods for each object type.
         '''
 
         if discovered is None:
@@ -3210,7 +3529,7 @@ class TargetSelection(Checkpoint):
         self._discovered_zpools = discovered.get_descendants(class_type=Zpool)
         if len(self._discovered_zpools) > 0:
             # Store map of devices on discovered zpools
-            self._discovered_zpool_map = self.__get_existing_zpool_map()
+            self._discovered_zpool_map = self._get_existing_zpool_map()
 
         if len(self._discovered_disks) == 0:
             raise SelectionError("No installation target disks found.")
@@ -3249,16 +3568,12 @@ class TargetSelection(Checkpoint):
                     self.controller.select_initial_disk())
 
             self.logger.info("Selected Disk(s) : %s" % \
-                (self.__pretty_print_disk(initial_disks)))
+                (self._pretty_print_disk(initial_disks)))
 
             # Add selected disks to the desired tree, using controller.
             # Ensure whole-disk is selected for each disk.
             selected_disks = self.controller.select_disk(initial_disks,
                 use_whole_disk=True)
-
-            for disk in selected_disks:
-                # Ensure we're using VTOC labelling until GPT integrated
-                disk.label = "VTOC"
 
             # Target Controller will insert default root pool need to
             # Set this for validation of name later on
@@ -3303,7 +3618,7 @@ class TargetSelection(Checkpoint):
                             logical.noswap = self._noswap
                             logical.nodump = self._nodump
                         # No need to insert into new_desired, already there
-                        self.__handle_logical(logical)
+                        self._handle_logical(logical)
 
                         # Get BE object from root pool
                         for zpool in \
@@ -3315,18 +3630,18 @@ class TargetSelection(Checkpoint):
                         (self.be_mountpoint))
                     be.mountpoint = self.be_mountpoint
 
-                self.__add_disks_to_map(selected_disks)
+                self._add_disks_to_map(selected_disks)
 
                 # As TC has configured the logical section we also need
                 # to ensure swap and dump zvols exist if required.
                 self.logger.debug("Target Selection ensuring swap/dump "
                     "configured if required.")
 
-                self.__validate_swap_and_dump(existing_desired)
+                self._validate_swap_and_dump(existing_desired)
 
                 # Validate logical/disk portions of desired tree
-                self.__validate_logical(existing_desired)
-                self.__validate_disks(existing_desired)
+                self._validate_logical(existing_desired)
+                self._validate_disks(existing_desired)
 
                 self.logger.debug("Target Controller Post-Desired : \n%s\n" %
                     (str(existing_desired)))
@@ -3337,7 +3652,7 @@ class TargetSelection(Checkpoint):
 
             if from_manifest:
                 # The AI DTD only allows for one <target> element.
-                new_target = self.__handle_target(from_manifest[0])
+                new_target = self._handle_target(from_manifest[0])
                 if new_target is not None:
                     # Got a new DESIRED tree, so add to DOC
                     existing_desired = \
@@ -3351,7 +3666,7 @@ class TargetSelection(Checkpoint):
 
         self.logger.debug("Selected disk(s): %s" % (repr(selected_disks)))
 
-    def __check_valid_zpool_vdev(self, disk):
+    def _check_valid_zpool_vdev(self, disk):
         '''Check that disk refers to known zpool and/or vdev
            Will raise an SelectionError exception if anything is wrong.
         '''
@@ -3359,7 +3674,7 @@ class TargetSelection(Checkpoint):
             if disk.in_zpool not in self._zpool_map:
                 raise SelectionError(
                     "Disk %s specifies non-existent in_zpool: %s"
-                    % (self.__pretty_print_disk(disk), disk.in_zpool))
+                    % (self._pretty_print_disk(disk), disk.in_zpool))
             # Limit vdev match to specific zpool
             zpool_list_to_match = [disk.in_zpool]
         else:
@@ -3378,11 +3693,11 @@ class TargetSelection(Checkpoint):
             if vdev_matches == 0:
                 raise SelectionError(
                     "Disk %s specifies non-existent in_vdev: %s"
-                    % (self.__pretty_print_disk(disk), disk.in_vdev))
+                    % (self._pretty_print_disk(disk), disk.in_vdev))
             elif vdev_matches > 1:
                 raise SelectionError(
                     "Disk %s specifies non-unique in_vdev: %s"
-                    % (self.__pretty_print_disk(disk), disk.in_vdev))
+                    % (self._pretty_print_disk(disk), disk.in_vdev))
 
         # TODO : If disk.in_zpool and disk.in_vdev are none, should we
         # be checking the children here
@@ -3390,7 +3705,7 @@ class TargetSelection(Checkpoint):
         # If we got this far we're ok, otherwise an exception will be raised.
         return True
 
-    def __get_new_desired_target(self):
+    def _get_new_desired_target(self):
         '''Create a new DESIRED tree using Target Controller
            initialize which performs the following :
            - Sets minimum_target_size

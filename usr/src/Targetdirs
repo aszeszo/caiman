@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # The list is built of owner-group combinations.
@@ -88,6 +88,7 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target/libbe \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target/libdevinfo \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt \
+	/usr/lib/python2.6/vendor-packages/solaris_install/target/libefi \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target/libnvpair \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target/shadow \
 	/usr/lib/python2.6/vendor-packages/solaris_install/text_install \

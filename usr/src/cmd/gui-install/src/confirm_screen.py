@@ -45,7 +45,9 @@ from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig.profile import from_engine
 from solaris_install.sysconfig.profile.support_info import SupportInfo
 from solaris_install.target import Target
-from solaris_install.target.physical import Disk, Partition
+from solaris_install.target.controller import DEFAULT_VDEV_NAME, \
+    DEFAULT_ZPOOL_NAME
+from solaris_install.target.physical import Disk, Partition, GPTPartition
 from solaris_install.target.size import Size
 
 
@@ -180,25 +182,39 @@ class ConfirmScreen(BaseScreen):
         self.logger.info("-- Disk --")
         first_disk = None
         for disk in disks:
-            # The Disk screen will have ensured there is exactly one
-            # Solaris2 partition and that Disk and Partition sizes are valid
-            parts = disk.get_children(class_type=Partition)
-            solaris_parts = [part for part in parts if part.is_solaris]
-
-            # There is no definitive way to detect whether "Use the whole
-            # disk" or "Partition the disk" was selected, so we will display
-            # a message about the Solaris2 partition details for each disk.
-            partsize = locale.format('%.1f',
-                solaris_parts[0].size.get(units=Size.gb_units))
+            # The Disk screen will have ensured there is an appropriate
+            # Solaris(2) partition and that Disk and Partition sizes are valid
             disksize = locale.format('%.1f',
                 disk.disk_prop.dev_size.get(units=Size.gb_units))
 
-            text_str = _("%(partsize)s GB partition on "
-                 "%(disksize)s GB disk (%(disk)s)") % \
-                 {"partsize": partsize,
-                  "disksize": disksize,
-                  "disk": disk.ctd}
-            warn_str = _("This partition will be erased")
+            if disk.whole_disk:
+                text_str = _("%(disksize)s GB disk (%(disk)s)") % \
+                     {"disksize": disksize,
+                      "disk": disk.ctd}
+                warn_str = _("The whole disk will be erased")
+            else:
+                if disk.label == "VTOC":
+                    parts = disk.get_children(class_type=Partition)
+                    target_part = next((p for p in parts if p.is_solaris),
+                        None)
+                else:  # GPT by default
+                    parts = disk.get_children(class_type=GPTPartition)
+                    target_part = next((p for p in parts if \
+                        p.is_solaris and \
+                        p.in_zpool == DEFAULT_ZPOOL_NAME and \
+                        p.in_vdev == DEFAULT_VDEV_NAME),
+                        None)
+
+                partsize = locale.format('%.1f',
+                    target_part.size.get(units=Size.gb_units))
+
+                text_str = _("%(partsize)s GB partition on "
+                     "%(disksize)s GB disk (%(disk)s)") % \
+                     {"partsize": partsize,
+                      "disksize": disksize,
+                      "disk": disk.ctd}
+                warn_str = _("This partition will be erased")
+
             adisk = add_detail_line(self.diskvbox, text_str, warning=warn_str)
             if first_disk == None:
                 first_disk = adisk

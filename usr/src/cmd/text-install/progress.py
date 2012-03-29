@@ -19,21 +19,20 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
+
+''' Progress handler for the text installer '''
 
 import random
 import socket
 import struct
-import sys
 import thread
 import time
 
 from select import select
 
 from solaris_install.logger import ProgressHandler
-
-''' Progress handler for the text installer '''
 
 
 class InstallProgressHandler(ProgressHandler):

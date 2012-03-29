@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.cmd
@@ -39,6 +39,7 @@ PYMODULES=	__init__.py \
 		disk_selection.py \
 		disk_window.py \
 		fdisk_partitions.py \
+		gpt_partitions.py \
 		install_progress.py \
 		install_status.py \
 		log_viewer.py \

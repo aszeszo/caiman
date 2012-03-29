@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -32,12 +32,15 @@ import platform
 
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME
+from solaris_install.target.controller import DEFAULT_VDEV_NAME, \
+    DEFAULT_ZPOOL_NAME
 from solaris_install.target.physical import Disk, Partition, Slice
 from solaris_install.target.size import Size
 from solaris_install.text_install import _, RELEASE, TUI_HELP, LOCALIZED_GB
 from solaris_install.text_install.disk_window import DiskWindow
 from solaris_install.text_install.ti_target_utils import \
-    get_desired_target_disk, get_solaris_partition, dump_doc, ROOT_POOL
+    get_desired_target_disk, get_solaris_gpt_partition, \
+    get_solaris_partition, dump_doc
 from terminalui.base_screen import BaseScreen, SkipException
 from terminalui.i18n import textwidth
 from terminalui.list_item import ListItem
@@ -50,9 +53,8 @@ LOGGER = None
 class FDiskPart(BaseScreen):
     '''Allow user to choose to use the whole disk, or move to the
     partition/slice edit screen.
-    
     '''
-    
+
     BOOT_TEXT = _("Boot")
     HEADER_FDISK = _("Fdisk Partitions: ")
     HEADER_PART_SLICE = _("Solaris Partition Slices")
@@ -76,7 +78,7 @@ class FDiskPart(BaseScreen):
     USE_SLICE_IN_PART = _("Use a slice in the partition")
     USE_PART_IN_DISK = _("Use a partition of the disk")
     USE_SLICE_IN_DISK = _("Use a slice on the disk")
-    
+
     SPARC_HELP = (TUI_HELP + "/%s/sparc_solaris_slices.txt",
                   _("Solaris Slices"))
     X86_PART_HELP = (TUI_HELP + "/%s/"
@@ -84,21 +86,21 @@ class FDiskPart(BaseScreen):
                      _("Fdisk Partitions"))
     X86_SLICE_HELP = (TUI_HELP + "/%s/x86_fdisk_slices.txt",
                       _("Solaris Partition Slices"))
-    
+
     def __init__(self, main_win, target_controller, x86_slice_mode=False):
         '''If x86_slice_mode == True, this screen presents options for using a
         whole partition, or a slice within the partition.
         Otherwise, it presents options for using the whole disk, or using a
         partition (x86) or slice (SPARC) within the disk
-        
         '''
+
         super(FDiskPart, self).__init__(main_win)
         global LOGGER
         LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
         self.x86_slice_mode = x86_slice_mode
         self.is_x86 = True
         self.help_format = "  %s"
-        if platform.processor() == "sparc": # SPARC, slices on a disk
+        if platform.processor() == "sparc":  # SPARC, slices on a disk
             self.is_x86 = False
             self.header_text = FDiskPart.HEADER_SLICE
             self.paragraph = FDiskPart.PARAGRAPH_SLICE
@@ -107,7 +109,7 @@ class FDiskPart(BaseScreen):
             self.use_whole = FDiskPart.USE_WHOLE_DISK
             self.use_part = FDiskPart.USE_SLICE_IN_DISK
             self.help_data = FDiskPart.SPARC_HELP
-        elif self.x86_slice_mode: # x86, slices within a partition
+        elif self.x86_slice_mode:  # x86, slices within a partition
             self.instance = ".slice"
             self.header_text = FDiskPart.HEADER_PART_SLICE
             self.paragraph = FDiskPart.PARAGRAPH_PART_SLICE
@@ -117,7 +119,7 @@ class FDiskPart(BaseScreen):
             self.use_part = FDiskPart.USE_SLICE_IN_PART
             self.help_data = FDiskPart.X86_SLICE_HELP
             self.help_format = "    %s"
-        else: # x86, partitions on a disk
+        else:  # x86, partitions on a disk
             self.header_text = FDiskPart.HEADER_FDISK
             self.paragraph = FDiskPart.PARAGRAPH_FDISK
             self.found = FDiskPart.FOUND_PART
@@ -128,33 +130,35 @@ class FDiskPart(BaseScreen):
         self.disk_win = None
         self.partial_disk_item = None
         self.whole_disk_item = None
-        self.disk = None 
+        self.disk = None
         self.tc = target_controller
         self.use_whole_segment = True
-    
+
     def _show(self):
         '''Display partition data for selected disk, and present the two
         choices
-        
         '''
-        doc = InstallEngine.get_instance().doc
-        
-        if self.x86_slice_mode:
 
-            disk = get_desired_target_disk(doc)
+        doc = InstallEngine.get_instance().doc
+
+        disk = get_desired_target_disk(doc)
+        if disk.label == "GPT":
+            # this disk has GPT partitions, so skip this screen
+            raise SkipException
+
+        if self.x86_slice_mode:
             if disk.whole_disk:
                 raise SkipException
 
             sol_partition = get_solaris_partition(doc)
-
-            LOGGER.debug("Working with the following partition:")
-            LOGGER.debug(str(sol_partition))
-
             if sol_partition is None:
                 # Must have a Solaris partition
                 err_msg = "Critical error - no Solaris partition found"
                 LOGGER.error(err_msg)
                 raise ValueError(err_msg)
+
+            LOGGER.debug("Working with the following partition:")
+            LOGGER.debug(str(sol_partition))
 
             # See if there are any slices in the partition
             all_slices = sol_partition.get_children(class_type=Slice)
@@ -166,17 +170,15 @@ class FDiskPart(BaseScreen):
                 # partition should be used.  The needed underlying
                 # slices will be created in the next step when
                 # the in_zpool flag is detected.
-                sol_partition.in_zpool = ROOT_POOL
+                sol_partition.in_zpool = DEFAULT_ZPOOL_NAME
 
                 raise SkipException
-                    
+
             LOGGER.debug("Preserved partition with existing slices, "
                          "presenting option to install into a slice")
-
             self.disk = sol_partition
 
         else:
-
             self.disk = get_desired_target_disk(doc)
 
             LOGGER.debug("Working with the following disk:")
@@ -203,7 +205,7 @@ class FDiskPart(BaseScreen):
 
         y_loc = 1
         y_loc += self.center_win.add_paragraph(self.paragraph, start_y=y_loc)
-        
+
         y_loc += 1
         if self.is_x86 and not self.x86_slice_mode:
             all_parts = self.disk.get_children(class_type=Partition)
@@ -217,14 +219,14 @@ class FDiskPart(BaseScreen):
         else:
             next_line = self.proposed
         y_loc += self.center_win.add_paragraph(next_line, start_y=y_loc)
-        
+
         y_loc += 1
         disk_win_area = WindowArea(6, 70, y_loc, 0)
         self.disk_win = DiskWindow(disk_win_area, self.disk,
                                    target_controller=self.tc,
                                    window=self.center_win)
         y_loc += disk_win_area.lines
-        
+
         y_loc += 3
         whole_disk_width = textwidth(self.use_whole) + 3
         cols = (self.win_size_x - whole_disk_width) / 2
@@ -233,7 +235,7 @@ class FDiskPart(BaseScreen):
                                         window=self.center_win,
                                         text=self.use_whole,
                                         centered=True)
-        
+
         y_loc += 1
         partial_width = textwidth(self.use_part) + 3
         cols = (self.win_size_x - partial_width) / 2
@@ -242,36 +244,33 @@ class FDiskPart(BaseScreen):
                                           window=self.center_win,
                                           text=self.use_part,
                                           centered=True)
-        
+
         self.main_win.do_update()
         if self.use_whole_segment:
             self.center_win.activate_object(self.whole_disk_item)
         else:
             self.center_win.activate_object(self.partial_disk_item)
-    
+
     def on_continue(self):
         '''Set the user's selection in the install target. If they chose
         to use the entire disk (or entire partition), define a single
         partition (or slice) to consume the whole disk (or partition)
-        
         '''
 
         if self.center_win.get_active_object() is self.whole_disk_item:
             self.use_whole_segment = True
             if isinstance(self.disk, Disk):
-                LOGGER.debug("Setting whole_disk and creating default"
-                             " layout for %s", self.disk)
-                disk = self.tc.select_disk(self.disk, use_whole_disk=True)[0]
-                disk.whole_disk = True
-            else: 
-                # it's a partition, set the in_zpool attribute in
-                # the object for now.  The next screen will
-                # fill in needed slices
-                self.disk.in_zpool = ROOT_POOL
+                LOGGER.debug("Setting whole_disk for %s", self.disk)
+                self.disk = self.tc.select_disk(self.disk,
+                                                use_whole_disk=True)[0]
+            else:
+                # it's a partition, set the in_zpool attribute in the object
+                # for now.  The next screen will fill in needed slices
+                self.disk.in_zpool = DEFAULT_ZPOOL_NAME
         else:
             self.use_whole_segment = False
             if isinstance(self.disk, Disk):
-                LOGGER.debug("Setting whole_disk to false")
+                LOGGER.debug("Setting whole_disk to false for %s", self.disk)
                 self.disk.whole_disk = False
             else:
                 self.disk.in_zpool = None

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -41,16 +41,22 @@ import logging
 import gobject
 import gtk
 
+from solaris_install.gui_install.base_screen import NotOkToProceedError
+from solaris_install.gui_install.disk_panel import DiskPanel
 from solaris_install.gui_install.gui_install_common import \
-    COLOR_WHITE, empty_container, modal_dialog, GLADE_ERROR_MSG
+    COLOR_WHITE, DEFAULT_LOG_LOCATION, empty_container, modal_dialog, \
+    GLADE_DIR, GLADE_ERROR_MSG
 from solaris_install.logger import INSTALL_LOGGER_NAME
-from solaris_install.target.controller import BadDiskError
-from solaris_install.target.libadm.const import FD_NUMPART, MAX_EXT_PARTS
+from solaris_install.target.controller import BadDiskError, DEFAULT_ZPOOL_NAME
+from solaris_install.target.libadm.const import FD_NUMPART, MAX_EXT_PARTS, \
+    V_ROOT
 from solaris_install.target.libdiskmgt import const as diskmgt_const
-from solaris_install.target.physical import Partition
-from solaris_install.target.shadow.physical import LOGICAL_ADJUSTMENT
+from solaris_install.target.physical import DuplicatePartition, \
+    InsufficientSpaceError, NoPartitionSlotsFree, Partition, Slice
 from solaris_install.target.size import Size
 
+# Glade layout file for this widget
+FDISK_GLADE = "fdisk-panel.xml"
 
 # These are the only Partition types this module knows about.
 # Any other partitions discovered on the disk will be displayed,
@@ -83,7 +89,7 @@ ZERO_SIZE = Size("0" + Size.byte_units)
 LOGGER = None
 
 
-class FdiskPanel(object):
+class FdiskPanel(DiskPanel):
     '''
         Controls the creation, display and user interaction with the
         Fdisk partitioning table on the DiskScreen.
@@ -109,21 +115,19 @@ class FdiskPanel(object):
 
             Returns: nothing
         '''
-
         global LOGGER
 
         LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
 
+        super(FdiskPanel, self).__init__(builder)
         self._disk = None
         self._ui_disk = None
         self._target_controller = None
         self._signal_widgets = dict()
 
+        builder.add_from_file(GLADE_DIR + "/" + FDISK_GLADE)
         # Widgets from the Glade XML files that are referenced in this class
-        self._custompartioningalignment = \
-            builder.get_object("custompartioningalignment")
-        self._custompartitioningvbox = \
-            builder.get_object("custompartitioningvbox")
+        self._toplevel = builder.get_object("fdiskpaneltoplevel")
         self._partinfomessagesvbox = \
             builder.get_object("partinfomessagesvbox")
         self._unreadablepartsouterhbox = \
@@ -142,8 +146,7 @@ class FdiskPanel(object):
             builder.get_object("partitionavaillabel")
         self._fdiskresetbutton = builder.get_object("fdiskresetbutton")
 
-        if None in [self._custompartioningalignment,
-            self._custompartitioningvbox, self._partinfomessagesvbox,
+        if None in [self._toplevel, self._partinfomessagesvbox,
             self._unreadablepartsouterhbox, self._partsfoundlabel,
             self._custominfolabel, self._fdiskscrolledwindow,
             self._fdiskviewport, self._fdisktable, self._partitiontypelabel,
@@ -155,16 +158,28 @@ class FdiskPanel(object):
         # Initially hide all the widgets and empty any widgets that
         # may have been in the fdisktable, which will be dynamically
         # populated when we display.
-        self._custompartioningalignment.hide_all()
+        self._toplevel.hide_all()
         empty_container(self._fdisktable)
+
+        # Connect up the reset button clicked signal
+        gobject.GObject.connect(self._fdiskresetbutton,
+                                "clicked",
+                                self.reset_button_clicked,
+                                None)
+
+    @property
+    def toplevel(self):
+        ''' Instance property to return the toplevel widget of the
+            DiskPanel subclass object
+        '''
+        return self._toplevel
 
     def hide(self):
         ''' Hide the entire panel.
 
             Returns: nothing
         '''
-
-        self._custompartioningalignment.hide()
+        self.toplevel.hide()
 
     def display(self, disk, target_controller):
         ''' Show the custom fdisk partitioning panel for the given Disk.
@@ -184,8 +199,7 @@ class FdiskPanel(object):
         self._ui_disk = None
         self._update()
 
-        self._custompartioningalignment.show()
-        self._custompartitioningvbox.show()
+        self.toplevel.show()
 
         # Show the appropriate messages
         self._partinfomessagesvbox.show()
@@ -261,6 +275,82 @@ class FdiskPanel(object):
 
         LOGGER.info("Disk layout after tidy up:\n%s" % self._disk)
 
+    def validate(self):
+        ''' Validate the user selections before proceeding.
+
+            Perform a series of validations on the selected
+            disk and the selected partitions, if appropriate.
+
+            If the Disk and/or Partitions are not suitable for the install,
+            then display an error dialog and raise an exception.
+
+            Raises: NotOkToProceedError
+        '''
+        # Refuse to validate a GPT labeled disk
+        if self._disk.label == "GPT":
+            raise RuntimeError("Internal error: fdisk based validation " \
+                "is invalid for GPT labeled disk: %s" \
+                 % self._disk)
+
+        # Fetch the Solaris2 partition
+        partitions = self._disk.get_children(class_type=Partition)
+        solaris_partitions = [part for part in partitions \
+            if part.part_type == Partition.name_to_num("Solaris2")]
+
+        # ERROR #1 - No Solaris partitions defined
+        if len(solaris_partitions) == 0:
+            LOGGER.error("No Solaris2 partition on disk.")
+            modal_dialog(_("The selected disk contains no "
+                "Solaris partitions."),
+                _("Create one Solaris partition or use the whole disk."))
+            raise NotOkToProceedError("No Solaris partitions on disk.")
+
+        # ERROR #2 - Must be only one Solaris partition
+        if len(solaris_partitions) > 1:
+            LOGGER.error("Too many Solaris2 partitions on disk.")
+            modal_dialog(_("There must be only one "
+                "Solaris partition."),
+                _("Change the extra Solaris partitions to another type."))
+            raise NotOkToProceedError("Too many Solaris partitions on disk.")
+
+        # ERROR #3 - Solaris partition is too small
+        if solaris_partitions[0].size < \
+            self._target_controller.minimum_target_size:
+            LOGGER.error("Solaris2 partition too small.")
+            LOGGER.error("Minimum size is %s." % \
+                self._target_controller.minimum_target_size)
+            LOGGER.error("Partition size is (%s)." % \
+                solaris_partitions[0].size)
+            modal_dialog(_("The Solaris partition is too "
+                "small for Solaris installation."),
+                _("Increase the size of the Solaris partition."))
+            raise NotOkToProceedError("Solaris2 partition too small")
+
+        # Do any necessary tidying up before final validation
+        self._fixup_solaris_partition(solaris_partitions[0])
+
+        # Re-fetch the Solaris2 partition in case it was changed by
+        # _fixup_solaris_partition()
+        partitions = self._disk.get_children(class_type=Partition)
+        solaris_partitions = [part for part in partitions \
+            if part.part_type == Partition.name_to_num("Solaris2")]
+
+        # Get the Solaris slice
+        solaris_slice = None
+        all_slices = solaris_partitions[0].get_children(class_type=Slice)
+
+        for slc in all_slices:
+            if slc.in_zpool == DEFAULT_ZPOOL_NAME:
+                solaris_slice = slc
+
+        if solaris_slice is None:
+            LOGGER.error("Cannot locate Solaris (rpool) slice.")
+            modal_dialog(_("Validation failed."), "%s\n\n%s" % \
+                (_("See log file for details."), DEFAULT_LOG_LOCATION))
+            raise NotOkToProceedError("Cannot locate Solaris (rpool) slice.")
+
+        return solaris_slice
+
     #--------------------------------------------------------------------------
     # Signal handler methods
 
@@ -270,7 +360,7 @@ class FdiskPanel(object):
             Call TargetController to reset the disk to original layout.
 
             This method is associated with the reset Button from
-            the Glade XML file and in the ScreenManager.
+            the Glade XML file.
         '''
 
         if self._target_controller is None:
@@ -427,6 +517,69 @@ class FdiskPanel(object):
 
     #--------------------------------------------------------------------------
     # Private methods
+
+    def _fixup_solaris_partition(self, partition):
+        ''' Perform any necessary tidying up on the Solaris partition.
+
+            Params:
+            - partition, a Partition object representing the Solaris2
+              partition for this install
+
+            Actions taken:
+            1. Create slice 0.
+                At this stage the slices on the Solaris2 partition may be
+                in a number of states:
+                - discovered slices from a previous install may still be
+                  present if the user has not made any adjustments to the
+                  partition (although they may not match our requirements)
+                - slices added by TargetController may be present
+                - there may be no slices if the user has made any adjustments
+                  to the type or size of the partition (as these operations
+                  involve removing any child slices)
+                The application does not allow the user any control over
+                slice configuration, and we need to ensure a consistent state
+                before proceeding, so we remove any existing slices found
+                on the Solaris partition and create slice 0.
+
+            2. Activate the partition, if needed.
+                Ensure that the bootid attribute of the partition is
+                ACTIVE
+        '''
+
+        # Create slice 0
+        LOGGER.info("Creating slice 0 on Solaris2 partition.")
+
+        # If we are setting in_zpool and in_vdev on the slice, we must ensure
+        # they are unset on the Disk
+        disk = partition.parent
+        if disk is not None:
+            disk.in_zpool = None
+            disk.in_vdev = None
+
+        try:
+            efi_sys, resv, partition = disk.add_required_partitions(partition)
+
+        except NoPartitionSlotsFree as nsf:
+            # If there are no unused partitions left we can't proceed
+            LOGGER.error("No free slots available for EFI system partition.")
+            modal_dialog(_("The selected disk has no more available " \
+                "slots to create the EFI system partition"),
+                _("Allow at least one unused primary or logical partition"))
+            raise NotOkToProceedError("No free slots available for EFI " \
+                                      "system partition.")
+
+        except InsufficientSpaceError as ise:
+            raise RuntimeError("INTERNAL ERROR: Could not allocate space"
+                "for EFI system partition on disk %s: %s" % (disk, str(ise)))
+
+        partition.create_entire_partition_slice(in_zpool=DEFAULT_ZPOOL_NAME,
+                                                in_vdev="vdev", tag=V_ROOT)
+
+        # Activate the partition (primary partition's only)
+        if partition.is_primary:
+            if partition.bootid != Partition.ACTIVE:
+                LOGGER.info("Activating Solaris2 partition.")
+                partition.bootid = Partition.ACTIVE
 
     def _update(self):
         ''' re-fetch all the details for the currently selected disk
@@ -1194,7 +1347,7 @@ class UIPartition(object):
         highest_end_sector = self.partition.start_sector + \
             self.partition.size.sectors
 
-        gap_after = self._get_gap_after()
+        gap_after = self.partition.get_gap_after()
         if gap_after is not None:
             sectors_available += gap_after.size.sectors
             highest_end_sector = gap_after.start_sector + \
@@ -1207,7 +1360,7 @@ class UIPartition(object):
                 size_units=Size.sector_units)
             return new_partition
 
-        gap_before = self._get_gap_before()
+        gap_before = self.partition.get_gap_before()
         if gap_before is not None:
             sectors_available += gap_before.size.sectors
 
@@ -1325,11 +1478,11 @@ class UIPartition(object):
             # imply that they can be resized
             return Size(str(sectors) + Size.sector_units)
 
-        gap = self._get_gap_after()
+        gap = self.partition.get_gap_after()
         if gap is not None:
             sectors += gap.size.sectors
 
-        gap = self._get_gap_before()
+        gap = self.partition.get_gap_before()
         if gap is not None:
             sectors += gap.size.sectors
 
@@ -1400,65 +1553,6 @@ class UIPartition(object):
 
         # An unsupported type will always be the last option in the list
         return len(self._get_allowed_types()) - 1
-
-    def _get_gap_before(self):
-        ''' Returns the HoleyObject gap that occurs immediately before the
-            current partition, or None if there isn't such a gap.
-
-            If the current partition is logical, only logical gaps (gaps
-            within an EXTENDED partition) are considered; otherwise, only
-            Disk gaps (gaps between primary partitions (or slices)) are
-            considered.
-        '''
-
-        if self.partition is not None and self.partition.parent is not None:
-            if self.is_logical:
-                gaps = self.partition.parent.get_logical_partition_gaps()
-                # An 'adjacent' logical gap is one that is within
-                # the "logical adjustment" + 1 sectors of this partition
-                adjacent_size = LOGICAL_ADJUSTMENT + 1
-            else:
-                gaps = self.partition.parent.get_gaps()
-                # An 'adjacent' primary gap is one that is within
-                # one cylinder of this partition
-                adjacent_size = self.partition.parent.geometry.cylsize
-
-            for gap in gaps:
-                if abs(gap.start_sector + gap.size.sectors \
-                       - self.partition.start_sector) <= adjacent_size:
-                    return gap
-
-        return None
-
-    def _get_gap_after(self):
-        ''' Returns the HoleyObject gap that occurs immediately after the
-            current partition, or None if there isn't such a gap.
-
-            If the current partition is logical, only logical gaps (gaps
-            within an EXTENDED partition) are considered; otherwise, only
-            Disk gaps (gaps between primary partitions (or slices)) are
-            considered.
-        '''
-
-        if self.partition is not None and self.partition.parent is not None:
-            if self.is_logical:
-                gaps = self.partition.parent.get_logical_partition_gaps()
-                # An 'adjacent' logical gap is one that is within
-                # the "logical adjustment" + 1 sectors of this partition
-                adjacent_size = LOGICAL_ADJUSTMENT + 1
-            else:
-                gaps = self.partition.parent.get_gaps()
-                # An 'adjacent' primary gap is one that is within
-                # one cylinder of this partition
-                adjacent_size = self.partition.parent.geometry.cylsize
-
-            for gap in gaps:
-                if abs(self.partition.start_sector + \
-                    self.partition.size.sectors - gap.start_sector) <= \
-                    adjacent_size:
-                    return gap
-
-        return None
 
     def _get_next(self):
         ''' Returns the first non-dummy UIPartition after the current object.

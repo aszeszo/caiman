@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ discovery.py - target discovery checkpoint.  Attempts to find all target
@@ -29,15 +29,17 @@ devices on the given system.  The Data Object Cache is populated with the
 information.
 """
 
+import copy
 import optparse
 import os
 import platform
 import re
 import sys
+import tempfile
 
 import solaris_install.target.vdevs as vdevs
 
-from bootmgmt.pysol import di_find_prop
+from bootmgmt.pysol import di_find_prop, getmntany, mnttab_open, mnttab_close
 
 from solaris_install import CalledProcessError, Popen, run
 from solaris_install.data_object.data_dict import DataObjectDict
@@ -48,9 +50,10 @@ from solaris_install.target.libbe import be
 from solaris_install.target.libdevinfo import devinfo
 from solaris_install.target.libdiskmgt import const, diskmgt
 from solaris_install.target.libdiskmgt.attributes import DMMediaAttr
+from solaris_install.target.libefi.efi import efi_free, efi_read
 from solaris_install.target.logical import BE, Filesystem, Logical, Zpool, Zvol
 from solaris_install.target.physical import Disk, DiskProp, DiskGeometry, \
-    DiskKeyword, Iscsi, Partition, Slice
+    DiskKeyword, Iscsi, GPTPartition, Partition, Slice
 from solaris_install.target.size import Size
 
 
@@ -60,12 +63,15 @@ DHCPINFO = "/sbin/dhcpinfo"
 EEPROM = "/usr/sbin/eeprom"
 FSTYP = "/usr/sbin/fstyp"
 ISCSIADM = "/usr/sbin/iscsiadm"
+PCFSMOUNT = "/usr/lib/fs/pcfs/mount"
 PRTVTOC = "/usr/sbin/prtvtoc"
 SVCS = "/usr/bin/svcs"
 SVCADM = "/usr/sbin/svcadm"
+UMOUNT = "/usr/sbin/umount"
 ZFS = "/usr/sbin/zfs"
 ZPOOL = "/usr/sbin/zpool"
 ZVOL_PATH = "/dev/zvol/dsk"
+ZVOL_RPATH = "/dev/zvol/rdsk"
 
 DISK_SEARCH_NAME = "disk"
 ZPOOL_SEARCH_NAME = "zpool"
@@ -173,6 +179,7 @@ class TargetDiscovery(Checkpoint):
         else:
             # use the first active ctd
             new_disk.ctd = new_disk.active_ctds[0]
+
         new_disk.devid = drive.name
         new_disk.iscdrom = drive.cdrom
         new_disk.opath = drive_attributes.opath
@@ -231,13 +238,6 @@ class TargetDiscovery(Checkpoint):
             # looking them up
             drive_media_attributes = drive_media.attributes
 
-            # if a drive comes back without basic information, skip discovery
-            # entirely
-            if not DMMediaAttr.NACCESSIBLE in drive_media_attributes or \
-               not DMMediaAttr.BLOCKSIZE in drive_media_attributes:
-                self.logger.debug("skipping discovery of %s" % new_disk.ctd)
-                return None
-
             # retrieve the drive's geometry
             new_disk = self.set_geometry(drive_media_attributes, new_disk)
 
@@ -245,57 +245,72 @@ class TargetDiscovery(Checkpoint):
             # again later
             visited_slices = []
 
-            # if this system is x86 and the drive has slices but no fdisk
-            # partitions, don't report any of the slices
-            if self.arch == "i386" and drive_media.slices and not \
-               drive_media.partitions:
+            # if this system is x86 and the drive reports *VTOC* slices but no
+            # fdisk partitions, don't report any of the slices. This probably
+            # means there is no label at all on the disk:
+            # On x86 libdiskmgmt will report slices, but no partitions
+            # when the disk has no partition table/label at all.
+            if self.arch == "i386" \
+                and drive_media.slices \
+                and not drive_media.partitions \
+                and new_disk.label != "GPT":
+                # Unset the erroneous disk label
+                new_disk._label = None
                 return new_disk
 
-            for partition in drive_media.partitions:
-                new_partition = self.discover_partition(partition,
-                    drive_media_attributes.blocksize)
-
-                # add the partition to the disk object
-                new_disk.insert_children(new_partition)
-
-                # check for slices associated with this partition.  If found,
-                # add them as children
-                for slc in partition.media.slices:
-                    # discover the slice
-                    new_slice = self.discover_slice(slc,
+            if new_disk.label == "VTOC":
+                for partition in drive_media.partitions:
+                    new_partition = self.discover_partition(partition,
                         drive_media_attributes.blocksize)
 
-                    # constrain when a slice is added to the DOC.  We only want
-                    # to add a slice when:
-                    # - the partition id is a Solaris partition (non EFI)
-                    # - the fstyp is 'zfs' (for EFI labeled disks)
-                    # - the fstyp is 'unknown_fstyp' AND it's slice 8 (for EFI
-                    #   labeled disks)
-                    if new_partition.is_solaris:
-                        new_partition.insert_children(new_slice)
-                    elif new_partition.part_type == 238:
-                        # call fstyp to try to figure out the slice type
-                        cmd = [FSTYP, slc.name]
-                        p = run(cmd, check_result=Popen.ANY)
-                        if p.returncode == 0:
-                            if p.stdout.strip() == "zfs":
-                                # add the slice since it's used by zfs
-                                new_partition.insert_children(new_slice)
-                        else:
-                            if p.stderr.startswith("unknown_fstyp") and \
-                                new_slice.name == "8":
-                                # add the slice since it's an EFI boot slice
-                                new_partition.insert_children(new_slice)
+                    # add the partition to the disk object
+                    new_disk.insert_children(new_partition)
 
-                    # keep a record this slice so it's not discovered again
-                    visited_slices.append(slc.name)
+                    # check for slices associated with this partition
+                    # if found, add them as children
+                    for slc in partition.media.slices:
+                        # discover the slice
+                        new_slice = self.discover_slice(slc,
+                            drive_media_attributes.blocksize)
 
-            for slc in drive_media.slices:
-                # discover the slice if it's not already been found
-                if slc.name not in visited_slices:
-                    new_slice = self.discover_slice(slc,
-                        drive_media_attributes.blocksize)
-                    new_disk.insert_children(new_slice)
+                        # constrain when a slice is added to the DOC.
+                        # We only want to add a slice when the partition id
+                        # is a Solaris partition (non EFI)
+                        if new_partition.is_solaris:
+                            new_partition.insert_children(new_slice)
+
+                        # keep a record this slice so it's not discovered again
+                        visited_slices.append(slc.name)
+
+                for slc in drive_media.slices:
+                    # discover the slice if it's not already been found
+                    if slc.name not in visited_slices:
+                        new_slice = self.discover_slice(slc,
+                            drive_media_attributes.blocksize)
+                        new_disk.insert_children(new_slice)
+
+            # If the disk has a GPT label then the protective MBR
+            # reported by libdiskmgt should be ignored. The GPT partitions
+            # are reported by libdiskmgt as "slices", similar to VTOC slices
+            elif new_disk.label == "GPT":
+                # EFI/GPT label on disc. Discover GPT partitions.
+                # libdiskmgt's information about GPT partitions is incomplete
+                # so use libefi to fill in what is missing.
+                fh = os.open(new_disk.opath, os.O_RDONLY | os.O_NDELAY)
+                try:
+                    gptp = efi_read(fh)
+                    try:
+                        for slc in drive_media.slices:
+                            efi_part = gptp.contents.efi_parts[
+                                slc.attributes.index]
+                            new_gpart = self.discover_gptpartition(slc,
+                                drive_media_attributes.blocksize,
+                                efi_part)
+                            new_disk.insert_children(new_gpart)
+                    finally:
+                        efi_free(gptp)
+                finally:
+                    os.close(fh)
 
             return new_disk
 
@@ -341,7 +356,12 @@ class TargetDiscovery(Checkpoint):
         # If the disk has a GPT label (or no label), ncylinders will be
         # None
         if dma.ncylinders is None:
-            new_disk.disk_prop.dev_size = Size(str(dma.naccessible) +
+            # XXX - libdiskmgt calculation of DM_NACCESSIBLE for GPT disks
+            # is broken, so we use DM_SIZE since we can access all blocks on
+            # the disk anyway because we don't need to worry about VTOC
+            # imposed cylinder alignment on disk size.
+            # Bugster CR: 7099417
+            new_disk.disk_prop.dev_size = Size(str(dma.size) +
                                                Size.sector_units,
                                                dma.blocksize)
 
@@ -361,16 +381,15 @@ class TargetDiscovery(Checkpoint):
             ncyl = dma.ncylinders
             nhead = dma.nheads
             nsect = dma.nsectors
-
-            new_disk.disk_prop.dev_size = Size(str(ncyl * nhead * nsect) +
+            new_disk.disk_prop.dev_size = Size(str(dma.naccessible) +
                                                Size.sector_units,
                                                dma.blocksize)
             new_geometry = DiskGeometry(dma.blocksize, nhead * nsect)
             new_geometry.ncyl = ncyl
             new_geometry.nheads = nhead
             new_geometry.nsectors = nsect
-            new_disk.geometry = new_geometry
 
+        new_disk.geometry = new_geometry
         return new_disk
 
     def discover_pseudo(self, controller):
@@ -434,7 +453,57 @@ class TargetDiscovery(Checkpoint):
         new_partition.start_sector = long(partition_attributes.relsect)
         new_partition.size_in_sectors = partition_attributes.nsectors
 
+        # If the partition is an EFI system partition check to see if it
+        # is PCFS formatted. We only do this on EFI system partitions to save
+        # time since mounting can be slow.
+        if new_partition.is_efi_system:
+            ctdp = partition.name.rsplit('/', 1)[-1]
+            new_partition._is_pcfs_formatted = self.is_pcfs_formatted(ctdp)
+
         return new_partition
+
+    def discover_gptpartition(self, partition, blocksize, efipart):
+        """ discover_gptpartition - method to discover a physical disk's GPT
+        partition layout.
+
+        # Note that libdiskmgmt terminology treats GPT partitions as slices
+        # as does the Solaris cXtYdZsN notation
+        # We shall refer to them as GPT partitions though, like the rest of
+        # the world does.
+        partition - object as discovered by ldm
+        blocksize - blocksize of the disk
+        efipart - DK_PART EFI cstruct
+        """
+        # store the attributes locally so libdiskmgt doesn't have to keep
+        # looking them up
+        gpart_attributes = partition.attributes
+
+        new_gpart = GPTPartition(str(gpart_attributes.index))
+        new_gpart.action = "preserve"
+        new_gpart.size = Size(str(gpart_attributes.size) + Size.sector_units,
+                              blocksize=blocksize)
+        new_gpart.start_sector = long(gpart_attributes.start)
+        new_gpart.size_in_sectors = gpart_attributes.size
+
+        stats = partition.use_stats
+        if "used_by" in stats:
+            new_gpart.in_use = stats
+
+        # EFI partition type GUID and p_flag not provided by libdiskmgt.  Fall
+        # back on libefi provided DK_PART data.
+        new_gpart.part_type = '{%s}' % str(efipart.p_guid)
+        new_gpart.guid = copy.copy(efipart.p_guid)
+        new_gpart.uguid = copy.copy(efipart.p_uguid)
+        new_gpart.flag = efipart.p_flag
+
+        # If the partition is an EFI system partition check to see if it
+        # is PCFS formatted. We only do this on EFI system partition to save
+        # time since mounting can be slow.
+        if new_gpart.is_efi_system:
+            ctds = partition.name.rsplit('/', 1)[-1]
+            new_gpart._is_pcfs_formatted = self.is_pcfs_formatted(ctds)
+
+        return new_gpart
 
     def discover_slice(self, slc, blocksize):
         """ discover_slices - method to discover a physical disk's slice
@@ -582,13 +651,15 @@ class TargetDiscovery(Checkpoint):
                 # remove the device path from the entry
                 entry = full_entry.rpartition("/dev/dsk/")[2]
 
-                # try to partition the entry for slices
+                # try to partition the entry for GPT partitions and
+                # VTOC slices.
+                # Both are identified by the letter "s" preceding the index.
                 (vdev_ctd, vdev_letter, vdev_index) = entry.rpartition("s")
 
-                # if the entry is not a slice, vdev_letter and index will
-                # be empty strings
+                # if the entry is not a GPT partition or VTOC slice,
+                # vdev_letter and index will be empty strings
                 if not vdev_letter:
-                    # try to partition the entry for partitions
+                    # try to partition the entry for MBR partitions
                     (vdev_ctd, vdev_letter, vdev_index) = \
                         entry.rpartition("p")
 
@@ -602,8 +673,12 @@ class TargetDiscovery(Checkpoint):
                         if disk.ctd == vdev_ctd:
                             # this disk is a match
                             if vdev_letter == "s":
-                                child_list = disk.get_descendants(
-                                    class_type=Slice)
+                                if disk.label == "VTOC":
+                                    child_list = disk.get_descendants(
+                                        class_type=Slice)
+                                elif disk.label == "GPT":
+                                    child_list = disk.get_descendants(
+                                        class_type=GPTPartition)
                             elif vdev_letter == "p":
                                 child_list = disk.get_descendants(
                                     class_type=Partition)
@@ -679,6 +754,8 @@ class TargetDiscovery(Checkpoint):
         # now walk all the drives in the system to make sure we pick up any
         # disks which have no controller (OVM Xen disks)
         for drive in diskmgt.descriptors_by_type(const.DRIVE):
+            if drive.attributes.opath.startswith(ZVOL_RPATH):
+                continue
             new_disk = self.discover_disk(drive)
 
             # skip invalid drives and CDROM drives
@@ -691,85 +768,6 @@ class TargetDiscovery(Checkpoint):
 
             if add_physical:
                 self.root.insert_children(new_disk)
-
-    def sparc_label_check(self):
-        """ sparc_label_check - method to check for any unlabeled disks within
-        the system.  The AI manifest is checked to ensure discovery.py does not
-        try to apply a VTOC label to a disk specified with slices marked with
-        the 'preserve' action.
-        """
-        # extract all of the disk objects from the AI manifest
-        ai_disk_list = self.doc.volatile.get_descendants(class_type=Disk)
-
-        # create a new list of disk CTD values where the user has specified a
-        # 'preserve' action for a slice.
-        preserve_disks = list()
-        for ai_disk in ai_disk_list:
-            slice_list = ai_disk.get_descendants(class_type=Slice)
-            for slc in slice_list:
-                if slc.action == "preserve":
-                    preserve_disks.append(ai_disk.ctd)
-
-        # Since libdiskmgt has no mechanism to update it's internal view of the
-        # disk layout once its scanned /dev, fork a process and allow
-        # libdiskmgt to instantiate the drives first.  Then in the context of
-        # the main process, when libdiskmgt gathers drive information, the
-        # drive list will be up to date.
-        pid = os.fork()
-        if pid == 0:
-            for drive in diskmgt.descriptors_by_type(const.DRIVE):
-                if drive.media is None:
-                    continue
-
-                disk = Disk("disk")
-                disk.ctd = drive.aliases[0].name
-
-                # verify the drive can be read.  If not, continue to the next
-                # drive.
-                if not self.verify_disk_read(disk.ctd,
-                                             drive.media.attributes.blocksize):
-                    self.logger.debug("Skipping label check for %s" % disk.ctd)
-                    continue
-
-                dma = drive.media.attributes
-
-                # If a disk is missing some basic attributes then it most
-                # likely has no disk label.  Force a VTOC label onto the disk
-                # so its geometry can be correctly determined.  This should
-                # only happen for unlabeled SPARC disks, so we're safe to apply
-                # a VTOC label without fear of trashing fdisk partitions
-                # containing other OSes.
-                if (not DMMediaAttr.NACCESSIBLE in dma or \
-                   not DMMediaAttr.BLOCKSIZE in dma) and \
-                   not dma.removable:
-
-                    # only label the disk if it does not have any preserved
-                    # slices.
-                    if disk.ctd not in preserve_disks:
-                        if not self.dry_run:
-                            self.logger.info("%s is unlabeled.  Forcing a "
-                                             "VTOC label" % disk.ctd)
-                            try:
-                                disk.force_vtoc()
-                            except CalledProcessError as err:
-                                self.logger.info("Warning:  unable to label "
-                                    "%s:  %s\nThis warning can be ignored, "
-                                    "unless the disk is your install volume."
-                                    % (disk.ctd, err.popen.stderr))
-                        else:
-                            self.logger.info("%s is unlabeled.  Not forcing "
-                                             "a VTOC label due to dry_run "
-                                             "flag" % disk.ctd)
-                    else:
-                        self.logger.info("%s is unlabeled but manifest "
-                            "specifies 'preserved' slices.  Not forcing a "
-                            "VTOC label onto the disk." % disk.ctd)
-            os._exit(0)
-        else:
-            _none, status = os.wait()
-            if status != 0:
-                raise RuntimeError("Unable to fork a process to reset drive "
-                                   "geometry")
 
     def setup_iscsi(self):
         """ set up the iSCSI initiator appropriately (if specified)
@@ -950,10 +948,6 @@ class TargetDiscovery(Checkpoint):
         # discovered
         self.setup_iscsi()
 
-        # for sparc, check each disk to make sure there's a label
-        if self.arch == "sparc":
-            self.sparc_label_check()
-
         # check to see if the user specified a search_type
         if self.search_type == DISK_SEARCH_NAME:
             try:
@@ -996,6 +990,53 @@ class TargetDiscovery(Checkpoint):
         # Add the root node to the DOC
         self.doc.persistent.insert_children(self.root)
 
+    def is_pcfs_formatted(self, ctdn):
+        """ is_pcfs_formatted() Return a Boolean value of True if the GPT
+        partition guid is already formatted with a pcfs filesystem.
+
+        This test is useful in conjuction with the is_efi_system property to
+        determine if an existing EFI system partition  can be reused to store
+        the Solaris UEFI boot program. If False, a format using mkfs on the
+        partition would be required.
+        """
+
+        dev_dsk = "/dev/dsk/%s" % ctdn
+        if os.path.exists(dev_dsk) is False:
+            raise RuntimeError("No such block device exists: %s" % dev_dsk)
+
+        # Check to see if it's mounted first. If it is we can look at the
+        # fstype it is mounted with.
+        mntmatch = None
+        try:
+            mnttab_open()
+            mntmatch = getmntany(mnt_special=dev_dsk)
+        finally:
+            mnttab_close()
+
+        # Mounted
+        if mntmatch is not None:
+            if mntmatch.get('mnt_fstype') == 'pcfs':
+                return True
+            else:
+                return False
+        # Not mounted
+        else:
+            # Try to mount with pcfs. This is a much more robust and reliable
+            # check that the ESP is usable than simply checking with
+            # fstyp(1M)
+            mount_point = tempfile.mkdtemp(dir="/system/volatile",
+                                           prefix="esp_%s_" % (ctdn))
+            try:
+                mount_cmd = [PCFSMOUNT, dev_dsk, mount_point]
+                run(mount_cmd)
+                umount_cmd = [UMOUNT, dev_dsk]
+                run(umount_cmd)
+                return True
+            except CalledProcessError:
+                return False
+            finally:
+                os.rmdir(mount_point)
+            return False
 
 if __name__ == "__main__":
     # if discovery.py is run from the command line, rather than imported as a
@@ -1006,6 +1047,9 @@ if __name__ == "__main__":
         parser = optparse.OptionParser()
         parser.add_option("-d", "--disk", dest="disk", action="store_true",
                           help="print disk information")
+        parser.add_option("-g", "--gptpartition", dest="gptpartition",
+                          action="store_true",
+                          help="print GPT partition information")
         parser.add_option("-p", "--partition", dest="partition",
                           action="store_true",
                           help="print partition information")
@@ -1053,6 +1097,38 @@ if __name__ == "__main__":
             print entry_format % (disk.ctd, boot, \
                                   disk.disk_prop.dev_size.get(Size.gb_units))
         print '-' * 53
+
+    def print_gptpartition(doc):
+        """ prints the output from the -g argument
+        """
+        print "GPT partition discovery"
+        # walk the DOC and print only what the user requested
+        target = doc.persistent.get_children(class_type=Target)[0]
+        disk_list = target.get_children(class_type=Disk)
+
+        header_format = "{0:>15} | {1:>5} | {2:>40} |"
+        disk_format = "{0:>15} |" + 7 * " " + "|" + 42 * " " + "|"
+        entry_format = " " * 16 + "| {0:>5} | {1:>40} |"
+
+        disk_line = '-' * 67
+        entry_line = disk_line + "|"
+
+        print disk_line
+        print header_format.format(*["disk name", "index", "in use?"])
+        print entry_line
+        for disk in disk_list:
+            print disk_format.format(disk.ctd)
+            gpart_list = disk.get_descendants(class_type=GPTPartition)
+            for gpart in gpart_list:
+                if gpart.in_use is None:
+                    in_use = "no"
+                else:
+                    if "used_by" in gpart.in_use:
+                        in_use = "used by:  %s" % gpart.in_use["used_by"][0]
+                        if "used_name" in gpart.in_use:
+                            in_use += " (%s)" % gpart.in_use["used_name"][0]
+                print entry_format.format(*[gpart.name, in_use])
+            print entry_line
 
     def print_partition(doc):
         """ prints the output from the -p argument
@@ -1211,6 +1287,8 @@ if __name__ == "__main__":
 
     if options.disk:
         print_disk(TD.doc)
+    if options.gptpartition:
+        print_gptpartition(TD.doc)
     if options.partition:
         print_partition(TD.doc)
     if options.slc:

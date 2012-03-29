@@ -124,6 +124,8 @@ file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/target/controller.py \
     pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/controller.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/cuuid.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/cuuid.pyc
 # Add bypass generate to allow manual boot-management version 13 dependency
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/target/discovery.py \
@@ -177,6 +179,17 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/cs
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/cstruct.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/diskmgt.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/diskmgt.pyc
+dir  path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/__init__.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/__init__.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/cfunc.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/cfunc.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/const.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/const.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/cstruct.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/cstruct.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/efi.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/efi.pyc
 dir  path=usr/lib/python2.6/vendor-packages/solaris_install/target/libnvpair
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libnvpair/__init__.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libnvpair/__init__.pyc

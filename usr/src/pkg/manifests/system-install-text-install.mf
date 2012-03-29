@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/system/install/text-install@$(PKGVERS)
@@ -73,6 +73,12 @@ file \
     mode=0444
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/fdisk_partitions.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/gpt_partitions.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/gpt_partitions.pyc \
     mode=0444
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/install_progress.py \

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -18,31 +19,38 @@
 #
 # CDDL HEADER END
 #
+
 #
 # Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
+""" Python packge with ctypes wrapper for libefi.so
+"""
+import ctypes as C
 
-FILES= 	confirmation.xml \
-	date-time-zone.xml \
-	failure.xml \
-	fdisk-panel.xml \
-	gpt-panel.xml \
-	gui-install.xml \
-	installation.xml \
-	installationdisk.xml \
-	support.xml \
-	users.xml
+from solaris_install.target.libefi import cfunc, cstruct
 
-ROOTFILES=      $(FILES:%=$(ROOTGUIINST)/%)
 
-include $(SRC)/cmd/Makefile.cmd
+def efi_free(dk_gptp):
+    cfunc.efi_free(dk_gptp)
 
-FILEMODE= 444
 
-all: $(FILES) $(ROOTFILES)
+def efi_init(fh, num_parts):
+    dk_gptp = C.pointer(cstruct.DK_GPT())
+    err = cfunc.efi_alloc_and_init(fh, num_parts, C.byref(dk_gptp))
+    if err < 0:
+        raise OSError(err, "efi_alloc: %d" % err)
+    return dk_gptp
 
-install: all
 
-clobber clean:
+def efi_read(fh):
+    dk_gptp = C.pointer(cstruct.DK_GPT())
+    err = cfunc.efi_alloc_and_read(fh, C.byref(dk_gptp))
+    if err < 0:
+        raise OSError(err, "efi_read: %d" % err)
+    return dk_gptp
 
-include $(SRC)/cmd/Makefile.targ
+
+def efi_write(fh, dk_gptp):
+    err = cfunc.efi_write(fh, dk_gptp)
+    if err < 0:
+        raise OSError(err, "efi_write: %d" % err)

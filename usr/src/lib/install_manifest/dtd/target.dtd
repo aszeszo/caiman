@@ -25,7 +25,7 @@
 <!ELEMENT target (disk*, logical?)>
 <!ATTLIST target name CDATA #IMPLIED>
 
-<!ELEMENT disk ((disk_name|disk_prop|disk_keyword|iscsi), partition*, slice*)>
+<!ELEMENT disk ((disk_name|disk_prop|disk_keyword|iscsi), (gpt_partition*|partition*|slice*))>
 <!--
      in_zpool and in_vdev are reference attributes to a
      corresponding <zpool> name and <vdev> name under the <logical>
@@ -37,7 +37,7 @@
      If one or both of these attributes are specified, it must be
      possible to uniquely identify a zpool or vdev from them.
 
-     The in_zpool and in_vdev attributes are present on disk,
+     The in_zpool and in_vdev attributes are present on disk, gpt_partition,
      partition and slice elements.  However, if either or both of these
      attributes are specified for one of these elements, they should not
      also be specified for any of its sub-elements or an error will occur. 
@@ -71,6 +71,49 @@
 
 <!ELEMENT disk_keyword EMPTY>
 <!ATTLIST disk_keyword key (boot_disk) #REQUIRED>
+
+<!--
+     gpt_partition names are numeric values, e.g. 1 will be
+     interpreted as partition 1.
+
+     No size specification means we create the slice or partition with
+     a size value set to the size of parent element.
+-->
+
+<!ELEMENT gpt_partition (size?)>
+<!ATTLIST gpt_partition name CDATA #REQUIRED>
+<!ATTLIST gpt_partition action (create|delete|preserve) "create">
+
+<!--
+     If the create action is specified for a GPT Partition that already
+     exists, then the force attribute defines how to proceed.  If
+     force is true then the operation will continue; otherwise an
+     error will occur.
+-->
+<!ATTLIST gpt_partition force (true|false) "false">
+
+<!--
+     The in_zpool and in_vdev attributes follow the same rules as the
+     similarly named attributes of disk
+-->
+<!ATTLIST gpt_partition in_zpool CDATA #IMPLIED>
+<!ATTLIST gpt_partition in_vdev CDATA #IMPLIED> 
+
+<!--
+    The part_type attribute specfies the GUID partition type of the
+    gpt_partition.
+    The value can either be one of the supported GPT type aliases or an
+    explicit GUID hexadecimal string value.
+
+    The following aliases are supported:
+      1. "solaris"      : Solaris partition
+
+    Explicit GUID hexadecimal string values for other GUID types are defined
+    in /usr/include/sys/efi_partition.h
+    For example:
+      "{6A898CC3-1DD2-11B2-99A6-080020736631}" specifies a Solaris partition
+-->
+<!ATTLIST gpt_partition part_type CDATA "solaris">
 
 <!--
      Partition and Slice names are numeric values, e.g. 1, will be

@@ -42,6 +42,9 @@ from solaris_install.transfer.ips import InstallCLIProgressTracker
 from solaris_install.transfer.info import Software
 
 
+VOLSETID = '.volsetid'
+
+
 class CleanupCPIOInstall(ICT.ICTBaseClass):
     '''
        The CleanupCPIOInstall checkpoint performs clean up on the system after
@@ -65,7 +68,7 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
         '''
         super(CleanupCPIOInstall, self).__init__(name)
 
-        self.cleanup_list = ['.livecd', '.volsetid', '.textinstall',
+        self.cleanup_list = ['.livecd', VOLSETID, '.textinstall',
                              'etc/sysconfig/language', '.liveusb',
                              'a', 'bootcd_microroot', 'var/user/jack',
                              'var/cache/gdm/jack/dmrc', 'var/cache/gdm/jack/']
@@ -109,6 +112,20 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
 
         # parse_doc populates variables necessary to execute the checkpoint
         self.parse_doc()
+
+        # For GRUB2 based media there is a .volsetid derived ident file that
+        # identifies the root of the image during GRUB2 configuration. It
+        # needs to be removed from the target if present.
+        # eg. if the contents of .volsetid are "ABC-123" then the ident file
+        # name will be (dot)volsetid: ".ABC-123"
+        volsetid = None
+        if VOLSETID in self.cleanup_list:
+            vpath = os.path.join(self.target_dir, VOLSETID)
+            with open(vpath, 'r') as vpath_fh:
+                volsetid = vpath_fh.read().strip()
+        if volsetid and \
+            os.path.exists(os.path.join(self.target_dir, '.' + volsetid)):
+            self.cleanup_list.append('.' + volsetid)
 
         # Get the list of install specific items that need to be removed.
         # Check for both IPS packages and files and directories

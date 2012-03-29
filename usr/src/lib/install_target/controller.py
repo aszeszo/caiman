@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ controller.py, TargetController and related classes.
@@ -33,14 +33,18 @@ import platform
 
 from copy import copy, deepcopy
 
-from solaris_install import Popen
+from bootmgmt.bootinfo import SystemFirmware
+from solaris_install import get_system_memory, gpt_firmware_check
 from solaris_install.data_object.simple import SimpleXmlHandlerBase
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target import Target
 from solaris_install.target.libadm.const import V_ROOT
+from solaris_install.target.libefi.const import EFI_NUMUSERPAR
 from solaris_install.target.logical import Logical, BE
-from solaris_install.target.physical import Disk, Partition, Slice
+from solaris_install.target.physical import Disk, GPTPartition, Partition, \
+    Slice
 from solaris_install.target.size import Size
+
 
 LOGGER = None
 
@@ -55,7 +59,7 @@ MAX_DUMP_SIZE = (Size("64gb")).get(Size.mb_units)
 OVERHEAD = 1024
 FUTURE_UPGRADE_SPACE = (Size("2gb")).get(Size.mb_units)
 # Swap ZVOL is required if memory is below this
-ZVOL_REQ_MEM = 900
+ZVOL_REQ_MEM = Size("900mb")
 
 VFSTAB_FILE = "etc/vfstab"
 
@@ -76,6 +80,15 @@ VDEV_REDUNDANCY_MIRROR = "mirror"
 class BadDiskError(Exception):
     ''' General purpose error class for when TargetController is unable
         to access a disk.
+    '''
+    pass
+
+
+class BadDiskBlockSizeError(Exception):
+    ''' Specific exception sub-class for when a disk block size is
+        imcompatible with installation. Specifically this means
+        UEFI64 on a non 512b block size disk at this time because
+        of pcfs block size limitations (see PSARC 2008/769)
     '''
     pass
 
@@ -235,6 +248,8 @@ class TargetController(object):
         self._dump_type = TargetController.SWAP_DUMP_NONE
         self._dump_size = None
 
+        self._firmware = SystemFirmware.get().fw_name
+        self._gpt_boot = gpt_firmware_check()
         self._this_processor = platform.processor()
 
         super(TargetController, self).__init__()
@@ -281,7 +296,13 @@ class TargetController(object):
             raise BadDiskError("No discovered targets available")
 
         self._image_size = image_size
-        self._mem_size = _get_system_memory()
+
+        try:
+            self._mem_size = Size("%d" % get_system_memory() + Size.mb_units)
+        except OSError as err:
+            LOGGER.error("Unable to determine amount of system memory")
+            raise SwapDumpGeneralError
+
         # Reset these values to None so they get correctly recomputed
         self._minimum_target_size = None
         self._recommended_target_size = None
@@ -525,32 +546,93 @@ class TargetController(object):
 
         return return_disks
 
-    def apply_default_layout(self, disk, use_whole_disk,
-        wipe_disk=False, in_zpool=DEFAULT_ZPOOL_NAME,
-        in_vdev=DEFAULT_VDEV_NAME):
-        ''' Attempt to apply the default layout to a disk.
-            Only apply to disks if we are not using whole disk.
-
-            If wipe disk specified then delete all existing partition
-            and slice information from the disk supplied.
+    def _apply_default_gpt_layout(self, disk,
+        in_zpool=DEFAULT_ZPOOL_NAME, in_vdev=DEFAULT_VDEV_NAME):
+        ''' Attempt to apply the default GPT layout to a disk.
+            Only apply this to disks if we are not using whole disk.
         '''
 
-        if use_whole_disk:
-            return
+        if disk.label != "GPT":
+            raise RuntimeError("A default GPT layout can not be applied to "
+                               "a disk that doesn't have a GPT label")
 
-        # force a VTOC label and update the disk's geometry and dev_size
-        if disk.label == "VTOC" and not self._dry_run:
-            # look for this disk in the DISCOVERED target tree to see if the
-            # label changed from EFI to VTOC
+        partitions = disk.get_descendants(class_type=GPTPartition)
+
+        if not partitions:
+            # We need to add some back in to create the disk set up in such a
+            # way that we end up with a bootable pool:
+            # X86:
+            #   0 EFI system partition: 256MB
+            #     or
+            #   0 BIOS boot partition: 256Mb
+            #   1 Solaris (/usr): Everything in between the boot partition and
+            #     the reserved partition.
+            #   8 Solaris Reserved: 16384 *sectors*
+            # SPARC:
+            #   0 Solaris (/usr): Everything in between the GPT header and
+            #     the reserved partition.
+            #   8 Solaris Reserved: 16384 *sectors*
+
+            # set the start sector to start after the GPT table
+            start = disk.gpt_primary_table_size.sectors
+            index = 0
+            sol_partition = None
+
+            if self._this_processor == "i386":
+                boot_partition = disk.add_gpt_system()[0]
+                index += 1  # safe because this had no partitions
+                start = boot_partition.start_sector + \
+                        boot_partition.size.sectors
+
+            resv_partition = disk.add_gpt_reserve()[0]
+
+            # Allocate the remainder to the Solaris partition
+            sol_sectors = resv_partition.start_sector - start
+            sol_partition = disk.add_gptpartition(str(index), start,
+                sol_sectors, Size.sector_units,
+                partition_type=GPTPartition.alias_to_guid("solaris"),
+                force=True)
+
+            sol_partition.in_vdev = in_vdev
+            sol_partition.in_zpool = in_zpool
+
+            disk._children.sort(key=lambda gpe: int(gpe.name))
+
+    def _apply_default_vtoc_layout(self, disk,
+        in_zpool=DEFAULT_ZPOOL_NAME, in_vdev=DEFAULT_VDEV_NAME):
+        ''' Attempt to apply the default VTOC layout to a disk.
+            Only apply this to disks if we are not using whole disk.
+        '''
+
+        # If the disk requires relabeling, the cached copies containing its
+        # old layout need to be nuked from discovered, desired and backup
+        # caches.
+        relabeled = False
+
+        if disk.label != "VTOC":
+            raise RuntimeError("A default VTOC layout can not be applied to "
+                               "a disk that doesn't have a VTOC label")
+        elif not self._dry_run:
+            # Force a VTOC label and update the disk's geometry and dev_size
+            # if necessary:
+            # Look for this disk in the DISCOVERED target tree to see if the
+            # label was flipped from EFI to VTOC
             for discovered_disk in self.discovered_disks:
                 if disk.ctd == discovered_disk.ctd:
                     if discovered_disk.label == "GPT":
-                        # we need to reset the label
-                        disk._set_vtoc_label_and_geometry(self._dry_run)
+                        # Bail if there are children on the disk. These should
+                        # have been removed explicitly before attempting to
+                        # flip the label on the disk. The Disk object enforces
+                        # this on the disk.label property so this is just
+                        # extra precaution and paranoia.
+                        for obj in [GPTPartition, Partition, Slice]:
+                            children = disk.get_children(class_type=obj)
+                            if children:
+                                raise RuntimeError("Non-empty disks can not" \
+                                                   " be relabeled")
 
-        if wipe_disk:
-            for obj in [Partition, Slice]:
-                disk.delete_children(class_type=obj)
+                        disk._set_vtoc_label_and_geometry(self._dry_run)
+                        relabeled = True
 
         partitions = disk.get_descendants(class_type=Partition)
         slices = disk.get_descendants(class_type=Slice)
@@ -573,10 +655,31 @@ class TargetController(object):
                 new_slice = disk.add_slice("0", start, slice_size,
                     Size.sector_units, force=True)
 
-            # enable the disk's write-cache if wipe_disk is True.
-            if wipe_disk:
-                disk.write_cache = True
+            # We end up in here if the disk was relabled. Now is a good
+            # time to purge artifacts of the stale disk data
+            if relabeled:
+                for discovered_disk in self.discovered_disks:
+                    if disk.ctd == discovered_disk.ctd:
+                        # The disk object in the discovered tree is stale and
+                        # irrecoverable now so replace it with the disk in its
+                        # current state and reset everything.
+                        self._discovered_root.insert_children(disk,
+                            before=discovered_disk)
+                        self._discovered_root.delete_children(
+                            children=discovered_disk,
+                            not_found_is_err=True)
+                        # This property will auto-regenerate on next access
+                        self._discovered_disks = None
+                        # Replace the backup copy
+                        self._backup_disks([disk])
 
+                for desired_disk in self._get_desired_disks():
+                    if disk.ctd == desired_disk.ctd:
+                        self._desired_root.insert_children(disk,
+                            before=desired_disk)
+                        self._desired_root.delete_children(
+                            children=desired_disk,
+                            not_found_is_err=True)
         else:
             # Compile a list of the usable slices, if any
             slice_list = list()
@@ -626,6 +729,70 @@ class TargetController(object):
         new_slice.in_vdev = in_vdev
         new_slice.in_zpool = in_zpool
 
+    def apply_default_layout(self, disk, use_whole_disk,
+        wipe_disk=False, in_zpool=DEFAULT_ZPOOL_NAME,
+        in_vdev=DEFAULT_VDEV_NAME):
+        ''' Attempt to apply the default layout to a disk.
+            Only apply to disks if we are not using whole disk.
+
+            If wipe disk specified then delete all existing partition
+            and slice information from the disk supplied.
+
+            NOTE: When use_whole_disk is True this method does not perform
+            ANY necessary steps to ensure the disk is bootable. The way to
+            ensure that condition is to invoke select_disk() on a disk with
+            use_whole_disk=True which eventually calls _fixup_disk():
+            select_disk(uwd=True)->_add_disks(uwd=True)->_fixup_disk(uwd=True)
+            _fixup_disk() handles the whole disk layout correctly based on the
+            GPT capabilities of the system.
+        '''
+        # use_whole_disk by definition implies wiping the disk so treat either
+        # wipe_disk or use_whole_disk as an instruction to wipe the contents
+        # of the disk.
+        if wipe_disk or use_whole_disk:
+            for obj in [GPTPartition, Partition, Slice]:
+                disk.delete_children(class_type=obj)
+
+            # Ignore the current disk label. It needs to be something bootable.
+            if self._gpt_boot:
+                disk.label = "GPT"
+            else:
+                disk.label = "VTOC"
+
+            # enable the disk's write-cache beacause wipe_disk is True
+            # (either explicitly or implicitly via. use_whole_disk being True)
+            disk.write_cache = True
+
+            if use_whole_disk:
+                # GPT whole disk can be handled immediately. VTOC can't
+                # because it doesn't really exist - ZFS only considers whole
+                # disk as a property of GPT labeled disks.
+                # For VTOC we have to fudge it via. _fixup_disk() to add
+                # Slices back in, which is invoked later with
+                # use_whole_disk = False
+                if disk.label == "GPT":
+                    disk.whole_disk = True
+                    disk.in_zpool = in_zpool
+                    disk.in_vdev = in_vdev
+                return
+
+        elif not disk.label:
+            # Not using whole disk or wipe disk so we have to try to first
+            # figure out what is on the disk if the disk.label is not set. Do
+            # this based on the presence of partition or slice children
+            for obj in [Partition, Slice]:
+                children = disk.get_children(class_type=obj)
+                if children:
+                    disk.label = "VTOC"
+                    break
+            else:
+                disk.label = "GPT"
+
+        if disk.label == "VTOC":
+            self._apply_default_vtoc_layout(disk, in_zpool, in_vdev)
+        else:
+            self._apply_default_gpt_layout(disk, in_zpool, in_vdev)
+
     def select_initial_disk(self):
         ''' Iterate through the disks discovered by TD and select
             one of them to be the initial install target.
@@ -636,18 +803,20 @@ class TargetController(object):
         '''
 
         # Check #1 - look for a disk has the disk_keyword "boot_disk"
-        # and is big enough
+        # and is big enough and is block size compatible
         for disk in self.discovered_disks:
-            if disk.is_boot_disk() and self._is_big_enough(disk):
+            if disk.is_boot_disk() and self._is_big_enough(disk) and \
+                self._is_block_size_compatible(disk):
                 return disk
 
-        # Check #2 - get 1st disk that is big enough
+        # Check #2 - get 1st disk that is big enough and block size compatible
         for disk in self.discovered_disks:
-            if self._is_big_enough(disk):
+            if self._is_big_enough(disk) and \
+                self._is_block_size_compatible(disk):
                 return disk
         else:
             raise BadDiskError(
-                "None of the available disks are big enough for install!")
+                "None of the available disks are suitable for install!")
 
     def calc_swap_dump_size(self, installation_size, available_size,
                             swap_included=False):
@@ -663,7 +832,7 @@ class TargetController(object):
             <900mb        zvol           yes          1G (MIN_SWAP_SIZE)
             900mb-4G	  zvol		  no          1G
             4G-16G        zvol            no          2G
-            16G-128G      zvol            no          4G 
+            16G-128G      zvol            no          4G
             >128G         zvol            no          4G (MAX_SWAP_SIZE)
 
             The following rules are used for calculating the amount
@@ -757,7 +926,7 @@ class TargetController(object):
                 swap_size_mb = self._calc_swap_size(
                     ((free_space_mb * MIN_SWAP_SIZE) /
                     (MIN_SWAP_SIZE + MIN_DUMP_SIZE)))
-            
+
                 dump_size_mb = self._calc_dump_size( \
                     free_space_mb - swap_size_mb)
 
@@ -855,7 +1024,6 @@ class TargetController(object):
         ''' Convenience method called from select_disk, add_disk
             and initialize.
         '''
-
         # if use_whole_disk is False, then check if there is a backup
         # available for this exact set of disks
         backup = None
@@ -885,10 +1053,11 @@ class TargetController(object):
 
         # If there is now 1 disk selected, set the vdev redundancy
         # to "none".  Otherwise, set it to "mirror".
-        if len(self._get_desired_disks()) == 1:
-            self._vdev.redundancy = "none"
-        else:
-            self._vdev.redundancy = "mirror"
+        if self._vdev:
+            if len(self._get_desired_disks()) == 1:
+                self._vdev.redundancy = "none"
+            else:
+                self._vdev.redundancy = "mirror"
 
         return return_disks
 
@@ -923,7 +1092,7 @@ class TargetController(object):
 
             Returns: nothing
 
-            Raises: SubSizeDiskError, BadDiskError
+            Raises: BadDiskBlockSizeError, SubSizeDiskError, BadDiskError
         '''
 
         for disk in disks:
@@ -934,6 +1103,10 @@ class TargetController(object):
 
             if not self._is_big_enough(disk):
                 raise SubSizeDiskError("Disk is not big enough for install")
+
+            if not self._is_block_size_compatible(disk):
+                raise BadDiskBlockSizeError("Disk block size is not "
+                    "compatible: %d" % (disk.geometry.blocksize))
 
     def _backup_disks(self, disks):
         ''' Make a backup of a set of disks.
@@ -1003,9 +1176,14 @@ class TargetController(object):
 
         return None
 
-    def _fixup_disk(self, disk, use_whole_disk):
-        ''' Prepare the passed-in Disk object for placement
-            in the "desired targets" area.
+    def _fixup_vtoc_disk(self, disk, use_whole_disk):
+        ''' Prepare the passed-in Disk object for placement in the "desired
+            target" area.
+
+            NOTE: if use_whole_disk is True then it is presumed that the
+            caller "_fixup_disk()" has determined that the system needs to
+            use VTOC for the whole disk layout rather than GPT due to lack of
+            firmware GPT boot capability.
 
             Returns:
             True if disk or slice successfully setup;
@@ -1025,8 +1203,6 @@ class TargetController(object):
                     # There is only one slice we need to check to see if it's
                     # slice "2". If is it we need to add a slice "0" and set
                     # in_vdev and in_zpool.
-
-                    # NB: This will need to be updated when GPT is supported
 
                     if slices[0].name == "2":
                         # Add a slice
@@ -1066,18 +1242,15 @@ class TargetController(object):
                                 return True
                     return False
         else:
-            new_slice = None
-            # If user requested use_whole_disk, then:
-            # - delete any partitions on the disk
-            # - delete any slices on the disk
-            # - set the whole_disk attribute on the disk
+            # If user requested use_whole_disk, which we have to fake:
+            # Place a VTOC layout on the (now empty) disk. Don't bother with
+            # the generic apply_default_layout() method:
+            # We obviously want the VTOC variant at this point.
+            self._apply_default_vtoc_layout(disk)
 
-            self.apply_default_layout(disk, use_whole_disk=False,
-                wipe_disk=True)
             # We don't want the whole disk here right now since that
-            # causes zpool create to use an EFI label on the disk which
-            # is not supported by ZFS boot. When EFI support is available
-            # disk.whole_disk should be set to the value of us_whole_disk
+            # causes zpool create to use an EFI/GPT label on the disk which
+            # is presumably not supported for system boot if we reach here.
             disk.whole_disk = False
 
             # Set the in_vdev and/or in_zpool attributes
@@ -1094,6 +1267,102 @@ class TargetController(object):
                 slice_zero.tag = V_ROOT
                 return True
             return False
+
+    def _fixup_gpt_disk(self, disk, use_whole_disk):
+        ''' Prepare the passed-in Disk object for placement
+            in the "desired targets" area.
+
+            NOTE: if use_whole_disk is True then it is presumed that the
+            caller "_fixup_disk()" has determined that the system supports
+            GPT boot
+
+            NOTE: even though this method always returns True, it does so for
+            seamless equivalance with _fixup_disk() and fixup_vtoc_disk()
+            _fixup_vtoc_disk() returns False if certain unique VTOC conditions
+            are not satsified, which don't apply here.
+
+            Returns:
+            True
+        '''
+        if not use_whole_disk:
+            partitions = disk.get_descendants(class_type=GPTPartition)
+            if not partitions:
+                if self._vdev is not None:
+                    disk.in_vdev = self._vdev.name
+                if self._zpool is not None:
+                    disk.in_zpool = self._zpool.name
+                return True
+            else:
+                fallback_partition = None
+                for nextpartition in partitions:
+                    if int(nextpartition.name) < EFI_NUMUSERPAR and \
+                        nextpartition.is_solaris:
+                        # Check if there is a Solaris partition that
+                        # has already been setup as the root pool vdev
+                        if nextpartition.in_vdev == self._vdev.name and \
+                            nextpartition.in_zpool == self._zpool.name:
+                            break
+                        # find the first available Solaris partition that's
+                        # big enough and reference it as a fallback partition
+                        # in case we don't find one that's already explicitly
+                        # set up as a root pool vdev.
+                        elif fallback_partition is None and \
+                            nextpartition.size >= self.minimum_target_size:
+                            fallback_partition = nextpartition
+                else:
+                    if fallback_partition is not None:
+                        # Setup the fallback partition as the root pool vdev
+                        if self._vdev is not None:
+                            fallback_partition.in_vdev = self._vdev.name
+                        if self._zpool is not None:
+                            fallback_partition.in_zpool = self._zpool.name
+                return True
+        else:
+            # If user requested use_whole_disk, then:
+            # - delete any stray partitions (GPT & MBR) or slices on the disk
+            # - set the whole_disk attribute on the disk
+            # - set the in_zpool and in_vdev attributes on the disk
+
+            for obj in [GPTPartition, Partition, Slice]:
+                disk.delete_children(class_type=obj)
+            disk.whole_disk = True
+            if self._zpool is not None:
+                disk.in_zpool = self._zpool.name
+            if self._vdev is not None:
+                disk.in_vdev = self._vdev.name
+            return True
+
+    def _fixup_disk(self, disk, use_whole_disk):
+        ''' Prepare the passed-in Disk object for placement in the "desired
+            targets" area.
+        '''
+
+        # If use_whole_disk is True then the disk label is irrelevant because
+        # the existing disk label and layout will get erased anyway.
+        # The new disk label and layout should be set based on the GPT boot
+        # capability of the system firmware or boot loader.
+        # We give preference to GPT over legacy VTOC whenever possible.
+        if use_whole_disk:
+            if self._gpt_boot:
+                disk.label = "GPT"
+            else:
+                disk.label = "VTOC"
+
+        if disk.label == "GPT":
+            return self._fixup_gpt_disk(disk, use_whole_disk)
+        else:
+            return self._fixup_vtoc_disk(disk, use_whole_disk)
+
+    @property
+    def desired_disks(self):
+        ''' Returns a list of disks currently in the "desired targets" area.
+        '''
+        disks = self._get_desired_disks()
+        # Make sure an empty list gets returned instead of None
+        if disks is None:
+            return list()
+
+        return disks
 
     @property
     def discovered_disks(self):
@@ -1127,10 +1396,25 @@ class TargetController(object):
 
         return False
 
+    def _is_block_size_compatible(self, disk):
+        ''' Returns True if the passed in Disk has a compatible block size to
+            install Solaris; otherwise returns False.
+        '''
+
+        # XXX PSARC 2008/769 (Search: "pcfs")
+        # Due to limitiations of pcfs, the EFI system partition can only be
+        # created or mounted on 512 byte sector size disks. This is expected
+        # to be addressed in phase 2 of PSARC 2008/769
+        if self._firmware == 'uefi64' and \
+            disk.geometry.blocksize != 512:
+            return False
+
+        return True
+
     def _calc_swap_size(self, available_space):
         ''' Calculates size of swap based on amount of
             physical memory.
- 
+
             The following rule is applied:
 
             memory        	swap size
@@ -1149,9 +1433,9 @@ class TargetController(object):
         if available_space == 0:
             return 0
 
-        if self._mem_size <= (Size("4gb")).get(Size.mb_units):
+        if self._mem_size <= (Size("4gb")):
             size = (Size("1gb")).get(Size.mb_units)
-        elif self._mem_size > (Size("16gb")).get(Size.mb_units):
+        elif self._mem_size > (Size("16gb")):
             size = (Size("4gb")).get(Size.mb_units)
         else:
             size = (Size("2gb")).get(Size.mb_units)
@@ -1160,7 +1444,7 @@ class TargetController(object):
             size = available_space
 
         return size
-        
+
     def _calc_dump_size(self, available_space):
         ''' Calculates size of dump based on amount of physical memory.
 
@@ -1185,12 +1469,12 @@ class TargetController(object):
         if available_space == 0:
             return 0
 
-        if self._mem_size < (Size("0.5gb")).get(Size.mb_units):
+        if self._mem_size < (Size("0.5gb")):
             size = MIN_DUMP_SIZE
-        elif self._mem_size > (Size("128gb")).get(Size.mb_units):
+        elif self._mem_size > (Size("128gb")):
             size = MAX_DUMP_SIZE
         else:
-            size = self._mem_size / 2
+            size = self._mem_size.get(Size.mb_units) / 2
 
         if available_space < size:
             size = available_space
@@ -1279,26 +1563,3 @@ class TargetControllerBackupEntry(SimpleXmlHandlerBase):
                 return False
 
         return True
-
-#------------------------------------------------------------------------------
-# Module private functions
-
-
-def _get_system_memory():
-    ''' Returns the amount of memory available in the system '''
-
-    memory_size = 0
-
-    p = Popen.check_call(["/usr/sbin/prtconf"], stdout=Popen.STORE,
-        stderr=Popen.STORE, logger=LOGGER)
-    for line in p.stdout.splitlines():
-        if "Memory size" in line:
-            memory_size = int(line.split()[2])
-            break
-
-    if memory_size <= 0:
-        # We should have a valid size now
-        LOGGER.error("Unable to determine amount of system memory")
-        raise SwapDumpGeneralError
-
-    return memory_size

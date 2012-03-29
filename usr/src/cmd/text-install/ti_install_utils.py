@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -37,9 +37,7 @@ class InstallationError(Exception):
 
 
 class InstallationCanceledError(Exception):
-    '''User selected to cancel the installation.
-
-    '''
+    '''User selected to cancel the installation.'''
     pass
 
 

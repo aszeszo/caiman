@@ -50,8 +50,8 @@ from solaris_install.text_install import TRANSFER_PREP, \
 from solaris_install.text_install import ti_install_utils as ti_utils
 from solaris_install.text_install.progress import InstallProgressHandler
 from solaris_install.text_install.ti_target_utils import \
-    get_desired_target_zpool, get_desired_target_be, get_solaris_slice, \
-    ROOT_POOL
+    get_desired_target_disk, get_desired_target_zpool, get_desired_target_be, \
+    get_solaris_gpt_partition, get_solaris_slice, ROOT_POOL
 from solaris_install.transfer.info import Software, IPSSpec
 
 LOGGER = None
@@ -63,6 +63,7 @@ INSTALL_STATUS = None
 
 
 def exec_callback(status, failed_cp):
+    ''' callback function for engine.execute_checkpoints '''
 
     LOGGER.debug("exec_callback parameters:")
     LOGGER.debug("status: %s", status)
@@ -70,7 +71,6 @@ def exec_callback(status, failed_cp):
 
     # check the result of execution
     INSTALL_STATUS.exec_status = status
-
     INSTALL_STATUS.stop_report_status()
 
     if status == InstallEngine.EXEC_FAILED:
@@ -84,13 +84,11 @@ def exec_callback(status, failed_cp):
 class InstallStatus(object):
     '''Stores information on the installation progress, and provides a
     hook for updating the screen.
-
     '''
 
     def __init__(self, screen, update_status_func):
         '''screen and update_status_func are values passed in from
         the main app
-
         '''
 
         self.screen = screen
@@ -128,7 +126,7 @@ class InstallStatus(object):
                         engine = InstallEngine.get_instance()
                         engine.cancel_checkpoints()
                         processing_quit = True
-        except Exception, e:
+        except Exception:
             LOGGER.exception("progressServer Error")
 
     def stop_report_status(self):
@@ -138,7 +136,6 @@ class InstallStatus(object):
 def do_ti_install(install_data, screen, update_status_func):
     '''Installation engine for text installer.
        Raises InstallationError for any error occurred during install.
-
     '''
 
     sysconfig_profile = sysconfig.profile.from_engine()
@@ -171,16 +168,29 @@ def do_ti_install(install_data, screen, update_status_func):
 
     engine = InstallEngine.get_instance()
     doc = engine.doc
-    solaris_slice = get_solaris_slice(doc)
-    if solaris_slice is None:
-        raise ti_utils.InstallationError("Unable to find solaris slice")
-    inst_device_size = solaris_slice.size
+
+    # look to see if the target disk has 'whole_disk' set
+    disk = get_desired_target_disk(doc)
+    if disk.whole_disk:
+        inst_device_size = disk.disk_prop.dev_size
+    else:
+        # look for a GPT partition first
+        gpt_partition = get_solaris_gpt_partition(doc)
+
+        if gpt_partition is None:
+            solaris_slice = get_solaris_slice(doc)
+            if solaris_slice is None:
+                raise ti_utils.InstallationError("Unable to find solaris "
+                                                 "slice")
+            inst_device_size = solaris_slice.size
+        else:
+            inst_device_size = gpt_partition.size
 
     LOGGER.info("Installation Device Size: %s", inst_device_size)
 
     minimum_size = screen.tc.minimum_target_size
     LOGGER.info("Minimum required size: %s", minimum_size)
-    if (inst_device_size < minimum_size):
+    if inst_device_size < minimum_size:
         LOGGER.error("Size of device specified for installation "
                      "is too small")
         LOGGER.error("Size of install device: %s", inst_device_size)
@@ -189,7 +199,7 @@ def do_ti_install(install_data, screen, update_status_func):
 
     recommended_size = screen.tc.recommended_target_size
     LOGGER.info("Recommended size: %s", recommended_size)
-    if (inst_device_size < recommended_size):
+    if inst_device_size < recommended_size:
         # Warn users that their install target size is not optimal
         # Just log the warning, but continue with the installation.
         LOGGER.warning("Size of device specified for installation is "
@@ -202,14 +212,14 @@ def do_ti_install(install_data, screen, update_status_func):
                                       swap_included=True)
 
     desired_zpool = get_desired_target_zpool(doc)
-    if (swap_type == TargetController.SWAP_DUMP_ZVOL):
-        swap_zvol = desired_zpool.add_zvol("swap", \
-            swap_size.get(Size.mb_units), Size.mb_units, use="swap")
+    if swap_type == TargetController.SWAP_DUMP_ZVOL:
+        desired_zpool.add_zvol("swap", swap_size.get(Size.mb_units),
+                               Size.mb_units, use="swap")
 
-    if (dump_type == TargetController.SWAP_DUMP_ZVOL):
-        dump_zvol = desired_zpool.add_zvol("dump", \
-            dump_size.get(Size.mb_units), Size.mb_units, use="dump",
-            create_failure_ok=True)
+    if dump_type == TargetController.SWAP_DUMP_ZVOL:
+        desired_zpool.add_zvol("dump", dump_size.get(Size.mb_units),
+                               Size.mb_units, use="dump",
+                               create_failure_ok=True)
 
     LOGGER.info("Swap type: %s", swap_type)
     LOGGER.info("Swap size: %s", swap_size)
@@ -233,16 +243,15 @@ def do_ti_install(install_data, screen, update_status_func):
     pkg_rm_node.insert_children(pkg_spec)
     doc.volatile.insert_children(pkg_rm_node)
 
-    # execute the prepare transfer checkpoint.  This checkpoint must
-    # be executed by itself, before executing any of the transfer
-    # related checkpoints.  The transfer checkpoints requires
-    # data setup from the prepare transfer checkpoint.
-
-    (status, failed_cp) = engine.execute_checkpoints(
+    # execute the prepare transfer checkpoint.  This checkpoint must be
+    # executed by itself, before executing any of the transfer related
+    # checkpoints.  The transfer checkpoints requires data setup from the
+    # prepare transfer checkpoint.
+    status, failed_cp = engine.execute_checkpoints(
         start_from=TRANSFER_PREP, pause_before=VAR_SHARED_DATASET)
 
     if status != InstallEngine.EXEC_SUCCESS:
-        err_data = (errsvc.get_errors_by_mod_id(TRANSFER_PREP))[0]
+        err_data = errsvc.get_errors_by_mod_id(TRANSFER_PREP)[0]
         LOGGER.error("%s checkpoint failed" % TRANSFER_PREP)
         err = err_data.error_data[liberrsvc.ES_DATA_EXCEPTION]
         LOGGER.error(err)
@@ -254,7 +263,7 @@ def do_ti_install(install_data, screen, update_status_func):
 
     LOGGER.debug("Executing rest of checkpoints")
 
-    engine.execute_checkpoints(callback=exec_callback, \
+    engine.execute_checkpoints(callback=exec_callback,
         dry_run=install_data.no_install_mode)
 
     INSTALL_STATUS.report_status()
@@ -266,8 +275,7 @@ def do_ti_install(install_data, screen, update_status_func):
         raise ti_utils.InstallationError("Failed executing checkpoints")
 
     if install_data.no_install_mode:
-        # all subsequent code depends on the install target being
-        # setup, so, can not execute them.
+        # all subsequent code depends on the install target being setup
         return
 
     new_be = get_desired_target_be(doc)
@@ -297,7 +305,7 @@ def post_install_cleanup(install_data):
                   final_log_loc))
     try:
         shutil.copyfile(install_data.log_location, final_log_loc)
-    except (IOError, OSError), err:
+    except (IOError, OSError) as err:
         LOGGER.error("Failed to copy %s to %s" % (install_data.log_location,
                       install_data.log_final))
         LOGGER.exception(err)
@@ -310,7 +318,6 @@ def perform_ti_install(install_data, screen, update_status_func):
     '''Wrapper to call the do_ti_install() function.
        Sets the variable indicating whether the installation is successful or
        not.
-
     '''
 
     global LOGGER
@@ -323,6 +330,6 @@ def perform_ti_install(install_data, screen, update_status_func):
     except ti_utils.InstallationCanceledError:
         install_data.install_succeeded = False
         LOGGER.info("Install canceled by user.")
-    except Exception, ex:
+    except Exception:
         LOGGER.exception("Install FAILED.")
         install_data.install_succeeded = False

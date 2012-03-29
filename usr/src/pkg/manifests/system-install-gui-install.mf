@@ -52,6 +52,8 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/base_scr
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/base_screen.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/confirm_screen.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/confirm_screen.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_panel.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_panel.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_screen.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_screen.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/failure_screen.py
@@ -60,6 +62,8 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/fdisk_pa
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/fdisk_panel.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/finish_screen.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/finish_screen.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/gpt_panel.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/gpt_panel.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/gui_install_common.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/gui_install_common.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/help_dialog.py
@@ -98,7 +102,9 @@ file path=usr/share/gui-install/city_selected_s.png group=sys
 file path=usr/share/gui-install/confirmation.xml group=sys
 file path=usr/share/gui-install/date-time-zone.xml group=sys
 file path=usr/share/gui-install/failure.xml group=sys
+file path=usr/share/gui-install/fdisk-panel.xml group=sys
 file path=usr/share/gui-install/gnome-spinner.gif group=sys
+file path=usr/share/gui-install/gpt-panel.xml group=sys
 file path=usr/share/gui-install/gui-install.xml group=sys
 file path=usr/share/gui-install/hand.png group=sys
 dir  path=usr/share/gui-install/help group=sys

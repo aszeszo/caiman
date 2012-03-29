@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -32,25 +32,27 @@ import platform
 
 import osol_install.errsvc as errsvc
 import osol_install.liberrsvc as liberrsvc
+
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target import Target
-from solaris_install.target.controller import TargetController, \
-    DEFAULT_VDEV_NAME, DEFAULT_ZPOOL_NAME
+from solaris_install.target.controller import DEFAULT_VDEV_NAME, \
+    DEFAULT_ZPOOL_NAME
 from solaris_install.target.libadm.const import FD_NUMPART as MAX_PRIMARY_PARTS
 from solaris_install.target.libadm.const import MAX_EXT_PARTS
 from solaris_install.target.libadm.const import V_BACKUP, V_ROOT
 from solaris_install.target.libdiskmgt import const as libdiskmgt_const
+from solaris_install.target.libefi import const as libefi_const
 from solaris_install.target.logical import Zpool, BE
-from solaris_install.target.physical import Disk, Partition, Slice, \
-    BACKUP_SLICE, BOOT_SLICE
+from solaris_install.target.physical import Disk, GPTPartition, Partition, \
+    Slice, BACKUP_SLICE, BOOT_SLICE
 from solaris_install.target.shadow.physical import ShadowPhysical
 from solaris_install.target.size import Size
 
 
 ROOT_POOL = DEFAULT_ZPOOL_NAME
 
-PART_TYPE_SOLARIS = 191 #191 is type "solaris"
+PART_TYPE_SOLARIS = 191  # 191 is type "solaris"
 BACKUP_SLICE_TEXT = "backup"
 UNUSED_TEXT = "Unused"
 EXTENDED_TEXT = "Extended"
@@ -104,6 +106,21 @@ def get_desired_target_be(doc):
                                         not_found_is_err=True)[0])
 
 
+def get_solaris_gpt_partition(doc):
+    '''Returns the installation target Solaris GPT partition, if it exists '''
+
+    desired_disk = get_desired_target_disk(doc)
+    all_partitions = desired_disk.get_children(class_type=GPTPartition)
+
+    if not all_partitions:
+        return None
+
+    return next((p for p in all_partitions if
+                 p.is_solaris and 
+                 p.in_zpool == DEFAULT_ZPOOL_NAME and 
+                 p.in_vdev == DEFAULT_VDEV_NAME), None)
+
+
 def get_solaris_partition(doc):
     '''Returns the partition with type "solaris", if it exists '''
 
@@ -134,9 +151,9 @@ def get_solaris_slice(doc):
     if not all_slices:
         return None
 
-    for slice in all_slices:
-        if slice.in_zpool == ROOT_POOL:
-            return slice
+    for slc in all_slices:
+        if slc.in_zpool == ROOT_POOL:
+            return slc
 
     return None
 
@@ -215,24 +232,38 @@ def perform_final_validation(doc):
     if not desired_root.final_validation():
         all_errors = errsvc.get_all_errors()
 
-        for err in all_errors:
+        # if final validation failed, it may have been due to something other
+        # than a shadow list failure.  Simply raise ValueError if there are no
+        # errors in the errsvc.
+        if not all_errors:
+            raise ValueError("Desired target doesn't pass final validation")
 
-            if not isinstance(err.error_data[liberrsvc.ES_DATA_EXCEPTION],
-                              ShadowPhysical.SliceInUseError):
-                LOGGER.error("Error module ID: %s.. error type: %s" % \
+        for err in all_errors:
+            # Skip in_use errors for GPTPartitions and Slices
+            if isinstance(err.error_data[liberrsvc.ES_DATA_EXCEPTION],
+                          ShadowPhysical.GPTPartitionInUseError):
+                LOGGER.debug("GPTPartitionInUseError is OK")
+                LOGGER.debug("Error module ID: %s.. error type: %s" % \
                              (err.get_mod_id(), str(err.get_error_type())))
+                LOGGER.debug("Exception value: %s",
+                             err.error_data[liberrsvc.ES_DATA_EXCEPTION].value)
+            elif isinstance(err.error_data[liberrsvc.ES_DATA_EXCEPTION],
+                             ShadowPhysical.SliceInUseError):
+                LOGGER.debug("SliceInUseError is OK")
+                LOGGER.debug("Error module ID: %s.. error type: %s" % \
+                             (err.get_mod_id(), str(err.get_error_type())))
+                LOGGER.debug("Exception value: %s",
+                             err.error_data[liberrsvc.ES_DATA_EXCEPTION].value)
+
+            else:
+                LOGGER.error("Error module ID: %s.. error type: %s",
+                             err.get_mod_id(), str(err.get_error_type()))
                 LOGGER.error("Error class: %r",
                              err.error_data[liberrsvc.ES_DATA_EXCEPTION])
                 LOGGER.error("Exception value: %s",
                              err.error_data[liberrsvc.ES_DATA_EXCEPTION].value)
                 raise ValueError("Desired target doesn't pass "
                                  "final validation")
-            else:
-                LOGGER.debug("SliceInUseError is OK")
-                LOGGER.debug("Error module ID: %s.. error type: %s" % \
-                             (err.get_mod_id(), str(err.get_error_type())))
-                LOGGER.debug("Exception value: %s",
-                             err.error_data[liberrsvc.ES_DATA_EXCEPTION].value)
     else:
         LOGGER.debug("No error from final validation")
 
@@ -249,7 +280,8 @@ def dump_doc(msg):
 
 
 def name_sort(a, b):
-    return cmp(a.name, b.name)
+    # cast to int otherwise "7" > "17"
+    return cmp(int(a.name), int(b.name))
 
 
 def size_sort(a, b):
@@ -321,40 +353,81 @@ class EmptySpace(object):
 
 
 class UIDisk(object):
-
     ''' Object used to keep track of disk related information for UI '''
 
-    def __init__(self, target_controller, parent=None, doc_obj=None):
+    def __init__(self, target_controller, doc_obj, parent=None):
 
         global LOGGER
         LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
 
-        if doc_obj is None:
-            raise ValueError("doc_obj for UIDisk is needed")
-        self.doc_obj = doc_obj
         self.tc = target_controller
+        self.doc_obj = doc_obj
         self.all_parts = list()
         self.have_logical = False
 
-        if platform.processor() == "i386":
-            max_all_parts = MAX_PRIMARY_PARTS + MAX_EXT_PARTS + 1
-            for i in range(max_all_parts):
-                part = UIPartition(self.tc, parent=self)
-                self.all_parts.append(part)
-        else:
-            max_all_parts = MAX_SLICES
-            for i in range(max_all_parts):
-                part = UISlice(self.tc, parent=self)
-                self.all_parts.append(part)
+        if self.doc_obj.label == "GPT":
+            last_part = 0
+            gpt_parts = self.doc_obj.get_children(class_type=GPTPartition)
+            if gpt_parts:
+                gpt_parts.sort(name_sort)
+                last_part = int(gpt_parts[-1].name)
+
+            for i in range(max(last_part + 1, libefi_const.EFI_NUMUSERPAR)):
+                self.all_parts.append(UIGPTPartition(self.tc, parent=self))
+            return
+        
+        if self.doc_obj.label == "VTOC":
+            if platform.processor() == "i386":
+                for i in range(MAX_PRIMARY_PARTS + MAX_EXT_PARTS + 1):
+                    self.all_parts.append(UIPartition(self.tc, parent=self))
+                return
+            else: # SPARC - has to be slices
+                for i in range(MAX_SLICES):
+                    self.all_parts.append(UISlice(self.tc, parent=self))
+                return
+
+        # Not fatal as a proposed layout will be constructed if/when the disk
+        # is selected via target controller.
+        LOGGER.info("Unable to read disk layout of: %s", str(self.doc_obj))
 
     def get_parts_in_use(self):
-        in_use_parts = []
-        for part in self.all_parts:
-            if (part.ui_type == UI_TYPE_IN_USE) or \
-               (part.ui_type == UI_TYPE_EMPTY_SPACE):
-                in_use_parts.append(part)
+        return [p for p in self.all_parts if p.ui_type in 
+                [UI_TYPE_IN_USE, UI_TYPE_EMPTY_SPACE]]
 
-        return in_use_parts  
+    def add_unused_gpt_parts(self):
+        ''' fill out the rest of the Disk's GPT Partitions with UNUSED
+        partitions.
+        '''
+
+        existing_gpt_parts = self.doc_obj.get_children(class_type=GPTPartition)
+        existing_gpt_parts.sort(name_sort)
+        existing_gaps = self.doc_obj.get_gaps()
+        existing_gaps.sort(size_sort)
+
+        min_size = Size(UI_MIN_EMPTY_PRIMARY_PART)
+        last_part = 0
+        if existing_gpt_parts:
+            last_part = int(existing_gpt_parts[-1].name)
+
+        for num in range(max(last_part + 1, libefi_const.EFI_NUMUSERPAR)):
+            part = get_part_by_num(num, existing_gpt_parts)
+            if part is not None:
+                self.all_parts[num].doc_obj = part
+            elif existing_gaps:
+                # some space is still left 
+                if (existing_gaps[-1]).size >= min_size:
+                    # see if the largest one is big enough
+                    one_gap = existing_gaps.pop()
+                    empty_space = EmptySpace(num, one_gap.start_sector,
+                                             one_gap.size)
+                    self.all_parts[num].empty_space_obj = empty_space
+                else:
+                    empty_space = EmptySpace(num, 0, Size("0gb"))
+                    self.all_parts[num].empty_space_obj = empty_space
+            else:
+                # no space is left.  Create 0 size empty spaces
+                empty_space = EmptySpace(num, 0, Size("0gb"))
+                self.all_parts[num].empty_space_obj = empty_space
 
     def add_unused_parts(self, no_part_ok=False):
         '''On x86: Sort through the logical and non-logical partitions and
@@ -432,9 +505,8 @@ class UIDisk(object):
                     LOGGER.debug("After fill unused...%s: %s..size=%s",
                                  str(part.name), part.get_description(),
                                  str(part.size))
-                except Exception, ex:
+                except Exception as ex:
                     LOGGER.debug("after fill unused...%s", ex)
-                    pass
 
         if not self.have_logical:
             return
@@ -515,6 +587,268 @@ class UIDisk(object):
         return(find_discovered_disk(self.doc_obj, doc))
 
 
+class UIGPTPartition(object):
+    ''' Object used to keep track of GPT partition related information for UI
+    '''
+
+    SOLARIS = GPTPartition.guid_to_name(libefi_const.EFI_USR)
+    RESERVED = GPTPartition.guid_to_name(libefi_const.EFI_RESERVED)
+    UNUSED = None
+    TYPES = [UNUSED, SOLARIS]
+
+    def __init__(self, target_controller, parent=None, doc_obj=None):
+
+        global LOGGER
+        LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
+
+        self._doc_obj = None
+        self._empty_space_obj = None
+        self.tc = target_controller
+        self.all_parts = list()
+        self._unused_parts_added = False
+        self.parent = parent
+        self.ui_type = UI_TYPE_NOT_USED
+
+        if doc_obj != None:
+            self.doc_obj = doc_obj
+
+    @property
+    def doc_obj(self):
+        return self._doc_obj
+
+    @doc_obj.setter
+    def doc_obj(self, obj):
+        if not isinstance(obj, GPTPartition):
+            raise TypeError("Object must be type GPTPartition" + \
+                            str(type(obj)))
+
+        self._doc_obj = obj
+        self.ui_type = UI_TYPE_IN_USE
+
+    @property
+    def empty_space_obj(self):
+        return self._empty_space_obj
+
+    @empty_space_obj.setter
+    def empty_space_obj(self, obj):
+        if not isinstance(obj, EmptySpace):
+            raise TypeError("Object must be type EmptySpace")
+
+        self._empty_space_obj = obj
+        self.ui_type = UI_TYPE_EMPTY_SPACE
+
+    @property
+    def name(self):
+        if self.ui_type == UI_TYPE_IN_USE:
+            return self.doc_obj.name
+        elif self.ui_type == UI_TYPE_EMPTY_SPACE:
+            return self.empty_space_obj.name
+        else:
+            raise RuntimeError("Partition not in use.")
+
+    @property
+    def size(self):
+        if self.ui_type == UI_TYPE_IN_USE:
+            return self.doc_obj.size
+        elif self.ui_type == UI_TYPE_EMPTY_SPACE:
+            return Size("0gb")
+        else:
+            raise RuntimeError("Partition not in use.")
+
+    @property
+    def end_sector(self):
+        if self.ui_type == UI_TYPE_IN_USE:
+            obj = self.doc_obj
+        elif self.ui_type == UI_TYPE_EMPTY_SPACE:
+            obj = self.empty_space_obj
+        else:
+            raise RuntimeError("Partition not in use")
+
+        return obj.start_sector + obj.size.sectors
+
+    def get_description(self):
+        if self.ui_type == UI_TYPE_IN_USE:
+            return self.doc_obj.guid_to_name(self.doc_obj.guid)
+        elif self.ui_type == UI_TYPE_EMPTY_SPACE:
+            return UNUSED_TEXT
+        else:
+            raise RuntimeError("Partition not in use.")
+
+    def get_max_size(self):
+        '''Return the maximum possible size this partition could consume,
+        in gigabytes, based on adjacent unused space
+        '''
+        
+        # Empty/unused slots get the largest gap available since that's what
+        # gets allocated when a new partition is created.
+        if self.ui_type != UI_TYPE_IN_USE:
+            gaps = self.parent.doc_obj.get_gaps()
+            if gaps:
+                gaps.sort(size_sort)
+                return gaps[-1].size
+            else:
+                return Size(str(0) + Size.sector_units)
+
+        # Existing partitions have to be contiguous so they are constrained
+        # to using only space available in immediately adjacent gaps. 
+        partition = self.doc_obj
+
+        # Keep a running total of how much space if available.  Do
+        # all calculations in sectors for convenience
+        sectors = partition.size.sectors        
+
+        gap = partition.get_gap_after()
+        if gap is not None:
+            sectors += gap.size.sectors
+
+        gap = partition.get_gap_before()
+        if gap is not None:
+            sectors += gap.size.sectors
+
+        return Size(str(sectors) + Size.sector_units)
+    
+    def editable(self):
+        '''Returns True if it is possible to edit this partition's size'''
+
+        if self.ui_type == UI_TYPE_IN_USE:
+            if self.doc_obj.is_solaris:
+                return True
+        return False
+
+    @property
+    def discovered_doc_obj(self):
+        ''' Find the same object, if it exists, in the discovered object tree.
+ 
+            Returns the object in discovered subtree, if found.
+            Returns None otherwise.
+        '''
+        if self.ui_type != UI_TYPE_IN_USE:
+            return None
+
+        parent_disc_obj = self.parent.discovered_doc_obj
+
+        # get all the discovered partitions 
+        discovered_partitions = parent_disc_obj.get_children(
+            class_type=GPTPartition)
+
+        if not discovered_partitions:
+            return None
+
+        # look through all the partitions, and find the one matching that
+        # matches this one.
+        for part in discovered_partitions:
+            if str(part.name) == str(self.doc_obj.name):
+                return part
+            
+        # partition is not found.
+        return None
+
+    def modified(self):
+        ''' compare with the same object when it is discovered.
+            only partition size is checked since that's the only thing the text 
+            installer allows users to change
+ 
+            Returns True if partition type or size is changed compared to the
+            discovered object.
+
+            Returns False otherwise.
+        '''
+        
+        if self.ui_type is not UI_TYPE_IN_USE:
+            return False
+
+        # object is newly added to the desired target.
+        if self.discovered_doc_obj is None:
+            return True
+       
+        precision = Size(UI_PRECISION).get(Size.byte_units)
+        discovered_size = self.discovered_doc_obj.size.get(Size.byte_units)
+        size = self.doc_obj.size.get(Size.byte_units)
+        return abs(discovered_size - size) > precision 
+
+    def cycle_type(self, new_type=None, extra_type=None):
+        '''Cycle this GPT partition's type. 
+        
+        If extra_types is passed in, it should be a list of other potential
+        types. These types will also be considered when cycling.
+        '''
+        dump_doc("before gpt_partition.cycle_type")
+
+        types = set()
+        # Only offer Solaris GPT partitions to partitions 0-7 because GPT 
+        # partitions 8+ aren't accesible as Solaris device nodes
+        if int(self.name) < libefi_const.EFI_NUMUSERPAR:
+            types.update(UIGPTPartition.TYPES)
+        else:
+            types.update([UIGPTPartition.UNUSED])
+
+        if extra_type is not None:
+            types.update(extra_type)
+        types = list(types)
+        types.sort()
+
+        if new_type is not None:
+            type_index = types.index(new_type)
+            type_index = (type_index + 1) % len(types)
+        else:
+            if self.ui_type == UI_TYPE_EMPTY_SPACE:
+                type_index = types.index(UIGPTPartition.UNUSED)
+                type_index = (type_index + 1) % len(types)
+            else:
+                # should have a doc_obj to reference
+                if self.doc_obj.guid_to_name(self.doc_obj.guid) in types:
+                    type_index = types.index(
+                        self.doc_obj.guid_to_name(self.doc_obj.guid))
+                    type_index = (type_index + 1) % len(types)
+                else:
+                    type_index = 0
+
+        new_type = types[type_index]
+
+        if new_type == UIGPTPartition.UNUSED:
+            LOGGER.debug("new type == unused")
+        else:
+            LOGGER.debug("new type == %s", new_type)
+
+        if self.ui_type == UI_TYPE_EMPTY_SPACE:
+            if new_type == UIGPTPartition.UNUSED:
+                LOGGER.debug("old type and new type both unused: skipping")
+                return
+            # find largest available gap, and create a GPT partition of
+            # the specified type in that gap.  We do not want to use
+            # the start sector and size value in the empty objects
+            # because those are fake values.
+            existing_gaps = self.parent.doc_obj.get_gaps()
+            if existing_gaps:
+                # sort the gaps by size, largest gap will be at the end
+                # of the list.
+                existing_gaps.sort(size_sort)
+                largest_empty = existing_gaps[-1]
+
+                # check to make sure the largest gap is big enough.
+                # gaps smaller than 1G are not used.
+                if largest_empty.size < Size(UI_MIN_EMPTY_SLICE):
+                    return
+
+                self.parent.doc_obj.add_gptpartition(
+                    self.name, largest_empty.start_sector,
+                    largest_empty.size.sectors,
+                    size_units=Size.sector_units)
+                return
+
+            # setting it back to whatever value was discovered
+            discovered_obj = self.discovered_doc_obj
+            if discovered_obj is not None:
+                self.parent.doc_obj.insert_children(discovered_obj)
+            else:
+                LOGGER.debug("Unable to reset to discovered value")
+ 
+        else:
+            if new_type == UIGPTPartition.UNUSED:
+                LOGGER.debug("Changing to unused, deleting")
+                self.parent.doc_obj.delete_gptpartition(self.doc_obj)
+
+
 class UIPartition(object):
     ''' Object used to keep track of partition related information for UI '''
 
@@ -523,9 +857,7 @@ class UIPartition(object):
     FDISK_EXTLBA = 0x0f
     UNUSED = None
 
-    EDITABLE_PART_TYPES = [SOLARIS,
-                           EXT_DOS,
-                           FDISK_EXTLBA]
+    EDITABLE_PART_TYPES = [SOLARIS, EXT_DOS, FDISK_EXTLBA]
 
     KNOWN_LOGIC_TYPES = [UNUSED, SOLARIS]
     KNOWN_PART_TYPES = [UNUSED, SOLARIS, EXT_DOS] 
@@ -582,11 +914,6 @@ class UIPartition(object):
         self._empty_space_obj = obj
         self.ui_type = UI_TYPE_EMPTY_SPACE
         self.cycle_types = UIPartition.KNOWN_PART_TYPES
-    
-    def set_unused(self):
-        self.ui_type = UI_TYPE_NOT_USED
-        self._empty_space_obj = None
-        self._doc_obj = None
 
     @property
     def name(self):
@@ -649,9 +976,9 @@ class UIPartition(object):
 
         # remove the boot slice from the list of slices that gets displayed.
         boot_slice = None
-        for slice in existing_parts:
-            if int(slice.name) == BOOT_SLICE:
-                boot_slice = slice
+        for slc in existing_parts:
+            if int(slc.name) == BOOT_SLICE:
+                boot_slice = slc
                 break
         if boot_slice is not None:
             existing_parts.remove(boot_slice)
@@ -685,12 +1012,11 @@ class UIPartition(object):
                     pass
 
     def get_description(self):
-
         if self.ui_type == UI_TYPE_IN_USE:
             if self.doc_obj.is_extended:
                 return EXTENDED_TEXT
             else:
-                return libdiskmgt_const.PARTITION_ID_MAP[\
+                return libdiskmgt_const.PARTITION_ID_MAP[
                     self.doc_obj.part_type]
         elif self.ui_type == UI_TYPE_EMPTY_SPACE:
             return UNUSED_TEXT
@@ -939,9 +1265,9 @@ class UIPartition(object):
 
                 largest_empty = existing_gaps[-1]
 
-                # check to make sure the largest gap is big enough.
-                # For primary partitions, we ignore all gaps smaller than 1G.
-                # For logical partitions, we ignore all gaps smaller than 0.1G. 
+                # check to make sure the largest gap is big enough.  For
+                # primary partitions, we ignore all gaps smaller than 1G.  For
+                # logical partitions, we ignore all gaps smaller than 0.1G. 
                 if self.is_logical():
                     min_gap_size = Size(UI_MIN_EMPTY_LOGICAL_PART)
                 else:
@@ -1039,11 +1365,6 @@ class UISlice(object):
 
         self._empty_space_obj = obj
         self.ui_type = UI_TYPE_EMPTY_SPACE
-    
-    def set_unused(self):
-        self.ui_type = UI_TYPE_NOT_USED
-        self._empty_space_obj = None
-        self._doc_obj = None
 
     @property
     def name(self):
@@ -1188,9 +1509,9 @@ class UISlice(object):
         # look through all the partitions, and find the one matching that
         # matches this one.  The slice id is used
         # to identify the matching slice
-        for slice in discovered_slices:
-            if str(slice.name) == str(self.doc_obj.name):
-                return slice
+        for slc in discovered_slices:
+            if str(slc.name) == str(self.doc_obj.name):
+                return slc
             
         # Slice is not found.
         return None
@@ -1224,7 +1545,7 @@ class UISlice(object):
         return False
 
     def cycle_type(self, new_type=None, extra_type=None):
-        '''Cycle this slide's type. 
+        '''Cycle this slice's type. 
         
         If extra_types is passed in, it should be a list of other potential
         types. These types will also be considered when cycling.

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -39,12 +39,12 @@ import numpy
 
 import osol_install.errsvc as errsvc
 import osol_install.liberrsvc as liberrsvc
-from solaris_install import CalledProcessError
 from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.engine import InstallEngine
 from solaris_install.gui_install.base_screen import BaseScreen, \
     NotOkToProceedError
 from solaris_install.gui_install.fdisk_panel import FdiskPanel
+from solaris_install.gui_install.gpt_panel import GPTPanel
 from solaris_install.gui_install.gui_install_common import \
     empty_container, modal_dialog, IMAGE_DIR, COLOR_WHITE, \
     DEFAULT_LOG_LOCATION, GLADE_ERROR_MSG, N_
@@ -52,11 +52,9 @@ from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target import Target
 from solaris_install.target.controller import TargetController, \
-    BadDiskError, SubSizeDiskError, DEFAULT_ZPOOL_NAME
-from solaris_install.target.libadm.const import V_ROOT
+    BadDiskError, BadDiskBlockSizeError, SubSizeDiskError, DEFAULT_ZPOOL_NAME
 from solaris_install.target.logical import Zpool, Zvol, Filesystem
-from solaris_install.target.physical import Disk, Partition, \
-    Slice
+from solaris_install.target.physical import Disk, Slice
 from solaris_install.target.shadow.physical import ShadowPhysical
 from solaris_install.target.size import Size
 
@@ -132,16 +130,25 @@ class DiskScreen(BaseScreen):
         self._wholediskradio = self.builder.get_object("wholediskradio")
         self._partitiondiskradio = self.builder.get_object(
             "partitiondiskradio")
+        self._custompartitionbox = self.builder.get_object(
+            "custompartitionbox")
 
         if None in [self._disksviewport, self._diskselectionhscrollbar,
             self._diskerrorimage, self._diskwarningimage,
             self._diskstatuslabel, self._partitioningvbox,
             self._diskradioalignment, self._diskwarninghbox,
-            self._wholediskradio, self._partitiondiskradio]:
+            self._wholediskradio, self._partitiondiskradio,
+            self._custompartitionbox]:
             modal_dialog(_("Internal error"), GLADE_ERROR_MSG)
             raise RuntimeError(GLADE_ERROR_MSG)
 
-        self.fdisk_panel = FdiskPanel(self.builder)
+        # We use this indirection to facilitate different partitioning control
+        # backends for MBR/fdisk and GPT partition formats
+        self._fdisk_panel = FdiskPanel(self.builder)
+        self._gpt_panel = GPTPanel(self.builder)
+        self._disk_panel = self._gpt_panel
+        self._custompartitionbox.pack_start(self._disk_panel.toplevel,
+            expand=True, fill=True, padding=0)
         self._icon_theme = gtk.icon_theme_get_default()
         self._busy_label = None
 
@@ -158,7 +165,7 @@ class DiskScreen(BaseScreen):
         self.activate_stage_label("diskstagelabel")
 
         # Initially, hide the Partitioning VBox and Disk selection scrollbar
-        self._partitioningvbox.hide_all()
+        self._partitioningvbox.hide()
         self._diskselectionhscrollbar.hide()
 
         if self._td_complete:
@@ -191,8 +198,19 @@ class DiskScreen(BaseScreen):
 
         LOGGER.info("Starting validation.")
 
-        # First, tell the FdiskPanel to tidy up the disk
-        self.fdisk_panel.finalize()
+        # First, tell the disk panel to tidy up the disk
+        self._disk_panel.finalize()
+
+        # Validation phases:
+        # 1. Start off by validating the generic stuff such as a disk being
+        #    selected, big enough etc.
+        #
+        # 2. Then get into the specifics by handing over validation control
+        #    to the disk_panel object for fdisk/gpt specific checks.
+        #
+        # 3. Validate the logical elements.
+        #
+        # 4. Throw up misc. warnings (not errors) if space is tight
 
         engine = InstallEngine.get_instance()
         doc = engine.data_object_cache
@@ -239,63 +257,39 @@ class DiskScreen(BaseScreen):
                 _("Select another disk."))
             self._raise_error("Disk too small")
 
-        # Fetch the Solaris2 partition
-        partitions = selected_disk.get_children(class_type=Partition)
-        solaris_partitions = [part for part in partitions \
-            if part.part_type == Partition.name_to_num("Solaris2")]
+        # ERROR #2.5 - No suitable disk selected
+        # (TargetController will prevent this happening, but this check remains
+        # for completeness.)
+        if not self._target_controller._is_block_size_compatible(
+            selected_disk):
 
-        # ERROR #3 - No Solaris partitions defined
-        if len(solaris_partitions) == 0:
-            LOGGER.error("No Solaris2 partition on disk.")
-            modal_dialog(_("The selected disk contains no "
-                "Solaris partitions."),
-                _("Create one Solaris partition or use the whole disk."))
-            self._raise_error("No Solaris partitions on disk.")
+            LOGGER.error("Disk block size incompatible: %d",
+                         selected_disk.geometry.blocksize)
 
-        # ERROR #4 - Must be only one Solaris partition
-        if len(solaris_partitions) > 1:
-            LOGGER.error("Too many Solaris2 partitions on disk.")
-            modal_dialog(_("There must be only one "
-                "Solaris partition."),
-                _("Change the extra Solaris partitions to another type."))
-            self._raise_error("Too many Solaris partitions on disk.")
+            modal_dialog(_("The selected disk has a block size of %d bytes, "
+                "which is incompatible for Oracle Solaris installation on "
+                "this system."),
+                _("Select another disk."))
+            self._raise_error("Disk block size incompatible")
 
-        # ERROR #5 - Solaris partition is too small
-        if solaris_partitions[0].size < \
-            self._target_controller.minimum_target_size:
-            LOGGER.error("Solaris2 partition too small.")
-            LOGGER.error("Minimum size is %s." % \
-                self._target_controller.minimum_target_size)
-            LOGGER.error("Partition size is (%s)." % \
-                solaris_partitions[0].size)
-            modal_dialog(_("The Solaris partition is too "
-                "small for Solaris installation."),
-                _("Increase the size of the Solaris partition."))
-            self._raise_error("Solaris2 partition too small")
+        # ERROR #3 - Tell disk_panel to do its bit if custom partitioning
+        # selected. For whole disk we trust ZFS to get it right.
+        if selected_disk.whole_disk:
+            pool_size = selected_disk.disk_prop.dev_size
+        else:
+            try:
+                solaris_partyslice = self._disk_panel.validate()
+                pool_size = solaris_partyslice.size
+            except NotOkToProceedError as nok:
+                self._raise_error(str(nok))
 
-        # Do any necessary tidying up before final validation
-        if not selected_disk.whole_disk:
-            self._fixup_solaris_partition(solaris_partitions[0])
-
+        # Finish up with the logical section
         # Create swap and dump, as required
-
-        # Get the Solaris slice
-        solaris_slice = None
-        all_slices = solaris_partitions[0].get_children(class_type=Slice)
-        for slc in all_slices:
-            if slc.in_zpool == ROOT_POOL:
-                solaris_slice = slc
-
-        if solaris_slice is None:
-            LOGGER.error("Cannot locate Solaris (rpool) slice.")
-            modal_dialog(_("Validation failed."), "%s\n\n%s" % \
-                (_("See log file for details."), DEFAULT_LOG_LOCATION))
-            self._raise_error("Cannot locate Solaris (rpool) slice.")
 
         (swap_type, swap_size, dump_type, dump_size) = \
             self._target_controller.calc_swap_dump_size(
                 self._target_controller.minimum_target_size,
-                solaris_slice.size,
+                pool_size,
                 swap_included=True)
 
         desired_zpool = desired_root.get_descendants(name=ROOT_POOL,
@@ -330,7 +324,7 @@ class DiskScreen(BaseScreen):
         if export_home_fs is None:
             desired_zpool.add_filesystem(EXPORT_HOME_FS_NAME)
 
-        # ERROR #6 - Target class final validation
+        # ERROR #4 - Target class final validation
         LOGGER.info("Performing Target.final_validation().")
         errsvc.clear_error_list()
         if not desired_root.final_validation():
@@ -343,6 +337,16 @@ class DiskScreen(BaseScreen):
                     ShadowPhysical.SliceInUseError):
 
                     LOGGER.warn("ShadowPhysical.SliceInUseError - not fatal")
+                    LOGGER.warn("Error: mod id %s, type %s",
+                        err.get_mod_id(), str(err.get_error_type()))
+                    LOGGER.warn("Error value: %s",
+                        err.error_data[liberrsvc.ES_DATA_EXCEPTION].value)
+                elif isinstance(
+                    err.error_data[liberrsvc.ES_DATA_EXCEPTION],
+                    ShadowPhysical.GPTPartitionInUseError):
+
+                    LOGGER.warn("ShadowPhysical.GPTPartitionInUseError " \
+                                "- not fatal")
                     LOGGER.warn("Error: mod id %s, type %s",
                         err.get_mod_id(), str(err.get_error_type()))
                     LOGGER.warn("Error value: %s",
@@ -392,22 +396,30 @@ class DiskScreen(BaseScreen):
                     self._raise_error("Disk smaller than recommended")
 
         # WARNING #2 - Solaris partition is smaller than recommended size
-        if solaris_partitions[0].size < \
-            self._target_controller.recommended_target_size:
+        # Identify the correct Solaris Partition or GPTPartition object.
+        # (not whole_disk only)
+        else:
+            if isinstance(solaris_partyslice, Slice):
+                solaris_partition = solaris_partyslice.parent
+            else:
+                solaris_partition = solaris_partyslice
 
-            LOGGER.info("Partition smaller than recommended")
-            LOGGER.info("Recommended size is %s",
-                self._target_controller.recommended_target_size)
-            LOGGER.info("Partition size is (%s)", solaris_partitions[0].size)
+            if solaris_partition.size < \
+                self._target_controller.recommended_target_size:
 
-            ok_to_proceed = modal_dialog(_("The selected partition is "
-                "smaller than the recommended minimum size."),
-                _("You may have difficulties upgrading the system "
-                "software and/or installing and running additional "
-                "applications."),
-                two_buttons=True)
-            if not ok_to_proceed:
-                self._raise_error("Partition smaller than recommended")
+                LOGGER.info("Partition smaller than recommended")
+                LOGGER.info("Recommended size is %s",
+                    self._target_controller.recommended_target_size)
+                LOGGER.info("Partition size is (%s)", solaris_partition.size)
+
+                ok_to_proceed = modal_dialog(_("The selected partition is "
+                    "smaller than the recommended minimum size."),
+                    _("You may have difficulties upgrading the system "
+                    "software and/or installing and running additional "
+                    "applications."),
+                    two_buttons=True)
+                if not ok_to_proceed:
+                    self._raise_error("Partition smaller than recommended")
 
         # Save the TargetController in the DOC (used to retrieve the
         # minimum_target_size and call setup_vfstab_for_swap())
@@ -446,21 +458,35 @@ class DiskScreen(BaseScreen):
                 # Prevent user from proceeding or customisation
                 self.set_back_next(back_sensitive=True, next_sensitive=False)
                 self._partitioningvbox.set_sensitive(False)
-                # Hide the custom fdisk partitioning details
-                self.fdisk_panel.hide()
+                # Hide the custom partitioning details
+                self._disk_panel.hide()
+                self._wholediskradio.set_active(True)
+                return
+            except BadDiskBlockSizeError as err:
+                self._diskwarningimage.hide()
+                self._diskerrorimage.show()
+                markup = '<span font_desc="Bold">%s</span>' \
+                    % _("This disk has an incompatible block size")
+                self._diskstatuslabel.set_markup(markup)
+                logging.debug("Selected disk [%s] blocksize is not " \
+                    "compatible for installation" % disk.ctd)
+                # Prevent user from proceeding or customisation
+                self.set_back_next(back_sensitive=True, next_sensitive=False)
+                self._partitioningvbox.set_sensitive(False)
+                # Hide the custom partitioning details
+                self._disk_panel.hide()
                 self._wholediskradio.set_active(True)
                 return
             except BadDiskError, err:
                 LOGGER.error("ERROR: TargetController cannot " \
                     "select disk [%s]" % disk.ctd)
-                self._selected_disk = None
                 modal_dialog(_("Internal Error"), "%s\n\n%s" % \
                     (_("See log file for details."), DEFAULT_LOG_LOCATION))
                 self.set_back_next(back_sensitive=True, next_sensitive=False)
                 return
 
-            self._selected_disk = selected_disks[0]
-            LOGGER.info("Disk [%s] selected" % self._selected_disk.ctd)
+            self._select_disk_panel()
+            LOGGER.info("Disk [%s] selected" % selected_disks[0])
             self._diskwarningimage.hide()
             self._diskerrorimage.hide()
             self._diskstatuslabel.set_markup('')
@@ -479,22 +505,22 @@ class DiskScreen(BaseScreen):
 
         self._wholediskmode = True
 
+        selected_disk = self._target_controller.desired_disks[0]
         # Re-select the disk, this time with use_whole_disk=True
         try:
             selected_disks = self._target_controller.select_disk(
-                self._selected_disk,
+                selected_disk,
                 use_whole_disk=self._wholediskmode)
         except BadDiskError, err:
             LOGGER.error("ERROR: TargetController cannot " \
-                "select disk [%s]" % self._selected_disk.ctd)
-            self._selected_disk = None
+                "select disk [%s]" % selected_disk.ctd)
             modal_dialog(_("Internal Error"), "%s\n\n%s" % \
                 (_("See log file for details."), DEFAULT_LOG_LOCATION))
             self.set_back_next(back_sensitive=True, next_sensitive=False)
             return
 
-        self._selected_disk = selected_disks[0]
-        LOGGER.info("Disk [%s] selected", self._selected_disk.ctd)
+        self._select_disk_panel()
+        LOGGER.info("Disk [%s] selected", selected_disk.ctd)
 
         self._display_selected_disk_details()
 
@@ -509,22 +535,22 @@ class DiskScreen(BaseScreen):
 
         self._wholediskmode = False
 
+        selected_disk = self._target_controller.desired_disks[0]
         # Re-select the disk, this time with use_whole_disk=False
         try:
             selected_disks = self._target_controller.select_disk(
-                self._selected_disk,
+                selected_disk,
                 use_whole_disk=self._wholediskmode)
         except BadDiskError, err:
             LOGGER.error("ERROR: TargetController cannot " \
-                "select disk [%s]" % self._selected_disk.ctd)
-            self._selected_disk = None
+                "select disk [%s]" % selected_disk.ctd)
             modal_dialog(_("Internal Error"), "%s\n\n%s" % \
                 (_("See log file for details."), DEFAULT_LOG_LOCATION))
             self.set_back_next(back_sensitive=True, next_sensitive=False)
             return
 
-        self._selected_disk = selected_disks[0]
-        LOGGER.info("Disk [%s] selected" % self._selected_disk.ctd)
+        self._select_disk_panel()
+        LOGGER.info("Disk [%s] selected" % selected_disk.ctd)
 
         self._display_selected_disk_details()
 
@@ -551,9 +577,6 @@ class DiskScreen(BaseScreen):
 
             If TD completes successfully, the attributes
             self._td_disks and self._target_controller will be set.
-
-            If TargetController successfully selects an initial disk,
-            then self.selected_disk will be set.
 
             In any event self._td_complete will be set to True.
         '''
@@ -616,8 +639,7 @@ class DiskScreen(BaseScreen):
             if selected_disks:
                 LOGGER.info("TD FINISHED SUCCESSFULLY!")
 
-                self._selected_disk = selected_disks[0]
-                LOGGER.info("Disk [%s] selected" % self._selected_disk.ctd)
+                LOGGER.info("Disk [%s] selected" % selected_disks[0].ctd)
             else:
                 LOGGER.error("TD DID NOT FINISH SUCCESSFULLY!")
 
@@ -626,53 +648,6 @@ class DiskScreen(BaseScreen):
 
     #--------------------------------------------------------------------------
     # Private methods
-
-    def _fixup_solaris_partition(self, partition):
-        ''' Perform any necessary tidying up on the Solaris partition.
-
-            Params:
-            - partition, a Partition object representing the Solaris2
-              partition for this install
-
-            Actions taken:
-            1. Create slice 0.
-                At this stage the slices on the Solaris2 partition may be
-                in a number of states:
-                - discovered slices from a previous install may still be
-                  present if the user has not made any adjustments to the
-                  partition (although they may not match our requirements)
-                - slices added by TargetController may be present
-                - there may be no slices if the user has made any adjustments
-                  to the type or size of the partition (as these operations
-                  involve removing any child slices)
-                The application does not allow the user any control over
-                slice configuration, and we need to ensure a consistent state
-                before proceeding, so we remove any existing slices found
-                on the Solaris partition and create slice 0.
-
-            2. Activate the partition, if needed.
-                Ensure that the bootid attribute of the partition is
-                ACTIVE
-        '''
-
-        # Create slice 0
-        LOGGER.info("Creating slice 0 on Solaris2 partition.")
-
-        # If we are setting in_zpool and in_vdev on the slice, we must ensure
-        # they are unset on the Disk
-        disk = partition.parent
-        if disk is not None:
-            disk.in_zpool = None
-            disk.in_vdev = None
-
-        partition.create_entire_partition_slice(in_zpool=ROOT_POOL,
-                                                in_vdev="vdev", tag=V_ROOT)
-
-        # Activate the partition (primary partition's only)
-        if partition.is_primary:
-            if partition.bootid != Partition.ACTIVE:
-                LOGGER.info("Activating Solaris2 partition.")
-                partition.bootid = Partition.ACTIVE
 
     def _set_screen_titles(self):
         # NB This messing about is because we want to re-use the existing
@@ -728,10 +703,11 @@ class DiskScreen(BaseScreen):
         # Match the currently selected disk to one of the disk
         # radio buttons and make that button active
         active_button = None
-        if self._selected_disk is not None:
+        selected_disks = self._target_controller.desired_disks
+        if selected_disks:
             for button in self._disk_buttons:
                 td_disk = gobject.GObject.get_data(button, "Disk")
-                if td_disk.name_matches(self._selected_disk):
+                if td_disk.name_matches(selected_disks[0]):
                     button.set_active(True)
                     active_button = button
                     break
@@ -748,7 +724,7 @@ class DiskScreen(BaseScreen):
             self._diskstatuslabel.show()
 
         # ERROR #2 - TC couldn't select an initial Disk
-        if self._selected_disk is None:
+        if not selected_disks:
             modal_dialog(_("Internal Error"), "%s\n\n%s" % \
                 (_("See log file for details."), DEFAULT_LOG_LOCATION))
 
@@ -782,7 +758,7 @@ class DiskScreen(BaseScreen):
         self._partitioningvbox.show()
         self._toplevel.show()
 
-        if not self._td_disks or self._selected_disk is None:
+        if not self._td_disks or not selected_disks:
             self.set_back_next(back_sensitive=True, next_sensitive=False)
         else:
             self.set_back_next(back_sensitive=True, next_sensitive=True)
@@ -801,18 +777,19 @@ class DiskScreen(BaseScreen):
             return True
 
     def _display_selected_disk_details(self):
-        if self._selected_disk is not None:
+        self._select_disk_panel()
+        selected_disks = self._target_controller.desired_disks
+        if selected_disks:
             if self._wholediskmode:
                 # Show "Entire disk will be erased" warning
                 self._diskwarninghbox.show()
 
-                # Hide the custom fdisk partitioning details
-                self.fdisk_panel.hide()
+                # Hide the custom disk partitioning details.
+                self._disk_panel.hide()
             else:
                 # Hide "Entire disk will be erased" warning
                 self._diskwarninghbox.hide()
-
-                self.fdisk_panel.display(self._selected_disk,
+                self._disk_panel.display(selected_disks[0],
                     self._target_controller)
 
     def _create_finding_disks_vbox(self):
@@ -870,15 +847,17 @@ class DiskScreen(BaseScreen):
 
         emblem_iconinfo = None
         # Apply any additional emblems appropriate for the disk
-        # Too small
+        # Too small or incompatible block_size
         if disk.disk_prop.dev_size < \
-            self._target_controller.minimum_target_size:
+            self._target_controller.minimum_target_size or \
+            not self._target_controller._is_block_size_compatible(disk):
             emblem_iconinfo = self._icon_theme.lookup_icon("dialog-error",
                 16, 0)
+        # No readable partition table / disk label
+        elif disk.label is None:
+            emblem_iconinfo = self._icon_theme.lookup_icon("dialog-warning",
+                16, 0)
 
-        # NB - Future enhancement: emblems required for disks > 2Tib and
-        # disks with unreadable partition table (not sure how to extract this
-        # info from TargetController/TD yet.
         if emblem_iconinfo is not None:
             emblem_filename = emblem_iconinfo.get_filename()
             emblem_pixbuf = gtk.gdk.pixbuf_new_from_file(emblem_filename)
@@ -991,3 +970,27 @@ class DiskScreen(BaseScreen):
         self._display_selected_disk_details()
 
         raise NotOkToProceedError(msg)
+
+    def _select_disk_panel(self):
+        ''' Sets the correct disk_panel object type (gpt_panel or fdisk_panel)
+            for the currently selected disk.
+        '''
+        selected_disks = self._target_controller.desired_disks
+        if not selected_disks:
+            return
+
+        selected_disk = selected_disks[0]
+        if selected_disk.label == "GPT" and \
+            not isinstance(self._disk_panel, GPTPanel):
+            self._disk_panel.hide()
+            self._custompartitionbox.remove(self._disk_panel.toplevel)
+            self._disk_panel = self._gpt_panel
+            self._custompartitionbox.pack_start(self._disk_panel.toplevel,
+                expand=True, fill=True, padding=0)
+        elif selected_disk.label == "VTOC" and \
+            not isinstance(self._disk_panel, FdiskPanel):
+            self._disk_panel.hide()
+            self._custompartitionbox.remove(self._disk_panel.toplevel)
+            self._disk_panel = self._fdisk_panel
+            self._custompartitionbox.pack_start(self._disk_panel.toplevel,
+                expand=True, fill=True, padding=0)

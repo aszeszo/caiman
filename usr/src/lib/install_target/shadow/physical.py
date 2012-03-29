@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 import osol_install.errsvc as errsvc
 
@@ -29,16 +29,76 @@ from solaris_install.target.libadm.const import FD_NUMPART, MAX_EXT_PARTS, \
     V_BACKUP, V_BOOT, V_NUMPAR
 from solaris_install.target.libdiskmgt import const as ldm_const
 from solaris_install.target.libdiskmgt import diskmgt
+from solaris_install.target.libefi.const import EFI_NUMPAR, EFI_NUMUSERPAR
+from solaris_install.target.libefi.cstruct import EFI_MAXPAR
 from solaris_install.target.shadow import ShadowList, ShadowExceptionBase
 from solaris_install.target.size import Size
 
 LOGICAL_ADJUSTMENT = 63
 
+# Lowest common multiple blocksize that ensures physical block alignment for
+# all block size multiples from 512bytes up to the maximum 128KB volume block
+# size for LUNs in the Sun Unified Storage appliance. For info see:
+# blogs.oracle.com/dlutz/entry/partition_alignment_guidelines_for_unified
+EFI_BLOCKSIZE_LCM = (128 * 1024)
+
 
 class ShadowPhysical(ShadowList):
-    """ ShadowPhysical - class to hold and validate Physical objects (Partition
-    and Slice)
+    """ ShadowPhysical - class to hold and validate Physical objects
+    (GPTPartition, Partition and Slice)
     """
+    class WholeDiskIsTrueError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "whole_disk attribute for this Disk is set to " + \
+                         "'true'. GPTPartitions, partitions or slices " + \
+                         "cannot be specified for this Disk"
+
+    # GPTPartition exception classes
+    class GPTPartitionInUseError(ShadowExceptionBase):
+        def __init__(self, in_use):
+            s = in_use["used_by"][0]
+            if "used_name" in in_use:
+                s += ": %s" % in_use["used_name"][0]
+            self.value = "GPT partition currently in use by %s" % s
+
+    class DuplicateGPTPartitionNameError(ShadowExceptionBase):
+        def __init__(self, gpart_name):
+            self.value = "GPT partition name %s already inserted" % gpart_name
+
+    class InvalidGPTPartitionNameError(ShadowExceptionBase):
+        def __init__(self, name, ctd):
+            self.value = "Invalid name:  '%s' for GPT partition " % name + \
+                         "on disk:  %s" % ctd
+
+    class InvalidGPTPartitionStartSectorError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "Invalid entry for GPT partition's start_sector"
+
+    class OverlappingGPTPartitionError(ShadowExceptionBase):
+        def __init__(self, partition_name, existing_partition):
+            self.value = "GPT partition %s overlaps with" % partition_name + \
+                         " existing GPT partition: %s" % existing_partition
+
+    class OverlappingGPTPartitionVdevError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "GPT partition in_vdev attribute overlaps " + \
+                         "with parent"
+
+    class OverlappingGPTPartitionZpoolError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "GPT partition in_zpool attribute overlaps " + \
+                         "with parent"
+
+    class GPTPartitionTypeMissingError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "GPT partition has invalid partition type"
+
+    class TooManyGPTPartitionsError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "Only %d GPT partitions may be inserted" % \
+                         EFI_MAXPAR
+
+    # Slice exception classes
     class OverlappingSliceError(ShadowExceptionBase):
         def __init__(self, slice_name, existing_slice):
             self.value = "Slice %s overlaps with existing slice: %s" % \
@@ -64,42 +124,79 @@ class ShadowPhysical(ShadowList):
         def __init__(self):
             self.value = "Only %d slices may be inserted" % V_NUMPAR
 
-    class OverlappingPartitionError(ShadowExceptionBase):
-        def __init__(self, partition_name, existing_partition):
-            self.value = "Partition %s overlaps with " % partition_name + \
-                         "existing partition: %s" % existing_partition
-
-    class OverlappingPartitionZpoolError(ShadowExceptionBase):
+    class InvalidSliceStartSectorError(ShadowExceptionBase):
         def __init__(self):
-            self.value = "Partition in_zpool attribute overlaps with parent"
+            self.value = "Invalid entry for slice's start_sector"
 
-    class OverlappingPartitionVdevError(ShadowExceptionBase):
-        def __init__(self):
-            self.value = "Partition in_vdev attribute overlaps with parent"
+    class SliceInUseError(ShadowExceptionBase):
+        def __init__(self, in_use):
+            s = in_use["used_by"][0]
+            if "used_name" in in_use:
+                s += ": %s" % in_use["used_name"][0]
+            self.value = "Slice currently in use by %s" % s
 
-    class LogicalPartitionOverlapError(ShadowExceptionBase):
-        def __init__(self):
-            self.value = "Logical partition exceeds the start or end " + \
-                         "sector of the extended partition"
-
+    # Partition (MBR) exception classes
     class DuplicatePartitionNameError(ShadowExceptionBase):
         def __init__(self, partition_name):
             self.value = "Partition name %s already inserted" % partition_name
 
-    class TooManyLogicalPartitionsError(ShadowExceptionBase):
+    class FAT16PartitionTooLargeError(ShadowExceptionBase):
         def __init__(self):
-            self.value = "Only %d logical partitions may be inserted" % \
-                         MAX_EXT_PARTS
+            self.value = "FAT16 Partition is too large.  It must not " + \
+                         "exceed 4GB"
+
+    class InvalidPartitionNameError(ShadowExceptionBase):
+        def __init__(self, name, ctd):
+            self.value = "Invalid name:  '%s' for partition " % name + \
+                         "on disk:  %s" % ctd
+
+    class InvalidPartitionStartSectorError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "Invalid entry for partition's start_sector"
+
+    class InvalidTypeError(ShadowExceptionBase):
+        def __init__(self, valid_type):
+            self.value = "Invalid partition type for operation.  Requires " + \
+                         "type:  %s" % valid_type
 
     class MultipleActivePartitionsError(ShadowExceptionBase):
         def __init__(self, partition_name):
             self.value = "Partition %s already marked as active" % \
                          partition_name
 
-    class InvalidTypeError(ShadowExceptionBase):
-        def __init__(self, valid_type):
-            self.value = "Invalid partition type for operation.  Requires " + \
-                         "type:  %s" % valid_type
+    class OverlappingPartitionError(ShadowExceptionBase):
+        def __init__(self, partition_name, existing_partition):
+            self.value = "Partition %s overlaps with " % partition_name + \
+                         "existing partition: %s" % existing_partition
+
+    class OverlappingPartitionVdevError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "Partition in_vdev attribute overlaps with parent"
+
+    class OverlappingPartitionZpoolError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "Partition in_zpool attribute overlaps with parent"
+
+    class PartitionTypeMissingError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "Partition has invalid partition type"
+
+    # Logical partition exception classes
+    class LogicalPartitionOverlapError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "Logical partition exceeds the start or end " + \
+                         "sector of the extended partition"
+
+    class TooManyLogicalPartitionsError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "Only %d logical partitions may be inserted" % \
+                         MAX_EXT_PARTS
+
+    # Extented partition exception classes
+    class ExtPartitionTooSmallError(ShadowExceptionBase):
+        def __init__(self):
+            self.value = "Extended Partition is too small.  It must be 63 " + \
+                         "sectors or larger."
 
     class NoExtPartitionsError(ShadowExceptionBase):
         def __init__(self):
@@ -111,59 +208,52 @@ class ShadowPhysical(ShadowList):
             self.value = "There is already an extended partition set for " + \
                          "this Disk"
 
-    class ExtPartitionTooSmallError(ShadowExceptionBase):
-        def __init__(self):
-            self.value = "Extended Partition is too small.  It must be 63 " + \
-                         "sectors or larger."
-
-    class FAT16PartitionTooLargeError(ShadowExceptionBase):
-        def __init__(self):
-            self.value = "FAT16 Partition is too large.  It must not " + \
-                         "exceed 4GB"
-
-    class WholeDiskIsTrueError(ShadowExceptionBase):
-        def __init__(self):
-            self.value = "whole_disk attribute for this Disk is set to " + \
-                         "'true'. Partitions or slices cannot be " + \
-                         "specified for this Disk"
-
-    class InvalidSliceStartSectorError(ShadowExceptionBase):
-        def __init__(self):
-            self.value = "Invalid entry for slice's start_sector"
-
-    class InvalidPartitionStartSectorError(ShadowExceptionBase):
-        def __init__(self):
-            self.value = "Invalid entry for partition's start_sector"
-
-    class SliceInUseError(ShadowExceptionBase):
-        def __init__(self, in_use):
-            s = in_use["used_by"][0]
-            if "used_name" in in_use:
-                s += ": %s" % in_use["used_name"][0]
-            self.value = "Slice currently in use by %s" % s
-
-    class PartitionTypeMissingError(ShadowExceptionBase):
-        def __init__(self):
-            self.value = "Partition has invalid partition type"
-
-    class InvalidPartitionNameError(ShadowExceptionBase):
-        def __init__(self, name, ctd):
-            self.value = "Invalid name:  '%s' for partition " % name + \
-                         "on disk:  %s" % ctd
-
-    def in_use_check(self, ctds):
-        """ in_use_check() - method to query libdiskmgt to check for in_use
-        confilcts.
+    def in_use_check(self, value):
+        """ in_use_check() - method to query the "discovered" DOC tree
+        for in_use conflicts.
         """
-        try:
-            dmd = diskmgt.descriptor_from_key(ldm_const.SLICE,
-                                              "/dev/dsk/" + ctds)
-        except KeyError:
-            # the requested slice doesn't exist so simply skip the check
-            return dict()
+        in_use = dict()
+
+        # If this is a Slice within a Partition object we need to
+        # to go up 2 ancestors higher to get the Disk object.
+        if self.container.__class__.__name__ == "Partition":
+            desired_disk = self.container.parent
         else:
-            dm_slice = diskmgt.DMSlice(dmd.value)
-            return dm_slice.use_stats
+            desired_disk = self.container
+
+        # Get the root DOC node and find the discovered sub-tree.
+        # Not finding discovered here would be an error under normal
+        # conditions but most unit tests don't create the discovered
+        # tree. So we just return nothing if the discovered tree or
+        # disk is not found.
+        root = self.container.root_object
+        discovered = root.get_descendants(name="discovered",
+            max_count=1, not_found_is_err=False)
+        if not discovered:
+            return in_use
+
+        disks = discovered[0].get_descendants(name="disk",
+            not_found_is_err=False)
+
+        # Look through the discovered disks and match it with ours
+        for disk in disks:
+            if disk.name_matches(desired_disk):
+                # Find the matching slice/(gpt)partition object and make
+                # sure we're comparing apples to apples.
+                partyslices = disk.get_descendants(name=value.name)
+                if not partyslices:
+                    break
+
+                for partyslice in partyslices:
+                    if partyslice.__class__.__name__ == \
+                        value.__class__.__name__:
+                        in_use = partyslice.in_use
+                        break
+
+            if in_use:
+                break
+
+        return in_use
 
     def insert_slice(self, index, value):
         """ insert_slice() - override method for validation of Slice DOC
@@ -185,12 +275,11 @@ class ShadowPhysical(ShadowList):
 
         - none of the parent objects have an in_zpool or in_vdev attribute set
         """
-        # set the proper cylinder boundry, parent_size and ctds string based on
+        # set the proper cylinder boundary and parent_size based on
         # the container type
         if hasattr(self.container, "geometry"):
             # container is a Disk object
             parent_size = self.container.disk_prop.dev_size.sectors
-            ctds = self.container.ctd + "s%s" % value.name
             label = self.container.label
 
             # verify that the Disk does not have 'whole_disk' set to 'true'
@@ -200,7 +289,6 @@ class ShadowPhysical(ShadowList):
         elif hasattr(self.container, "part_type"):
             # container is a Partition object
             parent_size = self.container.size.sectors
-            ctds = self.container.parent.ctd + "s%s" % value.name
             label = self.container.parent.label
 
         # check the bounds of the slice to be added.
@@ -278,13 +366,122 @@ class ShadowPhysical(ShadowList):
                    value.in_vdev:
                     self.set_error(self.OverlappingSliceVdevError())
 
-        # check for in_use conflicts.  Re-query libdiskmgt due to circular
-        # import issues with trying to navigate the DOC
-        stats = self.in_use_check(ctds)
+        # check for in_use conflicts.
+        stats = self.in_use_check(value)
         if stats and value.action != "preserve" and not value.force:
             self.set_error(self.SliceInUseError(stats))
 
         # insert the corrected Slice object
+        ShadowList.insert(self, index, value)
+
+    def insert_gptpartition(self, index, value):
+        """ insert_gptpartition() - override method for validation of
+        GPTPartition DOC objects.
+
+        the following checks are done as part of validation:
+
+        - the parent Disk object does not have whole_disk attribute set
+
+        - the start_sector of the slice is an int or long and is between 0 and
+          the container's maximum size
+
+        - no overlapping boundaries of the GPT partition with any other
+          GPT partitions already inserted
+
+        - no more than EFI_NUMUSERPAR for non-reserved or non-preserved
+          partitions
+
+        - no duplicate indexes (ie. no duplicate GPT partition numbers)
+
+        - none of the parent objects have an in_zpool or in_vdev attribute set
+        """
+        # set the parent_size based on the parent Disk object
+        parent_size = self.container.disk_prop.dev_size.sectors
+        label = self.container.label
+
+        # verify part_type is not None
+        if value.part_type is None:
+            self.set_error(self.GPTPartitionTypeMissingError())
+
+        # verify the name of the partition is valid
+        # User partitions must be between s0 - s6 unless preserving existing
+        # ones
+        # Reserved partitions can and should be s8+
+        if not value.is_reserved and \
+            not 0 <= int(value.name) < EFI_NUMUSERPAR:
+            if value.action != "preserve":
+                self.set_error(self.InvalidGPTPartitionNameError(
+                    str(value.name), self.container.ctd))
+        if int(value.name) == EFI_NUMUSERPAR:
+            if value.action != "preserve":
+                self.set_error(self.InvalidGPTPartitionNameError(
+                    str(value.name), self.container.ctd))
+
+        # check the bounds of the GPT partition to be added.
+        if not (isinstance(value.start_sector, int) or \
+            isinstance(value.start_sector, long)):
+            self.set_error(self.InvalidGPTPartitionStartSectorError())
+
+        if hasattr(self.container.disk_prop, "dev_size") and \
+           getattr(self.container.disk_prop, "dev_size") is not None:
+            if not (0 <= value.start_sector <= \
+               self.container.disk_prop.dev_size.sectors):
+                self.set_error(self.InvalidGPTPartitionStartSectorError())
+
+        # fix the start_sector and size to align against a lowest common
+        # multiple disk block size. Helps to prevent partition mis-alignment.
+        value = self.sector_boundary_adjustment(value)
+
+        # verify that the Disk does not have 'whole_disk' set to 'true'
+        if self.container.whole_disk:
+            self.set_error(self.WholeDiskIsTrueError())
+
+        new_start = value.start_sector
+        new_end = value.start_sector + value.size.sectors - 1
+
+        # verify each GPT partition does not overlap with any other
+        for gpart in self._shadow:
+
+            # calculate the range of each GPT partition already inserted
+            start = gpart.start_sector
+            end = gpart.start_sector + gpart.size.sectors - 1
+
+            # check that the start sector is not within another GPT partition
+            # and the existing GPT partition isn't inside the new GPT
+            # partition but only for GPT partitions not marked for deletion
+            if value.action != "delete" and gpart.action != "delete":
+                if (start <= new_start <= end or start <= new_end <= end) or \
+                   (new_start <= start <= new_end or \
+                    new_start <= end <= new_end):
+                    self.set_error(
+                        self.OverlappingGPTPartitionError(value.name,
+                                                          gpart.name))
+        if len(self._shadow) >= EFI_MAXPAR:
+            self.set_error(self.TooManyGPTPartitionsError())
+
+        # check for duplicate gptpartition.name values
+        if value.name in [gpart.name for gpart in self._shadow \
+                          if gpart.action != "delete"]:
+            self.set_error(self.DuplicateGPTPartitionNameError(value.name))
+
+        # check for in_zpool overlap
+        if value.in_zpool is not None:
+            # check the container
+            if getattr(self.container, "in_zpool") == value.in_zpool:
+                self.set_error(self.OverlappingGPTPartitionZpoolError())
+
+        # check for in_vdev overlap
+        if value.in_vdev is not None:
+            # check the container
+            if getattr(self.container, "in_vdev") == value.in_vdev:
+                self.set_error(self.OverlappingGPTPartitionVdevError())
+
+        # check for in_use conflicts.
+        stats = self.in_use_check(value)
+        if stats and value.action != "preserve" and not value.force:
+            self.set_error(self.GPTPartitionInUseError(stats))
+
+        # insert the corrected GPTPartition object
         ShadowList.insert(self, index, value)
 
     def insert_partition(self, index, value):
@@ -520,32 +717,22 @@ class ShadowPhysical(ShadowList):
             # reset the errsvc for Physical errors
             errsvc.clear_error_list_by_mod_id(self.mod_id)
 
-            # check the value to see what kind of DOC object we're trying to
-            # insert.
-            if hasattr(value, "force"):
-                # this is a Slice object, so call insert_slice
-                self.insert_slice(index, value)
-            elif hasattr(value, "part_type"):
-                # this is a Partition object, so call insert_partition
-                self.insert_partition(index, value)
+            # Check the value to see what kind of DOC object we're trying to
+            # insert. We can't import the classes from target.physical because
+            # it results in a circular import, so look at class name instead.
+            insert_map = {"GPTPartition": self.insert_gptpartition,
+                          "Slice": self.insert_slice,
+                          "Partition": self.insert_partition}
+            insert_map[value.__class__.__name__](index, value)
 
     def remove(self, value):
         # reset the errsvc for Physical errors
         errsvc.clear_error_list_by_mod_id(self.mod_id)
 
-        # look for slices only
+        # Check slices or GPT partitions for in use conclicts
         if hasattr(value, "force"):
-            # set the ctds of the slice
-            if hasattr(self.container, "geometry"):
-                # container is a Disk object
-                ctds = self.container.ctd + "s%s" % value.name
-            elif hasattr(self.container, "part_type"):
-                # container is a Partition object
-                ctds = self.container.parent.ctd + "s%s" % value.name
-
-            # check for in_use conflicts.  Re-query libdiskmgt due to circular
-            # import issues with trying to navigate the DOC
-            stats = self.in_use_check(ctds)
+            # check for in_use conflicts.
+            stats = self.in_use_check(value)
             if stats and not value.force:
                 self.set_error(self.SliceInUseError(stats))
 
@@ -553,7 +740,9 @@ class ShadowPhysical(ShadowList):
         ShadowList.remove(self, value)
 
     def cylinder_boundary_adjustment(self, value):
-        """ cylinder_boundary_adjustment() - method to adjust a Partition or
+        """ NOTE: MBR/VTOC SPECIFIC - do not use for GPT disk partitioning.
+
+        cylinder_boundary_adjustment() - method to adjust a Partition or
         Slice object's start_sector and size value to fall on cylinder
         boundaries
 
@@ -616,6 +805,85 @@ class ShadowPhysical(ShadowList):
                 end_cylinder = ((disk_size / cyl_boundary) - max_cyl) * \
                                cyl_boundary
                 value.size = Size(str(end_cylinder) + Size.sector_units)
+
+        return value
+
+    def sector_boundary_adjustment(self, value):
+        """ NOTE: GPT SPECIFIC - do not use for MBR/VTOC disk partitioning.
+
+        sector_boundary_adjustment() - method to adjust a GPTPartition
+        objects start_sector and size value to align with 128KB physical
+        block boundaries and avoid overlapping with either the primary
+        or secondary EFI labels at the beginning or end of the disk.
+
+        Some larger disks, iSCSI, zvols etc. implement larger physical block
+        sizes, up to 128KB for Sun Storage Array Luns.
+        Some of these can emulate a 512 byte block size for compatibility.
+
+        If not aligned properly, the file system would appear to be logically
+        aligned but physically end up misaligned across physical sectors, which
+        causes performance problems. This method rounds GPT partitions on disks
+        reporting < 128KB block size to multiples of 128KB.
+
+        value - DOC object to adjust
+        """
+        # only make adjustments when the action is 'create'
+        if value.action != "create":
+            return value
+
+        # determine the reported blocksize of the Disk container object
+        # and its size in blocks/sectors.
+        block_size = self.container.geometry.blocksize
+        disk_size = self.container.disk_prop.dev_size.sectors
+
+        # Check to make sure we get a clean block size multiple
+        if EFI_BLOCKSIZE_LCM % block_size != 0:
+            # Unexpected block size (ie. not a multiple of 512,
+            # or > EFI_BLOCKSIZE_LCM)
+            # Don't try to do anything fancy.
+            block_multiplier = 1
+        else:
+            block_multiplier = EFI_BLOCKSIZE_LCM / block_size
+
+        # check the start_sector of the object.
+        # The start sector may need to be further rounded up to align with
+        # our lowest common multiple disk block size value.
+        min_start_sector = self.container.gpt_primary_table_size.sectors
+        if value.start_sector < min_start_sector:
+            difference = min_start_sector - value.start_sector
+            value.start_sector = min_start_sector
+            value.size = Size(str(value.size.sectors - difference) + \
+                              Size.sector_units,
+                              blocksize=block_size)
+
+        # Round the start_sector up to the next block_multiplier boundary
+        # This provides ample space for the EFI disk label and EFI partition
+        # entries and facilitates proper partition alignment
+        if value.start_sector % block_multiplier != 0:
+            new_start_sector = ((value.start_sector / block_multiplier) * \
+                               block_multiplier) + block_multiplier
+            difference = new_start_sector - value.start_sector
+            value.start_sector = new_start_sector
+            value.size = Size(str(value.size.sectors - difference) + \
+                              Size.sector_units,
+                              blocksize=block_size)
+
+        # Check to make sure the GPT partition doesn't extend into or beyond
+        # where the secondary/backup GPT header is stored:
+        end_sector = value.start_sector + value.size.sectors - 1
+        bkup_start = disk_size - self.container.gpt_backup_table_size.sectors
+        if bkup_start <= end_sector:
+            # adjust the size down so it doesn't corrupt the backup EFI label
+            value.size = Size(str(bkup_start - value.start_sector - 1) + \
+                              Size.sector_units,
+                              blocksize=block_size)
+
+        # adjust the size down to the nearest whole multiple of
+        # block_multiplier to make partition end on a physical block boundary
+        if value.size.sectors % block_multiplier != 0:
+            value.size = Size(str((value.size.sectors / block_multiplier) * \
+                              block_multiplier) + Size.sector_units,
+                              blocksize=block_size)
 
         return value
 

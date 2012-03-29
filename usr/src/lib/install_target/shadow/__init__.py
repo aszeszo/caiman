@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """
 The base class that just forwards everything to its shadow.
@@ -116,6 +116,12 @@ class ShadowList(MutableSequence):
         s = ShadowList()
         s._shadow = copy.copy(self._shadow)
         return s
+
+    def sort(self, **kwargs):
+        """ L.sort(cmp=None, key=None, reverse=False) - stable sort *IN PLACE*
+            cmp(x, y) -> -1, 0, 1
+        """
+        self._shadow.sort(**kwargs)
 
     def set_error(self, exception):
         # pylint: disable-msg=E1101

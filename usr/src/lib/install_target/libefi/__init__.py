@@ -1,4 +1,5 @@
-
+#!/usr/bin/python
+#
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -20,39 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
-include ../../Makefile.cmd
-
-all:=		TARGET=	all
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-install:=	TARGET=	install
-
-HELP_FILES=	disks.txt \
-		gpt_partitions.txt \
-		sparc_solaris_slices_select.txt \
-		sparc_solaris_slices.txt \
-		summary.txt \
-		welcome.txt \
-		x86_fdisk_partitions_select.txt \
-		x86_fdisk_partitions.txt \
-		x86_fdisk_slices_select.txt \
-		x86_fdisk_slices.txt
-
-ROOTHELP_FILES=	$(HELP_FILES:%=$(ROOTUSRSHARETIHELPC)/%)
-
-$(ROOTUSRSHARETI):
-	$(INS.dir)
-
-all: $(ROOTUSRSHARETIHELPC)
-
-clean:	
-	rm -rf $(ROOTUSRSHARETI)
-
-clobber: clean
-
-install: all .WAIT $(ROOTHELP_FILES)
-
-include ../../Makefile.targ
+__all__ = ["cfunc, const, cstruct, efi"]

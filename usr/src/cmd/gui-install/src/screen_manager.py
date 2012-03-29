@@ -68,7 +68,7 @@ class ScreenManager(object):
     '''
 
     DEF_WIDTH = 890
-    DEF_HEIGHT = 690
+    DEF_HEIGHT = 695
 
     def __init__(self, logname):
         global LOGGER
@@ -197,8 +197,6 @@ class ScreenManager(object):
             "partition_0_spinner_value_changed": self.no_op,
             "partition_0_spinner_focus_in_handler": self.no_op,
             "partition_0_spinner_focus_out_handler": self.no_op,
-            "disk_partitioning_reset_button_clicked":
-                self._disk_screen.fdisk_panel.reset_button_clicked,
             "partition_0_combo_changed": self.no_op,
             "partition_1_combo_changed": self.no_op,
             "partition_2_combo_changed": self.no_op,

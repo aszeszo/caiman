@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import difflib
@@ -39,7 +39,7 @@ from solaris_install.engine import InstallEngine
 from solaris_install.engine.test.engine_test_utils import \
     get_new_engine_instance, reset_engine
 from solaris_install.target import Target, logical
-from solaris_install.target.physical import Disk
+from solaris_install.target.physical import Disk, Partition, Slice
 
 
 class  TestTargetSelectionTestCase(unittest.TestCase):
@@ -379,7 +379,6 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
             if disk.ctd is None:
                 disk.ctd = "c89t0d0"
 
-
     def tearDown(self):
         if self.engine is not None:
             reset_engine(self.engine)
@@ -392,17 +391,11 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
 
         expected_xml = '''\
         <target name="desired">
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" \
+        whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         ..<logical noswap="false" nodump="false">
         ....<zpool name="rpool" action="create" is_root="true">
@@ -455,17 +448,11 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......</zvol>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="vdev" \
+        whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         </target>
         '''
@@ -489,17 +476,11 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
 
         expected_xml = '''\
         <target name="desired">
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" \
+        whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool" action="create" is_root="true">
@@ -545,17 +526,11 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="vdev" \
+        whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         </target>
         '''
@@ -582,29 +557,15 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
 
         expected_xml = '''\
         <target name="desired">
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool" action="create" is_root="true">
@@ -734,17 +695,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<disk whole_disk="false">
         ....<disk_name name="c97d0" name_type="ctd"/>
@@ -803,29 +757,15 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         </target>
         '''
@@ -973,17 +913,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<disk whole_disk="false">
         ....<disk_name name="c97d0" name_type="ctd"/>
@@ -1045,29 +978,17 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="ai_test_vdev" \
+        whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="ai_test_vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="ai_test_vdev" \
+        whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="ai_test_vdev">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         </target>
         '''
@@ -1212,17 +1133,11 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="ai_test_vdev" \
+        whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="ai_test_vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<disk whole_disk="false">
         ....<disk_name name="c97d0" name_type="ctd"/>
@@ -1285,17 +1200,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         </target>
         '''
@@ -1342,17 +1250,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         </target>
         '''
@@ -1393,17 +1294,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......</zvol>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         </target>
         '''
@@ -1477,17 +1371,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......</zvol>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         </target>
         '''
@@ -1878,16 +1765,9 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<vdev name="vdev" redundancy="mirror"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c97d1" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="vdev">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c98d0" name_type="ctd"/>
@@ -1951,50 +1831,22 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="mirrored" whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="mirrored">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="mirrored" whole_disk="true">
         ....<disk_name name="c97d1" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="mirrored">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="spared" whole_disk="true">
         ....<disk_name name="c98d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="spared">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="spared" whole_disk="true">
         ....<disk_name name="c98d1" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="spared">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ..</disk>
         </target>
         '''
@@ -2057,17 +1909,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<vdev name="mirrored-log" redundancy="logmirror"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="mirrored" whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
@@ -2140,17 +1985,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<vdev name="raid" redundancy="raidz2"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="raid" whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
@@ -2228,17 +2066,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<vdev name="ai_test_log" redundancy="log"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c99t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<disk in_zpool="ai_test_data" in_vdev="ai_test_mirrored" \
         whole_disk="true">
@@ -2317,50 +2148,26 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="ai_test_mirrored" \
+        whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="ai_test_mirrored">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="ai_test_mirrored" \
+        whole_disk="true">
         ....<disk_name name="c97d1" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="ai_test_mirrored">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="ai_test_spare" \
+        whole_disk="true">
         ....<disk_name name="c98d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="ai_test_spare">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="ai_test_cache" \
+        whole_disk="true">
         ....<disk_name name="c98d1" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="ai_test_cache">
-        ........<size val="390713344secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ..</disk>
         </target>
         '''
@@ -2526,77 +2333,48 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="ai_test_mirrored" \
+        whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="ai_test_mirrored">
-        ........<size val="390714880secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="ai_test_mirrored" \
+        whole_disk="true">
         ....<disk_name name="c97d1" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="ai_test_mirrored">
-        ........<size val="390714880secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="ai_test_spare" \
+        whole_disk="true">
         ....<disk_name name="c98d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="ai_test_spare">
-        ........<size val="390714880secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ..</disk>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_root" in_vdev="ai_test_cache" \
+        whole_disk="true">
         ....<disk_name name="c98d1" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_root" in_vdev="ai_test_cache">
-        ........<size val="390714880secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ..</disk>
         </target>
         '''
 
         for disk in self.disks:
+            for obj in [Partition, Slice]:
+                disk.delete_children(class_type=obj)
             disk.label = "GPT"
 
         # When GPT support gets added and bug : 7037884 gets fixed we
         # can re-enable this test
-        #self.__run_simple_test(test_manifest_xml, expected_xml)
+        self.__run_simple_test(test_manifest_xml, expected_xml)
 
     def test_target_selection_no_target_all_gpt_disks(self):
         '''Test Success if no target in manifest with all GPT disks'''
 
         expected_xml = '''\
         <target name="desired">
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="390714880secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         ..<logical noswap="false" nodump="false">
         ....<zpool name="rpool" action="create" is_root="true">
@@ -2614,11 +2392,13 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         '''
 
         for disk in self.disks:
+            for obj in [Partition, Slice]:
+                disk.delete_children(class_type=obj)
             disk.label = "GPT"
 
         # When GPT support gets added and bug : 7037884 gets fixed we
         # can re-enable this test
-        #self.__run_simple_test(None, expected_xml)
+        self.__run_simple_test(None, expected_xml)
 
     def test_target_selection_no_disk_target_with_logical_all_gpt_disks(self):
         '''Test Success if no disks, but with logical section and all GPT
@@ -2655,27 +2435,22 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......</zvol>
         ....</zpool>
         ..</logical>
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="ai_test_rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c97d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
+        ....<disk_prop dev_type="FIXED" dev_size="\d+secs"/>
         ....<disk_keyword key="boot_disk"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="ai_test_rpool" in_vdev="vdev">
-        ........<size val="390714880secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
         ..</disk>
         </target>
         '''
 
         for disk in self.disks:
+            for obj in [Partition, Slice]:
+                disk.delete_children(class_type=obj)
             disk.label = "GPT"
 
         # When GPT support gets added and bug : 7037884 gets fixed we
         # can re-enable this test
-        #self.__run_simple_test(test_manifest_xml, expected_xml)
+        self.__run_simple_test(test_manifest_xml, expected_xml)
 
     def test_target_selection_slice_too_large(self):
         '''Test Fail if slice is specified with a value too large'''
@@ -3136,7 +2911,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
+        ......<size val="\d+secs" start_sector="512"/>
         ......<slice name="1" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="rpool-none">
         ........<size val="276976128secs" start_sector="512"/>
@@ -3196,10 +2971,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
+        ......<size val="\d+secs" start_sector="512"/>
         ......<slice name="1" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="rpool-none">
-        ........<size val="276976128secs" start_sector="512"/>
+        ........<size val="\d+secs" start_sector="512"/>
         ......</slice>
         ......<slice name="3" action="create" force="false" is_swap="true">
         ........<size val="2096640secs" start_sector="276977152"/>
@@ -3251,7 +3026,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
+        ......<size val="\d+secs" start_sector="512"/>
         ......<slice name="1" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
         ........<size val="625139712secs" start_sector="512"/>
@@ -3336,7 +3111,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="2" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
+        ......<size val="\d+secs" start_sector="512"/>
         ......<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
         ........<size val="390713344secs" start_sector="512"/>
@@ -3386,13 +3161,13 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="create" name="1" part_type="191">
-        ......<size val="390714880secs" start_sector="512"/>
+        ......<size val="\d+secs" start_sector="512"/>
         ......<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="ai_test_rpool" in_vdev="vdev">
         ........<size val="387972608secs" start_sector="512"/>
         ......</slice>
         ......<slice name="1" action="create" force="false" is_swap="false">
-        ........<size val="2741248secs" start_sector="387973632"/>
+        ........<size val="\d+secs" start_sector="387973632"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -3417,17 +3192,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         '''
         expected_xml = '''\
         <target name="desired">
-        ..<disk whole_disk="false">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
         ....<disk_name name="c89t0d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
-        dev_size="625141760secs"/>
-        ....<partition action="create" name="1" part_type="191">
-        ......<size val="625141248secs" start_sector="512"/>
-        ......<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="rpool" in_vdev="vdev">
-        ........<size val="625139712secs" start_sector="512"/>
-        ......</slice>
-        ....</partition>
+        dev_size="\d+secs"/>
         ..</disk>
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool" action="create" is_root="true">
