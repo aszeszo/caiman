@@ -198,6 +198,7 @@ class DBthread(threading.Thread):
 
         # register our user-defined function
         self._con.create_function("is_in_list", 4, is_in_list)
+        self._con.create_function("match_hostname", 3, match_hostname)
 
         # allow access by both index and column name
         self._con.row_factory = sqlite.Row
@@ -283,6 +284,46 @@ def is_in_list(crit_name, value, value_list, list_separator=None):
             return 1
 
     return 0
+
+
+def match_hostname(value, value_list, match_str=1):
+    '''This function is user-defined function to be used to find out
+       hostname match from the different possibilities of a fully
+       qualified hostname. For example, for hostname x.y.com, possible
+       matches are 'x', 'x.y' and 'x.y.com'.
+
+       Parameters: value      -  hostname to find in value_list
+                   value_list -  string of separated values
+                   match_str  -  1 implies return matched string value
+                                 0 implies return 0 or 1 based on match
+                                    1 -> possible match is in value_list
+                                    0 -> otherwise
+    '''
+
+    if value is None or value_list is None:
+        if match_str == 1:
+            return ""
+        else:
+            return 0
+
+    # create possible values of hostname
+    parts = value.split(".")
+    possible_match = [".".join(parts[:index])
+                     for index in range(len(parts), 0, -1)]
+
+    match = ""
+    for host in possible_match:
+        if host.lower() in [val.lower() for val in value_list.split()]:
+            match = host
+            break
+
+    if match_str == 1:
+        return match
+    else:
+        if len(match) > 0:
+            return 1
+        else:
+            return 0
 
 
 def sanitizeSQL(text):
@@ -615,21 +656,7 @@ def build_query_str(criteria, criteria_set_in_db, all_criteria_in_db):
     # Filter manifests with no criteria set, if all_criteria_in_db passed in.
     filter_noncriteria_manifests = (all_criteria_in_db is not None)
 
-    # Save range values as either 1 or 0 for ORDERing purposes.
-    # If either the MIN or MAX field in the db is non-NULL (if
-    # unbounded, the MIN or MAX is NULL), then the "_val"
-    # variable is set to 1. Otherwise, it is set to 0.
-    # This allows for criteria that can be a range or an exact
-    # value to be weighted equally during the ORDERing process
-    # for manifests that have criteria set.
-    # COALESCE returns a copy of its first non-NULL argument, or
-    # NULL if all arguments are NULL.
-    query_str = ("SELECT name, "
-                 "(COALESCE(MAXmac, MINmac) IS NOT NULL) as mac_val, "
-                 "(COALESCE(MAXipv4, MINipv4) IS NOT NULL) as ipv4_val, "
-                 "(COALESCE(MAXnetwork, MINnetwork) IS NOT NULL) as net_val, "
-                 "(COALESCE(MAXmem, MINmem) IS NOT NULL) as mem_val "
-                 "FROM manifests WHERE ")
+    query_str = "SELECT name FROM manifests WHERE "
 
     # Set up search for all manifest matches in the db and then add ORDER
     # clause to select the best match.
@@ -670,15 +697,24 @@ def build_query_str(criteria, criteria_set_in_db, all_criteria_in_db):
                 if crit in criteria:
                     # For non-range criteria, the value stored in the DB
                     # may be a whitespace separated list of single values.
-                    # We use a special user-defined function in the determine
+                    # We use a special user-defined function to determine
                     # if the given criteria is in that textual list.
                     #
-                    # setup a clause like:
+                    # setup a WHERE clause for hostname criteria:
+                    #    hostname IS NULL OR \
+                    #        match_hostname('value', hostname, 0) == 1
+                    # for all other criteria:
                     #    crit IS NULL OR \
                     #        is_in_list('crit', 'value', crit, 'None') == 1
-                    query_str += "(" + crit + " IS NULL OR is_in_list('" + \
-                        crit + "', '" + sanitizeSQL(criteria[crit]) + "', " + \
-                        crit + ", 'None') == 1) AND "
+                    if crit == "hostname":
+                        query_str += "( hostname IS NULL OR match_hostname" \
+                                     "('" + sanitizeSQL(criteria[crit]) + \
+                                     "', hostname, 0)  == 1) AND "
+                    else:
+                        query_str += "(" + crit + " IS NULL OR is_in_list" \
+                                     "('" + crit + "', '" + \
+                                     sanitizeSQL(criteria[crit]) + "', " + \
+                                     crit + ", 'None') == 1) AND "
                 else:
                     query_str += "(" + crit + " IS NULL) AND "
 
@@ -699,13 +735,20 @@ def build_query_str(criteria, criteria_set_in_db, all_criteria_in_db):
 
     # ORDER so that the best match is first.  Use LIMIT to select
     # that manifest, if multiple manifests match.
+    # COALESCE returns a copy of its first non-NULL argument, or
+    # NULL if all arguments are NULL.
     # Precedence order is:
-    #    mac_val, ipv4_val, platform, arch, cpu, net_val, mem_val
+    #    mac, ipv4, hostname, platform, arch, cpu, net, mem
 
     query_str += ("ORDER BY "
-                  "mac_val desc, ipv4_val desc, "
-                  "platform desc, arch desc, cpu desc, "
-                  "net_val desc, mem_val desc LIMIT 1")
+                  "(COALESCE(MAXmac, MINmac) IS NOT NULL) desc, "
+                  "(COALESCE(MAXipv4, MINipv4) IS NOT NULL) desc, ")
+    if "hostname" in criteria:
+        query_str += ("match_hostname('" + sanitizeSQL(criteria['hostname']) +
+                      "', hostname, 1) desc, ")
+    query_str += ("platform desc, arch desc, cpu desc, "
+                  "(COALESCE(MAXnetwork, MINnetwork) IS NOT NULL) desc, "
+                  "(COALESCE(MAXmem, MINmem) IS NOT NULL) desc LIMIT 1")
     return query_str
 
 

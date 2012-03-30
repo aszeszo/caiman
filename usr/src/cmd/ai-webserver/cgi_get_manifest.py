@@ -405,11 +405,20 @@ def send_manifest(form_data, port=0, servicename=None,
             # values.  We use a special user-defined function in the
             # determine if the given criteria is in that textual list.
             if no_default:
-                nvpairs += ["(is_in_list('" + crit + "', '" + envval + \
-                    "', " + crit + ", 'None') == 1)"]
+                if crit == "hostname":
+                    nvpairs += ["(match_hostname('" + envval + \
+                                "', hostname, 0) == 1)"]
+                else:
+                    nvpairs += ["(is_in_list('" + crit + "', '" + envval + \
+                                "', " + crit + ", 'None') == 1)"]
             else:
-                nvpairs += ["(" + crit + " IS NULL OR is_in_list('" + crit + \
-                    "', '" + envval + "', " + crit + ", 'None') == 1)"]
+                if crit == "hostname":
+                    nvpairs += ["( hostname IS NULL OR match_hostname('" + \
+                                envval + "', hostname, 0) == 1)"]
+                else:
+                    nvpairs += ["(" + crit + " IS NULL OR is_in_list('" + \
+                                crit + "', '" + envval + "', " + crit + \
+                                ", 'None') == 1)"]
 
     if len(nvpairs) > 0:
         q_str += " AND ".join(nvpairs)

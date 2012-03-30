@@ -540,5 +540,25 @@ class is_in_list(unittest.TestCase):
         self.assertFalse(AIdb.is_in_list('zonename', value, value_list, None))
 
 
+class match_hostname(unittest.TestCase):
+    '''Tests for match_hostname'''
+
+    def test_match_fqhn_value(self):
+        ''' Test that we match a fqhn value '''
+        value = "foo.com"
+        value_list = "foo bar bum"
+        matched = AIdb.match_hostname(value, value_list, 1)
+        self.assertTrue(AIdb.match_hostname(value, value_list, 0))
+        self.assertEqual(matched, "foo")
+
+    def test_no_match_fqhn_value(self):
+        ''' Test that we don't match a hostname with fqhn in the list'''
+        value = "foo"
+        value_list = "bar foo.com bum"
+        matched = AIdb.match_hostname(value, value_list, 1)
+        self.assertFalse(AIdb.match_hostname(value, value_list, 0))
+        self.assertEqual(len(matched), 0)
+
+
 if __name__ == '__main__':
     unittest.main()
