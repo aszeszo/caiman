@@ -451,6 +451,7 @@ class TargetInstantiation(Checkpoint):
             self.create_logicals()
 
         # lastly set up swap and dump devices
-        self.create_swap()
-
+        # since swap zvol can be defined as "max" size,
+        # it should be created in last.
         self.create_dump()
+        self.create_swap()

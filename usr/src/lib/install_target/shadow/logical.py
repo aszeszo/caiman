@@ -51,6 +51,11 @@ class ShadowLogical(ShadowList):
             self.value = "Zvol marked for dump usage, but Logical element " + \
                          "has nodump=\"true\""
 
+    class MaxSizeZvolError(ShadowExceptionBase):
+        def __init__(self, vol1, vol2):
+            self.value = "Multiple Zvol with maximum size are not allowed:" + \
+                         " (%s, %s)" % (vol1, vol2)
+
     def insert(self, index, value):
         """
         insert() - overridden method for validation of logical DOC objects
@@ -63,6 +68,8 @@ class ShadowLogical(ShadowList):
 
         - verifies the <logical> tag's noswap and nodump values do not conflict
           with the use attribute of a Zvol object
+
+        - more than 1 zvol with maximum size per pool
         """
         # reset the errsvc for Logical errors
         errsvc.clear_error_list_by_mod_id(self.mod_id)
@@ -82,6 +89,15 @@ class ShadowLogical(ShadowList):
                     self.set_error(
                         self.DuplicateMountpointError(dataset.name,
                                                       dataset.mountpoint))
+
+            # check for multiple zvol with max size in same pool
+            if hasattr(value, "use") and hasattr(dataset, "use"):
+                if isinstance(value.size, str) and \
+                   isinstance(dataset.size, str) and  value.size == "max" and \
+                   dataset.size == "max" and \
+                   self.container.name == dataset.parent.name:
+                    self.set_error(self.MaxSizeZvolError(value.name,
+                                                         dataset.name))
 
         # check the 'use' attribute for Zvol objects.  The grandparent of the
         # entry is the <logical> element

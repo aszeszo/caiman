@@ -416,6 +416,17 @@ class TestZvol(unittest.TestCase):
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
             ShadowLogical.NodumpMismatchError))
 
+    def test_max_size_zvol(self):
+        zvol1 = self.zpool.add_zvol("zvol1", size="max", use="swap")
+        zvol2 = self.zpool.add_zvol("zvol2", size="max", use="swap")
+
+        # verify there is only one error in the errsvc list and confirm
+        # the error
+        self.assertEqual(len(errsvc._ERRORS), 1)
+        error = errsvc._ERRORS[0]
+        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
+            ShadowLogical.MaxSizeZvolError))
+
 
 class TestGPTPartition(unittest.TestCase):
     def setUp(self):

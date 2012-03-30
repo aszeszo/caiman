@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_zpool_vdevs.py - test suite to exercise creation of zpools via
@@ -41,23 +41,26 @@ from solaris_install.target.size import Size
 
 
 MKFILE = "/usr/sbin/mkfile"
+ZFS = "/usr/sbin/zfs"
+
+
+def create_file(path, size="64m"):
+    """ create file with specified size using mkfile
+    """
+
+    # look for the file first.  if it exists, remove if
+    if os.path.isfile(path):
+        os.unlink(path)
+
+    # create the file with mkfile
+    cmd = [MKFILE, size, path]
+    p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE)
 
 
 class TestZpoolVdevs(unittest.TestCase):
     """ Test case for exercising creation of Zpool objects and validating
     against real zpools
     """
-    def create_file(self, path, size="64m"):
-        # look for the file first.  if it exists, remove if
-        if os.path.isfile(path):
-            os.unlink(path)
-
-        # create the file with mkfile
-        cmd = [MKFILE, size, path]
-        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE)
-
-        # add the file to the list to destroy later
-        self.file_list.append(path)
 
     def setUp(self):
         self.engine = engine_test_utils.get_new_engine_instance()
@@ -93,7 +96,8 @@ class TestZpoolVdevs(unittest.TestCase):
         """
         # create a single 64M file
         f1 = "/var/tmp/ti_file_1"
-        self.create_file(f1)
+        create_file(f1)
+        self.file_list.append(f1)
 
         # create a new Disk object
         d = Disk("disk")
@@ -128,10 +132,12 @@ class TestZpoolVdevs(unittest.TestCase):
         """
         # create two 64M files
         f1 = "/var/tmp/ti_file_1"
-        self.create_file(f1)
+        create_file(f1)
+        self.file_list.append(f1)
 
         f2 = "/var/tmp/ti_file_2"
-        self.create_file(f2)
+        create_file(f2)
+        self.file_list.append(f2)
 
         # create two disk objects
         d1 = Disk("disk1")
@@ -176,7 +182,8 @@ class TestZpoolVdevs(unittest.TestCase):
         # create 10 files
         for i in range(1, 11):
             f = "/var/tmp/ti_file_%d" % i
-            self.create_file(f)
+            create_file(f)
+            self.file_list.append(f)
 
         # create 10 disk objects
         for i in range(1, 11):
@@ -240,13 +247,16 @@ class TestZpoolVdevs(unittest.TestCase):
         """
         # create three 64M files
         f1 = "/var/tmp/ti_file_1"
-        self.create_file(f1)
+        create_file(f1)
+        self.file_list.append(f1)
 
         f2 = "/var/tmp/ti_file_2"
-        self.create_file(f2)
+        create_file(f2)
+        self.file_list.append(f2)
 
         f3 = "/var/tmp/ti_file_3"
-        self.create_file(f3)
+        create_file(f3)
+        self.file_list.append(f3)
 
         # create two disk objects
         d1 = Disk("disk1")
@@ -295,17 +305,21 @@ class TestZpoolVdevs(unittest.TestCase):
     def test_duplicate_in_vdev(self):
         # create four 64M files
         f1 = "/var/tmp/ti_file_1"
-        self.create_file(f1)
+        create_file(f1)
+        self.file_list.append(f1)
 
         f2 = "/var/tmp/ti_file_2"
-        self.create_file(f2)
+        create_file(f2)
+        self.file_list.append(f2)
 
         f3 = "/var/tmp/ti_file_3"
-        self.create_file(f3)
+        create_file(f3)
+        self.file_list.append(f3)
 
         f4 = "/var/tmp/ti_file_4"
-        self.create_file(f4)
-        
+        create_file(f4)
+        self.file_list.append(f4)
+
         # create four disk objects
         d1 = Disk("disk1")
         d1.ctd = f1
@@ -372,17 +386,21 @@ class TestZpoolVdevs(unittest.TestCase):
     def test_invalid_vdev_labels(self):
         # create four 64M files
         f1 = "/var/tmp/ti_file_1"
-        self.create_file(f1)
+        create_file(f1)
+        self.file_list.append(f1)
 
         f2 = "/var/tmp/ti_file_2"
-        self.create_file(f2)
+        create_file(f2)
+        self.file_list.append(f2)
 
         f3 = "/var/tmp/ti_file_3"
-        self.create_file(f3)
+        create_file(f3)
+        self.file_list.append(f3)
 
         f4 = "/var/tmp/ti_file_4"
-        self.create_file(f4)
-        
+        create_file(f4)
+        self.file_list.append(f4)
+
         # create four disk objects.  D1 has no in_zpool set
         d1 = Disk("disk1")
         d1.ctd = f1
@@ -415,9 +433,135 @@ class TestZpoolVdevs(unittest.TestCase):
 
         zpool2 = self.logical.add_zpool("ti_data")
         zpool2.add_vdev("datavdev", "mirror")
-        
+
         self.zpool_list.append(zpool1)
         self.zpool_list.append(zpool2)
 
         t = instantiation.TargetInstantiation("test_ti")
         self.assertRaises(RuntimeError, t.execute)
+
+
+class TestZvol(unittest.TestCase):
+    """ Test case for exercising creation of Zvol object
+    """
+
+    def setUp(self):
+        self.engine = engine_test_utils.get_new_engine_instance()
+        self.doc = self.engine.data_object_cache.volatile
+
+        # list of created files for zpool vdev usage
+        self.file_list = []
+
+        # list of created zpools
+        self.zpool_list = []
+
+        # create the basic DOC structure
+        self.target = Target(Target.DESIRED)
+        self.logical = Logical("logical")
+        self.target.insert_children(self.logical)
+
+        self.doc.insert_children(self.target)
+
+    def tearDown(self):
+        engine_test_utils.reset_engine()
+
+        # walk the zpool_list and call destroy
+        for zpool in self.zpool_list:
+            # remove the zvol from swap
+            for zvol in zpool.get_children():
+                zvol.destroy(dry_run=False)
+            zpool.destroy(dry_run=False, force=True)
+
+        # walk the file_list call unlink() on them
+        for f in self.file_list:
+            if os.path.isfile(f):
+                os.unlink(f)
+
+    def test_zvol_max_size(self):
+        """ test zvol creation with maximum size
+        """
+        # create a single 64M file
+        f1 = "/var/tmp/ti_file_1"
+        create_file(f1)
+        self.file_list.append(f1)
+
+        # create a new Disk object
+        d = Disk("disk")
+        d.ctd = f1
+        d.in_zpool = "ti_zpool_test"
+        d.whole_disk = True
+        self.target.insert_children(d)
+
+        # create a new Zpool object
+        zpool = self.logical.add_zpool("ti_zpool_test")
+
+        zvol = Zvol("zvol")
+        zvol.use = "swap"
+        zvol.size = "max"
+        zpool.insert_children(zvol)
+        # create the zpool and store it for later teardown
+        try:
+            t = instantiation.TargetInstantiation("test_ti")
+            t.execute(dry_run=False)
+            self.zpool_list.append(zpool)
+        except Exception as err:
+            import traceback
+            print traceback.print_exc()
+            self.fail(str(err))
+
+        # get the "available" size of zvol
+        zvol_name = zpool.name + "/" + zvol.name
+        cmd = [ZFS, "get", "-Ho", "value", "available", zvol_name]
+        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE)
+
+        zvol_size = 0.90 * float((p.stdout[:-2]))
+        self.assertTrue(zvol_size > zvol.size.get(Size.mb_units))
+
+    def test_create_multiple_zvols(self):
+        """ test zvol creation with 2 zvol 1 of them with max size
+        """
+        # create a single 128m file
+        f1 = "/var/tmp/ti_file_1"
+        create_file(f1, size="128m")
+        self.file_list.append(f1)
+
+        # create a new Disk object
+        d = Disk("disk")
+        d.ctd = f1
+        d.in_zpool = "ti_zpool_test"
+        d.whole_disk = True
+        self.target.insert_children(d)
+
+        # create a new Zpool object
+        zpool = self.logical.add_zpool("ti_zpool_test")
+
+        zvol = Zvol("zvol")
+        zvol.use = "swap"
+        zvol.size = "max"
+        zpool.insert_children(zvol)
+
+        zvol1 = Zvol("zvol1")
+        zvol1.size = Size("64mb")
+        zpool.insert_children(zvol1)
+        # create the zpool and store it for later teardown
+        try:
+            t = instantiation.TargetInstantiation("test_ti")
+            t.execute(dry_run=False)
+            self.zpool_list.append(zpool)
+        except Exception as err:
+            import traceback
+            print traceback.print_exc()
+            self.fail(str(err))
+
+        # get the "available" size of zvol
+        zvol_name = zpool.name + "/" + zvol.name
+        cmd = [ZFS, "get", "-Ho", "value", "available", zvol_name]
+        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE)
+
+        zvol_size = 0.90 * float(p.stdout[:-2])
+        self.assertTrue(zvol_size > zvol.size.get(Size.mb_units))
+
+        zvol1_name = zpool.name + "/" + zvol1.name
+        cmd = [ZFS, "get", "-Ho", "value", "available", zvol1_name]
+        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE)
+        self.assertTrue(float(p.stdout[:-2]) > zvol1.size.get(Size.mb_units))

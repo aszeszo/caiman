@@ -41,8 +41,6 @@ from solaris_install.target.shadow.logical import ShadowLogical
 from solaris_install.target.shadow.zpool import ShadowZpool
 from solaris_install.target.libbe.be import be_list, be_init, be_destroy, \
     be_activate, be_mount, be_unmount
-from solaris_install.target.libbe.const import ZFS_FS_NAMES, \
-    ZFS_SHARED_FS_NAMES
 from solaris_install.target.libnvpair import nvl
 
 DUMPADM = "/usr/sbin/dumpadm"
@@ -334,7 +332,7 @@ class Zpool(DataObject):
         """
         self.delete_children(name=filesystem.name, class_type=Filesystem)
 
-    def add_zvol(self, zvol_name, size, size_units=Size.gb_units, use=None,
+    def add_zvol(self, zvol_name, size="", size_units=Size.gb_units, use=None,
                  create_failure_ok=False):
         """ add_zvol - method to create a Zvol object and add it as a child of
         the Zpool object
@@ -344,9 +342,13 @@ class Zpool(DataObject):
 
         # fix the size units to conform to ZFS syntax by removing the "b"
         # character from the units
-        size_units = str(size_units).rstrip("bB")
+        if size:
+            if size == "max":
+                new_zvol.size = size
+            else:
+                size_units = str(size_units).rstrip("bB")
+                new_zvol.size = str(size) + size_units
 
-        new_zvol.size = str(size) + size_units
         if use is not None:
             new_zvol.use = use
         new_zvol.create_failure_ok = create_failure_ok
@@ -686,6 +688,12 @@ class Zvol(DataObject):
             if size.get("val") is None:
                 raise ParsingError("Size element must contain a 'val' " + \
                                    "attribute")
+
+            # 'max' is allowed only for swap zvol
+            if size.get("val") == "max":
+                if use is None or use != "swap":
+                    raise ParsingError("'max' value for 'val' attribute is "
+                                       "applicable only for swap zvol.")
             zvol.size = size.get("val")
         else:
             raise ParsingError("Zvol element must contain a size subelement")
@@ -712,6 +720,16 @@ class Zvol(DataObject):
             # ZFS expects
             if isinstance(self.size, Size):
                 zvol_size = str(int(self.size.get(Size.mb_units))) + "M"
+            elif self.size == "max":
+                # Allocate 90 % of available space on pool to zvol.
+                # Size of zvol is capped to 90 % to avoid full zpool
+                # issues.
+                if self.parent is not None:
+                    fs = Filesystem(self.parent.name)
+                    fs_size = Size(fs.get("available"))
+                    zvol_size = str(int(fs_size.get(Size.mb_units) * 0.9)) + \
+                                    "M"
+                    self.size = Size(zvol_size)
             else:
                 zvol_size = self.size
 
