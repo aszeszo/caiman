@@ -530,7 +530,9 @@ class SystemBootMenu(BootMenu):
         bootblk_src = os.path.join(self.boot_target[BOOT_ENV].mountpoint,
                                    'platform', platform.machine(),
                                    'lib', 'fs', 'zfs', 'bootblk')
-        sub_cmd = ["/usr/sbin/installboot", "-F", "zfs", bootblk_src]
+        # NOTE: the '-f' switch forces the installation of the bootblock 
+        # onto a disk that may have a versioned bootblock already installed.
+        sub_cmd = ["/usr/sbin/installboot", "-f", "-F", "zfs", bootblk_src]
 
         for dev in boot_devs:
             cmd = sub_cmd[:]
@@ -916,8 +918,11 @@ class SystemBootMenu(BootMenu):
             # Danger Will Robinson!!
             self.logger.info("Installing boot loader to devices: %s" \
                              % str(boot_rdevs))
-            self.config.commit_boot_config(
-                boot_devices=boot_rdevs)
+            # NOTE: Use the force (haha) option to force installation of the
+            # boot loader onto a disk that may have a versioned boot loader
+            # already installed.
+            self.config.commit_boot_config(boot_devices=boot_rdevs,
+                                           force=True)
         # XXX Pybootmgmt ought to do this but doesn't currently so
         # set up the bootfs property on the boot pool.
         self._set_bootfs_pool_prop(dry_run)
