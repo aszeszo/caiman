@@ -831,8 +831,11 @@ class SystemBootMenu(BootMenu):
             # Danger Will Robinson!!
             self.logger.info("Installing boot loader to devices: %s" \
                              % str(boot_rdevs))
-            self.config.commit_boot_config(
-                boot_devices=boot_rdevs)
+            # NOTE: Use the force (haha) option to force installation of the
+            # boot loader onto a disk that may have a versioned boot loader
+            # already installed.
+            self.config.commit_boot_config(boot_devices=boot_rdevs,
+                                           force=True) 
 
             self.logger.info("Setting boot devices in firmware")
             self._set_firmware_boot_device(dry_run)
