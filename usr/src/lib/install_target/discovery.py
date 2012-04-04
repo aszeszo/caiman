@@ -39,7 +39,7 @@ import tempfile
 
 import solaris_install.target.vdevs as vdevs
 
-from bootmgmt.pysol import di_find_prop, getmntany, mnttab_open, mnttab_close
+from bootmgmt.pysol import getmntany, mnttab_open, mnttab_close
 
 from solaris_install import CalledProcessError, Popen, run
 from solaris_install.data_object.data_dict import DataObjectDict
@@ -49,7 +49,6 @@ from solaris_install.target import CRO_LABEL, Target
 from solaris_install.target.libbe import be
 from solaris_install.target.libdevinfo import devinfo
 from solaris_install.target.libdiskmgt import const, diskmgt
-from solaris_install.target.libdiskmgt.attributes import DMMediaAttr
 from solaris_install.target.libefi.efi import efi_free, efi_read
 from solaris_install.target.logical import BE, Filesystem, Logical, Zpool, Zvol
 from solaris_install.target.physical import Disk, DiskProp, DiskGeometry, \
@@ -722,21 +721,14 @@ class TargetDiscovery(Checkpoint):
             # trap on the "/pseudo" controller (zvol swap and dump)
             if controller.name == "/pseudo" and add_physical:
                 self.discover_pseudo(controller)
+
+            # skip USB floppy controllers
+            if controller.floppy_controller:
+                continue
+
             else:
                 # extract every drive on the given controller
                 for drive in controller.drives:
-                    # skip USB floppy drives
-                    if controller.attributes is not None and \
-                       controller.attributes.type == const.CTYPE_USB:
-                        try:
-                            di_props = di_find_prop("compatible",
-                                                    controller.name)
-                        except Exception:
-                            di_props = list()
-
-                        if const.DI_FLOPPY in di_props:
-                            continue
-
                     # query libdiskmgt for the drive's information
                     new_disk = self.discover_disk(drive)
 
@@ -754,8 +746,14 @@ class TargetDiscovery(Checkpoint):
         # now walk all the drives in the system to make sure we pick up any
         # disks which have no controller (OVM Xen disks)
         for drive in diskmgt.descriptors_by_type(const.DRIVE):
+            # skip USB floppy controllers
+            if drive.controllers and drive.controllers[0].floppy_controller:
+                continue
+                
+            # skip any drive whose opath starts with "/dev/zvol/rdsk"
             if drive.attributes.opath.startswith(ZVOL_RPATH):
                 continue
+
             new_disk = self.discover_disk(drive)
 
             # skip invalid drives and CDROM drives

@@ -32,10 +32,11 @@ import fcntl
 import numbers
 import os
 
+from bootmgmt.pysol import di_find_prop
 from solaris_install.target.cgc import CTypesStructureRef
 from solaris_install.target.libdiskmgt import cfunc, const, cstruct
-from solaris_install.target.libdiskmgt.attributes import DMDriveAttr,\
-    DMControllerAttr, DMMediaAttr, DMSliceAttr, DMPartAttr, DMPathAttr,\
+from solaris_install.target.libdiskmgt.attributes import DMDriveAttr, \
+    DMControllerAttr, DMMediaAttr, DMSliceAttr, DMPartAttr, DMPathAttr, \
     DMAliasAttr, DMBusAttr
 from solaris_install.target.libnvpair.cfunc import nvlist_free
 
@@ -349,6 +350,21 @@ class DMDrive(DMDescriptor):
 class DMController(DMDescriptor):
     """A libdiskmgt.so descriptor that is of type const.CONTROLLER"""
     ATYPE = DMControllerAttr
+
+    @property
+    def floppy_controller(self):
+        """ property to indicate if the controller is a floppy drive USB
+        controller.
+        """
+
+        if self.attributes is not None and \
+           self.attributes.type == const.CTYPE_USB:
+            try:
+                di_props = di_find_prop("compatible", self.name)
+            except Exception:
+                di_props = list()
+            return const.DI_FLOPPY in di_props
+        return False
 
     @property
     def bus(self):

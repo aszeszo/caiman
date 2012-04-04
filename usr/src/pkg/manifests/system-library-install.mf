@@ -177,7 +177,10 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/co
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/const.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/cstruct.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/cstruct.pyc
-file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/diskmgt.py
+# Add bypass generate to allow manual boot-management version 13 dependency
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/diskmgt.py \
+    pkg.depend.bypass-generate=^usr/lib/python2.6/vendor-packages/bootmgmt/.*$
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt/diskmgt.pyc
 dir  path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi
 file path=usr/lib/python2.6/vendor-packages/solaris_install/target/libefi/__init__.py
