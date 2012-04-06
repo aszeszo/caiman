@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 
 # Description:
 #       This script contain functions to create net images
@@ -35,7 +35,6 @@
 PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 
 APACHE2=/usr/apache2/2.2/bin/apachectl
-AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
 RUN_DIR=/var/run/installadm
 MOUNT_DIR=${RUN_DIR}/installadm_image.$$
 VERSION_FILE=/usr/share/auto_install/version

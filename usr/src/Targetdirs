@@ -143,12 +143,13 @@ OTHERS= \
 	/usr/include/admin \
 	/usr/snadm/lib \
 	/var/ai \
+	/var/ai/ai-webserver \
 	/var/ai/image-server \
 	/var/ai/image-server/cgi-bin \
-	/var/installadm \
-	/var/installadm/ai-webserver \
-	/var/installadm/ai-webserver/AI_data \
-	/var/installadm/ai-webserver/AI_files
+	/var/ai/service \
+	/var/ai/service/.conf-templ \
+	/var/ai/service/.conf-templ/AI_data \
+	/var/ai/service/.conf-templ/AI_files
 
 # prepend the ROOT prefix
 

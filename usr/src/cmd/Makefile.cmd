@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 include $(SRC)/Makefile.master
 
@@ -42,8 +42,8 @@ ROOTUSERATTR	= $(ROOT)/etc/user_attr.d
 ROOTUSRLIBINSTALLADM	= $(ROOT)/usr/lib/installadm
 ROOTUSRLIBINSTALL	= $(ROOT)/usr/lib/install
 ROOTVARSADM	= $(ROOT)/var/sadm
-ROOTVARINSTADM	= $(ROOT)/var/installadm
-ROOTVARAIWEB	= $(ROOT)/var/installadm/ai-webserver
+ROOTVARAIWEB	= $(ROOT)/var/ai/ai-webserver
+ROOTVARAISVC	= $(ROOT)/var/ai/service/.conf-templ
 ROOTETCSVCPROFILE	= $(ROOT)/etc/svc/profile
 ROOTVARAICGI	= $(ROOT)/var/ai/image-server/cgi-bin
 

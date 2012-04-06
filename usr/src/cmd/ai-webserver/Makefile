@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.cmd
@@ -54,7 +54,7 @@ ROOTPYMODULES= $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
-ROOTWEBSERVER_FILES= $(WEBSERVER_FILES:%=$(ROOTVARAIWEB)/%)
+ROOTWEBSERVER_FILES= $(WEBSERVER_FILES:%=$(ROOTVARAISVC)/%)
 
 ROOTCGI_FILES= $(PYTHON_CGI:%=$(ROOTVARAICGI)/%)
 
@@ -71,7 +71,7 @@ clobber: clean
 install: all .WAIT $(ROOTPYTHONVENDORINSTALLAI) \
 			$(ROOTPYMODULES) \
 			$(ROOTPYCMODULES) \
-			$(ROOTVARINSTADM) \
+			$(ROOTVARAISVC) \
 			$(ROOTCGI_FILES) \
 			$(ROOTWEBSERVER_FILES) \
 			$(ROOTSCHEMAS)

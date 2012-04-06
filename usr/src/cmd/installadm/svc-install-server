@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 
 . /lib/svc/share/smf_include.sh
 . /usr/lib/installadm/installadm-common
@@ -28,9 +28,11 @@
 cd /
 
 # Apache configuration files
-AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
-LISTEN_ADDRESSES=/var/installadm/ai-webserver/listen-addresses.conf
-COMPATIBILITY_PORTS=/var/installadm/ai-webserver/compatibility-configuration/ports.conf
+AIWEB_DIR=/var/ai/ai-webserver
+AI_HTTPD_CONF=$AIWEB_DIR/ai-httpd.conf
+AI_HTTPD_CONF_TEMPLATE=$AIWEB_DIR/ai-httpd-templ.conf
+LISTEN_ADDRESSES=$AIWEB_DIR/listen-addresses.conf
+COMPATIBILITY_PORTS=$AIWEB_DIR/compatibility-configuration/ports.conf
 
 # required commands
 AIMDNSD=/usr/lib/installadm/aimdnsd.py
@@ -115,6 +117,10 @@ function setup_main_ports
     return $?
 }
 
+if [ ! -e $AI_HTTPD_CONF ]; then
+	echo "Creating $AI_HTTPD_CONF as a symbolic link."
+	ln -s $AI_HTTPD_CONF_TEMPLATE $AI_HTTPD_CONF
+fi
 
 case "$1" in
 'start')

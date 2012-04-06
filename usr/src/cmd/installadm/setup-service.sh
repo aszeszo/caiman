@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 
 # Description:
 #       This script contains interfaces that allow look for a service,
@@ -36,8 +36,8 @@ PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 
 . /usr/lib/installadm/installadm-common
 
-AI_SETUP_WS=/var/installadm/ai-webserver
-AI_WS_CONF=$AI_SETUP_WS/ai-httpd.conf
+AI_SETUP=/var/ai/
+AI_SETUP_SERVICE_TEMPLATES=$AI_SETUP/service/.conf-templ
 AI_SERVICE_DIR_PATH=/var/ai/service
 AIWEBSERVER="aiwebserver"
 ret=0
@@ -184,7 +184,7 @@ setup_data_dir()
 	$MKDIR -p $data_dir
 
 	current_dir=$(pwd)
-	cd ${AI_SETUP_WS}
+	cd ${AI_SETUP_SERVICE_TEMPLATES}
 	$FIND . -depth -print | $CPIO -pdmu ${data_dir} >/dev/null 2>&1
 	cd $current_dir
 

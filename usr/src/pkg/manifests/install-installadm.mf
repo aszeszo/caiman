@@ -210,6 +210,10 @@ file path=usr/share/man/zh_CN.UTF-8/man1m/installadm.1m mode=0444
 dir  path=usr/share/xml
 dir  path=var group=sys
 dir  path=var/ai group=sys
+dir  path=var/ai/ai-webserver group=sys
+file path=var/ai/ai-webserver/ai-httpd-templ.conf
+dir  path=var/ai/ai-webserver/compatibility-configuration group=sys
+dir  path=var/ai/ai-webserver/conf.d group=sys
 dir  path=var/ai/image-server group=sys
 dir  path=var/ai/image-server/cgi-bin group=sys
 file path=var/ai/image-server/cgi-bin/cgi_get_manifest.py mode=0555
@@ -217,13 +221,10 @@ dir  path=var/ai/image-server/images group=sys
 dir  path=var/ai/image-server/logs group=sys
 dir  path=var/ai/profile owner=webservd group=webservd mode=0700
 dir  path=var/ai/service group=sys
-dir  path=var/installadm group=sys
-dir  path=var/installadm/ai-webserver group=sys
-file path=var/installadm/ai-webserver/AI.db
-dir  path=var/installadm/ai-webserver/AI_data group=sys
-dir  path=var/installadm/ai-webserver/AI_files group=sys
-file path=var/installadm/ai-webserver/ai-httpd.conf
-dir  path=var/installadm/ai-webserver/compatibility-configuration group=sys
+dir  path=var/ai/service/.conf-templ group=sys
+file path=var/ai/service/.conf-templ/AI.db
+dir  path=var/ai/service/.conf-templ/AI_data group=sys
+dir  path=var/ai/service/.conf-templ/AI_files group=sys
 license cr_Sun license=cr_Sun
 depend type=require fmri=database/sqlite-3
 # Add manual boot-management version 13 dependency for UEFI/GRUB2 compat.

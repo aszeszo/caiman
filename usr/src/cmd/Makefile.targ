@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 $(ROOT)/%: %
@@ -219,6 +219,9 @@ $(ROOTVARSADM)/%: %
 	$(INS.file)
 
 $(ROOTVARAIWEB)/%: %
+	$(INS.file)
+
+$(ROOTVARAISVC)/%: %
 	$(INS.file)
 
 $(ROOTVARAICGI)/%: %

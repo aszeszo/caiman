@@ -66,10 +66,9 @@ BOOTARGS = 'bootargs'
 AI_SERVICE_DIR_PATH = com.AI_SERVICE_DIR_PATH
 CFGFILE = '.config'
 
-AI_HTTPD_CONF = '/var/installadm/ai-webserver/ai-httpd.conf'
-COMPATIBILITY_PORTS = ('/var/installadm/ai-webserver/'
+COMPATIBILITY_PORTS = ('/var/ai/ai-webserver/'
                        'compatibility-configuration/ports.conf')
-LISTEN_ADDRESSES = '/var/installadm/ai-webserver/listen-addresses.conf'
+LISTEN_ADDRESSES = '/var/ai/ai-webserver/listen-addresses.conf'
 VOLATILE = '/system/volatile/'
 
 
@@ -627,6 +626,7 @@ def create_compatibility_file(smf_port):
     Return:
         0 - New COMPATIBILITY_PORTS file has been put into place.
         1 - Existing COMPATIBILITY_PORTS file was not touched.
+
     '''
     valid_networks = com.get_valid_networks()
     ports = set()
@@ -680,6 +680,7 @@ def create_main_ports_file(smf_port):
     Return:
         0 - New LISTEN_ADDRESSES file has been put into place.
         1 - Existing LISTEN_ADDRESSES file was not touched.
+
     '''
     try:
         work_file = create_work_file()
