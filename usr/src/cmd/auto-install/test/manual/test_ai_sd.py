@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 # test_ai_sd - test for AI Service Discovery Engine
 #
@@ -131,5 +131,5 @@ class TestAISD(unittest.TestCase):
                 'did not find service (%s)' % self.SERVICE_NAME
 
 if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_autoinstall", "/usr/share/locale")
     unittest.main()

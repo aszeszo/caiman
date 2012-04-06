@@ -20,8 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # SPMI common library makefile
@@ -68,10 +67,6 @@ LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}
 LINTFLAGS	= -umx ${CPPFLAGS}
 
-CLOBBERFILES	= *.po *.mo
-
-MSG_DOMAIN	= SUNW_INSTALL_LIBCOMMON
-
 .KEEP_STATE:
 
 all: $(HDRS) .WAIT static dynamic
@@ -82,11 +77,11 @@ dynamic: $(DYNLIB) $(DYNLIBLINK)
 
 install:	all .WAIT \
 		$(ROOTADMINLIB) .WAIT $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \
-		$(ROOTADMINLIBDYNLIBLINK) .WAIT msgs .WAIT $(INSTMSGS)
+		$(ROOTADMINLIBDYNLIBLINK)
 
 install_test:	all .WAIT \
 		$(ROOTADMINLIB) $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \
-		$(ROOTADMINLIBDYNLIBLINK) .WAIT $(INSTMSGS)
+		$(ROOTADMINLIBDYNLIBLINK)
 
 install_h:	$(ROOTUSRINCLEXP)
 
@@ -94,23 +89,6 @@ common_proc:	objs/$(ARCH)/$(LIBRARY)
 		$(CC) -o objs/$(ARCH)/$@ -DMODULE_TEST $@.c \
 			objs/$(ARCH)/common_proc.o \
 			objs/$(ARCH)/$(LIBRARY)
-
-msgs: ${MSG_DOMAIN}.po
-
-${MSG_DOMAIN}.po: ${SRCS} ${HDRS}
-	@echo "Making messages file ${MSG_DOMAIN}.po"
-	@${COMPILE.c} -C -E ${SRCS} 2>/dev/null | \
-		xgettext -d ${MSG_DOMAIN} -s \
-			-c "i18n:" - >/dev/null 2>&1
- 
-# Create a message file with "translated" test strings.
-# Turn the po file into an mo file ready for testing.
-msgs_test: ${SRCS} ${HDRS}
-	@echo "Making test messages file ${MSG_DOMAIN}.po"
-	@${COMPILE.c} -C -E ${SRCS} 2>/dev/null | \
-		xgettext -d ${MSG_DOMAIN} -s \
-			-c "i18n:" -m "öýê!" - >/dev/null 2>&1
-	@msgfmt -o ${MSG_DOMAIN}.mo ${MSG_DOMAIN}.po
 
 lint:  ${SRCS} ${HDRS}
 	${LINT.c} ${SRCS}

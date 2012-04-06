@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 """
 AI set-criteria
 """
@@ -316,7 +316,7 @@ def do_set_criteria(cmd_options=None):
 
 
 if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_aiwebserver", "/usr/share/locale")
 
     # If invoked from the shell directly, mostly for testing,
     # attempt to perform the action.

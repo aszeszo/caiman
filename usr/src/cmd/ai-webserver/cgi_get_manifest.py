@@ -665,7 +665,7 @@ def list_manifests(service):
     print '</body></html>'
 
 if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_aiwebserver", "/usr/share/locale")
     DEFAULT_PORT = libaimdns.getinteger_property(com.SRVINST, com.PORTPROP)
     (PARAM_VERSION, SERVICE, NO_DEFAULT, FORM_DATA) = \
         get_parameters(cgi.FieldStorage())

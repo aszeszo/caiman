@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 Auto Installer mDNS and DNS Service Discovery class and application.
@@ -73,7 +73,7 @@ class AImDNS(object):
                              the host about the available interfaces or the
                              AI SMF service.
         '''
-        gettext.install("ai", "/usr/lib/locale")
+        gettext.install("solaris_install_installadm", "/usr/share/locale")
 
         # find sdref handle
         self._find = None

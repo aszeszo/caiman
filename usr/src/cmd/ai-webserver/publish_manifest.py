@@ -578,7 +578,7 @@ def do_update_manifest(cmd_options=None):
 
 
 if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_aiwebserver", "/usr/share/locale")
 
     # If invoked from the shell directly, mostly for testing,
     # attempt to perform the action.

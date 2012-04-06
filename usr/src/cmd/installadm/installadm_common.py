@@ -40,7 +40,9 @@ from osol_install.libaimdns import getifaddrs, getboolean_property, \
 from solaris_install import Popen
 
 
-_ = gettext.translation('AI', '/usr/share/locale', fallback=True).gettext
+_ = gettext.translation('solaris_install_installadm',
+                        '/usr/share/locale', 
+                        fallback=True).gettext
 
 
 LOG_FORMAT = ("%(filename)s:%(lineno)d %(message)s")

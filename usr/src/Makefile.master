@@ -97,10 +97,11 @@ GENCAT=			/usr/bin/gencat
 XGETTEXT=		xgettext
 XGETFLAGS=		-c TRANSLATION_NOTE
 GNUXGETTEXT=		/usr/gnu/bin/xgettext
-GNUXGETFLAGS=		--keyword=_ --strict --no-location --omit-header
+GNUXGETFLAGS=		--keyword=_ --keyword=N_
 CSTYLE=			cstyle -pP
 NAWK=			/usr/bin/nawk
 GREP=			/usr/bin/grep
+GGREP=			/usr/gnu/bin/grep
 
 # Reference paths for ON
 ONLIBDIR=		$(ONREF_PROTO)/lib
@@ -179,11 +180,11 @@ ROOTUSRSHARETIHELP=	$(ROOTUSRSHARETI)/help
 ROOTUSRSHARETIHELPC=	$(ROOTUSRSHARETIHELP)/C
 ROOTUSRLIB=		$(ROOT)/usr/lib
 ROOTUSRLIBBOOT=		$(ROOTUSRLIB)/boot
-ROOTUSRLIBMSGS=		$(ROOTUSRLIB)/locale/C/LC_MESSAGES
+ROOTUSRSHAREMSGS=	$(ROOTUSRSHARE)/locale/C/LC_MESSAGES
 ROOTUSRSBIN=		$(ROOT)/usr/sbin
 ROOTVAR=		$(ROOT)/var
 
-INSTMSGS=		$(MSG_DOMAIN:%=$(ROOTUSRLIBMSGS)/%.po)
+INSTMSGS=		$(MSG_DOMAIN:%=$(ROOTUSRSHAREMSGS)/%.po)
 ROOTSBINPROG=		$(PROG:%=$(ROOTSBIN)/%)
 ROOTUSRINCLEXP=		$(EXPHDRS:%=$(ROOTINCADMIN)/%)
 ROOTUSRSBINPROG=	$(PROG:%=$(ROOTUSRSBIN)/%)
@@ -251,14 +252,35 @@ MACH=	$(TARGET_MACH:-%=%)
 ARCH=	$(TARGET_ARCH:-%=%)
 
 # Message catalog build rule for packaging commands.
-BUILD.po= $(XGETTEXT) -d msg.$$$$ $(XGETFLAGS) $<.i ;\
-	$(CAT) msg.$$$$.po | sed "/^domain/d" > $@ ;\
-	$(RM) msg.$$$$.po $<.i
-
-POFILE=         $(PROG).po
+POFILE=        $(MSG_DOMAIN).po
 MSGROOT=        $(ROOT)/catalog
 MSGDOMAIN=      $(MSGROOT)/$(TEXT_DOMAIN)
-CLOBBERFILES += $(POFILE) $(POFILES)
+CLOBBERFILES += $(POFILE)
+
+# Generate a po file from msgfiles
+# The procedure for building po file from Python, Glade and Shell files
+# differs, so we have to handle each file type separately.
+# First, a list of files of each type is established, then xgettext is run
+# for each non-empty list.
+
+$(MSG_DOMAIN).po: $(MSGFILES)
+		PYMSGFILES=`$(ECHO) $(MSGFILES)|$(GGREP) -o '[^\ ]*\.py'` || true; \
+		GLADEMSGFILES=`$(ECHO) $(MSGFILES)|$(GGREP) -o '[^\ ]*\.xml'` || true; \
+		KSHMSGFILES=`$(ECHO) $(MSGFILES)|$(GGREP) -o '[^\ ]*\.ksh'` || true; \
+		echo "PYMSGFILES=$$PYMSGFILES       GLADEMSGFILES=$$GLADEMSGFILES      KSHMSGFILES=$$KSHMSGFILES"; \
+		echo ""|$(GNUXGETTEXT)  -o $@ --force-po -L C -; gsed -i s/charset=CHARSET/charset=UTF-8/ $@; \
+		if [ ! -z "$$PYMSGFILES" ]; then \
+			$(GNUXGETTEXT) -o $@ $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
+			--join-existing $$PYMSGFILES; \
+		fi; \
+		if [ ! -z "$$GLADEMSGFILES" ]; then \
+			$(GNUXGETTEXT) -o $@ $(GNUXGETFLAGS) --language=glade \
+			-d $(MSG_DOMAIN) --join-existing $$GLADEMSGFILES; \
+		fi; \
+		if [ ! -z "$$KSHMSGFILES" ]; then \
+			$(GNUXGETTEXT) -o $@ $(GNUXGETFLAGS) --language=Shell \
+			-d $(MSG_DOMAIN) --join-existing $$KSHMSGFILES; \
+		fi
 
 # The use of TEXT_DOMAIN here is strange, but required for the normal
 # message catalog build rules.  (This would be better done with a
@@ -371,6 +393,7 @@ $(RELEASE_BUILD)POST_PROCESS= $(PROCESS_COMMENT) $@ ;\
 #
 PKGPUBLISHER_REDIST=    install-nightly
 PKGPUBLISHER_NONREDIST= install-extra
+PKGPUBLISHER_LOCALIZABLE= install-localizable
 
 
 #	Default build rules which perform comment section post-processing.
@@ -441,14 +464,6 @@ PKGPUBLISHER_NONREDIST= install-extra
 	$(POST_PROCESS_O)
 	$(RM) $*.c
 
-.po:
-	$(COMPILE.po) $<  > $<.i
-	$(BUILD.po)
-
-.c.po:
-	$(COMPILE.po) $<  > $<.i
-	$(BUILD.po)
-
 .ksh:
 	$(RM) $@
 	cat $< > $@
@@ -470,4 +485,4 @@ PKGPUBLISHER_NONREDIST= install-extra
 		-e "s,@DTD_VERSION_TARGET@,$(DTD_VERSION_TARGET),g" \
  		$< > $@
 
-.SUFFIXES:    $(SUFFIXES) .po .ksh .ksh~ .src
+.SUFFIXES:    $(SUFFIXES) .ksh .ksh~ .src

@@ -18,11 +18,12 @@
 #
 # CDDL HEADER END
 #
+
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
-#
+
+MSG_DOMAIN=     solaris_install_text_menu
 
 include $(SRC)/cmd/Makefile.cmd
 
@@ -34,11 +35,8 @@ install:=	TARGET= install
 PROG_KSH=	text-mode-menu.ksh
 PROG=		$(PROG_KSH:%.ksh=%)
 
-MSG_DOMAIN=	SUNW_INSTALL_TEXT_MENU
-POFILE=		$(MSG_DOMAIN).po
-
 ROOTPROGS=      $(PROG:%=$(ROOTUSRSBIN)/%)
-ROOTMSGS=	$(POFILE:%=$(ROOTUSRLIBMSGS)/%)
+ROOTMSGS=	$(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
 
 SYSMANIFESTSRC= text-mode-menu.xml
 SYSMANIFESTS= $(SYSMANIFESTSRC:%=$(ROOTMANSYS)/%)
@@ -48,7 +46,7 @@ SYSMANIFESTS= $(SYSMANIFESTSRC:%=$(ROOTMANSYS)/%)
 all:	$(PROG) $(POFILE)
 
 clean:
-	rm -f $(ROOTPROGS) $(ROOTMSGS) $(SYSMANIFESTS)
+	rm -f $(ROOTPROGS) $(ROOTMSGS) $(SYSMANIFESTS) $(POFILE)
 
 clobber: clean
 
@@ -60,9 +58,7 @@ $(PROG):	$(PROG_KSH)
 
 msgs:	$(POFILE)
 
-$(POFILE):	$(PROG_KSH)
-	@echo "Making messages file $(POFILE)"
-	@$(ROOTADMINBIN)/xgetsh -d $(MSG_DOMAIN) $(PROG_KSH)
+MSGFILES =	text-mode-menu.ksh
 
 FRC:
 

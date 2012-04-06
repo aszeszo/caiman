@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''test_cgi_get_manifest runs tests on the cgi_get_manifest.py cgi-bin script
 '''
@@ -452,5 +452,5 @@ class testSendManifest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_aiwebserver", "/usr/share/locale")
     unittest.main()

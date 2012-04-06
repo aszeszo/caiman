@@ -53,7 +53,7 @@ can_use_gpt = gpt_firmware_check()
 
 # Variables used by modules this module imports
 # Defined here to avoid circular import errors
-_ = gettext.translation("textinstall", "/usr/share/locale",
+_ = gettext.translation("solaris_install_textinstall", "/usr/share/locale",
                         fallback=True).ugettext
 RELEASE = {"release": _("Oracle Solaris")}
 TUI_HELP = "/usr/share/text-install/help"
@@ -321,7 +321,9 @@ def prepare_engine(options):
 def init_locale():
 
     locale.setlocale(locale.LC_ALL, "")
-    gettext.install("textinstall", "/usr/share/locale", unicode=True)
+    gettext.install("solaris_install_textinstall",
+                    "/usr/share/locale", 
+                    unicode=True)
     set_wrap_on_whitespace(_("DONT_TRANSLATE_BUT_REPLACE_msgstr_WITH_True_"
                              "OR_False: Should wrap text on whitespace in"
                              " this language"))

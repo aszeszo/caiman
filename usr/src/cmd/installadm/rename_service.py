@@ -184,5 +184,5 @@ def do_rename_service(cmd_options=None):
 
 if __name__ == '__main__':
     # initialize gettext
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_installadm", "/usr/share/locale")
     do_rename_service()

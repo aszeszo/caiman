@@ -20,10 +20,10 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
-MSG_DOMAIN=	mim
+MSG_DOMAIN=	solaris_install_mim
 
 PYMODS=		__init__.py mim.py process_dtd.py
 
@@ -34,14 +34,16 @@ ROOTPYCMODS=	$(PYCMODS:%=$(ROOTPYTHONVENDORSOLINSTALLMANINPUT)/%)
 MSGFILES=	$(PYMODS)
 
 CLOBBERFILES=	$(PYCMODS)
-CLEANFILES=	$(CLOBBERFILES) $(MSG_DOMAIN).po
+CLEANFILES=	$(CLOBBERFILES) $(POFILE)
+
+ROOTMSGS=       $(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
 
 include ../Makefile.lib
 
 python:
 		$(PYTHON) -m compileall -l $(@D)
 
-all:		python
+all:		python $(POFILE)
 
 clobber: clean
 
@@ -53,13 +55,7 @@ install:	all .WAIT \
 		$(ROOTPYTHONVENDORSOLINSTALLMANINPUT) \
 		$(ROOTPYMODS) \
 		$(ROOTPYCMODS) \
-		msgs
-
-msgs:	$(MSG_DOMAIN).po
-
-$(MSG_DOMAIN).po: $(PYMODS)
-	@echo "Making messages file $(MSG_DOMAIN).po"
-		$(GNUXGETTEXT) $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
-		$(MSGFILES)
+		$(ROOTUSRSHAREMSGS) .WAIT \
+		$(ROOTMSGS)
 
 include ../Makefile.targ

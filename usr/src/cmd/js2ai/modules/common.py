@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """
 Utility class
@@ -132,7 +132,9 @@ LVL_CONVERSION = logging.ERROR + 3
 LVL_VALIDATION = logging.ERROR + 4
 LVL_WARNING = logging.WARNING
 
-_ = gettext.translation("js2ai", "/usr/share/locale", fallback=True).gettext
+_ = gettext.translation("solaris_install_js2ai",
+                        "/usr/share/locale",
+                        fallback=True).gettext
 
 
 def err(msg):

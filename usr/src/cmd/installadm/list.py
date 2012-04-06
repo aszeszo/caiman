@@ -1275,7 +1275,7 @@ def do_list(cmd_options=None):
 
 if __name__ == '__main__':
     # initialize gettext
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_installadm", "/usr/share/locale")
 
     # If invoked from the shell directly, mostly for testing,
     # attempt to perform the action.

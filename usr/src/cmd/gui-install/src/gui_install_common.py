@@ -44,7 +44,7 @@ from solaris_install import CalledProcessError, post_install_logs_path, \
 from solaris_install.logger import INSTALL_LOGGER_NAME
 
 # Define "_()" for gettext
-_ = gettext.translation("gui-install", "/usr/share/locale",
+_ = gettext.translation("solaris_install_guiinstall", "/usr/share/locale",
                         fallback=True).ugettext
 
 # Dir which this executable is run from

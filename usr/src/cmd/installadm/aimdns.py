@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 Auto Installer mDNS and DNS Service Discovery class and application.
@@ -182,7 +182,7 @@ def main(mdns):
     '''
     atexit.register(on_exit)
     try:
-        gettext.install("ai", "/usr/lib/locale")
+        gettext.install("solaris_install_installadm", "/usr/share/locale")
         options = parse_options()
         comments = options.comment
         mdns.verbose = options.verbose

@@ -65,6 +65,7 @@ via pfexec or sudo, to install software on the build system.
 	system/library/libdiskmgt/header-libdiskmgt
 	system/zones/internal
 	text/gnu-gettext
+	text/gnu-grep
 	text/locale
 
     To get these packages, run "pkg install <package>"

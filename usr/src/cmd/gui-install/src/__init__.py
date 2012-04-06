@@ -268,7 +268,9 @@ def setup_logging(logname, log_level):
 def _init_locale():
     '''Initialize the locale for gui-install'''
     locale.setlocale(locale.LC_ALL, "")
-    gettext.install("gui-install", "/usr/share/locale", unicode=True)
+    gettext.install("solaris_install_guiinstall",
+                    "/usr/share/locale",
+                    unicode=True)
 
 
 def main():

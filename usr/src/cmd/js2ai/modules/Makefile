@@ -18,8 +18,10 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
+
+MSG_DOMAIN =	solaris_install_js2ai
 
 include ../../Makefile.cmd
 
@@ -27,8 +29,6 @@ all:=		TARGET=	all
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
-
-MSG_DOMAIN =	../js2ai
 
 SRCPYFILES =	default_xml.py.src
 
@@ -50,12 +50,14 @@ ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLJS2AI)/%)
 
 ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLJS2AI)/%)
 
+ROOTMSGS=       $(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
+
 MSGFILES =  $(PYMODULES)
 
-all:		python
+all:		python .WAIT $(POFILE)
 
 clean:
-	rm -f $(PYCMODULES) $(GENERATEDPYFILES)
+	rm -f $(PYCMODULES) $(GENERATEDPYFILES) $(POFILE)
 
 clobber: clean
 
@@ -64,18 +66,12 @@ install: all .WAIT $(ROOTPYTHONVENDOR) \
 	$(ROOTPYTHONVENDORSOLINSTALLJS2AI) \
 	$(ROOTPYMODULES) \
 	$(ROOTPYCMODULES) \
-	.WAIT msgs
+	$(ROOTMSGS) \
+	.WAIT
 
 $(GENERATEDPYFILES):
 
 python:	$(GENERATEDPYFILES)
 	$(PYTHON) -m compileall -l $(@D)
-
-msgs:	$(MSG_DOMAIN).po
-
-$(MSG_DOMAIN).po: $(PYMODULES)
-	@echo "Making messages file $(MSG_DOMAIN).po"
-		$(GNUXGETTEXT) $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
-		$(MSGFILES)
 
 include ../../Makefile.targ

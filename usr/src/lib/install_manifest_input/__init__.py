@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ Module body for manifest_input package
@@ -29,7 +29,9 @@
 
 import gettext
 
-_ = gettext.translation("mim", "/usr/share/locale", fallback=True).gettext
+_ = gettext.translation("solaris_install_mim", 
+                        "/usr/share/locale", 
+                        fallback=True).gettext
 
 
 # Errors created for this library.

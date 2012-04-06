@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 """
 AI delete-manifest
 """
@@ -190,7 +190,7 @@ def do_delete_manifest(cmd_options=None):
         raise SystemExit(error)
 
 if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_aiwebserver", "/usr/share/locale")
 
     # If invoked from the shell directly, mostly for testing,
     # attempt to perform the action.

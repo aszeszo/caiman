@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 # ai_get_manifest - AI Service Choosing Engine
 #
@@ -1151,7 +1151,7 @@ def main():
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_autoinstall", "/usr/share/locale")
     try:
         RET_CODE = main()
     except StandardError:

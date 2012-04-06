@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/consolidation/install/install-incorporation@$(PKGVERS)
@@ -35,3 +35,5 @@ depend fmri=SUNWswmt@0.5.11-0.130 type=incorporate
 <include packages.redist.noredist>
 <include packages.redist.renamed>
 #<include packages.redist.obsolete>
+# exclude localizable file package which is internal
+<transform depend fmri=pkg://$(PKGPUBLISHER_LOCALIZABLE)/ -> drop>

@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
  */
 
 
@@ -802,15 +801,15 @@ get_err_str(int errno)
 	switch (errno) {
 
 	case ERR_MALLOC_FAIL:
-		ret = dgettext("SUNW_INSTALL_SWLIB",
+		ret = dgettext("solaris_install_swlib",
 					"Allocation of memory failed");
 		break;
 	case ERR_IBE:
-		ret = dgettext("SUNW_INSTALL_SWLIB",
+		ret = dgettext("solaris_install_swlib",
 		    "Install failed.  See /tmp/install_log for more details");
 		break;
 	default:
-		ret = dgettext("SUNW_INSTALL_SWLIB", "Fatal Error");
+		ret = dgettext("solaris_install_swlib", "Fatal Error");
 		break;
 	}
 

@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
  */
 
 
@@ -66,11 +65,11 @@ void		scriptwrite(FILE *, uint, char **, ...);
  *		"DryRun @TOKEN0@ @TOKEN1@ ..."
  *	Followed by any text that will be printed on the screen.
  *	    If the text needs translation, it will be of the form:
- *		"gettext SUNW_INSTALL_LIBSVC The actual text...`"
+ *		"gettext solaris_install_libsvc The actual text...`"
  *	    Any tokens will be represented by $0n to avoid confusion during
  *	    localization, and will be replaced by ther actual values before
  *	    writing.
- *	    Also, the string "gettext SUNW_INSTALL_LIBSVC" will be
+ *	    Also, the string "gettext solaris_install_libsvc" will be
  *	    stripped along with the trailing "`"
  *
  *	If DryRun AND trace_level is set > 0, we'll still write the script.
@@ -142,7 +141,7 @@ scriptwrite(FILE *fp, u_int format, char **cmdarray, ...)
 				dst++;
 				strcpy(ibuf, dst);
 				ibuf[strlen(ibuf)-1] = NULL;
-				cp = dgettext("SUNW_INSTALL_LIBSVC", ibuf);
+				cp = dgettext("solaris_install_libsvc", ibuf);
 			}
 		}
 		/*
@@ -249,7 +248,7 @@ scriptwrite(FILE *fp, u_int format, char **cmdarray, ...)
 		i++;
 		if (strncmp(cmdarray[i], "DryRun", 6)) {
 			write_message(SCR, WARNMSG, LEVEL0,
-			    dgettext("SUNW_INSTALL_LIBSVC",
+			    dgettext("solaris_install_libsvc",
 			    "Internal error: Dry Run message missing"));
 			/*
 			 * Just use the shell script string

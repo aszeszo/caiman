@@ -23,12 +23,16 @@
 # Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
+MSG_DOMAIN =	solaris_install_aiwebserver
+
 include ../Makefile.cmd
 
 all:=		TARGET=	all
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
+
+ROOTMSGS=	$(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
 
 PYMODULES=	AI_database.py \
 		common_profile.py \
@@ -50,6 +54,8 @@ SCHEMAS=	criteria_schema.rng
 
 PYTHON_CGI=	cgi_get_manifest.py
 
+MSGFILES=	$(PYMODULES)
+
 ROOTPYMODULES= $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
@@ -60,11 +66,12 @@ ROOTCGI_FILES= $(PYTHON_CGI:%=$(ROOTVARAICGI)/%)
 
 ROOTSCHEMAS= $(SCHEMAS:%=$(ROOTAUTOINST)/%)
 
-all: python
+all: python $(POFILE)
 
 clean:
 	$(RM) *.pyc
 	$(RM) AI.db
+	$(RM) $(POFILE)
 
 clobber: clean
 
@@ -74,7 +81,8 @@ install: all .WAIT $(ROOTPYTHONVENDORINSTALLAI) \
 			$(ROOTVARAISVC) \
 			$(ROOTCGI_FILES) \
 			$(ROOTWEBSERVER_FILES) \
-			$(ROOTSCHEMAS)
+			$(ROOTSCHEMAS) \
+			$(ROOTMSGS)
 
 python:
 	$(PYTHON) -m compileall -l $(@D)

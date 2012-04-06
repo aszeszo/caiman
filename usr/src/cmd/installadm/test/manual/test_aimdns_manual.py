@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''Manual Testcase for aimdns
 
@@ -226,5 +226,5 @@ def check_install_SMF():
 check_install_SMF()
 
 if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_installadm", "/usr/share/locale")
     unittest.main()

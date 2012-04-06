@@ -19,8 +19,10 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
+
+MSG_DOMAIN =    solaris_install_terminalui
 
 include ../Makefile.lib
 
@@ -28,6 +30,8 @@ all:=		TARGET= all
 clean:=		TARGET= clean
 clobber:=	TARGET= clobber
 install:=	TARGET= install
+
+ROOTMSGS=       $(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
 
 PYMODULES=	__init__.py \
 		action.py \
@@ -46,24 +50,27 @@ PYMODULES=	__init__.py \
 
 PYCMODULES=     $(PYMODULES:%.py=%.pyc)
 
+MSGFILES =      $(PYMODULES)
+
 ROOTPROGS=      $(PROGS:%=$(ROOTUSRBIN)/%)
 
 ROOTPYMODULES=  $(PYMODULES:%=$(ROOTPYTHONTERMUI)/%)
 
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONTERMUI)/%)
 
-CLEANFILES= $(PYCMODULES)
+CLEANFILES= $(PYCMODULES) $(POFILE)
 
 .KEEP_STATE:
 
-all:		python
+all:		python $(POFILE)
 
 install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDOR) \
 	$(ROOTPYTHONTERMUI) \
 	$(ROOTPYMODULES) \
 	$(ROOTPYCMODULES) \
-	.WAIT
+	$(ROOTUSRSHAREMSGS) .WAIT \
+	$(ROOTMSGS)
 
 install_h:
 

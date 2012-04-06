@@ -45,7 +45,7 @@ from solaris_install.engine import InstallEngine, RollbackError
 from solaris_install.ict.apply_sysconfig import APPLY_SYSCONFIG_DICT, \
     APPLY_SYSCONFIG_PROFILE_KEY
 
-_ = gettext.translation("sysconfig", "/usr/share/locale",
+_ = gettext.translation("solaris_install_systemconfig", "/usr/share/locale",
                         fallback=True).ugettext
 SCI_HELP = "/usr/share/sysconfig/help"
 COMMA = ","
@@ -1105,7 +1105,9 @@ def _init_locale():
                  "falling back to C.")
         locale.setlocale(locale.LC_ALL, "C")
 
-    gettext.install("sysconfig", "/usr/share/locale", unicode=True)
+    gettext.install("solaris_install_systemconfig",
+                    "/usr/share/locale",
+                    unicode=True)
     set_wrap_on_whitespace(_("DONT_TRANSLATE_BUT_REPLACE_msgstr_WITH_True_"
                              "OR_False: Should wrap text on whitespace in"
                              " this language"))

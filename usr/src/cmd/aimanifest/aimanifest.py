@@ -42,7 +42,7 @@ import solaris_install.manifest_input as milib
 from solaris_install.logger import InstallLogger
 from solaris_install.manifest_input.mim import ManifestInput
 
-_ = gettext.translation('aimanifest', '/usr/share/locale',
+_ = gettext.translation('solaris_install_aimanifest', '/usr/share/locale',
                         fallback=True).gettext
 
 AIM_LOGGER = None

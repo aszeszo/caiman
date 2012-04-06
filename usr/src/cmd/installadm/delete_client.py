@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 '''
 AI delete-client
 '''
@@ -89,6 +89,6 @@ def do_delete_client(cmd_options=None):
 if __name__ == "__main__":
 
     # initialize gettext
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_installadm", "/usr/share/locale")
 
     do_delete_client()

@@ -20,8 +20,10 @@
 #
 
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
+
+MSG_DOMAIN =	solaris_install_guiinstall
 
 include ../Makefile.cmd
 
@@ -32,13 +34,18 @@ install:=	TARGET=	install
 
 SUBDIRS=	src pixmaps xml aux
 
-all:		$(SUBDIRS)
+MSGFILES =      src/*.py xml/*.xml
+
+ROOTMSGS=       $(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
+
+all:		$(SUBDIRS) $(POFILE)
 
 clean:	$(SUBDIRS)
+	rm -f *.pyc  $(POFILE)
 
 clobber: clean
 
-install: $(SUBDIRS)
+install: $(SUBDIRS) $(ROOTMSGS)
 
 $(SUBDIRS): FRC
 	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)

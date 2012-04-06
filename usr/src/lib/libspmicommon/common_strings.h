@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
  */
 
 
@@ -41,7 +40,7 @@
 /* constants */
 
 #ifndef	TEXT_DOMAIN
-#define	TEXT_DOMAIN	"SUNW_INSTALL_LIBCOMMON"
+#define	TEXT_DOMAIN	"solaris_install_libcommon"
 #endif
 
 #ifndef ILIBSTR

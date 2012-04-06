@@ -21,14 +21,14 @@
 #
 # Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
+MSG_DOMAIN = solaris_install_systemconfig
+
 include ../Makefile.cmd
 
 all:=		TARGET=	all
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
-
-MSG_DOMAIN =	system-config
 
 SUBDIRS=	helpfiles profile tools xslt
 
@@ -54,11 +54,13 @@ ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORSCI)/%)
 
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORSCI)/%)
 
-MSGFILES =	$(PYMODULES)
+ROOTMSGS=       $(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
+
+MSGFILES =	$(PYMODULES) profile/*.py
 
 .KEEP_STATE:
 
-all:	python $(PROGS)
+all:	python $(PROGS) $(POFILE)
 
 install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDOR) \
@@ -66,7 +68,7 @@ install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDORSCI) \
 	$(ROOTPYMODULES) $(ROOTPYCMODULES) \
 	$(SUBDIRS) \
-	.WAIT msgs
+	$(ROOTMSGS)
 
 
 python:
@@ -75,19 +77,12 @@ python:
 install_h:
 
 clean: $(SUBDIRS)
-	rm -f *.pyc $(MSG_DOMAIN).po*
+	rm -f *.pyc $(POFILE)
 
 clobber: clean
 
 $(SUBDIRS): FRC
 	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-msgs:	$(MSG_DOMAIN).po
-
-$(MSG_DOMAIN).po: $(PYMODULES)
-	@echo "Making messages file $(MSG_DOMAIN).po"
-	$(GNUXGETTEXT) $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
-		$(MSGFILES)
 
 sysconfig:
 

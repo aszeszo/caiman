@@ -83,7 +83,7 @@ class TestRegCallback(unittest.TestCase):
     def test_registration_callback(self):
         '''test registration callback output
         '''
-        gettext.install("ai", "/usr/lib/locale")
+        gettext.install("solaris_install_installadm", "/usr/share/locale")
         redirected = RedirectedOutput()
         mdns = aimdns.AImDNS()
         sys.stdout = redirected
@@ -139,7 +139,7 @@ class TestBrowseCallback(unittest.TestCase):
         mdns.timeout = 1
         sys.stderr = redirected
         # _ needs to get instantiated within the redirected output
-        gettext.install("ai", "/usr/lib/locale")
+        gettext.install("solaris_install_installadm", "/usr/share/locale")
         mdns._resolved = list()
         mdns._browse_callback(None, None, 0, pyb.kDNSServiceErr_NoError,
                             self.name, self.regtype, self.domain)
@@ -228,5 +228,5 @@ def check_install_SMF():
 
 
 if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
+    gettext.install("solaris_install_installadm", "/usr/share/locale")
     unittest.main()

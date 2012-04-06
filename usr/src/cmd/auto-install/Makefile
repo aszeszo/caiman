@@ -19,8 +19,11 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
+
+MSG_DOMAIN =	solaris_install_autoinstall
+
 include ../Makefile.cmd
 
 all:=		TARGET=	all
@@ -29,6 +32,8 @@ clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
 SUBDIRS=	svc config checkpoints manifest profile test
+
+ROOTMSGS=       $(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
 
 PROGS=		ai_get_manifest ai_sd auto-install
 
@@ -53,7 +58,9 @@ ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLAI)/%)
 
 ROOTAIFILES=	$(AIFILES:%=$(ROOTAUTOINST)/%)
 
-all: python $(PROGS)
+MSGFILES =      $(PYMODULES)
+
+all: python $(PROGS) $(POFILE)
 
 install: all .WAIT $(ROOTPROGS) \
 	$(ROOTUSRBIN) \
@@ -63,7 +70,7 @@ install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDORSOLINSTALLAI) \
 	$(ROOTAIFILES) \
 	$(ROOTPYMODULES) $(ROOTPYCMODULES) \
-	$(SUBDIRS)
+	$(ROOTMSGS) $(SUBDIRS)
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
@@ -79,7 +86,7 @@ ai_sd: ai_sd.py
 	$(CP) ai_sd.py ai_sd
 
 clean: $(SUBDIRS)
-	$(RM) $(PROGS) $(PYCMODULES)
+	$(RM) $(PROGS) $(PYCMODULES) $(POFILE)
 
 clobber: clean 
 

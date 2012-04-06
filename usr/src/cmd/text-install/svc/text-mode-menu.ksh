@@ -20,12 +20,12 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 LANGUAGE_FILE=/etc/sysconfig/language
 
-export TEXTDOMAIN="SUNW_INSTALL_TEXT_MENU"
+export TEXTDOMAIN="solaris_install_text_menu"
 # LOGNAME variable is needed to display the shell prompt appropriately
 export LOGNAME=root
 

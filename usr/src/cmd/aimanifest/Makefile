@@ -18,8 +18,10 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
+
+MSG_DOMAIN=     solaris_install_aimanifest
 
 include ../Makefile.cmd
 
@@ -27,8 +29,6 @@ all:=		TARGET=	all
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
-
-MSG_DOMAIN=	aimanifest
 
 PYMODULES=	aimanifest.py
 
@@ -38,16 +38,18 @@ ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
 
 MSGFILES=	$(PYMODULES)
 
-all:		python $(PROGS)
+ROOTMSGS=       $(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
+
+all:		python $(PROGS) $(POFILE)
 
 clean:
-	$(RM) $(PROGS) aimanifest.pyc $(MSG_DOMAIN).po
+	$(RM) $(PROGS) aimanifest.pyc $(POFILE)
 
 clobber: clean
 
 install_h:
 
-install: all .WAIT $(ROOTPROGS) msgs
+install: all .WAIT $(ROOTPROGS) $(ROOTMSGS)
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
@@ -55,12 +57,5 @@ python:
 aimanifest: aimanifest.py
 	$(CP) aimanifest.py aimanifest
 	$(CHMOD) 755 aimanifest
-
-msgs:	$(MSG_DOMAIN).po
-
-$(MSG_DOMAIN).po: $(PYMODULES)
-	@echo "Making messages file $(MSG_DOMAIN).po"
-		$(GNUXGETTEXT) $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
-		$(MSGFILES)
 
 include ../Makefile.targ

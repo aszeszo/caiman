@@ -21,6 +21,8 @@
 # Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
+MSG_DOMAIN =	solaris_install_installadm
+
 include ../Makefile.cmd
 
 all:=		TARGET=	all
@@ -28,6 +30,7 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
+ROOTMSGS=	$(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
 
 SCRIPTS	=	check-server-setup \
 		installadm-common \
@@ -61,6 +64,8 @@ PYMODULES=	__init__.py \
 
 PYTHON_MODULES=	aimdns.py aimdnsd.py
 
+MSGFILES =      $(PYMODULES) $(PYTHON_MODULES) $(PYTHON_EXECS:%=%.py) 
+
 PYTHON_EXECS =	installadm installadm-convert
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
@@ -81,13 +86,11 @@ SYSMANIFESTS=	$(MANIFESTSRC:%=$(ROOTMANSYSINS)/%)
 SVCMETHODS=	$(SVCMETHODSRC:%=$(ROOTLIBSVCMETHOD)/%)
 $(SVCMETHODS) :=	FILEMODE= 0555
 
-MSG_DOMAIN = SUNW_INSTALL_INSTALLADM
-
 .KEEP_STATE: 
 
 
 all: python $(PYTHON_EXECS) \
-	$(SCRIPTS) $(CONF) 
+	$(SCRIPTS) $(CONF) $(POFILE)
 	@true
 
 python:
@@ -99,10 +102,8 @@ installadm:	installadm.py
 installadm-convert:	installadm-convert.py
 		cp installadm-convert.py installadm-convert
 
-msgs: ${MSG_DOMAIN}.po
-
 clean:
-	rm -f $(SCRIPTS) *.pyc $(PYTHON_EXECS)
+	rm -f $(SCRIPTS) *.pyc $(PYTHON_EXECS) $(POFILE)
 
 clobber: clean
 
@@ -111,7 +112,8 @@ install: all .WAIT $(ROOTPYPROGS) $(ROOTPYMODULES) \
 	$(ROOTPYCMODULES) $(ROOTPYSCRIPTS) $(SYSMANIFESTS) \
         $(ROOTSCRIPTS) $(ROOTMANSYS) $(ROOTLIBSVCMETHOD) \
 	$(SVCMETHODS) $(ROOTPYTHONVENDORINSTALLAI) \
-	$(SYSMANIFESTS) $(VARWEB)
+	$(SYSMANIFESTS) $(VARWEB) \
+	$(ROOTMSGS)
 
 include ../Makefile.targ
 

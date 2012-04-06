@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -42,7 +42,7 @@ import logging
 import os
 os.environ.setdefault("ESCDELAY", "200")
 
-_ = gettext.translation("terminalui", "/usr/share/locale",
+_ = gettext.translation("solaris_install_terminalui", "/usr/share/locale",
                         fallback=True).ugettext
 LOG_NAME_INPUT = "INPUT"
 LOG_LEVEL_INPUT = 5

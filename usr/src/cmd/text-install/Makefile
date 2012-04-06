@@ -22,6 +22,8 @@
 # Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
+MSG_DOMAIN =	solaris_install_textinstall
+
 include ../Makefile.cmd
 
 all:=		TARGET= all
@@ -31,7 +33,7 @@ install:=	TARGET= install
 
 SUBDIRS=        svc helpfiles
 
-MSG_DOMAIN =	textinstall
+ROOTMSGS=       $(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
 
 PROGS=		text-install
 
@@ -65,10 +67,10 @@ MSGFILES =	$(PYMODULES)
 
 .KEEP_STATE:
 
-all:	python $(PROGS) $(SUBDIRS)
+all:	python $(PROGS) $(SUBDIRS) $(POFILE)
 
 clean: $(SUBDIRS)
-	rm -f *.pyc  $(MSG_DOMAIN).po*
+	rm -f *.pyc  $(POFILE)
 
 clobber: clean
 
@@ -78,17 +80,10 @@ install: all .WAIT $(SUBDIRS) .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDORSOLINSTALLTI) \
 	$(ROOTPYMODULES) \
 	$(ROOTPYCMODULES) \
-	.WAIT msgs
+	$(ROOTMSGS)
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
-
-msgs:	$(MSG_DOMAIN).po
-
-$(MSG_DOMAIN).po: $(PYMODULES)
-	@echo "Making messages file $(MSG_DOMAIN).po"
-	$(GNUXGETTEXT) $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
-		$(MSGFILES)
 
 $(SUBDIRS): FRC
 	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
