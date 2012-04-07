@@ -125,7 +125,7 @@ for (( j=0, i=0 ; i < languages.list_len ; i++ )) ; do
 
 	# check whether we have a module for this locale ("C" and "POSIX"
 	# are always supported)
-        if [[ ! -f "/usr/lib/locale/${node.lang}/${node.lang}.so.3" && \
+        if [[ ! -f "/usr/lib/locale/${node.lang}/LC_COLLATE/LCL_DATA" && \
 	      "${node.lang}" != ~(Elr)(POSIX|C) ]] ; then
 		continue
 	fi
