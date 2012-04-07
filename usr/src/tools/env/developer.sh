@@ -55,7 +55,7 @@ export NIGHTLY_OPTIONS="-ANdlmp +t";
 export GATE=slim_source;
 
 # CODEMGR_WS - where is your workspace at (or what should nightly name it)
-export CODEMGR_WS="/export/home/${LOGNAME}/${GATE}";
+export CODEMGR_WS="$(hg root 2>/dev/null || git rev-parse --show-toplevel)";
 
 # PARENT_WS is used to determine the parent of this workspace. This is
 # for the options that deal with the parent workspace (such as where the
@@ -152,7 +152,7 @@ export UT_NO_USAGE_TRACKING="1";
 #
 #BUILD_TOOLS=/opt;				export BUILD_TOOLS
 #ONBLD_TOOLS=/opt/onbld;				export ONBLD_TOOLS
-SPRO_ROOT=/opt/SunStudioExpress;			export SPRO_ROOT
+SPRO_ROOT=/opt/studio/12.1;		export SPRO_ROOT
 
 
 
