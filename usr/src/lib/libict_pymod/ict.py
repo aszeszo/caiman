@@ -1181,7 +1181,7 @@ class ICT(object):
         # Note there are TABs in the blow expression.
         # sedcmd = 'sed \'/\-B[ <TAB>]*\\$ZFS-BOOTFS/ i\\\nbootfs ' +\
         sedcmd = 'sed \'/\-B[ 	]*\\$ZFS-BOOTFS/ i\\\nbootfs ' +\
-            rootdataset + '\' ' + self.grubmenu + ' > ' + newgrubmenu
+            rootdataset + '\\\n\' ' + self.grubmenu + ' > ' + newgrubmenu
         status = _cmd_status(sedcmd)
         if status != 0:
             prerror('Adding bootfs command to grub menu fails. ' +
