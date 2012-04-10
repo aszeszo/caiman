@@ -115,7 +115,7 @@
 			value='solaris.smf.manage.netphys' />
 	</property_group>
 
-	<property_group name='sysconfig' type='application'>
+	<property_group name='sysconfig' type='sysconfig'>
 		<stability value='Unstable' />
 		<propval name='group' type='astring' value='network' />
 		<propval name='reconfigurable' type='boolean' value='true' />

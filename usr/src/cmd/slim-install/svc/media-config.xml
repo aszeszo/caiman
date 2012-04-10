@@ -207,7 +207,7 @@
 
 	<!-- The following property group is used to control
 	     process of system configuration/unconfiguration --> 
-	<property_group name='sysconfig' type='application'>
+	<property_group name='sysconfig' type='sysconfig'>
 		<stability value='Evolving' />
 
 		<!-- Setting following property to 'true' triggers overall
