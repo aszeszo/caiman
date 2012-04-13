@@ -268,7 +268,7 @@ $(MSG_DOMAIN).po: $(MSGFILES)
 		GLADEMSGFILES=`$(ECHO) $(MSGFILES)|$(GGREP) -o '[^\ ]*\.xml'` || true; \
 		KSHMSGFILES=`$(ECHO) $(MSGFILES)|$(GGREP) -o '[^\ ]*\.ksh'` || true; \
 		echo "PYMSGFILES=$$PYMSGFILES       GLADEMSGFILES=$$GLADEMSGFILES      KSHMSGFILES=$$KSHMSGFILES"; \
-		echo ""|$(GNUXGETTEXT)  -o $@ --force-po -L C -; gsed -i s/charset=CHARSET/charset=UTF-8/ $@; \
+		echo ""|$(GNUXGETTEXT)  -o - --force-po -L C -|$(SED)  s/charset=CHARSET/charset=UTF-8/ >$@; \
 		if [ ! -z "$$PYMSGFILES" ]; then \
 			$(GNUXGETTEXT) -o $@ $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
 			--join-existing $$PYMSGFILES; \
