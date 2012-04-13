@@ -63,6 +63,7 @@ class PrePkgImgMod(Checkpoint):
         self.is_plaintext = arg.get("is_plaintext",
                                     self.DEFAULT_ARG.get("is_plaintext"))
         self.hostname = arg.get("hostname")
+        self.image_type = ""
 
         # instance attributes
         self.doc = None
@@ -301,6 +302,13 @@ class PrePkgImgMod(Checkpoint):
         with open(self.img_info_path, "a+") as fh:
             fh.write("IMAGE_SIZE=%d\n" % image_size)
 
+    def add_image_type(self):
+        """ class method to populate the .image_info file with the 
+        image type.
+        """
+        with open(self.img_info_path, "a+") as fh:
+            fh.write("IMAGE_TYPE=%s\n" % self.image_type)
+
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class
         dry_run is not used in DC
@@ -322,6 +330,9 @@ class PrePkgImgMod(Checkpoint):
         # write out the .image_info file
         self.calculate_size()
 
+        # write out the image type into the .image_info file
+        self.add_image_type()
+
 
 class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
     """ class to prepare the package image area for AI distributions
@@ -340,6 +351,7 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         self.hostname = arg.get("hostname")
         self._service_name = arg.get("service_name",
                                      self.DEFAULT_ARG.get("service_name"))
+        self.image_type = "AI"
 
     def get_pkg_version(self, pkg):
         """ class method to store the version of a package into a path
@@ -480,6 +492,10 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # write out the .image_info file
         self.calculate_size()
+
+        # write out the image type into the .image_info file
+        self.add_image_type()
+
         self.add_versions("usr/share/auto_install/version")
         self.add_default_svcname("auto-install")
 
@@ -504,6 +520,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         self.is_plaintext = arg.get("is_plaintext",
                                     self.DEFAULT_ARG.get("is_plaintext"))
         self.hostname = arg.get("hostname")
+        self.image_type = "LiveCD"
 
     def get_progress_estimate(self):
         """ Returns an estimate of the time this checkpoint will take
@@ -690,6 +707,9 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # write out the .image_info file
         self.calculate_size()
 
+        # write out the image type into the .image_info file
+        self.add_image_type()
+
 
 class TextPrePkgImgMod(PrePkgImgMod, Checkpoint):
     """ class to prepare the package image area for text install distributions
@@ -704,6 +724,7 @@ class TextPrePkgImgMod(PrePkgImgMod, Checkpoint):
         self.is_plaintext = arg.get("is_plaintext",
                                     self.DEFAULT_ARG.get("is_plaintext"))
         self.hostname = arg.get("hostname")
+        self.image_type = "Text"
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.
@@ -727,3 +748,6 @@ class TextPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # write out the .image_info file
         self.calculate_size()
+
+        # write out the image type into the .image_info file
+        self.add_image_type()

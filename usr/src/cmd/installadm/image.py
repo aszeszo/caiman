@@ -97,13 +97,24 @@ class InstalladmImage(object):
                                "a directory. Please provide a "
                                "different image path.\n") % self.path))
 
-         # check that the image_path has solaris.zlib and
-         # auto_install/ai.dtd files
+         # check that the image_path has solaris.zlib file and
+         # either auto_install/ai.dtd file exists or the image type is "AI"
         if not (os.path.exists(os.path.join(self.path, "solaris.zlib")) and
-                os.path.exists(os.path.join(self.path,
-                               "auto_install/ai.dtd"))):
+                (os.path.exists(os.path.join(self.path,
+                               "auto_install/ai.dtd")) or
+                (os.path.exists(os.path.join(self.path, ".image_info")) and 
+                self.image_type == "AI"))):
             raise ImageError(cw(self.INVALID_AI_IMAGE % {"path": self.path}))
-    
+
+    @property
+    def image_type(self):
+        '''Returns the AI client image type.
+        
+        See also the module docstring.
+        
+        '''
+        return self.read_image_info().get("image_type", "")
+
     @property
     def version(self):
         '''Returns the AI client image version.

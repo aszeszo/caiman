@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -98,6 +98,25 @@ class TestInstalladmImage(unittest.TestCase):
 
         myimage = InstalladmImage(test_path)
         self.assertRaises(ImageError, InstalladmImage.arch.fget, myimage)
+
+    def test_type(self):
+        '''test image type'''
+        test_path = self.tempdirname
+        image_info = os.path.join(test_path, '.image_info')
+
+        # test that image_type gets right value
+        with open(image_info, 'w') as info:
+            info.write('IMAGE_TYPE=AI')
+        myimage = InstalladmImage(test_path)
+        self.assertEqual(myimage.image_type, 'AI')
+        os.remove(image_info)
+
+        # test that image_type gets no value
+        with open(image_info, 'w') as info:
+            info.write('IMAGE_VERSION=3.0')
+        myimage = InstalladmImage(test_path)
+        self.assertEqual(myimage.image_type, '')
+        os.remove(image_info)
 
     def test_move(self):
         '''test image move'''
