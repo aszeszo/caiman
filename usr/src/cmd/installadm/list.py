@@ -45,6 +45,10 @@ FDICT = {
 }
 
 STATUS_WORDS = [_('Status'), _('Default'), _('Inactive')]
+
+# Find the width of Status column
+STWIDTH = max([len(item) for item in STATUS_WORDS]) + 1
+
 DEFAULT = _("Default")
 IGNORED = _("Ignored")
 INACTIVE = _("Inactive")
@@ -72,11 +76,951 @@ class SigpipeHandler(object):
         signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 
 
+class PrintObject(object):
+    '''
+    Class containing basic accessor utility functions and functions common
+    for all descendants (criteria, manifests and profiles)
+    '''
+
+    @classmethod
+    def get_header_len(cls):
+        '''
+        Returns
+            length of header
+        '''
+        return len(cls.header)
+
+    def get_max_crit_len(self):
+        '''
+        Returns
+            length of the longest criteria name
+        '''
+        return self.max_crit_len
+
+    def get_has_crit(self):
+        '''
+        Returns
+            True if some criteria is non-empty, otherwise return False
+        '''
+        return self.has_crit
+
+
+class CriteriaPrintObject(PrintObject):
+    '''
+    Class representing set of criteria
+    Class constructor reads criteria from database.
+    '''
+
+    # header is common for all instances of this class
+    header = _('Criteria')
+
+    def order_criteria_list(self):
+        '''
+        Sorts the list of criteria in order in which criteria are printed.
+
+        Returns
+            ordered list of criteria - always contain arch, mac, ipv4
+        Raises
+            None
+        '''
+        ordered_keys = ['arch', 'mac', 'ipv4']
+        keys = self.crit.keys()
+        keys.sort()
+        for crit in keys:
+            if crit not in ordered_keys:
+                ordered_keys.append(crit)
+
+        return ordered_keys
+
+    @classmethod
+    def get_header(cls, indent, cwidth):
+        '''
+        Args
+            indent = string which should be printed before header
+            cwidth = width of criteria names
+
+        Returns
+            formatted header string suitable for printing
+        '''
+        return indent + cls.header.ljust(cwidth) + '\n'
+
+    @classmethod
+    def get_underline(cls, indent, cwidth):
+        '''
+        Args
+            indent = string which should be printed before underline
+            cwidth = width of criteria names
+
+        Returns
+            formatted string which should underline the header
+        '''
+        return indent + ('-' * len(cls.header)).ljust(cwidth) + '\n'
+
+    def get_lines(self, first_line_indent, other_lines_indent, width=None):
+        '''
+        Args
+            first_line_indent = string which should be printed before first
+                                criteria line
+            other_lines_indent = string which should be printed before other
+                                 lines
+            width = width of criteria names
+
+        Returns
+            string containing formatted criteria
+        '''
+
+        # If width is not set justify to longest criteria
+        if width is None:
+            width = self.max_crit_len
+
+        line = ''
+        first = True
+
+        # Always print criteria in the same order
+        ordered_keys = self.order_criteria_list()
+        for akey in ordered_keys:
+            val = self.crit.get(akey, '')
+            if val != '':
+                if first:
+                    indent = first_line_indent
+                    first = False
+                else:
+                    indent = other_lines_indent
+                line += indent + akey.ljust(width) + ' = ' + val + '\n'
+
+        if first:  # we didn't print anything so we must print at least None
+            line = first_line_indent + _('None') + '\n'
+
+        return line
+
+    def get_criteria_info(self, crit_dict):
+        '''
+        Iterates over the criteria which consists of a dictionary with
+        possibly arch, min memory, max memory, min ipv4, max ipv4, min mac,
+        max mac, cpu, platform, min network, max network and zonename
+        converting it into a dictionary with arch, mem, ipv4, mac, cpu,
+        platform, network and zonename.  Any min/max attributes are stored as
+        a range within the new dictionary.
+
+        Args
+            crit_dict = dictionary of the criteria
+
+        Returns
+            None
+
+        Raises
+            None
+        '''
+
+        self.crit = dict()
+        self.max_crit_len = 0
+
+        if crit_dict is None:
+            return
+
+        # self.criteria values are formatted strings, with possible endings
+        # such as MB.
+
+        for key in crit_dict.keys():
+            if key == 'service':
+                continue
+            is_range_crit = key.startswith('MIN') or key.startswith('MAX')
+            # strip off the MAX or MIN for a new keyname
+            if is_range_crit:
+                keyname = key[3:]  # strip off the MAX or MIN for a new keyname
+            else:
+                keyname = key
+            self.crit.setdefault(keyname, '')
+            db_value = crit_dict[key]
+            if not db_value and not is_range_crit:
+                # For non-range (value) criteria, None means it isn't set.
+                # For range criteria, None means unbounded if the other
+                # criteria in the MIN/MAX pair is set.
+                continue    # value criteria not set
+            self.max_crit_len = max(self.max_crit_len, len(keyname))
+            fmt_value = AIdb.formatValue(key, db_value)
+            if is_range_crit:
+                if not db_value:
+                    fmt_value = "unbounded"
+                if self.crit[keyname] != '':
+                    if self.crit[keyname] != fmt_value:  # dealing with range
+                        if key.startswith('MAX'):
+                            self.crit[keyname] = self.crit[keyname] + \
+                                                 ' - ' + fmt_value
+                        else:
+                            self.crit[keyname] = fmt_value + ' - ' + \
+                                                 self.crit[keyname]
+                    elif self.crit[keyname] == "unbounded":
+                        # MIN and MAX both unbounded, which means neither is
+                        # set in db. Clear crit value.
+                        self.crit[keyname] = ''   # no values for range
+                else:  # first value, not range yet
+                    self.crit[keyname] = fmt_value
+                    # if the partner MIN/MAX criterion is not set in the db,
+                    # handle now because otherwise it won't be processed.
+                    if key.startswith('MIN'):
+                        if 'MAX' + keyname not in crit_dict.keys():
+                            if fmt_value == "unbounded":
+                                self.crit[keyname] = ''
+                            else:
+                                self.crit[keyname] = self.crit[keyname] + \
+                                                     ' - unbounded'
+                    else:
+                        if 'MIN' + keyname not in crit_dict.keys():
+                            if fmt_value == "unbounded":
+                                self.crit[keyname] = ''
+                            else:
+                                self.crit[keyname] = 'unbounded - ' + \
+                                                     self.crit[keyname]
+            else:
+                self.crit[keyname] = fmt_value
+
+    def __init__(self, aiqueue, name, instance, dbtable):
+        '''
+        Reads criteria from database and stores them into class attribute
+
+        Args:
+            aiqueue = database request queue
+
+            name = either the name of the manifest or the name of
+                   the profile to which this set of criteria belongs
+
+            instance = instance number
+
+            dbtable = database table, distinguishing manifests from profiles
+                Assumed to be one of AIdb.MANIFESTS_TABLE or
+                AIdb.PROFILES_TABLE
+        '''
+        # Set to True if there is at least one non-empty criteria
+        self.has_crit = False
+        # Store criteria in dictionary
+        self.crit = dict()
+        # Initialize length of the longest criteria to length of 'None' word
+        self.max_crit_len = len(_('None'))
+        # We need non-human output to be able to distiguish empty criteria
+        criteria = AIdb.getTableCriteria(name, instance, aiqueue, dbtable,
+                                         humanOutput=False, onlyUsed=True)
+        if criteria is not None:
+            for key in criteria.keys():
+                if criteria[key] is not None:
+                    self.has_crit = True
+                break
+            if self.has_crit:
+                # We need criteria in human readable form to be able to
+                # print it
+                hrcrit = AIdb.getTableCriteria(name, instance, aiqueue,
+                                               dbtable,
+                                               humanOutput=True,
+                                               onlyUsed=True)
+                # convert criteria into printable values
+                self.get_criteria_info(hrcrit)
+
+
+class ManifestPrintObject(PrintObject):
+    '''
+    Class representing a manifest. This class also contains a list of criteria
+    associated with this manifest
+    '''
+
+    header = _('Manifest')
+
+    def __init__(self, aiqueue, name, default=False):
+        '''
+        Reads manifest from database
+
+        Args:
+            aiqueue = database request queue
+
+            name = name of the manifest
+
+            default = boolean whether this manifest is default or not
+        '''
+        # Save manifest name
+        self.name = name
+        # Manifest itself don't know whether it is default for its service so
+        # this information should be passed in constructor
+        self.default = default
+        # Each manifest can have several sets of criteria - put them into list
+        self.criteria = list()
+        # Length of the longest criteria
+        self.max_crit_len = 0
+        # One manifest can have associated more sets of criteria
+        instances = AIdb.numInstances(name, aiqueue)
+        for instance in range(0, instances):
+            self.criteria.append(CriteriaPrintObject(aiqueue, name, instance,
+                                          AIdb.MANIFESTS_TABLE))
+        # Check whether this manifest has at least one active criteria
+        # and find the longest one
+        self.has_crit = False
+        for crit in self.criteria:
+            self.has_crit = crit.get_has_crit()
+            if crit.get_max_crit_len() > self.max_crit_len:
+                self.max_crit_len = crit.get_max_crit_len()
+        # Set status
+        if self.default:
+            self.status = DEFAULT
+        else:
+            if not self.has_crit:
+                # It is not default and doesn't have criteria - it is Inactive
+                self.status = INACTIVE
+            else:
+                self.status = ''
+
+    @classmethod
+    def get_header(cls, indent, mwidth, cwidth):
+        '''
+        Args
+            indent = string which should be printed before header
+            mwidth = manifest name width
+            cwidth = width of criteria names
+
+        Returns
+            formatted header string suitable for printing
+        '''
+        hdr = indent + cls.header.ljust(mwidth) + \
+              _('Status').ljust(STWIDTH)
+
+        # Print just header of the first criteria
+        return CriteriaPrintObject.get_header(hdr, cwidth)
+
+    @classmethod
+    def get_underline(cls, indent, mwidth, cwidth):
+        '''
+        Args
+            indent = string which should be printed before underline
+            mwidth = manifest name width
+            cwidth = width of criteria names
+
+        Returns
+            formatted underline string suitable for printing
+        '''
+        hdr = indent + ('-' * len(cls.header)).ljust(mwidth) + \
+              ('-' * len(_('Status'))).ljust(STWIDTH)
+        return CriteriaPrintObject.get_underline(hdr, cwidth)
+
+    def get_lines(self, first_line_indent, other_lines_indent,
+                       delim='\n', mwidth=None, cwidth=None):
+        '''
+        Args
+            first_line_indent = string which should be printed before first
+                                line of output
+            other_lines_indent = string which should be printed before other
+                                 lines of output
+            mwidth = manifest name width
+            cwidth = width of criteria names
+
+        Returns
+            string containing formatted manifest together with it's associated
+            criteria
+        '''
+        if mwidth is None:
+            mwidth = len(self.name)
+
+        if cwidth is None:
+            cwidth = self.max_crit_len
+
+        fl = first_line_indent + self.name.ljust(mwidth) + \
+             self.status.ljust(STWIDTH)
+        ol = other_lines_indent + ''.ljust(mwidth) + ''.ljust(STWIDTH)
+
+        line = ''
+        first = True
+        for crit in self.criteria:
+            # Print delimiter before each line except the first one
+            if not first:
+                line += delim
+            # If default manifest has criteria, print Ignored before them
+            if self.default and self.has_crit:
+                line += fl + '(' + IGNORED + ':' + '\n'
+                fl = ol
+            line += crit.get_lines(fl, ol, width=cwidth)
+            if self.default and self.has_crit:
+                # Insert the right bracket before the last character (\n)
+                line = line[0:-1] + ')' + line[-1]
+            fl = ol
+            first = False
+        return line
+
+
+class ProfilePrintObject(PrintObject):
+    '''
+    Class representing a profile. This class also contains criteria
+    associated with this profile
+    '''
+
+    header = _('Profile')
+
+    def __init__(self, aiqueue, name):
+        '''
+        Reads profile from database
+
+        Args:
+            aiqueue = database request queue
+
+            name = name of the profile
+        '''
+        # Save profile name
+        self.name = name
+        self.criteria = CriteriaPrintObject(aiqueue, name, None,
+                                            AIdb.PROFILES_TABLE)
+        self.max_crit_len = self.criteria.get_max_crit_len()
+        self.has_crit = self.criteria.get_has_crit()
+
+    def get_lines(self, first_line_indent, other_lines_indent,
+                       pwidth=None, cwidth=None):
+        '''
+        Args
+            first_line_indent = string which should be printed before first
+                                criteria line
+            other_lines_indent = string which should be printed before other
+                                 lines
+            pwidth = profile names width
+            cwidth = width of criteria names
+
+        Returns
+            string containing formatted profile together with it's associated
+            criteria
+        '''
+        if pwidth is None:
+            pwidth = len(self.name)
+
+        if cwidth is None:
+            cwidth = len(self.max_crit_len)
+
+        fl = first_line_indent + self.name.ljust(pwidth)
+        ol = other_lines_indent + ' '.ljust(pwidth)
+        return self.criteria.get_lines(fl, ol, width=cwidth)
+
+    @classmethod
+    def get_header(cls, indent, pwidth, cwidth):
+        '''
+        Args
+            indent = string which should be printed before header
+            pwidth = profile name width
+            cwidth = width of criteria names
+
+        Returns
+            formatted header string suitable for printing
+        '''
+        hdr = indent + cls.header.ljust(pwidth)
+        return CriteriaPrintObject.get_header(hdr, cwidth)
+
+    @classmethod
+    def get_underline(cls, indent, pwidth, cwidth):
+        '''
+        Args
+            indent = string which should be printed before underline
+            pwidth = manifest name width
+            cwidth = width of criteria names
+
+        Returns
+            formatted underline string suitable for printing
+        '''
+        hdr = indent + ('-' * len(cls.header)).ljust(pwidth)
+        return CriteriaPrintObject.get_underline(hdr, cwidth)
+
+
+class ServicePrintObject(PrintObject):
+    '''
+    Common base class for classes representing one service
+    '''
+
+    def __init__(self, sname):
+        '''
+        Opens database for given service and sets database request queue
+        '''
+        self.name = sname
+        try:
+            self.service = AIService(sname)
+
+        except VersionError as err:
+            warn_version(err)
+            raise
+
+        path = self.service.database_path
+
+        if os.path.exists(path):
+            try:
+                maisql = AIdb.DB(path)
+                maisql.verifyDBStructure()
+                self.aiqueue = maisql.getQueue()
+
+            except StandardError as err:
+                sys.stderr.write(_('Error: AI database access error\n%s\n')
+                                    % err)
+                raise
+        else:
+            sys.stderr.write(_('Error: unable to locate AI database for "%s" '
+                               'on server\n') % sname)
+            # I can't read from service database and I should raise an error
+            # for this condition.
+            raise StandardError
+
+    def get_max_profman_len(self):
+        '''
+        Returns
+            length of the longest manifest/profile name
+        '''
+        return self.max_profman_len
+
+    def get_name(self):
+        '''
+        Returns
+            name of the service
+        '''
+        return self.name
+
+    def __str__(self):
+        if self.non_empty():
+            return self.print_header() + self.get_lines()
+        else:
+            return self.empty_msg % self.name
+
+
+class ServiceProfilePrint(ServicePrintObject):
+    '''
+    Class representing one service and its associated profiles
+    '''
+
+    empty_msg = _('There are no profiles configured for local service '
+                  '"%s".\n')
+
+    def __init__(self, sname):
+        '''
+        Reads profile names associated with this service from database,
+        creates objects for them and stores these objects into instance
+        attributes
+        '''
+        ServicePrintObject.__init__(self, sname)
+
+        self.profiles = list()
+        self.max_profman_len = 0
+        self.max_crit_len = 0
+
+        try:
+            # Read all profiles for this service
+            for name in AIdb.getNames(self.aiqueue, AIdb.PROFILES_TABLE):
+                # Record the longest profile name
+                if self.max_profman_len < len(name):
+                    self.max_profman_len = len(name)
+                profile = ProfilePrintObject(self.aiqueue, name)
+                # Record the longest criteria in this service
+                if profile.get_max_crit_len() > self.max_crit_len:
+                    self.max_crit_len = profile.get_max_crit_len()
+                self.profiles.append(profile)
+
+        except StandardError as err:
+            sys.stderr.write(_('Error: AI database access error\n%s\n')
+                                % err)
+            raise
+
+    @staticmethod
+    def get_header(indent, pwidth, cwidth):
+        '''
+        Args
+            indent = string which should be printed before header
+            pwidth = profile name width
+            cwidth = width of criteria names
+
+        Returns
+            formatted header string suitable for printing
+        '''
+        return ProfilePrintObject.get_header(indent, pwidth, cwidth)
+
+    @staticmethod
+    def get_underline(indent, pwidth, cwidth):
+        '''
+        Args
+            indent = string which should be printed before underline
+            pwidth = profile name width
+            cwidth = width of criteria names
+
+        Returns
+            formatted underline string suitable for printing
+        '''
+        return ProfilePrintObject.get_underline(indent, pwidth, cwidth)
+
+    def print_header(self):
+        '''
+        Returns underlined header justified according to length of header and
+        length of the longest printed profile and criteria
+
+        Returns
+            formatted underline string suitable for printing
+        '''
+        plen = max(ProfilePrintObject.get_header_len(), self.max_profman_len)
+        clen = max(CriteriaPrintObject.get_header_len(), self.max_crit_len)
+
+        line = self.get_header('', plen + 2, clen)
+        line += self.get_underline('', plen + 2, clen)
+
+        return line
+
+    def get_lines(self, first_line_indent='',
+                   other_lines_indent='', pwidth=None, cwidth=None):
+        '''
+        Args
+            first_line_indent = string which should be printed before first
+                                line
+            other_lines_indent = string which should be printed before other
+                                 lines
+            pwidth = profile names width
+            cwidth = width of criteria names
+
+        Returns
+            string containing formatted profiles together with their associated
+            criteria
+        '''
+        if pwidth is None:
+            # We want 2 spaces between columns
+            pwidth = self.max_profman_len + 2
+
+        if cwidth is None:
+            cwidth = self.max_crit_len
+
+        line = ''
+        fl = first_line_indent
+        ol = other_lines_indent
+        for prof in self.profiles:
+            line += prof.get_lines(fl, ol, pwidth=pwidth, cwidth=cwidth)
+            fl = ol
+
+        return line
+
+    def non_empty(self):
+        '''
+        Returns
+            True if this service has at least one profile, otherwise returns
+            False
+        '''
+        if self.profiles:
+            return True
+        else:
+            return False
+
+
+class ServiceManifestPrint(ServicePrintObject):
+    '''
+    Class representing one service and its associated manifests
+    '''
+
+    def __init__(self, sname):
+        '''
+        Reads manifest names associated with this service from database,
+        creates objects for them and stores these objects into instance
+        attributes. Manifests are sorted into 3 groups - Active, Inactive
+        and Default.
+        '''
+        ServicePrintObject.__init__(self, sname)
+
+        try:
+            default_mname = self.service.get_default_manifest()
+        except StandardError:
+            default_mname = ""
+
+        self.default_manifest = None
+        self.active_manifests = list()
+        self.inactive_manifests = list()
+        self.max_profman_len = 0
+        self.max_crit_len = 0
+
+        try:
+            # Read all manifests for this service
+            for name in AIdb.getNames(self.aiqueue, AIdb.MANIFESTS_TABLE):
+                if self.max_profman_len < len(name):
+                    self.max_profman_len = len(name)
+                if name == default_mname:
+                    manifest = ManifestPrintObject(self.aiqueue, name,
+                                             default=True)
+                    self.default_manifest = manifest
+                else:
+                    manifest = ManifestPrintObject(self.aiqueue, name)
+                    if manifest.get_has_crit():
+                        self.active_manifests.append(manifest)
+                    else:
+                        self.inactive_manifests.append(manifest)
+                if manifest.get_max_crit_len() > self.max_crit_len:
+                    self.max_crit_len = manifest.get_max_crit_len()
+
+        except StandardError as err:
+            sys.stderr.write(_('Error: AI database access error\n%s\n')
+                                % err)
+            raise
+
+    @staticmethod
+    def get_header(indent, mwidth, cwidth):
+        '''
+        Args
+            indent = string which should be printed before header
+            mwidth = manifest name width
+            cwidth = width of criteria names
+
+        Returns
+            formatted header string suitable for printing
+        '''
+        return ManifestPrintObject.get_header(indent, mwidth, cwidth)
+
+    @staticmethod
+    def get_underline(indent, mwidth, cwidth):
+        '''
+        Args
+            indent = string which should be printed before underline
+            mwidth = manifest name width
+            cwidth = width of criteria names
+
+        Returns
+            formatted underline string suitable for printing
+        '''
+        return ManifestPrintObject.get_underline(indent, mwidth, cwidth)
+
+    def print_header(self):
+        '''
+        Returns underlined header justified according to length of header and
+        length of the longest printed manifest and criteria
+
+        Returns
+            formatted underline string suitable for printing
+        '''
+        plen = max(ManifestPrintObject.get_header_len(), self.max_profman_len)
+        clen = max(CriteriaPrintObject.get_header_len(), self.max_crit_len)
+
+        return self.get_header('', plen + 2, clen) + \
+               self.get_underline('', plen + 2, clen)
+
+    def get_lines(self, first_line_indent='',
+                   other_lines_indent='', mwidth=None, cwidth=None):
+        '''
+        Args
+            first_line_indent = string which should be printed before first
+                                line
+            other_lines_indent = string which should be printed before other
+                                 lines
+            mwidth = manifest name width
+            cwidth = width of criteria names
+
+        Returns
+            string containing formatted manifests together with their
+            associated criteria
+        '''
+        if mwidth is None:
+            # We want 2 spaces between columns
+            mwidth = self.max_profman_len + 2
+
+        if cwidth is None:
+            cwidth = self.max_crit_len
+
+        line = ''
+        fl = first_line_indent
+        ol = other_lines_indent
+        # Print active manifests first
+        for manifest in self.active_manifests:
+            line += manifest.get_lines(fl, ol, mwidth=mwidth,
+                                                cwidth=cwidth)
+            fl = ol
+
+        # Then print default manifest
+        if self.default_manifest:
+            line += self.default_manifest.get_lines(fl, ol, mwidth=mwidth,
+                                                     cwidth=cwidth)
+            fl = ol
+
+        # Print inactive manifests last
+        for manifest in self.inactive_manifests:
+            line += manifest.get_lines(fl, ol, mwidth=mwidth,
+                                                cwidth=cwidth)
+            fl = ol
+
+        return line
+
+    def non_empty(self):
+        '''
+        Returns
+            True because each service has at least one Default manifest
+        '''
+        return True
+
+
+class ServicesList(PrintObject):
+    '''
+    Base class for list of services
+    '''
+
+    def get_lines(self, indent='', delim='\n',
+                    width=None, cwidth=None):
+        '''
+        '''
+        line = ''
+        first = True
+        for s in self.services:
+            # Print just services containing some profiles/manifests
+            if s.non_empty():
+                if not first:
+                    line += delim
+                line += s.get_name() + '\n'
+                line += s.get_lines(indent, indent, width, cwidth)
+                first = False
+
+        return line
+
+    def __str__(self):
+        '''
+        '''
+        if not self.services:
+            return self.empty_msg
+
+        ind = '   '
+
+        # Count the width of manifests/profiles column
+        j = max(self.max_name_len, len(ind) + self.max_profman_len,
+                self.get_header_len()) + 2
+        return self.get_header(j, self.max_crit_len) + \
+               self.get_underline(j, self.max_crit_len) + \
+               self.get_lines(ind, '\n', j - len(ind), self.max_crit_len)
+
+
+class ServicesManifestList(ServicesList):
+    '''
+    Class representing list of services. Services contain manifests
+    '''
+
+    # Message printed in case that there are no services configured
+    # (each service should have at least Default profile
+    empty_msg = _('There are no manifests configured for local services.\n')
+    header = _('Service/Manifest Name')
+
+    def __init__(self, srvcs, name=None):
+        '''
+        Reads dictionary of services and creates list of service objects
+
+        Args:
+            srvcs = dictionary of service properties
+        '''
+        self.services = list()
+        self.max_crit_len = 0
+        self.max_profman_len = 0
+        if name:
+            # We are going to print only one service
+            srvlist = [name]
+            self.max_name_len = len(name)
+        else:
+            self.max_name_len = len(max(srvcs.keys(), key=len))
+            srvlist = srvcs.keys()
+            srvlist.sort()
+        for s in srvlist:
+            try:
+                service = ServiceManifestPrint(s)
+            except (StandardError, VersionError):
+                # Ignore these errors and just skip these services
+                # Errors/Warnings should be already printed
+                pass
+            else:
+                if self.max_crit_len < service.get_max_crit_len():
+                    self.max_crit_len = service.get_max_crit_len()
+                if self.max_profman_len < service.get_max_profman_len():
+                    self.max_profman_len = service.get_max_profman_len()
+
+                if service.non_empty():
+                    self.services.append(service)
+
+    @classmethod
+    def get_header(cls, mwidth, cwidth):
+        '''
+        Args
+            mwidth = manifest name width
+            cwidth = width of criteria names
+
+        Returns
+            formatted header string suitable for printing
+        '''
+        hdr = cls.header.ljust(mwidth) + _('Status').ljust(STWIDTH)
+        return CriteriaPrintObject.get_header(hdr, cwidth)
+
+    @classmethod
+    def get_underline(cls, mwidth, cwidth):
+        '''
+        Args
+            mwidth = manifest name width
+            cwidth = width of criteria names
+
+        Returns
+            formatted underline string suitable for printing
+        '''
+        hdr = ('-' * len(cls.header)).ljust(mwidth) +\
+              ('-' * len(_('Status'))).ljust(STWIDTH)
+        return CriteriaPrintObject.get_underline(hdr, cwidth)
+
+
+class ServicesProfileList(ServicesList):
+    '''
+    Class representing list of services. Services contain profiles
+    '''
+
+    empty_msg = _('There are no profiles configured for local services.\n')
+    header = _('Service/Profile Name')
+
+    def __init__(self, srvcs, name=None):
+        '''
+        '''
+        self.services = list()
+        self.max_crit_len = 0
+        self.max_profman_len = 0
+        if name:
+            srvlist = [name]
+            self.max_name_len = len(name)
+            # There is different error msg if we are printing just one service
+            self.empty_msg = ServiceProfilePrint.empty_msg % name
+        else:
+            self.max_name_len = len(max(srvcs.keys(), key=len))
+            srvlist = srvcs.keys()
+            srvlist.sort()
+        for s in srvlist:
+            try:
+                service = ServiceProfilePrint(s)
+            except (StandardError, VersionError):
+                # Ignore these errors and just skip these services
+                # Errors/Warnings should be already printed
+                pass
+            else:
+                if self.max_crit_len < service.get_max_crit_len():
+                    self.max_crit_len = service.get_max_crit_len()
+                if self.max_profman_len < service.get_max_profman_len():
+                    self.max_profman_len = service.get_max_profman_len()
+
+                if service.non_empty():
+                    self.services.append(service)
+
+    @staticmethod
+    def get_header(pwidth, cwidth):
+        '''
+        Args
+            pwidth = profile width
+            cwidth = width of criteria names
+
+        Returns
+            formatted header string suitable for printing
+        '''
+        hdr = ServicesProfileList.header.ljust(pwidth)
+        return CriteriaPrintObject.get_header(hdr, cwidth)
+
+    @staticmethod
+    def get_underline(pwidth, cwidth):
+        '''
+        Args
+            pwidth = profile width
+            cwidth = width of criteria names
+
+        Returns
+            formatted underline string suitable for printing
+        '''
+        hdr = ('-' * len(ServicesProfileList.header)).ljust(pwidth)
+        return CriteriaPrintObject.get_underline(hdr, cwidth)
+
+
 def warn_version(version_err):
     '''Prints a short warning about version incompatibility to stderr
     for a given service. For any one invocation of "installadm list"
     the warning will only be printed once.
-    
+
     '''
     if version_err.service_name not in _WARNED_ABOUT:
         print >> sys.stderr, version_err.short_str()
@@ -355,7 +1299,7 @@ def get_local_services(services, sname=None):
         if config.PROP_ALIAS_OF in serv:
             image_path = service.image.path
             serv[config.PROP_IMAGE_PATH] = image_path
-        
+
         info = dict()
         # if a service name is passed in then
         # ensure it matches the current name
@@ -377,7 +1321,7 @@ def get_local_services(services, sname=None):
                 sdict[servicename] = slist
             else:
                 sdict[servicename] = [info]
-    
+
     return sdict, width, aliasofwidth
 
 
@@ -395,10 +1339,10 @@ def list_local_services(services, name=None):
 
     Raises
         None
-    
+
     """
     sdict, width, awidth = get_local_services(services, sname=name)
-    
+
     width = max(width, len(_('Service Name')))
     awidth = max(awidth, len(_('Alias Of')))
     fields = [[_('Service Name'), width]]
@@ -534,697 +1478,6 @@ def list_local_clients(lservices, name=None):
     print
 
 
-def get_manifest_or_profile_names(services, dbtable):
-    """
-    Iterate through the services retrieving
-    all the stored manifest or profile names.
-
-    Args
-        services = dictionary of service properties
-        dbtable = database table, distinguishing manifests from profiles
-
-    Returns
-        a dictionary of service manifests or profiles within a list:
-
-            {
-                servicename1:
-                    [
-                        [name, has_criteria (boolean), {crit:value, ... }],
-                        ... 
-                    ],
-                ...
-            }
-
-        the width of the longest service name (swidth)
-
-        the width of the longest manifest name (mwidth)
-
-        the width of the longest criteria (cwidth)
-
-    Raises
-        None
-    """
-    swidth = 0
-    mwidth = 0
-    cwidth = 0
-    sdict = dict()
-    for sname in sorted(services.keys()):
-        try:
-            service = AIService(sname)
-        except VersionError as err:
-            warn_version(err)
-            continue
-        
-        path = service.database_path
-        
-        if os.path.exists(path):
-            try:
-                maisql = AIdb.DB(path)
-                maisql.verifyDBStructure()
-                aiqueue = maisql.getQueue()
-                swidth = max(len(sname), swidth)
-                if not AIdb.tableExists(aiqueue, dbtable):
-                    continue
-                for name in AIdb.getNames(aiqueue, dbtable):
-                    mwidth = max(len(name), mwidth)
-                    tdict = dict()
-                    if dbtable == 'manifests':
-                        instances = AIdb.numInstances(name, aiqueue)
-                        for instance in range(0, instances):
-                            criteria = AIdb.getTableCriteria(name,
-                                            instance, aiqueue, dbtable,
-                                            humanOutput=False,
-                                            onlyUsed=True)
-                            has_criteria = False
-                            if criteria is not None:
-                                for key in criteria.keys():
-                                    if criteria[key] is not None:
-                                        has_criteria = True
-                                        break
-                                if has_criteria:
-                                    # We need criteria in human readable form
-                                    hrcrit = AIdb.getTableCriteria(name,
-                                                  instance, aiqueue, dbtable,
-                                                  humanOutput=True,
-                                                  onlyUsed=True)
-                                    tdict, twidth = get_criteria_info(hrcrit)
-                                    cwidth = max(twidth, cwidth)
-                    else:
-                        criteria = AIdb.getTableCriteria(name,
-                                        None, aiqueue, dbtable,
-                                        humanOutput=False,
-                                        onlyUsed=True)
-                        has_criteria = False
-                        if criteria is not None:
-                            for key in criteria.keys():
-                                if criteria[key] is not None:
-                                    has_criteria = True
-                                    break
-                    if sname in sdict:
-                        slist = sdict[sname]
-                        slist.append([name, has_criteria, tdict])
-                        sdict[sname] = slist
-                    else:
-                        sdict[sname] = [[name, has_criteria, tdict]]
-            except StandardError as err:
-                sys.stderr.write(_('Error: AI database access error\n%s\n')
-                                   % err)
-                continue
-        else:
-            sys.stderr.write(_('Error: unable to locate AI database for "%s" '
-                               'on server\n') % sname)
-            continue
-
-    return sdict, swidth, mwidth, cwidth
-
-
-def get_criteria_info(crit_dict):
-    """
-    Iterates over the criteria which consists of a dictionary with
-    possibly arch, min memory, max memory, min ipv4, max ipv4, min mac,
-    max mac, cpu, platform, min network, max network and zonename converting
-    it into a dictionary with arch, mem, ipv4, mac, cpu, platform, network
-    and zonename.  Any min/max attributes are stored as a range within the
-    new dictionary.
-
-    Args
-        crit_dict = dictionary of the criteria
-
-    Returns
-        dictionary of combined min/max and other criteria, formatted
-           with possible endings such as MB
-        maximum criteria width
-
-    Raises
-        None
-    """
-
-    if crit_dict is None:
-        return dict(), 0
-
-    # tdict values are formatted strings, with possible endings
-    # such as MB.
-    tdict = dict()
-
-    crit_width = 0
-    for key in crit_dict.keys():
-        if key == 'service':
-            continue
-        is_range_crit = key.startswith('MIN') or key.startswith('MAX')
-        # strip off the MAX or MIN for a new keyname
-        if is_range_crit:
-            keyname = key[3:]  # strip off the MAX or MIN for a new keyname
-        else:
-            keyname = key
-        tdict.setdefault(keyname, '')
-        db_value = crit_dict[key]
-        if not db_value and not is_range_crit:
-            # For non-range (value) criteria, None means it isn't set.
-            # For range criteria, None means unbounded if the other
-            # criteria in the MIN/MAX pair is set.
-            continue    # value criteria not set
-        crit_width = max(crit_width, len(keyname))
-        fmt_value = AIdb.formatValue(key, db_value)
-        if is_range_crit:
-            if not db_value:
-                fmt_value = "unbounded"
-            if tdict[keyname] != '':
-                if tdict[keyname] != fmt_value:  # dealing with range
-                    if key.startswith('MAX'):
-                        tdict[keyname] = tdict[keyname] + ' - ' + fmt_value
-                    else:
-                        tdict[keyname] = fmt_value + ' - ' + tdict[keyname]
-                elif tdict[keyname] == "unbounded":
-                    # MIN and MAX both unbounded, which means neither is
-                    # set in db. Clear tdict value.
-                    tdict[keyname] = ''   # no values for range, reset tdict
-            else:  # first value, not range yet
-                tdict[keyname] = fmt_value
-                # if the partner MIN/MAX criterion is not set in the db,
-                # handle now because otherwise it won't be processed.
-                if key.startswith('MIN'):
-                    if 'MAX' + keyname not in crit_dict.keys():
-                        if fmt_value == "unbounded":
-                            tdict[keyname] = ''
-                        else:
-                            tdict[keyname] = tdict[keyname] + ' - unbounded'
-                else:
-                    if 'MIN' + keyname not in crit_dict.keys():
-                        if fmt_value == "unbounded":
-                            tdict[keyname] = ''
-                        else:
-                            tdict[keyname] = 'unbounded - ' + tdict[keyname]
-        else:
-            tdict[keyname] = fmt_value
-
-    return tdict, crit_width
-
-
-def get_mfest_or_profile_criteria(sname, services, dbtable):
-    """
-    Iterate through all the manifests or profiles for the named service (sname)
-    pointed to by the SCF service.
-
-    Args
-        sname = service name
-        services = config.get_all_service_props()
-        dbtable = database table, distinguishing manifests from profiles
-            Assumed to be one of AIdb.MANIFESTS_TABLE or AIdb.PROFILES_TABLE
-
-    Returns
-        a dictionary of the criteria for the named service within a list:
-
-            {
-                servicename1:[
-                             { 'arch':arch1, 'mem':memory1, 'ipv4':ipaddress1,
-                               'mac':macaddr1, 'platform':platform1,
-                               'network':network1, 'cpu':cpu1, 'zonename':z1 },
-                             ...
-                            ]
-            }
-
-        * Note1: platform, network and cpu are currently not-implemented
-                 upstream.
-        * Note2: could simply use a list of dictionaries but implemented as a
-                 dictionary of a list of dictionary which will allow for
-                 multiple services to be listed at the same time.
-
-        width of longest manifest or profile name
-
-        width of longest criteria
-
-    Raises
-        None
-    """
-    sdict = dict()
-    width = 0
-    cwidth = 0
-    # ensure the named service is in our service dictionary.
-    lservices = services.keys()
-    if sname in lservices:
-        try:
-            path = AIService(sname).database_path
-        except VersionError as version_err:
-            warn_version(version_err)
-            return sdict, width, cwidth
-
-        if os.path.exists(path):
-            try:
-                maisql = AIdb.DB(path)
-                maisql.verifyDBStructure()
-                aiqueue = maisql.getQueue()
-                if dbtable == AIdb.MANIFESTS_TABLE:
-                    for name in AIdb.getNames(aiqueue, dbtable):
-                        sdict[name] = list()
-                        instances = AIdb.numInstances(name, aiqueue)
-                        for instance in range(0, instances):
-                            width = max(len(name), width)
-                            criteria = AIdb.getManifestCriteria(name,
-                                            instance, aiqueue,
-                                            humanOutput=True,
-                                            onlyUsed=True)
-                            if criteria:
-                                tdict, twidth = get_criteria_info(criteria)
-                                cwidth = max(twidth, cwidth)
-                                sdict[name].append(tdict)
-                elif dbtable == AIdb.PROFILES_TABLE:
-                    for name in AIdb.getNames(aiqueue, dbtable):
-                        sdict[name] = list()
-                        criteria = AIdb.getProfileCriteria(name,
-                                        aiqueue,
-                                        humanOutput=True,
-                                        onlyUsed=True)
-                        width = max(len(name), width)
-                        tdict, twidth = get_criteria_info(criteria)
-                        cwidth = max(twidth, cwidth)
-
-                        sdict[name].append(tdict)
-                else:
-                    raise ValueError("Invalid value for dbtable: %s" % dbtable)
-
-            except StandardError as err:
-                sys.stderr.write(_('Error: AI database access error\n%s\n')
-                                   % err)
-                sys.exit(1)
-        else:
-            sys.stderr.write(_('Error: unable to locate AI database on server '
-                               'for %s\n') % sname)
-            sys.exit(1)
-
-    return sdict, width, cwidth
-
-
-def print_service_manifests(sdict, sname, width, swidth, cwidth):
-    """
-    Iterates over the criteria dictionary printing each non blank
-    criteria.  The manifest dictionary is populated via
-    get_mfest_or_profile_criteria().
-
-    Args
-        sdict = criteria dictionary
-                (same as in get_mfest_or_profile_criteria() description)
-
-        sname = name of service
-
-        width = widest manifest name
-
-        swidth = width of status column
-
-        cwidth = widest criteria name (0 if no criteria)
-
-    Returns
-        None
-
-    Raises
-        None
-    """
-    default_mfest = None
-    inactive_mfests = list()
-    active_mfests = list()
-
-    width += 1
-    swidth += 1
-
-    mnames = sdict.keys()
-    if not mnames:
-        return
-    mnames.sort()
-
-    try:
-        default_mname = AIService(sname).get_default_manifest()
-    except StandardError:
-        default_mname = ""
-
-    ordered_keys = ['arch', 'mac', 'ipv4']
-    if cwidth > 0:
-        # Criteria are present.
-        keys = sdict[mnames[0]][0].keys()
-        keys.sort()
-        for akey in keys:
-            if akey not in ordered_keys:
-                ordered_keys.append(akey)
-
-    for name in mnames:
-        manifest_list = [name]
-        if cwidth > 0:
-            for ldict in sdict[name]:
-                for akey in ordered_keys:
-                    if akey in ldict and ldict[akey] != '':
-                        manifest_list.append(akey.ljust(cwidth) + ' = ' +
-                                             ldict[akey])
-        if name == default_mname:
-            default_mfest = manifest_list
-        elif len(manifest_list) == 1:
-            inactive_mfests.append(manifest_list)
-        else:
-            active_mfests.append(manifest_list)
-
-    for mfest in active_mfests:
-        # Active manifests have at least one criterion.
-        print mfest[0].ljust(width) + ''.ljust(swidth) + mfest[1]
-        for other_crit in range(2, len(mfest)):
-            print ' '.ljust(width + swidth) + mfest[other_crit]
-        print
-    if default_mfest:
-        # Since 'Default' is used in status column, it is in STATUS_WORDS
-        # and so swidth accommodates it.
-        first_line = default_mfest[0].ljust(width) + \
-            DEFAULT.ljust(swidth)
-        if len(default_mfest) > 1:
-            first_line += "(" + IGNORED + ": " + default_mfest[1] + ")"
-        else:
-            first_line += "None"
-        print first_line
-        for other_crit in range(2, len(default_mfest)):
-            print ''.ljust(width + swidth) + \
-                "(" + IGNORED + ": " + default_mfest[other_crit] + ")"
-        print
-    for mfest in inactive_mfests:
-        # Since 'Inactive' is used in status column, it is in STATUS_WORDS.
-        # and so swidth accommodates it.
-        print mfest[0].ljust(width) + INACTIVE.ljust(swidth) + \
-            _("None")
-        print
-
-
-def print_service_profiles(sdict, width, cwidth):
-    """
-    Iterates over the criteria dictionary printing each non blank
-    criteria.  The profile dictionary is populated via
-    get_mfest_or_profile_criteria().
-
-    Args
-        sdict = criteria dictionary
-                (same as in get_mfest_or_profile_criteria() description)
-
-        width = widest profile name
-
-        cwidth = widest criteria name (0 if no criteria)
-
-    Returns
-        None
-
-    Raises
-        None
-    """
-    pnames = sdict.keys()
-    if not pnames:
-        return
-    pnames.sort()
-
-    ordered_keys = ['arch', 'mac', 'ipv4']
-    if cwidth > 0:
-        # Criteria are present.
-        keys = sdict[pnames[0]][0].keys()
-        keys.sort()
-        for akey in keys:
-            if akey not in ordered_keys:
-                ordered_keys.append(akey)
-
-    for name in pnames:
-        print name.ljust(width),
-        first = True
-        if cwidth > 0:
-            for ldict in sdict[name]:
-                for akey in ordered_keys:
-                    if akey in ldict and ldict[akey] != '':
-                        if not first:
-                            print ''.ljust(width),
-                        first = False
-                        print akey.ljust(cwidth) + ' = ' + ldict[akey]
-        # Flush line if no criteria displayed.
-        if first:
-            print "None"
-        print
-
-
-def print_local_manifests(sdict, smwidth, mfindent, stwidth, cwidth):
-    """
-    Iterates over the name dictionary printing each
-    manifest or criteria within the dictionary.  The name dictionary
-    is populated via get_manifest_or_profile_names().
-
-    Args
-        sdict = service manifest dictionary
-
-            {
-                'servicename1':
-                    [
-                        [ manifestfile1, has_criteria (boolean), {} ],
-                        ...
-                    ],
-                ...
-            }
-
-        smwidth = the length of the widest service or manifest name
-
-        mfindent = how many spaces will be manifest name indented
-
-        stwidth = width of status column
-
-        cwidth = the length of the widest criteria
-
-    Returns
-        None
-
-    Raises
-        None
-    """
-
-    tkeys = sdict.keys()
-    tkeys.sort()
-    smwidth += 1
-    stwidth += 1
-    for akey in tkeys:
-        default_mfest = None
-        inactive_mfests = list()
-        active_mfests = list()
-        try:
-            default_mname = AIService(akey).get_default_manifest()
-        except StandardError:
-            default_mname = ""
-        for manifest_item in sdict[akey]:
-            # manifest_items are a list of
-            # [ name, number of criteria, criteria_dictionary ]
-
-            if manifest_item[0] == default_mname:
-                default_mfest = manifest_item  # There could be max 1 default
-            elif manifest_item[1]:  # has_criteria and not default
-                active_mfests.append(manifest_item)
-            else:
-                inactive_mfests.append(manifest_item)
-
-        print akey  # print service name on separate line
-
-        line = ''.ljust(mfindent)  # Manifest is indented
-        for manifest_i in active_mfests:
-            line += manifest_i[0].ljust(smwidth - mfindent)  # Manifest
-            line += ''.ljust(stwidth)  # Status is empty for active mfests
-            ordered_keys = ['arch', 'mac', 'ipv4']
-            keys = manifest_i[2].keys()
-            keys.sort()
-            for k in keys:
-                if k not in ordered_keys:
-                    ordered_keys.append(k)
-            crit_printed = False
-            for k in ordered_keys:
-                if k in manifest_i[2] and manifest_i[2][k] != '':
-                    line += k.ljust(cwidth) + ' = ' + manifest_i[2][k]
-                    print line
-                    crit_printed = True
-                    line = ''.ljust(mfindent) + \
-                        ''.ljust(smwidth - mfindent) + ''.ljust(stwidth)
-            if not crit_printed:
-                line += _("None")
-                print line
-            print  # Blank line after each manifest
-            line = ''.ljust(mfindent)
-
-        if default_mfest:
-            line += default_mfest[0].ljust(smwidth - mfindent)  # Manifest name
-            line += DEFAULT.ljust(stwidth)  # Status is Default
-            # Default manifest can have ignored criteria
-            ordered_keys = ['arch', 'mac', 'ipv4']
-            keys = default_mfest[2].keys()
-            keys.sort()
-            for k in keys:
-                if k not in ordered_keys:
-                    ordered_keys.append(k)
-            crit_printed = False
-            for k in ordered_keys:
-                if k in default_mfest[2] and default_mfest[2][k] != '':
-                    line += '(' + IGNORED + ': ' + k.ljust(cwidth) + \
-                        ' = ' + default_mfest[2][k] + ')'
-                    print line
-                    crit_printed = True
-                    line = ''.ljust(mfindent) + \
-                        ''.ljust(smwidth - mfindent) + ''.ljust(stwidth)
-            if not crit_printed:
-                line += _("None")
-                print line
-            line = ''.ljust(mfindent)
-            print  # Blank line after each manifest
-        for manifest_i in inactive_mfests:
-            line += manifest_i[0].ljust(smwidth - mfindent)  # Manifest
-            line += INACTIVE.ljust(stwidth)
-            line += _("None")  # Inactive manifests have no criteria
-            print line
-            print  # Blank line after each manifest
-            line = ''.ljust(mfindent)
-
-
-def print_local_profiles(sdict, swidth):
-    """
-    Iterates over the name dictionary printing each
-    profile or criteria within the dictionary.  The name dictionary
-    is populated via get_manifest_or_profile_names().
-
-    Args
-        sdict = service profile dictionary
-
-            {
-                'servicename1':
-                    [
-                        [ profile1, has_criteria (boolean) ],
-                        ...
-                    ],
-                ...
-            }
-
-        swidth = the length of the widest service name
-
-    Returns
-        None
-
-    Raises
-        None
-    """
-    tkeys = sdict.keys()
-    tkeys.sort()
-    swidth += 1
-    for akey in tkeys:
-        first_for_service = True
-        # profile_items are a list of [ name, number of criteria ]
-        for profile_item in sdict[akey]:
-            if first_for_service:
-                print akey.ljust(swidth) + profile_item[0]
-                first_for_service = False
-            else:
-                print ''.ljust(swidth) + profile_item[0]
-    print
-
-
-def list_local_manifests(services, name=None):
-    """
-    list the local manifests.  If name is not passed in then
-    print all the local manifests. List also the associated
-    manifest criteria.
-
-    Args
-        services = config.get_all_service_props()
-        name = service name
-
-    Returns
-        None
-
-    Raises
-        None
-    """
-    # list -m
-    if not name:
-        sdict, swidth, mwidth, cwidth = get_manifest_or_profile_names(services,
-                                                     AIdb.MANIFESTS_TABLE)
-        if not sdict:
-            output = _('There are no manifests configured for local '
-                       'services.\n')
-            sys.stdout.write(output)
-            return
-        # manifest should be indented 3 spaces
-        mfindent = 3
-        smwidth = max(swidth, mwidth + mfindent,
-            len(_('Service/Manifest Name'))) + 1
-        fields = [[_('Service/Manifest Name'), smwidth]]
-        stwidth = max([len(item) for item in STATUS_WORDS]) + 1
-        fields.extend([[_('Status'), stwidth]])
-        fields.extend([[_('Criteria'), len(_('Criteria'))]])
-
-        do_header(fields)
-        # set the SIGPIPE signal to SIG_DFL
-        with SigpipeHandler():
-            print_local_manifests(sdict, smwidth, mfindent, stwidth, cwidth)
-    # list -m -n <service>
-    else:
-        sdict, mwidth, cwidth = \
-            get_mfest_or_profile_criteria(name, services, AIdb.MANIFESTS_TABLE)
-        if not sdict:
-            output = _('There are no manifests configured for local service, '
-                       '"%s".\n') % name
-            sys.stdout.write(output)
-            return
-
-        mwidth = max(mwidth, len(_('Manifest'))) + 1
-        fields = [[_('Manifest'), mwidth]]
-        stwidth = max([len(item) for item in STATUS_WORDS]) + 1
-        fields.extend([[_('Status'), stwidth]])
-        fields.extend([[_('Criteria'), len(_('Criteria'))]])
-
-        do_header(fields)
-        print_service_manifests(sdict, name, mwidth, stwidth, cwidth)
-
-
-def list_local_profiles(linst, name=None):
-    """
-    list the local profiles.  If name is not passed in then
-    print all the local profiles.  Otherwise list the named
-    service's profiles' criteria.
-
-    Args
-        inst = smf.AISCF()
-        name = service name
-
-    Returns
-        None
-
-    Raises
-        None
-    """
-    # list -p
-    if not name:
-        sdict, swidth, mwidth, cwidth = \
-                get_manifest_or_profile_names(linst, AIdb.PROFILES_TABLE)
-        if not sdict:
-            output = _('There are no profiles configured for local '
-                       'services.\n')
-            sys.stdout.write(output)
-            return
-
-        swidth = max(swidth, len(_('Service Name'))) + 1
-        fields = [[_('Service Name'), swidth]]
-        mwidth = max(mwidth, len(_('Profile')))
-        fields.extend([[_('Profile'), mwidth]])
-
-        do_header(fields)
-        # set the SIGPIPE signal to SIG_DFL
-        with SigpipeHandler():
-            print_local_profiles(sdict, swidth)
-    # list -p -n <service>
-    else:
-        sdict, mwidth, cwidth = \
-            get_mfest_or_profile_criteria(name, linst, AIdb.PROFILES_TABLE)
-        if not sdict:
-            output = _('There are no profiles configured for local service, '
-                       '"%s".\n') % name
-            sys.stdout.write(output)
-            return
-
-        mwidth = max(mwidth, len(_('Profile'))) + 1
-        fields = [[_('Profile'), mwidth]]
-        fields.extend([[_('Criteria'), len(_('Criteria'))]])
-
-        do_header(fields)
-        print_service_profiles(sdict, mwidth, cwidth)
-
-
 def do_list(cmd_options=None):
     '''
     List information about AI services, clients, and manifests.
@@ -1265,12 +1518,12 @@ def do_list(cmd_options=None):
         if options.manifest:
             if options.client:
                 print
-            list_local_manifests(services, name=options.service)
+            print ServicesManifestList(services, name=options.service)
         # list -p
         if options.profile:
             if options.client or options.manifest:
                 print
-            list_local_profiles(services, name=options.service)
+            print ServicesProfileList(services, name=options.service)
 
 
 if __name__ == '__main__':

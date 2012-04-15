@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -33,60 +33,70 @@ import unittest
 import osol_install.auto_install.list as list
 
 
+class DummyCriteriaPrint(list.CriteriaPrintObject):
+    def __init__(self):
+        pass
+
+
 class GetCriteriaInfo(unittest.TestCase):
     '''Tests for get_criteria_info.'''
 
+    def setUp(self):
+        '''unit test set up'''
+        self.crit = DummyCriteriaPrint()
+
     def test_list_range_bounded_both_sides(self):
         '''Ensure range bounded with different values list correctly'''
-        mycriteria = {"MAXmem": 2048, "MINmem": 512} 
-        cri_dict, width = list.get_criteria_info(mycriteria) 
-        self.assertEquals(width, len("mem"))
-        self.assertEquals(cri_dict["mem"], "512 MB - 2048 MB")
+        mycriteria = {"MAXmem": 2048, "MINmem": 512}
+        self.crit.get_criteria_info(mycriteria)
+        self.assertEquals(self.crit.max_crit_len, len("mem"))
+        self.assertEquals(self.crit.crit["mem"], "512 MB - 2048 MB")
 
     def test_list_range_bounded_same_on_both_sides(self):
         '''Ensure range bounded with same values list correctly'''
-        mycriteria = {"MINmac": u'00ABCDEF0122', "MAXmac": u'00ABCDEF0122'} 
-        cri_dict, width = list.get_criteria_info(mycriteria) 
-        self.assertEquals(width, len("mac"))
-        self.assertEquals(cri_dict["mac"], "00:AB:CD:EF:01:22")
+        mycriteria = {"MINmac": u'00ABCDEF0122', "MAXmac": u'00ABCDEF0122'}
+        self.crit.get_criteria_info(mycriteria)
+        self.assertEquals(self.crit.max_crit_len, len("mac"))
+        self.assertEquals(self.crit.crit["mac"], "00:AB:CD:EF:01:22")
 
     def test_list_range_unbounded_min_side(self):
         '''Ensure range with unbounded minimum list correctly'''
-        mycriteria = {"MAXipv4": '124213023291'} 
-        cri_dict, width = list.get_criteria_info(mycriteria) 
-        self.assertEquals(width, len("ipv4"))
-        self.assertEquals(cri_dict["ipv4"], "unbounded - 124.213.23.291")
+        mycriteria = {"MAXipv4": '124213023291'}
+        self.crit.get_criteria_info(mycriteria)
+        self.assertEquals(self.crit.max_crit_len, len("ipv4"))
+        self.assertEquals(self.crit.crit["ipv4"], "unbounded - 124.213.23.291")
 
     def test_list_range_unbounded_max_side(self):
         '''Ensure range with unbounded maximum list correctly'''
-        mycriteria = {"MINmem": 2048} 
-        cri_dict, width = list.get_criteria_info(mycriteria) 
-        self.assertEquals(width, len("mem"))
-        self.assertEquals(cri_dict["mem"], "2048 MB - unbounded")
+        mycriteria = {"MINmem": 2048}
+        self.crit.get_criteria_info(mycriteria)
+        self.assertEquals(self.crit.max_crit_len, len("mem"))
+        self.assertEquals(self.crit.crit["mem"], "2048 MB - unbounded")
 
     def test_list_non_range_criteria(self):
         '''Ensure non-range criteria lists correctly'''
         myplatform = "SUNW,Sun-Fire-V250"
-        mycriteria = {"platform": myplatform} 
-        cri_dict, width = list.get_criteria_info(mycriteria) 
-        self.assertEquals(width, len("platform"))
-        self.assertEquals(cri_dict["platform"], myplatform)
+        mycriteria = {"platform": myplatform}
+        self.crit.get_criteria_info(mycriteria)
+        self.assertEquals(self.crit.max_crit_len, len("platform"))
+        self.assertEquals(self.crit.crit["platform"], myplatform)
 
     def test_list_setting_none(self):
         '''Ensure None setting handled correctly'''
 
-        mycriteria = {"arch": "sun4u", "cpu": None} 
-        cri_dict, width = list.get_criteria_info(mycriteria) 
-        self.assertEquals(cri_dict["arch"], "sun4u")
-        self.assertEquals(cri_dict["cpu"], "")
+        mycriteria = {"arch": "sun4u", "cpu": None}
+        self.crit.get_criteria_info(mycriteria)
+        self.assertEquals(self.crit.crit["arch"], "sun4u")
+        self.assertEquals(self.crit.crit["cpu"], "")
 
     def test_width(self):
         '''Ensure width returned correctly'''
 
-        mycriteria = {"arch": "sun4v", "platform":"SUNW,Sun-Fire-V250",
-                      "cpu": "sparc"} 
-        cri_dict, width = list.get_criteria_info(mycriteria) 
-        self.assertEquals(width, len("platform"))
+        mycriteria = {"arch": "sun4v", "platform": "SUNW,Sun-Fire-V250",
+                      "cpu": "sparc"}
+        self.crit.get_criteria_info(mycriteria)
+        self.assertEquals(self.crit.max_crit_len, len("platform"))
+
 
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options.'''
@@ -116,15 +126,15 @@ class ParseOptions(unittest.TestCase):
         '''Ensure valid options ok'''
         myargs = []
         options = list.parse_options(cmd_options=myargs)
-        self.assertFalse(options.client) 
-        self.assertFalse(options.manifest) 
-        self.assertFalse(options.service) 
+        self.assertFalse(options.client)
+        self.assertFalse(options.manifest)
+        self.assertFalse(options.service)
 
         myargs = ["-m", "-c", "-n", "mysvc"]
         options = list.parse_options(cmd_options=myargs)
-        self.assertTrue(options.client) 
-        self.assertTrue(options.manifest) 
-        self.assertEqual(options.service, "mysvc") 
+        self.assertTrue(options.client)
+        self.assertTrue(options.manifest)
+        self.assertEqual(options.service, "mysvc")
 
 
 if __name__ == '__main__':
