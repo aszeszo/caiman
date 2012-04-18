@@ -718,14 +718,13 @@ class TargetDiscovery(Checkpoint):
         # to find all the drives on the system, first start with the
         # controllers
         for controller in diskmgt.descriptors_by_type(const.CONTROLLER):
-            # trap on the "/pseudo" controller (zvol swap and dump)
-            if controller.name == "/pseudo" and add_physical:
-                self.discover_pseudo(controller)
-
             # skip USB floppy controllers
             if controller.floppy_controller:
                 continue
 
+            # trap on the "/pseudo" controller (zvol swap and dump)
+            if controller.name == "/pseudo" and add_physical:
+                self.discover_pseudo(controller)
             else:
                 # extract every drive on the given controller
                 for drive in controller.drives:
