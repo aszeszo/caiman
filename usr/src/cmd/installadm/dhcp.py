@@ -677,12 +677,13 @@ class DHCPArchClass(DHCPData):
         # inform the enduser that manual DHCP configuration might be required.
         if edit_complete == False:
             print cw(_("\nFailed to update the DHCP configuration. An error "
-                       "occured while setting the new bootfile (%s) for the "
-                       "%s architecture in the current DHCP configuration "
-                       "file (%s). Please ensure the bootfile is properly set "
-                       "before using this service. Please see dhcpd(8) for "
-                       "further information.\n") %
-                       (bootfile, self.arch, current_cfgfile))
+                       "occured while setting the new bootfile (%(bootfile)s) "
+                       "for the %(arch)s architecture in the current DHCP "
+                       "configuration file (%(cfgfile)s). Please ensure the "
+                       "bootfile is properly set before using this service. "
+                       "Please see dhcpd(8) for further information.\n") %
+                       {'bootfile': bootfile, 'arch': self.arch, \
+                       'cfgfile': current_cfgfile})
 
         # Finally, rename the new temporary file to the configfile and return.
         os.rename(tmp_cfgfile, current_cfgfile)
@@ -839,8 +840,9 @@ class DHCPServer(object):
             logging.debug("dhcp.control: unexpected service state: %s",
                           self._state)
             raise DHCPServerError(cw(_("DHCP server is in an unexpected "
-                                       "state: action [%s] state [%s]") %
-                                       (action, self._state)))
+                                       "state: action [%(action)s] "
+                                       "state [%(state)s]") % {'action': \
+                                       action, 'state': self._state}))
 
     def _add_stanza_to_config_file(self, new_stanza):
         '''
@@ -1532,12 +1534,13 @@ def _get_default_route_for_subnet(subnet_ip):
                           route)
             return route
 
-    print >> sys.stderr, cw(_("\nUnable to determine a route for network %s. "
-                              "Setting the route temporarily to %s; this "
-                              "should be changed to an appropriate value in "
-                              "the DHCP configuration file. Please see "
-                              "dhcpd(8) for further information.\n") %
-                              (subnet_ip, INVALID_IP))
+    print >> sys.stderr, cw(_("\nUnable to determine a route for network "
+                              "%(subnet)s. Setting the route temporarily to "
+                              "%(ip)s; this should be changed to an "
+                              "appropriate value in the DHCP configuration "
+                              "file. Please see dhcpd(8) for further "
+                              "information.\n") % {'subnet': subnet_ip, \
+                              'ip': INVALID_IP})
 
     logging.debug("dhcp._get_default_route_for_subnet: no route found")
     return INVALID_IP

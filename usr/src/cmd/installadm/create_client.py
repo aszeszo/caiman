@@ -159,9 +159,9 @@ def create_new_client(arch, service, mac_address, bootargs=None,
     # is not enabled, print warning to the user.
     if not config.is_enabled(service.name):
         logging.debug("service is disabled: %s", service.name)
-        print cw(_("\nWarning: the installation service, %s, is disabled. "
-                   "To enable it, use 'installadm enable %s'.") %
-                   (service.name, service.name))
+        print cw(_("\nWarning: the installation service, %(name)s, is "
+                   "disabled. To enable it, use 'installadm enable "
+                   "%(name)s'.") % {'name': service.name})
 
 
 def do_create_client(cmd_options=None):

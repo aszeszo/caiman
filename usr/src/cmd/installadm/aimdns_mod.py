@@ -408,8 +408,9 @@ class AImDNS(object):
                 continue
 
             if self.verbose:
-                print cw(_('Registering %s on %s (%s)') % \
-                           (name, inf, interfaces[inf]))
+                print cw(_('Registering %(name)s on %(interface)s'
+                           '(%(inf)s)') % {'name': name, 'interface': inf, \
+                           'inf': interfaces[inf]})
 
             if smf_port is not None:
                 # comments are part of the service record

@@ -271,9 +271,12 @@ def verify_key_properties(svcname, props):
     else:
         prop_name = props[PROP_SERVICE_NAME]
         if prop_name != svcname:
-            raise ServiceCfgError(cw(_("\nError: service name '%s' does not "
-                                       "match %s property '%s'\n") % (svcname,
-                                       PROP_SERVICE_NAME, prop_name)))
+            raise ServiceCfgError(cw(_("\nError: service name '%(name)s' does "
+                                       "not match %(service)s property "
+                                       "'%(prop_name)s'\n") %
+                                       {'name': svcname, \
+                                        'service': PROP_SERVICE_NAME, \
+                                        'prop_name': prop_name}))
 
     if PROP_STATUS not in props.keys():
         missing.add(PROP_STATUS)
@@ -290,8 +293,9 @@ def verify_key_properties(svcname, props):
             missing.add(PROP_IMAGE_PATH + _(' or ') + PROP_ALIAS_OF)
     if missing:
         raise ServiceCfgError(cw(_('\nError: installation service key '
-                                   'properties missing for service %s: %s\n') %
-                                   (svcname, ', '.join(missing))))
+                                   'properties missing for service %(name)s:'
+                                   ' %(properties)s\n') % {'name': svcname, \
+                                   'properties': ', '.join(missing)}))
 
 
 def get_aliased_services(service_name, recurse=False):

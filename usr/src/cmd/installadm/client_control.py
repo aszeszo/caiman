@@ -182,8 +182,9 @@ def setup_x86_client(service, mac_address, bootargs='',
             server.add_option_arch()
             server.add_host(full_mac, boot_tuples)
         except dhcp.DHCPServerError as err:
-            print cw(_("Unable to add host (%s) to DHCP configuration: %s") %
-                      (full_mac, err))
+            print cw(_("Unable to add host (%(mac)s) to DHCP"
+                       "configuration: %(error)s") % {'mac': full_mac, \
+                       'error': err})
             return
 
         if server.is_online():

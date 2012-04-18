@@ -157,8 +157,9 @@ def set_aliasof(options):
                            "are different.\n"))
 
     if aliassvc.is_aliasof(basesvcname):
-        raise SystemExit(_("\nError: %s is already an alias of %s\n") %
-                         (aliasname, basesvcname))
+        raise SystemExit(_("\nError: %(aliasname)s is already an alias "
+                           "of %(svcname)s\n") % {'aliasname': aliasname, \
+                           'svcname': basesvcname})
 
     if svc.AIService(basesvcname).is_alias():
         raise SystemExit(_("\nError: Cannot alias to another alias.\n"))
@@ -166,9 +167,11 @@ def set_aliasof(options):
     # Make sure we aren't creating inter dependencies
     all_aliases = config.get_aliased_services(aliasname, recurse=True)
     if basesvcname in all_aliases:
-        raise SystemExit(cw(_("\nError: %s can not be made an alias of %s "
-                              "because %s is dependent on %s\n") % (aliasname,
-                              basesvcname, basesvcname, aliasname)))
+        raise SystemExit(cw(_("\nError: %(aliasname)s can not be made an "
+                              "alias of %(svcname)s because %(svcname)s is "
+                              "dependent on %(aliasname)s\n") %
+                              {'aliasname': aliasname, \
+                               'svcname': basesvcname}))
 
     # Remove clients of alias
     clients = config.get_clients(aliasname)
