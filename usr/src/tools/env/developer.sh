@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Configuration variables for the runtime environment of the nightly
@@ -46,7 +46,7 @@
 # Other features disabled:
 #	CHECK_PATHS	no packaging exception list
 #
-export NIGHTLY_OPTIONS="-AMNdlmp +t";
+export NIGHTLY_OPTIONS="-AMNlmp +t";
 
 # This is a variable for the rest of the script - GATE doesn't matter to
 # nightly itself
