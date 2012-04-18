@@ -1038,7 +1038,9 @@ class ISOImageBootMenu(BootMenu):
                 self.logger.debug("Installing GRUB2 on %s", lofi_rdev)
                 bios_grub_dir = os.path.join(self.pkg_img_path,
                                              "boot/grub/i386-pc")
-                cmd = [GRUB_SETUP, "-d", bios_grub_dir, "-M", lofi_rdev]
+                cmd = [GRUB_SETUP, "-d", bios_grub_dir,
+                       "--root-device=(hostdisk/" + lofi_rdev + ")",
+                       "-M", lofi_rdev]
                 run(cmd)
 
                 # Write the first 1MB of the lofi image out to file and store
