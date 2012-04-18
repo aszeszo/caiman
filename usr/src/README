@@ -104,8 +104,8 @@ To build this repository use the following steps:
     pkglint(1) ERRORs and pkgfmt(1) ERRORS. Please refer to 
     usr/src/pkg/README.pkg for more details.
 
-To run unit tests after building packages:
-------------------------------------------
+To run unit tests and slim_code_cleanliness after building packages:
+--------------------------------------------------------------------
 
  1. cd usr/src/tools/tests
  2.  Follow the README and run the slim_unit tests
@@ -117,14 +117,20 @@ To check for pep8 slim_code_cleanliness:
  1. Install the Python setup tools:
                 pkg install library/python-2/setuptools-26
  
- 2. Install the pep8 3rd tool:
+ 2. In order to use easy_install, you might need to setup http_proxy:
+
+    i.e:
+
+     http_proxy=http://www-proxy.us.oracle.com/
+
+ 3. Install the pep8 tool:
 
                 easy_install pep8
                 (The warning messages during installation may be ignored)
 
- 3.  And the python setup tools will find it, download, and install it for you as /usr/bin/pep8
+     And the python setup tools will find it, download, and install it for you as /usr/bin/pep8
 
- 4.  You can check for pep8 cleanliness mimicking the command that hudson use:
+ 4.  You can check for pep8 cleanliness mimicking the command that hudson uses:
 
 /usr/bin/pep8 --ignore=E261,W291,W293 --count -r --show-source <file/folder>
 

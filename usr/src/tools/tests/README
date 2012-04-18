@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 This directory contains configuration files for Nose, the PyUnit test runner
@@ -29,8 +29,21 @@ for the slim_source gate. In order to run the tests you should:
 		pkg install library/python-2/setuptools-26
 		pkg install runtime/python-26/tests
 		pkg install library/python-2/coverage
+		pkg install library/python-2/nose
+
+	Note:	As of March 21, 2012, library/python-2/nose is available in 
+		solaris repo in s11u1_b13 and onward.
+
+
+2) Install pylint 0.23.0 and the nosexunit module:
+
+	* Make sure that http_proxy is setup in order to use easy_install-2.6
+
+           i.e:  http_proxy=http://www-proxy.us.oracle.com/
+
 	* Running the command:
-		easy_install-2.6 nose coverage
+		easy_install-2.6 -f http://download.logilab.org/pub/pylint pylint-0.23.0
+		easy_install-2.6 nosexunit
 		(The warning messages during installation may be ignored)
 
 	  Then edit /usr/lib/python2.6/site-packages/easy-install.pth
@@ -44,24 +57,27 @@ for the slim_source gate. In order to run the tests you should:
 
 	  #/usr/lib/python2.6/vendor-packages
   
-	Note:	As of June 22, 2010, Nose is currently in the JUCR process,
-		and may be available from the contrib repository at a
-		later date.
-
-2)  You also need to install the following additional packages from solaris publisher in order for the slim_unit test and slim_code cleaness tests to run:
+	Note:	For S11, the pylint version is 0.18 and it had bugs.  Thus we                 need to install the latest version of pylint via easy_install
+                to run slim_code_cleanliness test.  Unfortunately, the latest 
+                pylint 0.25 does not work with nosexunit at all.  As a 
+                result, only plint 0.23 will work and this is why the above
+                needs to be done.
+ 
+3)  You also need to install the following additional packages from solaris 
+    publisher in order for the slim_unit test and slim_code cleaness tests
+    to run:
 
         group/system/solaris-desktop
         install/installadm
 
-3) Build the gate, per the instructions in usr/src/README.
+4) Build the gate, per the instructions in usr/src/README.
 	Note:	The slim_test program will test Python code from
 		the proto area, so the associated files must be
 		re-built to pick up any changes to tested code.
 		The tests themselves are run from the source files,
 		so changes to tests do not require a re-build.
 
-4) Use the "bldenv" command to set-up the build and test environment. 
-   slim_test should be run with sudo:
+5) Use the "bldenv" command to set-up the build and test environment. 
 
 	sudo /opt/onbld/bin/bldenv -d ../../developer.sh
 
