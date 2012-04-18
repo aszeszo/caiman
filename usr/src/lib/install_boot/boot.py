@@ -1023,11 +1023,15 @@ class ISOImageBootMenu(BootMenu):
                 # target modules because we want precise control over the
                 # geometry, plus it's not well suited to lofi devices.
                 # Layout:
-                # type ESP, at 1M offset, partition size = uefi_image size
+                # - type ESP, active, at 1M offset,
+                # - partition size = uefi_image size
+                # The ESP is marked active, because despite the fact that we
+                # write GRUB to the MBR, some BIOSes are brain dead and won't
+                # boot USB media without an active DOS partition.
                 esptype = Partition.name_to_num("EFI System")
                 startblock = MB / BLOCKSIZE
                 uefi_image_nblocks = uefi_image_size / BLOCKSIZE
-                fdiskentry = "%d:0:0:0:0:0:0:0:%d:%d" \
+                fdiskentry = "%d:128:0:0:0:0:0:0:%d:%d" \
                              % (esptype, startblock, uefi_image_nblocks)
                 self.logger.debug("Creating fdisk table on %s:\n\t%s",
                                   lofi_rdev, fdiskentry)
