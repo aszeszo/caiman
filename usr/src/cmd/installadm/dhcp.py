@@ -682,7 +682,7 @@ class DHCPArchClass(DHCPData):
                        "configuration file (%(cfgfile)s). Please ensure the "
                        "bootfile is properly set before using this service. "
                        "Please see dhcpd(8) for further information.\n") %
-                       {'bootfile': bootfile, 'arch': self.arch, \
+                       {'bootfile': bootfile, 'arch': self.arch,
                        'cfgfile': current_cfgfile})
 
         # Finally, rename the new temporary file to the configfile and return.
@@ -841,7 +841,7 @@ class DHCPServer(object):
                           self._state)
             raise DHCPServerError(cw(_("DHCP server is in an unexpected "
                                        "state: action [%(action)s] "
-                                       "state [%(state)s]") % {'action': \
+                                       "state [%(state)s]") % {'action':
                                        action, 'state': self._state}))
 
     def _add_stanza_to_config_file(self, new_stanza):
@@ -1539,7 +1539,7 @@ def _get_default_route_for_subnet(subnet_ip):
                               "%(ip)s; this should be changed to an "
                               "appropriate value in the DHCP configuration "
                               "file. Please see dhcpd(8) for further "
-                              "information.\n") % {'subnet': subnet_ip, \
+                              "information.\n") % {'subnet': subnet_ip,
                               'ip': INVALID_IP})
 
     logging.debug("dhcp._get_default_route_for_subnet: no route found")

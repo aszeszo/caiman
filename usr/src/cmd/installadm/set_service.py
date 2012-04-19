@@ -158,7 +158,7 @@ def set_aliasof(options):
 
     if aliassvc.is_aliasof(basesvcname):
         raise SystemExit(_("\nError: %(aliasname)s is already an alias "
-                           "of %(svcname)s\n") % {'aliasname': aliasname, \
+                           "of %(svcname)s\n") % {'aliasname': aliasname,
                            'svcname': basesvcname})
 
     if svc.AIService(basesvcname).is_alias():
@@ -170,7 +170,7 @@ def set_aliasof(options):
         raise SystemExit(cw(_("\nError: %(aliasname)s can not be made an "
                               "alias of %(svcname)s because %(svcname)s is "
                               "dependent on %(aliasname)s\n") %
-                              {'aliasname': aliasname, \
+                              {'aliasname': aliasname,
                                'svcname': basesvcname}))
 
     # Remove clients of alias

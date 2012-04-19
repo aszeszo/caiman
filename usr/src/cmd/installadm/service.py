@@ -151,8 +151,8 @@ class MountError(AIServiceError):
         self.reason = reason
 
     def __str__(self):
-        return cw(_("\nUnable to mount '%(source)s' at '%(target)s':"
-                    "%(reason)s\n" % {'source': self.source, \
+        return cw(_("\nUnable to mount '%(source)s' at '%(target)s': "
+                    "%(reason)s\n" % {'source': self.source,
                     'target': self.target, 'reason': self.reason}))
 
 
@@ -967,7 +967,7 @@ class AIService(object):
                     os.unlink(filename)
             except OSError, emsg:
                 logging.warn(_("Could not delete profile %(filename)s: "
-                               "%(error)s") % {'filename': filename, \
+                               "%(error)s") % {'filename': filename,
                                'error': emsg})
 
     def validate_profiles(self):
@@ -1478,26 +1478,26 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
                     logging.debug('cur_bootfile is %s', cur_bootfile)
                     if cur_bootfile is None:
                         # No bootfile set for this arch
-                        print cw(_("Setting the default %(type)s bootfile in "
-                                   "the local DHCP configuration to "
-                                   "'%(bfile)s'\n") % {'type': client_type, \
+                        print cw(_("Setting the default %(type)s bootfile(s) "
+                                   "in the local DHCP configuration to:"
+                                   "\n%(bfile)s\n") % {'type': client_type,
                                    'bfile': bfile})
                         server.add_bootfile_to_arch(arch, bootfile)
                     elif ((arch == 'sparc' and cur_bootfile != bfile) or
                           (arch == 'i386' and sorted(bootfile_tuples) !=
                            sorted(cur_bootfile))):
                         # Update the existing bootfile to our default
-                        print cw(_("Updating the default %(type)s bootfile in "
-                                   "the local DHCP configuration from "
-                                   "'%(bootfile)s' to '%(bfile)s'\n ") %
-                                   {'type': client_type, \
-                                    'bootfile': cur_bootfile, 'bfile': bfile})
+                        print cw(_("Updating the default %(type)s bootfile(s) "
+                                   "in the local DHCP configuration to:\n"
+                                   "%(bfile)s\n") % {'type': client_type,
+                                   'bfile': bfile})
                         server.update_bootfile_for_arch(arch, bootfile)
                 else:
                     # Set up a whole new architecture class
-                    print cw(_("Setting the default %(type)s bootfile in the "
-                               "local DHCP configuration to '%(bfile)s'\n") %
-                               {'type': client_type, 'bfile': bfile})
+                    print cw(_("Setting the default %(type)s bootfile(s) in "
+                               "the local DHCP configuration to:\n"
+                               "%(bfile)s\n") % {'type': client_type,
+                               'bfile': bfile})
                     server.add_arch_class(arch, bootfile)
 
             except dhcp.DHCPServerError as err:
@@ -1535,12 +1535,13 @@ def setup_dhcp_server(service, ip_start, ip_count, bootserver):
 
         if arch == 'i386':
             # Boot server IP is not needed for SPARC clients
-            print _("\t%-20(msg)s : %(ip)s" % {'msg': "Boot server IP", \
+            print _("%(msg)s: %(ip)s" % {'msg': "Boot server IP",
                     'ip': server_ip})
-            print _("\t%-20(msg)s : %(bootfile)s\n" % {'msg': "Boot file", \
-                    'bootfile': bfile})
+            print _("%(msg)s:\n%(bfile)s" % {'msg': "Boot file(s)",
+                    'bfile': bfile})
         else:
-            print _("%s: %s\n" % ("Boot file", bfile))
+            print _("%(msg)s: %(bfile)s\n" % {'msg': "Boot file",
+                    'bfile': bfile})
 
         if len(valid_nets) > 1 and arch == 'i386':
             print cw(_("\nNote: determined more than one IP address "

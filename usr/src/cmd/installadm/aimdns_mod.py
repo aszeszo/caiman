@@ -408,8 +408,8 @@ class AImDNS(object):
                 continue
 
             if self.verbose:
-                print cw(_('Registering %(name)s on %(interface)s'
-                           '(%(inf)s)') % {'name': name, 'interface': inf, \
+                print cw(_('Registering %(name)s on %(interface)s '
+                           '(%(inf)s)') % {'name': name, 'interface': inf,
                            'inf': interfaces[inf]})
 
             if smf_port is not None:

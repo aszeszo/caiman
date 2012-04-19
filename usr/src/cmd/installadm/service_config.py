@@ -274,8 +274,8 @@ def verify_key_properties(svcname, props):
             raise ServiceCfgError(cw(_("\nError: service name '%(name)s' does "
                                        "not match %(service)s property "
                                        "'%(prop_name)s'\n") %
-                                       {'name': svcname, \
-                                        'service': PROP_SERVICE_NAME, \
+                                       {'name': svcname,
+                                        'service': PROP_SERVICE_NAME,
                                         'prop_name': prop_name}))
 
     if PROP_STATUS not in props.keys():
@@ -294,7 +294,7 @@ def verify_key_properties(svcname, props):
     if missing:
         raise ServiceCfgError(cw(_('\nError: installation service key '
                                    'properties missing for service %(name)s:'
-                                   ' %(properties)s\n') % {'name': svcname, \
+                                   ' %(properties)s\n') % {'name': svcname,
                                    'properties': ', '.join(missing)}))
 
 
