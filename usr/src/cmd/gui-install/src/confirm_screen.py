@@ -169,7 +169,7 @@ class ConfirmScreen(BaseScreen):
         disks = desired_root.get_children(class_type=Disk,
             not_found_is_err=True)
 
-        profile = doc.persistent.get_first_child(
+        profile = doc.volatile.get_first_child(
             name="GUI Install",
             class_type=InstallProfile)
         if profile is None:
@@ -186,6 +186,13 @@ class ConfirmScreen(BaseScreen):
             # Solaris(2) partition and that Disk and Partition sizes are valid
             disksize = locale.format('%.1f',
                 disk.disk_prop.dev_size.get(units=Size.gb_units))
+
+            # Distinguish between regular and iSCSI targets
+            if disk.disk_prop is not None and \
+                disk.disk_prop.dev_type == "iSCSI":
+                diskdescriptor = _("iSCSI disk")
+            else:
+                diskdescriptor = _("disk")
 
             if disk.whole_disk:
                 text_str = _("%(disksize)s GB disk (%(disk)s)") % \
@@ -209,9 +216,10 @@ class ConfirmScreen(BaseScreen):
                     target_part.size.get(units=Size.gb_units))
 
                 text_str = _("%(partsize)s GB partition on "
-                     "%(disksize)s GB disk (%(disk)s)") % \
+                     "%(disksize)s GB %(diskdescriptor)s (%(disk)s)") % \
                      {"partsize": partsize,
                       "disksize": disksize,
+                      "diskdescriptor": diskdescriptor,
                       "disk": disk.ctd}
                 warn_str = _("This partition will be erased")
 

@@ -155,7 +155,7 @@ class TestTargetController(unittest.TestCase):
 
     def test_initial_disk_selected(self):
         '''Validate that an initial disk is returned and selected.'''
-        tc = TargetController(self.doc)
+        tc = TargetController(self.doc, dry_run=True)
         returned_disks = tc.initialize()
 
         self.assertEqual(returned_disks[0].ctd, "c2t0d0",
@@ -166,7 +166,7 @@ class TestTargetController(unittest.TestCase):
 
     def test_initial_disk_selected_by_size(self):
         '''Validate that initial disk matches size criteria'''
-        tc = TargetController(self.doc)
+        tc = TargetController(self.doc, dry_run=True)
         returned_disks = tc.initialize(image_size=Size("110GB"))
 
         self.assertEqual(returned_disks[0].ctd, "c2t2d0",
@@ -178,7 +178,7 @@ class TestTargetController(unittest.TestCase):
     def test_selecting_specific_disk(self):
         '''Validate that a specific disk can be selected.'''
         discovered_disks = self._get_discovered_disks()
-        tc = TargetController(self.doc)
+        tc = TargetController(self.doc, dry_run=True)
         selected_disks = tc.select_disk(discovered_disks[1])
 
         self.assertEqual(len(selected_disks), 1,
@@ -194,7 +194,7 @@ class TestTargetController(unittest.TestCase):
     def test_existing_partitions(self):
         '''Validate that existing MBR partitions can be presevered.'''
         discovered_disks = self._get_discovered_disks()
-        tc = TargetController(self.doc)
+        tc = TargetController(self.doc, dry_run=True)
 
         # Set disk.label to VTOC explicitly. If there is no label set
         # then TargetController will default it to GPT and remove the
@@ -218,7 +218,7 @@ class TestTargetController(unittest.TestCase):
             raise SkipTest("test not supported on sparc")
 
         discovered_disks = self._get_discovered_disks()
-        tc = TargetController(self.doc)
+        tc = TargetController(self.doc, dry_run=True)
         selected_disks = tc.select_disk(discovered_disks[3])
         tc.apply_default_layout(selected_disks[0], False, True)
 
@@ -283,7 +283,7 @@ class TestTargetController(unittest.TestCase):
     def test_selecting_specific_disks(self):
         '''Validate that 2 specific disks can be selected.'''
         discovered_disks = self._get_discovered_disks()
-        tc = TargetController(self.doc)
+        tc = TargetController(self.doc, dry_run=True)
         selected_disks = tc.select_disk(
             [discovered_disks[1], discovered_disks[2]])
 
@@ -304,7 +304,7 @@ class TestTargetController(unittest.TestCase):
     def test_previous_disk_unselected(self):
         '''Validate that selecting a new disk un-selects the previous disk'''
         discovered_disks = self._get_discovered_disks()
-        tc = TargetController(self.doc)
+        tc = TargetController(self.doc, dry_run=True)
         selected_disks = tc.select_disk(discovered_disks[1])
         selected_disks = tc.select_disk(discovered_disks[2])
 
@@ -321,7 +321,7 @@ class TestTargetController(unittest.TestCase):
     def test_add_disk(self):
         '''Validate that adding a disk works'''
         discovered_disks = self._get_discovered_disks()
-        tc = TargetController(self.doc)
+        tc = TargetController(self.doc, dry_run=True)
         selected_disks = tc.select_disk(discovered_disks[1])
         added_disks = tc.add_disk(discovered_disks[2])
 
@@ -402,7 +402,7 @@ class TestTargetController(unittest.TestCase):
     def test_restoring_from_backup(self):
         '''Validate restoring previously edited disk from backup'''
         discovered_disks = self._get_discovered_disks()
-        tc = TargetController(self.doc)
+        tc = TargetController(self.doc, dry_run=True)
         # select, edit, de-select and re-select a disk
         selected_disks = tc.select_disk(discovered_disks[1])
         selected_disks[0].delete_children(class_type=Partition)
@@ -441,7 +441,7 @@ class TestTargetController(unittest.TestCase):
     def test_disks_associated_with_vdev(self):
         '''Validate selected disks are associated with a Vdev'''
         discovered_disks = self._get_discovered_disks()
-        tc = TargetController(self.doc)
+        tc = TargetController(self.doc, dry_run=True)
         selected_disks = tc.select_disk(
             [discovered_disks[1], discovered_disks[2]])
 

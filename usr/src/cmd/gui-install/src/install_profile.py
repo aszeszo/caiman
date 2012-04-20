@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -46,6 +46,8 @@ class InstallProfile(DataObject):
     def __init__(self, name):
         super(InstallProfile, self).__init__(name)
 
+        self.show_local = False
+        self.show_iscsi = False
         self.continent = None
         self.country = None
         self.timezone = None
@@ -67,20 +69,24 @@ class InstallProfile(DataObject):
         return None
 
     @classmethod
-    def can_handle(self, xml_node):
+    def can_handle(cls, xml_node):
         ''' Abstract method which must be defined in DataObject
             sub-classes.  This class does not relate to manifests
             and so does not import or export XML.'''
         return False
 
     @classmethod
-    def from_xml(self, xml_node):
+    def from_xml(cls, xml_node):
         ''' Abstract method which must be defined in DataObject
             sub-classes.  This class does not relate to manifests
             and so does not import or export XML.'''
         return None
 
     # Convenience methods for setting the data gathered from each screen
+    def set_disk_selections(self, show_local=False, show_iscsi=False):
+        self.show_local = show_local
+        self.show_iscsi = show_iscsi
+
     def set_timezone_data(self, continent, country, timezone):
         self.continent = continent
         self.country = country
@@ -127,5 +133,7 @@ class InstallProfile(DataObject):
                 self.target_controller.minimum_target_size
         prof += "\tLog Location: [%s]\n" % self.log_location
         prof += "\tLog Final: [%s]\n" % self.log_final
+        prof += "\tShow local disks?: [%s]\n" % self.show_local
+        prof += "\tShow iSCSI disks?: [%s]\n" % self.show_iscsi
 
         return prof

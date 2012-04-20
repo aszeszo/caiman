@@ -425,7 +425,7 @@ class UserScreen(BaseScreen):
         # Save the user-entered details to the DOC
         engine = InstallEngine.get_instance()
         doc = engine.data_object_cache
-        profile = doc.persistent.get_first_child(
+        profile = doc.volatile.get_first_child(
             name="GUI Install",
             class_type=InstallProfile)
 

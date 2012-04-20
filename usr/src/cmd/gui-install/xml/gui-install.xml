@@ -536,16 +536,29 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel" id="diskstagelabel">
+                  <object class="GtkLabel" id="diskdiscoverystagelabel">
                     <property name="visible">True</property>
                     <property name="xalign">0</property>
-                    <property name="label" translatable="yes">&lt;span font_desc="Bold" foreground="#595A5E"&gt;Disk&lt;/span&gt;</property>
+                    <property name="label" translatable="yes">&lt;span font_desc="Bold" foreground="#595A5E"&gt;Disk Discovery&lt;/span&gt;</property>
                     <property name="use_markup">True</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
                     <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="diskselectionstagelabel">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">&lt;span font_desc="Bold" foreground="#595A5E"&gt;Disk Selection&lt;/span&gt;</property>
+                    <property name="use_markup">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">2</property>
                   </packing>
                 </child>
                 <child>
@@ -558,7 +571,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">2</property>
+                    <property name="position">3</property>
                   </packing>
                 </child>
                 <child>
@@ -571,7 +584,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">3</property>
+                    <property name="position">4</property>
                   </packing>
                 </child>
                 <child>
@@ -584,7 +597,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">4</property>
+                    <property name="position">5</property>
                   </packing>
                 </child>
                 <child>
@@ -597,7 +610,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">5</property>
+                    <property name="position">6</property>
                   </packing>
                 </child>
                 <child>
@@ -610,7 +623,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">6</property>
+                    <property name="position">7</property>
                   </packing>
                 </child>
               </object>
@@ -647,8 +660,8 @@
                           <object class="GtkVBox" id="screencontentvbox">
                             <property name="visible">True</property>
                             <accessibility>
-                              <relation type="labelled-by" target="screentitlesublabel1"/>
                               <relation type="labelled-by" target="screentitlelabel"/>
+                              <relation type="labelled-by" target="screentitlesublabel1"/>
                             </accessibility>
                             <child>
                               <placeholder/>

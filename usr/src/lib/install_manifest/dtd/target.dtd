@@ -194,6 +194,9 @@
 <!ATTLIST iscsi target_lun CDATA #IMPLIED>
 <!ATTLIST iscsi target_port CDATA #IMPLIED>
 <!ATTLIST iscsi target_ip CDATA #IMPLIED>
+<!ATTLIST iscsi initiator_name CDATA #IMPLIED>
+<!ATTLIST iscsi chap_name CDATA #IMPLIED>
+<!ATTLIST iscsi chap_password CDATA #IMPLIED>
 
 <!ELEMENT logical (zpool*)>
 <!ATTLIST logical noswap (true|false) "false">

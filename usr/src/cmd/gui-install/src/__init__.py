@@ -43,13 +43,14 @@ import g11nsvc
 import gtk
 
 import osol_install.errsvc as errsvc
-from solaris_install import post_install_logs_path
+from solaris_install import CalledProcessError, Popen, \
+    post_install_logs_path, run
 from solaris_install.engine import InstallEngine
 from solaris_install.gui_install.gui_install_common import exit_gui_install, \
-    other_instance_is_running, write_pid_file, modal_dialog, \
+    modal_dialog, other_instance_is_running, start_td_local, write_pid_file, \
     CLEANUP_CPIO_INSTALL, DEFAULT_LOG_LEVEL, DEFAULT_LOG_LOCATION, GLADE_DIR, \
     LOG_FORMAT, LOG_LEVEL_INPUT, LOG_NAME_INPUT, LOGNAME, RELEASE, \
-    TRANSFER_PREP, VAR_SHARED_DATASET
+    TARGET_DISCOVERY, TRANSFER_PREP, VAR_SHARED_DATASET
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.gui_install.screen_manager import ScreenManager
 from solaris_install.ict.transfer_files import add_transfer_files_to_doc
@@ -58,7 +59,6 @@ import solaris_install.sysconfig as sysconfig
 
 # setup target instantiation checkpoint dictionary
 TI_CHKPS = dict()
-TARGET_DISCOVERY = "TargetDiscovery"
 TI_CHKPS[TARGET_DISCOVERY] = (TARGET_DISCOVERY,
                               "solaris_install/target/discovery",
                               "TargetDiscovery")
@@ -187,23 +187,6 @@ def setup_checkpoints():
     logger.debug("**** Checkpoints Established ****")
 
 
-def start_td(disk_screen):
-    ''' Kicks off the TargetDiscovery (TD) checkpoint.
-
-        By passing the InstallEngine a callback function, TD is
-        run in a separate thread and control is immediately passed
-        back to this function.  The application is notified when
-        TD completes by having the callback function called.
-
-        Returns: nothing
-    '''
-    engine = InstallEngine.get_instance()
-    errsvc.clear_error_list()
-    engine.execute_checkpoints(start_from=TARGET_DISCOVERY,
-                               pause_before=TRANSFER_PREP,
-                               callback=disk_screen.td_callback)
-
-
 def init_install_profile():
     '''
         Initialize the profile for storing user-entered details.
@@ -216,12 +199,12 @@ def init_install_profile():
 
     # Clear out any other "GUI Install" InstallProfiles in the
     # DOC - there should only be one.
-    doc.persistent.delete_children(
+    doc.volatile.delete_children(
         name=data_object_name,
         class_type=InstallProfile)
 
     profile = InstallProfile(data_object_name)
-    doc.persistent.insert_children(profile)
+    doc.volatile.insert_children(profile)
 
 
 def save_locale_in_doc():
@@ -237,7 +220,7 @@ def save_locale_in_doc():
     # Save the locale details to the DOC
     engine = InstallEngine.get_instance()
     doc = engine.data_object_cache
-    profile = doc.persistent.get_first_child(
+    profile = doc.volatile.get_first_child(
         name="GUI Install",
         class_type=InstallProfile)
     if profile is None:
@@ -333,7 +316,7 @@ def main():
     setup_checkpoints()
     manager = ScreenManager(options.logname)
 
-    start_td(manager._disk_screen)
+    start_td_local()
 
     init_install_profile()
     save_locale_in_doc()

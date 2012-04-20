@@ -59,10 +59,12 @@ class BaseScreen(object):
     # referenced at run time
     __STAGE_LABELS = {
         "welcomestagelabel": N_("Welcome"),
-        "supportstagelabel": N_("Support"),
+        "diskdiscoverystagelabel": N_("Disk Discovery"),
+        "diskselectionstagelabel": N_("Disk Selection"),
         "diskstagelabel": N_("Disk"),
         "timezonestagelabel": N_("Time Zone"),
         "userstagelabel": N_("Users"),
+        "supportstagelabel": N_("Support"),
         "installationstagelabel": N_("Installation"),
         "finishstagelabel": N_("Finish"),
     }

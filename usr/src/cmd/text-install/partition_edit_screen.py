@@ -37,16 +37,15 @@ from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target.controller import DEFAULT_VDEV_NAME, \
     DEFAULT_ZPOOL_NAME
 from solaris_install.target.libadm.const import V_ROOT
-from solaris_install.target.libefi.const import EFI_NUMUSERPAR
-from solaris_install.target.physical import DuplicatePartition, \
-    DuplicateGPTPartition, GPTPartition, InsufficientSpaceError, \
-    NoPartitionSlotsFree, NoGPTPartitionSlotsFree, Partition
+from solaris_install.target.physical import GPTPartition, \
+    InsufficientSpaceError, NoPartitionSlotsFree, NoGPTPartitionSlotsFree, \
+    Partition
 from solaris_install.target.size import Size
 from solaris_install.text_install import _, RELEASE, TUI_HELP, LOCALIZED_GB
 from solaris_install.text_install.disk_window import DiskWindow
 from solaris_install.text_install.ti_target_utils import \
-    get_desired_target_disk, get_solaris_gpt_partition, \
-    get_solaris_partition, perform_final_validation, ROOT_POOL
+    get_desired_target_disk, get_solaris_partition, perform_final_validation, \
+    ROOT_POOL
 from terminalui import LOG_LEVEL_INPUT
 from terminalui.action import Action
 from terminalui.base_screen import BaseScreen, SkipException, UIMessage
@@ -278,7 +277,7 @@ class PartEditScreen(BaseScreen):
                                 "partitions.")
 
             except InsufficientSpaceError as ise:
-                raise RuntimeError("INTERNAL ERROR: Could not allocate space"
+                raise RuntimeError("INTERNAL ERROR: Could not allocate space "
                     "for EFI system partition on disk %s: %s"
                     % (disk, str(ise)))
 
@@ -457,7 +456,7 @@ class GPTPartEditScreen(PartEditScreen):
                             "partitions.")
 
         except InsufficientSpaceError as ise:
-            raise RuntimeError("INTERNAL ERROR: Could not allocate space"
+            raise RuntimeError("INTERNAL ERROR: Could not allocate space "
                 "for system partition or reserved partition on disk %s: "
                 "%s" % (disk, str(ise)))
 

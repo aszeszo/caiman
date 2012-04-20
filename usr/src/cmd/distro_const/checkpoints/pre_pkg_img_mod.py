@@ -38,8 +38,8 @@ from distutils.text_file import TextFile
 
 from osol_install.install_utils import dir_size, encrypt_password
 from pkg.cfgfiles import PasswordFile
-from solaris_install import CalledProcessError, DC_LABEL, DC_PERS_LABEL, run, \
-    Popen, path_matches_dtd
+from solaris_install import CalledProcessError, DC_LABEL, DC_PERS_LABEL, \
+    path_matches_dtd, run
 from solaris_install.configuration.configuration import Configuration
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
@@ -154,6 +154,50 @@ class PrePkgImgMod(Checkpoint):
         with open(etc_system, "a+") as fh:
             fh.write("set zfs:zfs_arc_max=0x4002000\n")
             fh.write("set zfs:zfs_vdev_cache_size=0\n")
+
+    def modify_dhcpagent(self):
+        """ method to modify /etc/default/dhcpagent to include the Rootpath
+        bootp-dhcp-parameter for finding iSCSI information from the DHCP server
+
+        This method can be removed if/when CR 7129888 is addressed
+        """
+
+        # verify /etc/default/dhcpagent exists
+        dhcpagent = os.path.join(self.pkg_img_path, "etc/default/dhcpagent")
+        if not os.path.exists(dhcpagent):
+            self.logger.debug("skipping save of /etc/default/dhcpagent")
+            return
+
+        # path to the save directory
+        save_path = os.path.join(self.pkg_img_path, "save")
+
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
+
+        # create /save/etc/default directory, if needed
+        if not os.path.exists(os.path.join(save_path, "etc/default")):
+            os.makedirs(os.path.join(save_path, "etc/default"))
+
+        # save a copy of /etc/default/dhcpagent
+        shutil.copy2(dhcpagent,
+                     os.path.join(save_path, "etc/default/dhcpagent"))
+
+        # open the file and read it into memory
+        with open(dhcpagent, "r") as fh:
+            contents = fh.read()
+
+        new_file = list()
+        for line in contents.splitlines():
+            if line.startswith("PARAM_REQUEST_LIST") and "17" not in line:
+                # append the parameter to enable rootpath
+                new_file.append(line + ",17")
+            else:
+                new_file.append(line)
+
+        # rewrite the file
+        with open(dhcpagent, "w+") as fh:
+            fh.write("\n".join(new_file))
+            fh.write("\n")
 
     def save_etc_inet_hosts(self):
         """ class method to save pristine hosts(4) file. hosts(4) file
@@ -490,6 +534,9 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         self.get_license()
         self.modify_etc_system()
 
+        # modify /etc/default/dhcpagent
+        self.modify_dhcpagent()
+
         # write out the .image_info file
         self.calculate_size()
 
@@ -698,6 +745,9 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # modify /etc/system
         self.modify_etc_system()
 
+        # modify /etc/default/dhcpagent
+        self.modify_dhcpagent()
+
         # save pristine /etc/inet/hosts file
         self.save_etc_inet_hosts()
 
@@ -742,6 +792,9 @@ class TextPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # modify /etc/system
         self.modify_etc_system()
+
+        # modify /etc/default/dhcpagent
+        self.modify_dhcpagent()
 
         # save pristine /etc/inet/hosts file
         self.save_etc_inet_hosts()

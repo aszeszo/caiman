@@ -75,7 +75,11 @@ DTD sample manifest for Automatic Installer input manifest specification.
       =======================================================================
     -->
     <target>
-      <disk>
+      <!--
+        use whole_disk="true" if you do not wish to specify <partition>
+        or <slice> children.
+      -->
+      <disk whole_disk="true">
         <!-- G1 -->
         <!--
           c#t#d# device name like c0t0d0 or 
@@ -111,6 +115,14 @@ DTD sample manifest for Automatic Installer input manifest specification.
 
           with sendtargets
         <iscsi target_lun="0" target_ip="192.168.1.34"/>
+
+          with setting the initiator-node name
+
+        <iscsi target_lun="0" target_ip="192.168.1.34" initiator_name="iqn.1986-03.com.sun:01:e00000000000.4d94f3bd/>
+
+          with setting the CHAP username and password
+
+        <iscsi target_lun="0" target_ip="192.168.1.34" initiator_name="iqn.1986-03.com.sun:01:e00000000000.4d94f3bd chap_name="chapname" chap_password="chappassword />
         -->
         <!-- receptacle name - e.g. can be obtained by means of 
           croinfo(1M) -o cR
@@ -160,7 +172,8 @@ DTD sample manifest for Automatic Installer input manifest specification.
           </slice>
         </partition>
 
-        or, use the following to create a Solaris partition
+        or, use the following to create a Solaris partition.
+        Remember to set whole_disk="false" in the parent <disk> element.
         -->
         <partition name="1" part_type="191">
           <size start_sector="200" val="40960mb"/>

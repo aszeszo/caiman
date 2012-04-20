@@ -577,6 +577,15 @@ def descriptors_by_type(dtype):
         cfunc.dm_free_descriptors(descp)
     return tuple(rlist)
 
+
+def cache_update(event_type=const.DM_EV_DISK_ADD, devname=None):
+    """ Rebuild libdiskmgt's controller and drive cache.  This is done so new
+    drives (mapped iSCSI LUNs) can be added after local discovery has started.
+    """
+
+    cfunc.dm_cache_update(event_type, devname)
+
+
 # Used to change the result of a call to a C function.
 # This way we don't have to create a factory function.
 _RESTYPE = {

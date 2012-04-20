@@ -28,18 +28,24 @@
 objects, including Partition, Slice and Disk.
 """
 import copy
+import fcntl
 import gettext
 import locale
 import os
 import platform
+import socket
+import struct
 import tempfile
+import time
 
+from collections import namedtuple
 from multiprocessing import Manager
 from uuid import UUID
 
 from lxml import etree
 
 from bootmgmt.bootinfo import SystemFirmware
+from osol_install.libaimdns import getifaddrs
 from solaris_install import CalledProcessError, Popen, run
 from solaris_install.data_object import DataObject, ParsingError
 from solaris_install.target.cuuid import cUUID, UUID2cUUID
@@ -48,13 +54,20 @@ from solaris_install.target.libdiskmgt import const as ldm_const
 from solaris_install.target.libdiskmgt import diskmgt
 from solaris_install.target.libefi import const as efi_const
 from solaris_install.target.libefi import efi
-from solaris_install.target.libefi.cstruct import EFI_MAXPAR
 from solaris_install.target.shadow.physical import LOGICAL_ADJUSTMENT, \
     ShadowPhysical, EFI_BLOCKSIZE_LCM
+from solaris_install.target.libima import ima
 from solaris_install.target.size import Size
 
+DEVFSADM = "/usr/sbin/devfsadm"
+DHCPINFO = "/usr/sbin/dhcpinfo"
 FDISK = "/usr/sbin/fdisk"
 FORMAT = "/usr/sbin/format"
+ISCSIADM = "/usr/sbin/iscsiadm"
+NETSTAT = "/usr/bin/netstat"
+PRTVTOC = "/usr/sbin/prtvtoc"
+SVCS = "/usr/bin/svcs"
+SVCADM = "/usr/sbin/svcadm"
 FSTYP = "/usr/sbin/fstyp"
 PCFSMKFS = "/usr/lib/fs/pcfs/mkfs"
 SWAP = "/usr/sbin/swap"
@@ -67,6 +80,9 @@ BOOT_SLICE_RES_CYL = 1
 BACKUP_SLICE = 2
 BOOT_SLICE = 8
 ALT_SLICE = 9
+
+# extrapolated from sys/sockio.h
+SIOCGIFNETMASK = 0x08c0206919
 
 
 def partition_sort(a, b):
@@ -1617,26 +1633,32 @@ class Disk(DataObject):
         if self.ctd is not None:
             device = self.ctd
 
-            # Get Disk Controller type via libdiskmgt
-            dm_drive = None
-            try:
-                dm_desc = diskmgt.descriptor_from_key(ldm_const.ALIAS, device)
-                dm_alias = diskmgt.DMAlias(dm_desc.value)
-                dm_drive = dm_alias.drive
-            except OSError:
-                pass
+            if self.disk_prop is not None and \
+                self.disk_prop.dev_type == "iSCSI":
+                ctrl_type = "iSCSI"
+            else:
+                # Get Disk Controller type via libdiskmgt
+                dm_drive = None
+                try:
+                    dm_desc = diskmgt.descriptor_from_key(ldm_const.ALIAS,
+                        device)
+                    dm_alias = diskmgt.DMAlias(dm_desc.value)
+                    dm_drive = dm_alias.drive
+                except OSError:
+                    pass
 
-            if dm_drive is not None:
-                dm_controllers = dm_drive.controllers
-                if dm_controllers is not None and len(dm_controllers):
-                    dm_attribs = dm_controllers[0].attributes
+                if dm_drive is not None:
+                    dm_controllers = dm_drive.controllers
+                    if dm_controllers is not None and len(dm_controllers):
+                        dm_attribs = dm_controllers[0].attributes
 
-                    if dm_attribs is not None:
-                        ctrl_type = dm_attribs.type
-                        # A couple of quick cosmetic changes to the value:
-                        # - just take the first word, eg fibre channel -> fibre
-                        # - use uppercase (prefer ATA, SCSI to ata, scsi, etc)
-                        ctrl_type = ctrl_type.split()[0].upper()
+                        if dm_attribs is not None:
+                            ctrl_type = dm_attribs.type
+                            # A couple of quick cosmetic changes to the value:
+                            # - just take the first word, eg:
+                            #   fibre channel -> fibre
+                            # - use uppercase (prefer ATA, SCSI to ata, scsi)
+                            ctrl_type = ctrl_type.split()[0].upper()
 
         elif self.volid is not None:
             device = self.volid
@@ -3147,14 +3169,29 @@ class Iscsi(DataObject):
     """ class definition for Iscsi objects
     """
 
+    ISCSI_DEFAULT_PORT = "3260"
+
     def __init__(self, name):
         super(Iscsi, self).__init__(name)
 
         self.source = None
         self.target_name = None
         self.target_lun = None
-        self.target_port = None
+        self.target_port = Iscsi.ISCSI_DEFAULT_PORT
         self.target_ip = None
+        self.initiator_name = None
+        self.chap_name = None
+        self.chap_password = None
+
+        # keep a list of ctd strings found when the iSCSI target is mapped
+        self.ctd_list = list()
+
+        # keep a dictionary map of ctd: LUN number
+        self.iscsi_dict = dict()
+
+        # for SPARC, keep the index of which slice on the LUN was used for
+        # install
+        self.sparc_slice = None
 
     def to_xml(self):
         element = etree.Element("iscsi")
@@ -3168,6 +3205,12 @@ class Iscsi(DataObject):
             element.set("target_port", self.target_port)
         if self.target_ip is not None:
             element.set("target_ip", self.target_ip)
+        if self.initiator_name is not None:
+            element.set("initiator_name", self.initiator_name)
+        if self.chap_name is not None:
+            element.set("chap_name", self.chap_name)
+        if self.chap_password is not None:
+            element.set("chap_password", self.chap_password)
         return element
 
     @classmethod
@@ -3188,6 +3231,9 @@ class Iscsi(DataObject):
         target_lun = element.get("target_lun")
         target_port = element.get("target_port")
         target_ip = element.get("target_ip")
+        initiator_name = element.get("initiator_name")
+        chap_name = element.get("chap_name")
+        chap_password = element.get("chap_password")
 
         iscsi = Iscsi("iscsi")
         if source == "dhcp":
@@ -3211,18 +3257,365 @@ class Iscsi(DataObject):
                 iscsi.target_name = target_name
             if target_port is not None:
                 iscsi.target_port = target_port
+
+        if initiator_name is not None:
+            iscsi.initiator_name = initiator_name
+        if chap_name is not None:
+            iscsi.chap_name = chap_name
+        if chap_password is not None:
+            iscsi.chap_password = chap_password
+
+        if iscsi.chap_name is not None and iscsi.chap_password is None:
+            raise ParsingError("CHAP username specified without CHAP "
+                               "password")
+
+        if iscsi.chap_password is not None and iscsi.chap_name is None:
+            raise ParsingError("CHAP password specified without CHAP "
+                               "username")
+
         return iscsi
 
-    def __repr__(self):
-        s = ""
-        if self.source is not None:
-            s += "; source=%s" % self.source
+    def setup_iscsi(self):
+        """ set up the iSCSI initiator appropriately (if specified)
+        such that any physical/logical iSCSI devices can be discovered.
+        """
+        _ = gettext.gettext
+
+        SVC = "svc:/network/iscsi/initiator:default"
+
+        # set up a namedtuple for the lun number and target name
+        TargetInfo = namedtuple("TargetInfo", ["lun_num", "target_name"])
+
+        # verify iscsiadm is available
+        if not os.path.exists(ISCSIADM):
+            raise RuntimeError(_("iSCSI discovery enabled but %s does " \
+                               "not exist") % ISCSIADM)
+
+        # ensure the iscsi/initiator service is online
+        state_cmd = [SVCS, "-H", "-o", "STATE", SVC]
+        p = run(state_cmd, check_result=Popen.ANY)
+        if p.returncode != 0:
+            # iscsi/initiator is not installed
+            raise RuntimeError(_("%s not found - is it installed?") % SVC)
+
+        # if the service is offline, enable it
+        state = p.stdout.strip()
+        if state == "offline":
+            cmd = [SVCADM, "enable", "-s", SVC]
+            run(cmd)
+
+            # verify the service is now online
+            p = run(state_cmd, check_result=Popen.ANY)
+            state = p.stdout.strip()
+
+            if state != "online":
+                raise RuntimeError(_("Unable to start %s") % SVC)
+
+        elif state != "online":
+            # the service is in some other kind of state, so raise an error
+            raise RuntimeError(_("%s is not online and requires manual "
+                                 "servicing") % SVC)
+
+        # Before attempting to connect to the target IP, open a socket to the
+        # IP/port with a timeout.  This will prevent a bad IP address from
+        # taking upwards of a minute when an invalid IP is specified.  When CR
+        # 6937014 is resolved, this code can be removed.
+        socket_err = _("Cannot connect to %(ip)s:%(port)s [%(error)s]")
+        try:
+            if not self.target_port:
+                port = Iscsi.ISCSI_DEFAULT_PORT
+            else:
+                port = self.target_port
+            # cast the target_ip and port to strings to handle unicode
+            address = (str(self.target_ip), str(port))
+            socket.create_connection(address, timeout=5)
+        except (socket.timeout, socket.gaierror) as err:
+            raise RuntimeError(socket_err %
+                               ({"ip": self.target_ip,
+                                 "port": self.target_port,
+                                 "error": err}))
+        # this method seems to throw unknown exceptions, so add a catch-all
+        except Exception as err:
+            raise RuntimeError(socket_err %
+                               ({"ip": self.target_ip,
+                                 "port": self.target_port,
+                                 "error": err}))
+
+        # check the source attribute for dhcp.  If set, query dhcpinfo for the
+        # iSCSI boot parameters and set the rest of the Iscsi object
+        # attributes
+        if self.source == "dhcp":
+            dhcp_params = self.get_dhcp()
+            if dhcp_params is not None:
+                self.target_ip,
+                self.target_port,
+                self.target_lun,
+                self.target_name = dhcp_params
+
+        if self.initiator_name is not None:
+            cmd = [ISCSIADM, "modify", "initiator-node", "-N",
+                   self.initiator_name]
+            run(cmd)
+
+        # set the CHAP creditials if both attributes are specified
+        if self.chap_name is not None and self.chap_password is not None:
+            cmd = [ISCSIADM, "modify", "initiator-node", "-a", "CHAP"]
+            run(cmd)
+            cmd = [ISCSIADM, "modify", "initiator-node", "-H",
+                   self.chap_name]
+            run(cmd)
+            self.logger.debug("setting CHAP password via libima")
+            ima.set_chap_password(self.chap_password)
+
+        # set up either static discovery or sendtargets.  iSNS discovery is not
+        # currently supported
         if self.target_name is not None:
-            s += "; target_name=%s" % self.target_name
+            # set up static discovery of targets
+            discovery_str = self.target_name + "," + self.target_ip
+            if self.target_port is not None:
+                discovery_str += ":" + self.target_port
+            cmd = [ISCSIADM, "add", "static-config", discovery_str]
+            run(cmd)
+
+            cmd = [ISCSIADM, "modify", "discovery", "--static", "enable"]
+            run(cmd)
+
+            iscsi_list_cmd = [ISCSIADM, "list", "target", "-S",
+                              discovery_str]
+        else:
+            # set up discovery of sendtargets targets
+            discovery_str = self.target_ip
+            if self.target_port is not None:
+                discovery_str += ":" + self.target_port
+            cmd = [ISCSIADM, "add", "discovery-address", discovery_str]
+            run(cmd)
+
+            cmd = [ISCSIADM, "modify", "discovery", "--sendtargets",
+                   "enable"]
+            run(cmd)
+
+            iscsi_list_cmd = [ISCSIADM, "list", "target", "-S"]
+
+        # run devfsadm and wait for the iscsi devices to configure
+        run([DEVFSADM, "-i", "iscsi"])
+
+        # list all the targets found in an attempt to match the CTD string.  If
+        # the CTD is not available for any reason, sleep for 1 second before
+        # trying again.  If it fails 5 times, raise a RuntimeError.
+        for i in range(5):
+            iscsi_list = run(iscsi_list_cmd, env={"LC_ALL": "C"})
+            if "OS Device Name: Not Available" in iscsi_list.stdout:
+                # sleep for 1 second to allow iscsiadm to catch up
+                time.sleep(1)
+            else:
+                break
+        else:
+            raise RuntimeError(_("Timeout waiting for LUN mappings"))
+
+        # the output will look like:
+        #
+        # Target: <iqn string>
+        #        Alias: -
+        #        TPGT: 1
+        #        ISID: 4000002a0000
+        #        Connections: 1
+        #        LUN: 1
+        #             Vendor:  SUN
+        #             Product: COMSTAR
+        #             OS Device Name: <ctd>
+        #        LUN: 0
+        #             Vendor:  SUN
+        #             Product: COMSTAR
+        #             OS Device Name: <ctd>
+        #
+        # The LUN number and ctd strings are the only values we're interested
+        # in.
+
+        # Walk the output from iscsiadm list target to create a mapping
+        # between ctd and LUN number.
+        for line in iscsi_list.stdout.splitlines():
+            line = line.lstrip()
+            if line.startswith("Target:"):
+                target_name = line.split()[1]
+            if line.startswith("LUN:"):
+                lun_num = line.split(": ")[1]
+            if line.startswith("OS Device Name:") and lun_num is not None:
+                iscsi_ctd = line.rpartition("/")[2].partition("s2")[0]
+                self.iscsi_dict[iscsi_ctd] = TargetInfo(lun_num, target_name)
+
+                # reset the lun_num for the next lun
+                lun_num = None
+
+        # build the ctd_list based on which attributes are set
+        if self.target_lun is None and self.target_name is None:
+            # Store every CTD string
+            self.ctd_list = self.iscsi_dict.keys()
+        elif self.target_lun is not None and self.target_name is None:
+            # Store each CTD whose lun_num maps back to self.target_lun
+            for ctd in self.iscsi_dict:
+                if self.target_lun == self.iscsi_dict[ctd].lun_num:
+                    self.ctd_list.append(ctd)
+                    break
+        elif self.target_lun is None and self.target_name is not None:
+            # Store each CTD whose target_name maps back to self.target_name
+            for ctd in self.iscsi_dict:
+                if self.target_name == self.iscsi_dict[ctd].target_name:
+                    self.ctd_list.append(ctd)
+                    break
+        elif self.target_lun is not None and self.target_name is not None:
+            for ctd in self.iscsi_dict:
+                if self.target_lun == self.iscsi_dict[ctd].lun_num and \
+                   self.target_name == self.iscsi_dict[ctd].target_name:
+                    self.ctd_list.append(ctd)
+                    break
+
+        if not self.ctd_list:
+            raise RuntimeError(_("No matching LUNs found on Target"))
+
+    def teardown(self):
+        """ remove the iSCSI configuration from the initiator
+        """
+
+        # determine the discovery method, disable it, and remove the config.
+        # iSNS is not currently supported.
+        cmd = [ISCSIADM, "list", "discovery"]
+        p = run(cmd, env={"LC_ALL": "C"})
+        for line in p.stdout.splitlines():
+            if "enabled" in line:
+                if "Static" in line:
+                    cmd = [ISCSIADM, "modify", "discovery", "--static",
+                           "disable"]
+                    run(cmd)
+
+                    # remove the static config
+                    if self.target_name:
+                        cmd = [ISCSIADM, "remove", "static-config",
+                               self.target_name]
+                        run(cmd)
+
+                elif "Send Targets" in line:
+                    cmd = [ISCSIADM, "modify", "discovery", "--sendtargets",
+                           "disable"]
+                    run(cmd)
+
+                    # remove the discovery address
+                    if self.target_ip:
+                        cmd = [ISCSIADM, "remove", "discovery-address",
+                               self.target_ip]
+                        run(cmd)
+
+        if self.chap_name is not None or self.chap_password is not None:
+            cmd = [ISCSIADM, "list", "initiator-node"]
+            p = run(cmd, env={"LC_ALL": "C"})
+            for line in p.stdout.splitlines():
+                if "Authentication Type" in line and "CHAP" in line:
+                    cmd = [ISCSIADM, "modify", "initiator-node", "-a", "none"]
+                    run(cmd)
+
+        # unset CHAP attributes to force re-validation in the installers
+        self.chap_name = None
+        self.chap_password = None
+
+        # remove all CTDs
+        self.ctd_list = list()
+
+    @property
+    def sparc_obp_boot_string(self):
+        """ class method to return a properly formatted boot-device string
+        """
+
+        s = list()
+        s.append("iscsi-target-ip=%s" % self.target_ip)
+        s.append("iscsi-target-name=%s" % self.target_name)
+
+        # cast the target_ip and target_port to strings from unicode
+        address = (str(self.target_ip), str(self.target_port))
+        sock = socket.create_connection(address)
+        host_ip = sock.getsockname()[0]
+        s.append("host-ip=%s" % host_ip)
+        sock.close()
+
+        if self.target_port is not None:
+            s.append("iscsi-port=%s" % self.target_port)
+
+        s.append("iscsi-lun=%s" % self.target_lun)
+        if self.sparc_slice is not None:
+            s.append("iscsi-partition=%s" % self.sparc_slice)
+
+        # get the default route
+        cmd = [NETSTAT, "-rn"]
+        p = run(cmd, env={"LC_ALL": "C"})
+        for line in p.stdout.splitlines():
+            if line.startswith("default"):
+                s.append("router-ip=%s" % line.split()[1])
+                break
+
+        # get the netmask
+        ifaddrs = getifaddrs()
+
+        # create a simple socket to query
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        for vanity_name, full_ip in ifaddrs.items():
+            if full_ip.split("/")[0] == host_ip:
+                buf = struct.pack("256s", vanity_name)
+                netmask = socket.inet_ntoa(
+                    fcntl.ioctl(sock, SIOCGIFNETMASK, buf)[20:24])
+
+                s.append("subnet-mask=%s" % netmask)
+                break
+
+        sock.close()
+
+        # return a string-cast, comma separated list
+        return ",".join(map(str, s))
+
+    @staticmethod
+    def get_dhcp():
+        '''
+            Checks if DHCP Autodiscovery is available.  If yes, return
+            the parameters received.
+
+            Returns: a list with 4 items (IP, port, LUN and target) or None.
+        '''
+        params = None
+
+        try:
+            cmd = [DHCPINFO, 'rootpath']
+            p = run(cmd)
+        except (OSError, CalledProcessError):
+            # dhcpinfo isn't installed or failed
+            pass
+        else:
+            if p.stdout and p.stdout.startswith('iscsi'):
+                # RFC 4173 defines the format of iSCSI boot parameters in DHCP
+                # Rootpath as follows:
+                # Rootpath=iscsi:<IP>:<protocol>:<port>:<LUN>:<target>
+                # We are only interested in <IP>, <port>, <LUN>, <target>
+                all_params = p.stdout.strip().split(':', 5)
+                params = [all_params[1]]
+                params.extend(all_params[3:])
+
+        return params
+
+    def __repr__(self):
+        s = "target_ip=%s" % self.target_ip
         if self.target_lun is not None:
             s += "; target_lun=%s" % self.target_lun
+        if self.target_name is not None:
+            s += "; target_name=%s" % self.target_name
         if self.target_port is not None:
             s += "; target_port=%s" % self.target_port
+        if self.initiator_name is not None:
+            s += "; initiator_name=%s" % self.initiator_name
+        if self.chap_name is not None:
+            s += "; chap_name=%s" % self.chap_name
+        if self.ctd_list:
+            s += "; ctd=%s" % self.ctd_list
+        else:
+            s += "; ctd=NOT MAPPED"
+        if self.source is not None:
+            s += "; source=%s" % self.source
         return s
 
 

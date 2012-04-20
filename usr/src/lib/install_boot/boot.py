@@ -33,13 +33,12 @@ import fcntl
 import linecache
 import os
 import platform
-import stat
 import struct
 import tempfile
 
 from grp import getgrnam
 from pwd import getpwnam
-from shutil import move, copyfile, rmtree
+from shutil import move, rmtree
 
 from bootmgmt import bootconfig, BootmgmtUnsupportedPlatformError, \
     BootmgmtPropertyWriteError, BootmgmtUnsupportedPropertyError
@@ -57,7 +56,7 @@ from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target import Target
 from solaris_install.target.logical import be_list, BE, Zpool
-from solaris_install.target.physical import Disk, FDISK, GPTPartition, \
+from solaris_install.target.physical import Disk, FDISK, Iscsi, GPTPartition, \
     Partition, Slice
 from solaris_install.target.vdevs import _get_vdev_mapping
 from solaris_install.transfer.media_transfer import get_image_grub_title
@@ -316,6 +315,10 @@ class SystemBootMenu(BootMenu):
         # Mountpoint of pool toplevel dataset
         self.pool_tld_mount = None
 
+        # iSCSI attributes
+        self.iscsi_doc_obj = None
+        self.iscsi_boot = False
+
     def init_boot_config(self, autogen=True):
         """ Instantiates the appropriate bootmgmt.bootConfig subclass object
             for this class
@@ -445,10 +448,33 @@ class SystemBootMenu(BootMenu):
             sequence of the devices forming the root pool.
         """
         self.logger.info("Setting openprom boot-device")
+
+        if self.iscsi_boot:
+            if not dry_run:
+                try:
+                    # swap the default boot strings to be 'net disk'
+                    cmd = '/usr/sbin/eeprom boot-device="net disk"'
+                    run(cmd, shell=True)
+
+                    # add the iscsi OBP options to the network-boot-args
+                    cmd = '/usr/sbin/eeprom network-boot-arguments=%s' % \
+                          self.iscsi_doc_obj.sparc_obp_boot_string
+                    run(cmd, shell=True)
+
+                except CalledProcessError as cpe:
+                    # Treat this as non-fatal. It can be manually fixed later
+                    # on reboot.
+                    self.logger.warning("Failed to set openprom boot-device:")
+                    self.logger.warning(str(cpe))
+            return
+
         prom_device = "/dev/openprom"
-        #ioctl codes and OPROMMAXPARAM taken from /usr/include/sys/openpromio.h
+        # ioctl codes and OPROMMAXPARAM taken from
+        # /usr/include/sys/openpromio.h
         oioc = ord('O') << 8
-        opromdev2promname = oioc | 15  # Convert devfs path to prom path
+
+        # Convert devfs path to prom path
+        opromdev2promname = oioc | 15
         oprommaxparam = 32768
 
         boot_devs = [os.path.join('/dev/dsk', dev) \
@@ -524,16 +550,10 @@ class SystemBootMenu(BootMenu):
         new_prom_boot_devs.extend([d for d in cur_prom_boot_devs if \
                                    d not in new_prom_boot_devs])
         prom_arg_str = " ".join(new_prom_boot_devs)
-
-        # Set the boot device using eeprom
         cmd = ["/usr/sbin/eeprom", "boot-device=%s" % prom_arg_str]
-        self.logger.debug("Executing: %s" % cmd)
         if not dry_run:
             try:
-                Popen.check_call(cmd,
-                                 stdout=Popen.STORE,
-                                 stderr=Popen.STORE,
-                                 logger=ILN)
+                run(cmd)
             except CalledProcessError as cpe:
                 # Treat this as non-fatal. It can be manually fixed later
                 # on reboot.
@@ -683,6 +703,11 @@ class SystemBootMenu(BootMenu):
                                "fileystem \'%s\' does not exist!" \
                                % (pool.name, self.pool_tld_mount))
 
+        # Look for an Iscsi DOC object
+        iscsi_check = self.doc.get_descendants(class_type=Iscsi)
+        if iscsi_check:
+            self.iscsi_doc_obj = iscsi_check[0]
+
         # Figure out the boot device names in ctd notation
         for disk in target.get_children(class_type=Disk):
             if disk.whole_disk and disk.label == "GPT":
@@ -694,6 +719,23 @@ class SystemBootMenu(BootMenu):
                         if vdev.startswith('/dev/dsk/'):
                             vdev = vdev.lstrip('/dev/dsk/')
                         self.boot_target[DEVS].append(vdev)
+
+                if self.iscsi_doc_obj and \
+                   disk.ctd in self.iscsi_doc_obj.ctd_list:
+                    # For the whole disk case, slice 0 will contain 99% of the
+                    # disk so use that.  Since this is an OBP setting, it must
+                    # be done by letter.  s0 = 'a'
+                    self.iscsi_boot = True
+                    self.iscsi_doc_obj.sparc_slice = "a"
+
+                    # verify the LUN and target name are set
+                    if self.iscsi_doc_obj.target_lun is None:
+                        self.iscsi_doc_obj.target_lun = \
+                            self.iscsi_doc_obj.iscsi_dict[disk.ctd].lun_num
+
+                    if self.iscsi_doc_obj.target_name is None:
+                        self.iscsi_doc_obj.target_name = \
+                            self.iscsi_doc_obj.iscsi_dict[disk.ctd].target_name
                 break
 
             # Look for either GPT partitions or slices that are in the boot/
@@ -704,9 +746,26 @@ class SystemBootMenu(BootMenu):
             if not nodes:
                 nodes = disk.get_descendants(class_type=Slice, max_depth=2)
             boot_nodes = [node for node in nodes if \
-                           node.in_zpool == root_pool.name]
+                          node.in_zpool == root_pool.name]
             bdevs = ['%ss%s' % (disk.ctd, node.name) for node in boot_nodes]
             self.boot_target[DEVS].extend(bdevs)
+
+            if self.iscsi_doc_obj and disk.ctd in self.iscsi_doc_obj.ctd_list:
+                self.iscsi_boot = True
+
+                # set the sparc slice.  Since this is an OBP setting, it must
+                # be done by letter.  s0 = 'a', s1 = 'b', etc.
+                self.iscsi_doc_obj.sparc_slice = \
+                    chr(97 + int(boot_nodes[0].name))
+
+                # verify the LUN and target name are set
+                if self.iscsi_doc_obj.target_lun is None:
+                    self.iscsi_doc_obj.target_lun = \
+                        self.iscsi_doc_obj.iscsi_dict[disk.ctd].lun_num
+
+                if self.iscsi_doc_obj.target_name is None:
+                    self.iscsi_doc_obj.target_name = \
+                        self.iscsi_doc_obj.iscsi_dict[disk.ctd].target_name
 
         if not self.boot_target[DEVS]:
             raise RuntimeError("Could not find any boot devices to " \
@@ -835,7 +894,7 @@ class SystemBootMenu(BootMenu):
             # boot loader onto a disk that may have a versioned boot loader
             # already installed.
             self.config.commit_boot_config(boot_devices=boot_rdevs,
-                                           force=True) 
+                                           force=True)
 
             self.logger.info("Setting boot devices in firmware")
             self._set_firmware_boot_device(dry_run)

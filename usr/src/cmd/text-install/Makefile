@@ -38,12 +38,14 @@ ROOTMSGS=       $(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
 PROGS=		text-install
 
 PYMODULES=	__init__.py \
+		discovery_selection.py \
 		disk_selection.py \
 		disk_window.py \
 		fdisk_partitions.py \
 		gpt_partitions.py \
 		install_progress.py \
 		install_status.py \
+		iscsi.py \
 		log_viewer.py \
 		partition_edit_screen.py \
                 progress.py \

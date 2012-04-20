@@ -1,0 +1,837 @@
+<?xml version="1.0"?>
+<!--
+ CDDL HEADER START
+  
+ The contents of this file are subject to the terms of the
+ Common Development and Distribution License (the "License").
+ You may not use this file except in compliance with the License.
+
+ You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+ or http://www.opensolaris.org/os/licensing.
+ See the License for the specific language governing permissions
+ and limitations under the License.
+
+ When distributing Covered Code, include this CDDL HEADER in each
+ file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+ If applicable, add the following below this CDDL HEADER, with the
+ fields enclosed by brackets "[]" replaced with your own identifying
+ information: Portions Copyright [yyyy] [name of copyright owner]
+
+ CDDL HEADER END
+
+ Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+
+-->
+<interface>
+  <!-- interface-requires gtk+ 2.10 -->
+  <!-- interface-naming-policy toplevel-contextual -->
+  <object class="GtkWindow" id="discovery_window">
+    <property name="title" translatable="yes">installdiskwindow</property>
+    <child>
+      <object class="GtkVBox" id="discovery_top_level_vbox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">6</property>
+        <child>
+          <object class="GtkAlignment" id="discovery_local_check_align">
+            <property name="visible">True</property>
+            <property name="top_padding">10</property>
+            <property name="left_padding">10</property>
+            <property name="right_padding">10</property>
+            <child>
+              <object class="GtkCheckButton" id="discovery_local_check">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="draw_indicator">True</property>
+                <signal name="toggled" handler="discovery_local_check_toggled_cb"/>
+                <child>
+                  <object class="GtkLabel" id="discovery_local_check_label">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Local Disks&lt;/span&gt;</property>
+                    <property name="use_markup">True</property>
+                    <property name="use_underline">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkAlignment" id="discovery_iscsi_align">
+            <property name="visible">True</property>
+            <property name="bottom_padding">10</property>
+            <property name="left_padding">10</property>
+            <property name="right_padding">10</property>
+            <child>
+              <object class="GtkVBox" id="discovery_iscsi_vbox">
+                <property name="visible">True</property>
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkAlignment" id="discovery_iscsi_check_align">
+                    <property name="visible">True</property>
+                    <child>
+                      <object class="GtkCheckButton" id="discovery_iscsi_check">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">False</property>
+                        <property name="draw_indicator">True</property>
+                        <signal name="toggled" handler="discovery_iscsi_check_toggled_cb"/>
+                        <child>
+                          <object class="GtkAlignment" id="discovery_iscsi_check_label_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkHBox" id="discovery_iscsi_check_label_hbox">
+                                <property name="visible">True</property>
+                                <child>
+                                  <object class="GtkLabel" id="discovery_iscsi_check_label">
+                                    <property name="visible">True</property>
+                                    <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_iSCSI&lt;/span&gt;</property>
+                                    <property name="use_markup">True</property>
+                                    <property name="use_underline">True</property>
+                                  </object>
+                                  <packing>
+                                    <property name="expand">False</property>
+                                    <property name="fill">False</property>
+                                    <property name="position">0</property>
+                                  </packing>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkAlignment" id="discovery_iscsi_detail_align">
+                    <property name="visible">True</property>
+                    <property name="top_padding">10</property>
+                    <property name="left_padding">20</property>
+                    <child>
+                      <object class="GtkVBox" id="discovery_iscsi_detail_vbox">
+                        <property name="visible">True</property>
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkAlignment" id="discovery_dhcp_align">
+                            <property name="visible">True</property>
+                            <property name="bottom_padding">10</property>
+                            <child>
+                              <object class="GtkHBox" id="discovery_dhcp_hbox">
+                                <property name="visible">True</property>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_dhcp_radio_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkRadioButton" id="discovery_dhcp_radio">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="receives_default">False</property>
+                                        <property name="active">True</property>
+                                        <property name="draw_indicator">True</property>
+                                        <property name="group">discovery_criteria_radio</property>
+                                        <signal name="toggled" handler="discovery_dhcp_radio_toggled_cb"/>
+                                        <child>
+                                          <object class="GtkLabel" id="discovery_dhcp_label">
+                                            <property name="visible">True</property>
+                                            <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Use _DHCP autodiscovery&lt;/span&gt;</property>
+                                            <property name="use_markup">True</property>
+                                            <property name="use_underline">True</property>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="position">0</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_dhcp_unavail_align">
+                                    <property name="visible">True</property>
+                                    <property name="left_padding">10</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_dhcp_unavail_label">
+                                        <property name="visible">True</property>
+                                        <property name="label" translatable="yes">(DHCP server reports no iSCSI autodiscovery)</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="position">1</property>
+                                  </packing>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="discovery_criteria_align">
+                            <property name="visible">True</property>
+                            <child>
+                              <object class="GtkRadioButton" id="discovery_criteria_radio">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">False</property>
+                                <property name="active">True</property>
+                                <property name="draw_indicator">True</property>
+                                <signal name="toggled" handler="discovery_criteria_radio_toggled_cb"/>
+                                <child>
+                                  <object class="GtkLabel" id="discovery_criteria_radio_label">
+                                    <property name="visible">True</property>
+                                    <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Specify search criteria&lt;/span&gt;</property>
+                                    <property name="use_markup">True</property>
+                                    <property name="use_underline">True</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="discovery_criteria_detail_align">
+                            <property name="visible">True</property>
+                            <property name="top_padding">10</property>
+                            <property name="left_padding">20</property>
+                            <property name="right_padding">20</property>
+                            <child>
+                              <object class="GtkTable" id="discovery_criteria_detail_table">
+                                <property name="visible">True</property>
+                                <property name="n_rows">7</property>
+                                <property name="n_columns">13</property>
+                                <property name="row_spacing">10</property>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_ip_req_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_target_ip_req_label">
+                                        <property name="visible">True</property>
+                                        <property name="label" translatable="yes">*</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="x_options">GTK_SHRINK</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_ip_label_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_target_ip_label">
+                                        <property name="visible">True</property>
+                                        <property name="xalign">0</property>
+                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Target IP:&lt;/span&gt;</property>
+                                        <property name="use_markup">True</property>
+                                        <property name="use_underline">True</property>
+                                        <property name="mnemonic_widget">discovery_target_ip_1_entry</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">1</property>
+                                    <property name="right_attach">2</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_ip_1_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkEntry" id="discovery_target_ip_1_entry">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="width_chars">3</property>
+                                        <signal name="insert_text" handler="discovery_numeric_ip_field_insert_text_cb"/>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">2</property>
+                                    <property name="right_attach">3</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_ip_1_dot_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_target_ip_1_dot_label">
+                                        <property name="visible">True</property>
+                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;.&lt;/span&gt;</property>
+                                        <property name="use_markup">True</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">3</property>
+                                    <property name="right_attach">4</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_ip_2_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkEntry" id="discovery_target_ip_2_entry">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="width_chars">3</property>
+                                        <signal name="insert_text" handler="discovery_numeric_ip_field_insert_text_cb"/>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">4</property>
+                                    <property name="right_attach">5</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_ip_2_dot_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_target_ip_2_dot_label">
+                                        <property name="visible">True</property>
+                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;.&lt;/span&gt;</property>
+                                        <property name="use_markup">True</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">5</property>
+                                    <property name="right_attach">6</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_ip_3_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkEntry" id="discovery_target_ip_3_entry">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="width_chars">3</property>
+                                        <signal name="insert_text" handler="discovery_numeric_ip_field_insert_text_cb"/>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">6</property>
+                                    <property name="right_attach">7</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_ip_3_dot_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_target_ip_3_dot_label">
+                                        <property name="visible">True</property>
+                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;.&lt;/span&gt;</property>
+                                        <property name="use_markup">True</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">7</property>
+                                    <property name="right_attach">8</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_ip_4_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkEntry" id="discovery_target_ip_4_entry">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="width_chars">3</property>
+                                        <signal name="insert_text" handler="discovery_numeric_ip_field_insert_text_cb"/>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">8</property>
+                                    <property name="right_attach">9</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_required_label_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_required_label">
+                                        <property name="visible">True</property>
+                                        <property name="label" translatable="yes">* Required Field</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">10</property>
+                                    <property name="right_attach">12</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="dummyalign1">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <placeholder/>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">12</property>
+                                    <property name="right_attach">13</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_lun_label_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_lun_label">
+                                        <property name="visible">True</property>
+                                        <property name="xalign">0</property>
+                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;L_UN:&lt;/span&gt;</property>
+                                        <property name="use_markup">True</property>
+                                        <property name="use_underline">True</property>
+                                        <property name="mnemonic_widget">discovery_lun_entry</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">1</property>
+                                    <property name="right_attach">2</property>
+                                    <property name="top_attach">1</property>
+                                    <property name="bottom_attach">2</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_lun_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkEntry" id="discovery_lun_entry">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <signal name="insert_text" handler="discovery_hex_lun_entry_insert_text_cb"/>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">2</property>
+                                    <property name="right_attach">9</property>
+                                    <property name="top_attach">1</property>
+                                    <property name="bottom_attach">2</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_name_label_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_target_name_label">
+                                        <property name="visible">True</property>
+                                        <property name="xalign">0</property>
+                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Target N_ame:&lt;/span&gt;</property>
+                                        <property name="use_markup">True</property>
+                                        <property name="use_underline">True</property>
+                                        <property name="mnemonic_widget">discovery_target_name_entry</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">1</property>
+                                    <property name="right_attach">2</property>
+                                    <property name="top_attach">2</property>
+                                    <property name="bottom_attach">3</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_target_name_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkEntry" id="discovery_target_name_entry">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="max_length">223</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">2</property>
+                                    <property name="right_attach">9</property>
+                                    <property name="top_attach">2</property>
+                                    <property name="bottom_attach">3</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_port_label_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_port_label">
+                                        <property name="visible">True</property>
+                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Port:&lt;/span&gt;</property>
+                                        <property name="use_markup">True</property>
+                                        <property name="use_underline">True</property>
+                                        <property name="mnemonic_widget">discovery_port_entry</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">9</property>
+                                    <property name="right_attach">10</property>
+                                    <property name="top_attach">2</property>
+                                    <property name="bottom_attach">3</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_port_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkEntry" id="discovery_port_entry">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="width_chars">6</property>
+                                        <signal name="insert_text" handler="discovery_numeric_port_field_insert_text_cb"/>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">10</property>
+                                    <property name="right_attach">11</property>
+                                    <property name="top_attach">2</property>
+                                    <property name="bottom_attach">3</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="dummyalign2">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <placeholder/>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">11</property>
+                                    <property name="right_attach">12</property>
+                                    <property name="top_attach">2</property>
+                                    <property name="bottom_attach">3</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_criteria_seperator_align">
+                                    <property name="visible">True</property>
+                                    <property name="top_padding">10</property>
+                                    <property name="bottom_padding">10</property>
+                                    <child>
+                                      <object class="GtkHSeparator" id="discovery_criteria_seperator">
+                                        <property name="visible">True</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">1</property>
+                                    <property name="right_attach">13</property>
+                                    <property name="top_attach">3</property>
+                                    <property name="bottom_attach">4</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_initiator_name_label_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_initiator_name_label">
+                                        <property name="visible">True</property>
+                                        <property name="xalign">0</property>
+                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Initiato_r Name:&lt;/span&gt;</property>
+                                        <property name="use_markup">True</property>
+                                        <property name="use_underline">True</property>
+                                        <property name="mnemonic_widget">discovery_initiator_name_entry</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">1</property>
+                                    <property name="right_attach">2</property>
+                                    <property name="top_attach">4</property>
+                                    <property name="bottom_attach">5</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_initiator_name_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkEntry" id="discovery_initiator_name_entry">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="max_length">223</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">2</property>
+                                    <property name="right_attach">11</property>
+                                    <property name="top_attach">4</property>
+                                    <property name="bottom_attach">5</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_iscsi_boot_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkLabel" id="discovery_iscsi_boot_label">
+                                        <property name="visible">True</property>
+                                        <property name="xalign">0</property>
+                                        <property name="yalign">1</property>
+                                        <property name="label" translatable="yes">(iSCSI boot enabled - Initiator Name set in BIOS)</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">1</property>
+                                    <property name="right_attach">11</property>
+                                    <property name="top_attach">5</property>
+                                    <property name="bottom_attach">6</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkAlignment" id="discovery_chap_table_align">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <object class="GtkTable" id="discovery_chap_table">
+                                        <property name="visible">True</property>
+                                        <property name="n_rows">2</property>
+                                        <property name="n_columns">2</property>
+                                        <property name="row_spacing">10</property>
+                                        <child>
+                                          <object class="GtkAlignment" id="discovery_chap_align">
+                                            <property name="visible">True</property>
+                                            <child>
+                                              <object class="GtkCheckButton" id="discovery_chap_check">
+                                                <property name="visible">True</property>
+                                                <property name="can_focus">True</property>
+                                                <property name="receives_default">False</property>
+                                                <property name="draw_indicator">True</property>
+                                                <signal name="toggled" handler="discovery_chap_check_toggled_cb"/>
+                                                <child>
+                                                  <object class="GtkLabel" id="discovery_chap_label">
+                                                    <property name="visible">True</property>
+                                                    <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Use _CHAP&lt;/span&gt;</property>
+                                                    <property name="use_markup">True</property>
+                                                    <property name="use_underline">True</property>
+                                                  </object>
+                                                </child>
+                                              </object>
+                                            </child>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkAlignment" id="discovery_chap_detail_align">
+                                            <property name="visible">True</property>
+                                            <child>
+                                              <object class="GtkTable" id="discovery_chap_detail_table">
+                                                <property name="visible">True</property>
+                                                <property name="n_rows">2</property>
+                                                <property name="n_columns">2</property>
+                                                <property name="row_spacing">10</property>
+                                                <child>
+                                                  <object class="GtkAlignment" id="discovery_chap_name_label_align">
+                                                    <property name="visible">True</property>
+                                                    <child>
+                                                      <object class="GtkLabel" id="discovery_chap_name_label">
+                                                        <property name="visible">True</property>
+                                                        <property name="xalign">0</property>
+                                                        <property name="xpad">20</property>
+                                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Na_me:&lt;/span&gt;</property>
+                                                        <property name="use_markup">True</property>
+                                                        <property name="use_underline">True</property>
+                                                        <property name="mnemonic_widget">discovery_chap_name_entry</property>
+                                                      </object>
+                                                    </child>
+                                                  </object>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkAlignment" id="discovery_chap_name_entry_align">
+                                                    <property name="visible">True</property>
+                                                    <child>
+                                                      <object class="GtkEntry" id="discovery_chap_name_entry">
+                                                        <property name="visible">True</property>
+                                                        <property name="can_focus">True</property>
+                                                        <property name="invisible_char">&#x25CF;</property>
+                                                      </object>
+                                                    </child>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="left_attach">1</property>
+                                                    <property name="right_attach">2</property>
+                                                  </packing>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkAlignment" id="discovery_chap_pass_label_align">
+                                                    <property name="visible">True</property>
+                                                    <child>
+                                                      <object class="GtkLabel" id="discovery_chap_pass_label">
+                                                        <property name="visible">True</property>
+                                                        <property name="xalign">0</property>
+                                                        <property name="xpad">20</property>
+                                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Pass_word:&lt;/span&gt;</property>
+                                                        <property name="use_markup">True</property>
+                                                        <property name="use_underline">True</property>
+                                                        <property name="mnemonic_widget">discovery_chap_pass_entry</property>
+                                                      </object>
+                                                    </child>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="top_attach">1</property>
+                                                    <property name="bottom_attach">2</property>
+                                                  </packing>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkAlignment" id="discovery_chap_pass_entry_align">
+                                                    <property name="visible">True</property>
+                                                    <child>
+                                                      <object class="GtkEntry" id="discovery_chap_pass_entry">
+                                                        <property name="visible">True</property>
+                                                        <property name="can_focus">True</property>
+                                                        <property name="visibility">False</property>
+                                                        <property name="invisible_char">&#x25CF;</property>
+                                                      </object>
+                                                    </child>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="left_attach">1</property>
+                                                    <property name="right_attach">2</property>
+                                                    <property name="top_attach">1</property>
+                                                    <property name="bottom_attach">2</property>
+                                                  </packing>
+                                                </child>
+                                              </object>
+                                            </child>
+                                          </object>
+                                          <packing>
+                                            <property name="right_attach">2</property>
+                                            <property name="top_attach">1</property>
+                                            <property name="bottom_attach">2</property>
+                                          </packing>
+                                        </child>
+                                        <child>
+                                          <placeholder/>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left_attach">2</property>
+                                    <property name="right_attach">11</property>
+                                    <property name="top_attach">6</property>
+                                    <property name="bottom_attach">7</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="position">2</property>
+                          </packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkAlignment" id="discovery_status_align">
+            <property name="visible">True</property>
+            <property name="bottom_padding">10</property>
+            <property name="left_padding">10</property>
+            <child>
+              <object class="GtkLabel" id="discovery_status_label">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="yalign">1</property>
+                <property name="label" translatable="yes">Status:</property>
+                <property name="use_markup">True</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="position">2</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

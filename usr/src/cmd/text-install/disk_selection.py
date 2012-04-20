@@ -36,15 +36,16 @@ import osol_install.liberrsvc as liberrsvc
 
 from bootmgmt.bootinfo import SystemFirmware
 from solaris_install.text_install import _, RELEASE, TUI_HELP, \
-    TARGET_DISCOVERY, TRANSFER_PREP, LOCALIZED_GB
+    TARGET_DISCOVERY, TRANSFER_PREP, LOCALIZED_GB, ISCSI_LABEL, \
+    ISCSI_TARGET_DISCOVERY
 from solaris_install.text_install.disk_window import DiskWindow, \
     get_minimum_size, get_recommended_size
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target import Target
 from solaris_install.target.controller import FALLBACK_IMAGE_SIZE
-from solaris_install.target.physical import Disk, GPTPartition, Partition, \
-    Slice
+from solaris_install.target.physical import Disk, GPTPartition, Iscsi, \
+    Partition, Slice
 from solaris_install.target.size import Size
 from solaris_install.text_install import can_use_gpt
 from solaris_install.text_install.ti_target_utils import MAX_VTOC
@@ -67,9 +68,9 @@ class DiskScreen(BaseScreen):
     '''
     Allow the user to select a (valid) disk target for installation
     Display the partition/slice table for the highlighted disk
-    
+
     '''
-    
+
     HEADER_TEXT = _("Disks")
     PARAGRAPH = _("Where should %(release)s be installed?") % RELEASE
     REC_SIZE_TEXT = _("Recommended size: ")
@@ -94,7 +95,7 @@ class DiskScreen(BaseScreen):
     TGT_ERROR = _("An error occurred while searching for installation"
                   " targets. Please check the install log and file a bug"
                   " at defect.opensolaris.org.")
-    
+
     DISK_HEADERS = [(8, _("Type")),
                     (10, _(" Size(GB)")),
                     (6, _("Boot")),
@@ -103,7 +104,7 @@ class DiskScreen(BaseScreen):
     VENDOR_LEN = 15
 
     SPINNER = ["\\", "|", "/", "-"]
-    
+
     DISK_WARNING_HEADER = _("Warning")
     DISK_WARNING_TOOBIG = _("Only the first %.1fTB can be used.")
     DISK_WARNING_RELABEL = _("You have chosen a GPT labeled disk. Installing "
@@ -114,10 +115,12 @@ class DiskScreen(BaseScreen):
 
     CANCEL_BUTTON = _("Cancel")
     CONTINUE_BUTTON = _("Continue")
-    
+
     HELP_DATA = (TUI_HELP + "/%s/disks.txt", _("Disks"))
-    
+
     def __init__(self, main_win, target_controller):
+        """ screen object containing the disk selection choice for the user
+        """
 
         global LOGGER
         LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
@@ -132,7 +135,7 @@ class DiskScreen(BaseScreen):
 
         self.gpt_found_text = DiskScreen.FOUND_GPT
         self.gpt_proposed_text = DiskScreen.PROPOSED_GPT
-        
+
         disk_header_text = []
         for header in DiskScreen.DISK_HEADERS:
             header_str = fit_text_truncate(header[1], header[0] - 1,
@@ -143,7 +146,7 @@ class DiskScreen(BaseScreen):
         self.max_vtoc_disk_size = (Size(MAX_VTOC)).get(Size.tb_units)
         self.disk_warning_too_big = \
             DiskScreen.DISK_WARNING_TOOBIG % self.max_vtoc_disk_size
-        
+
         self.disks = []
         self.existing_pools = []
         self.disk_win = None
@@ -161,32 +164,36 @@ class DiskScreen(BaseScreen):
         self._target_discovery_completed = False
         self._target_discovery_status = InstallEngine.EXEC_SUCCESS
         self._image_size = None
-    
+
+        self.iscsi = None
+        self._iscsi_target_discovery_completed = False
+        self._iscsi_target_discovery_status = InstallEngine.EXEC_SUCCESS
+
     def determine_minimum(self):
         '''Returns minimum install size, fetching first if needed'''
 
         self.determine_size_data()
         return self._minimum_size
-    
+
     minimum_size = property(determine_minimum)
-    
+
     def determine_recommended(self):
         '''Returns recommended install size, fetching first if needed'''
 
         self.determine_size_data()
         return self._recommended_size
-    
+
     recommended_size = property(determine_recommended)
-    
+
     def determine_size_data(self):
         '''Retrieve the minimum and recommended sizes and generate the string
         to present that information.
         '''
-        
+
         if self._minimum_size is None or self._recommended_size is None:
             self._recommended_size = get_recommended_size(self.tc)
             self._minimum_size = get_minimum_size(self.tc)
-    
+
     def get_size_line(self):
         '''Returns the line of text displaying the min/recommended sizes'''
 
@@ -199,14 +206,14 @@ class DiskScreen(BaseScreen):
                 DiskScreen.MIN_SIZE_TEXT + min_size_str
 
         return self._size_line
-    
+
     size_line = property(get_size_line)
-    
+
     def wait_for_disks(self):
         '''Block while waiting for target discovery to finish. Catch F9 and
         quit if needed
         '''
-        
+
         self.main_win.actions.pop(curses.KEY_F2, None)
         self.main_win.actions.pop(curses.KEY_F6, None)
         self.main_win.actions.pop(curses.KEY_F3, None)
@@ -241,6 +248,79 @@ class DiskScreen(BaseScreen):
             raise TargetDiscoveryError(("Unexpected error (%s) during target "
                 "discovery. See log for details.") % err)
 
+    def wait_for_iscsi_disk(self):
+        ''' Block while waiting for iSCSI discovery to finish
+        '''
+
+        # check for the existence of an Iscsi object in the DOC.  That object
+        # is only added when the user selects 'iSCSI' as the discovery criteria
+        self.iscsi = self.doc.volatile.get_first_child(name=ISCSI_LABEL,
+                                                       class_type=Iscsi)
+
+        if not self.iscsi:
+            return
+
+        self.main_win.actions.pop(curses.KEY_F2, None)
+        self.main_win.actions.pop(curses.KEY_F6, None)
+        self.main_win.actions.pop(curses.KEY_F3, None)
+        self.main_win.show_actions()
+
+        self.center_win.add_text(DiskScreen.DISK_SEEK_TEXT, 5, 1,
+                                 self.win_size_x - 3)
+        self.main_win.do_update()
+        offset = textwidth(DiskScreen.DISK_SEEK_TEXT) + 2
+        spin_index = 0
+        self.center_win.window.timeout(250)
+
+        # there's an iscsi object in the DOC.  Check for an existing iSCSI
+        # target discovery checkpoint.  If found, update the kwargs for
+        # discovery to find all the information about the newest mapped LUN.
+        # If not, register a new checkpoint.
+        kwargs = {"search_type": "disk", "search_name": self.iscsi.ctd_list}
+
+        for checkpoint in self.engine._checkpoints:
+            if checkpoint.name == ISCSI_TARGET_DISCOVERY:
+                checkpoint.kwargs = kwargs
+                break
+        else:
+            # register a new iSCSI target discovery checkpoint
+            self.engine.register_checkpoint(ISCSI_TARGET_DISCOVERY,
+                                            "solaris_install/target/discovery",
+                                            "TargetDiscovery",
+                                            kwargs=kwargs,
+                                            insert_before=TRANSFER_PREP)
+
+        # run target discovery again against the iSCSI LUN
+        self._iscsi_target_discovery_completed = False
+        errsvc.clear_error_list()
+        self.engine.execute_checkpoints(start_from=ISCSI_TARGET_DISCOVERY,
+                                        pause_before=TRANSFER_PREP,
+                                        callback=self._iscsi_td_callback)
+
+        while not self._iscsi_target_discovery_completed:
+            input_key = self.main_win.getch()
+            if input_key == curses.KEY_F9:
+                if self.confirm_quit():
+                    raise QuitException
+
+            self.center_win.add_text(DiskScreen.SPINNER[spin_index], 5, offset)
+            self.center_win.no_ut_refresh()
+            self.main_win.do_update()
+            spin_index = (spin_index + 1) % len(DiskScreen.SPINNER)
+
+        self.center_win.window.timeout(-1)
+        self.center_win.clear()
+
+        # check the result of target discovery
+        if self._iscsi_target_discovery_status is not \
+           InstallEngine.EXEC_SUCCESS:
+            err_data = errsvc.get_errors_by_mod_id(ISCSI_TARGET_DISCOVERY)[0]
+            LOGGER.error("iSCSI target discovery failed")
+            err = err_data.error_data[liberrsvc.ES_DATA_EXCEPTION]
+            LOGGER.error(err)
+            raise TargetDiscoveryError("Unexpected error (%s) during iSCSI "
+                "target discovery. See log for details." % err)
+
     def _td_callback(self, status, errsvc):
         '''Callback function for Target Discovery checkpoint execution.  The
         status value is saved to be interpreted later.  This function sets the
@@ -251,6 +331,17 @@ class DiskScreen(BaseScreen):
         self._target_discovery_status = status
         self._target_discovery_completed = True
 
+    def _iscsi_td_callback(self, status, errsvc):
+        '''Callback function for iSCSI Target Discovery checkpoint execution.
+           The status value is saved to be interpreted later.
+           This function sets the self._iscsi_target_discovery_completed
+           value to true so the wait_for_iscsi_disk() function will know
+           to stop displaying the spinner.
+        '''
+
+        self._iscsi_target_discovery_status = status
+        self._iscsi_target_discovery_completed = True
+
     def _show(self):
         '''Create a list of disks to choose from and create the window
         for displaying the partition/slice information from the selected
@@ -258,6 +349,7 @@ class DiskScreen(BaseScreen):
         '''
 
         self.wait_for_disks()
+        self.wait_for_iscsi_disk()
 
         discovered_target = self.doc.persistent.get_first_child( \
             name=Target.DISCOVERED)
@@ -282,7 +374,7 @@ class DiskScreen(BaseScreen):
             except:
                 # Unable to get the image size for some reason, allow
                 # the target controller to use it's default size.
-                LOGGER.debug("Unable to get image size") 
+                LOGGER.debug("Unable to get image size")
                 self._image_size = FALLBACK_IMAGE_SIZE
 
         # initialize the target controller so the min/max size for the
@@ -293,7 +385,7 @@ class DiskScreen(BaseScreen):
         # node in the DOC can be re-populated with information from target
         # discovery.
         self.tc.initialize(image_size=self._image_size, no_initial_disk=True)
-         
+
         # Go through all the disks found and find ones that have enough space
         # for installation.  At the same time, see if any existing disk is the
         # boot disk.  If a boot disk is found, move it to the front of the list
@@ -318,16 +410,16 @@ class DiskScreen(BaseScreen):
 
         self.main_win.reset_actions()
         self.main_win.show_actions()
-        
+
         y_loc = 1
         self.center_win.add_text(DiskScreen.PARAGRAPH, y_loc, 1)
-        
+
         y_loc += 1
         self.center_win.add_text(self.size_line, y_loc, 1)
-        
+
         y_loc += 2
         self.center_win.add_text(self.disk_header_text, y_loc, 1)
-        
+
         y_loc += 1
         self.center_win.window.hline(y_loc, self.center_win.border_size[1] + 1,
                                      curses.ACS_HLINE,
@@ -338,7 +430,7 @@ class DiskScreen(BaseScreen):
                                    y_loc, 0)
         disk_win_area.scrollable_lines = len(self.disks) + 1
         self.disk_win = ScrollWindow(disk_win_area, window=self.center_win)
-        
+
         disk_item_area = WindowArea(1, disk_win_area.columns - 2, 0, 1)
         disk_index = 0
         len_type = DiskScreen.DISK_HEADERS[0][0] - 1
@@ -368,7 +460,7 @@ class DiskScreen(BaseScreen):
             # Information will be displayed in the device column with
             # the following priority:
             #
-            # First priority is to display receptacle information, 
+            # First priority is to display receptacle information,
             # if available.  If receptacle information is displayed,
             # ctd name will not be displayed.
             #
@@ -390,7 +482,7 @@ class DiskScreen(BaseScreen):
             if (len_dev - len(device)) >= DiskScreen.VENDOR_LEN:
                 vendor = disk.disk_prop.dev_vendor
                 if vendor is not None:
-                    dev_display_len = len_dev - DiskScreen.VENDOR_LEN 
+                    dev_display_len = len_dev - DiskScreen.VENDOR_LEN
                     device_field = ljust_columns(device, dev_display_len)
                     disk_text_fields.append(device_field)
                     vendor_field = vendor[:DiskScreen.VENDOR_LEN - 1]
@@ -439,18 +531,47 @@ class DiskScreen(BaseScreen):
             disk_index += 1
 
         self.disk_win.no_ut_refresh()
-        
+
         y_loc += 7
         disk_detail_area = WindowArea(6, 70, y_loc, 1)
 
         self.disk_detail = DiskWindow(disk_detail_area, self.disks[0],
                                       target_controller=self.tc,
                                       window=self.center_win)
-        
+
         self.main_win.do_update()
         self.center_win.activate_object(self.disk_win)
-        self.disk_win.activate_object(self.selected_disk_index)
-    
+        self.disk_win.activate_object(self.selected_disk_index, jump=True)
+
+    def on_prev(self):
+        ''' If the user goes back a screen, teardown any existing Iscsi objects
+        and reset iSCSI target discovery
+        '''
+
+        if self.iscsi is not None:
+            # remove the iscsi Disk objects from the doc and from self.disks
+            if self.iscsi.ctd_list:
+                discovered_target = self.doc.persistent.get_first_child(
+                    name=Target.DISCOVERED)
+
+                for disk in discovered_target.get_descendants(class_type=Disk):
+                    if disk.ctd in self.iscsi.ctd_list:
+                        disk.delete()
+
+                self.disks = discovered_target.get_children(class_type=Disk)
+
+            # tear down the Iscsi object
+            self.iscsi.teardown()
+
+            # reset the selected disk index to 0
+            self.selected_disk_index = 0
+
+            # reset the iscsi_discovery status
+            self._iscsi_target_discovery_completed = False
+
+            # reset the target controller's discovered_disk
+            self.tc._discovered_disks = None
+
     def on_change_screen(self):
         ''' Save the index of the current selected object in case the user
         returns to this screen later
@@ -462,7 +583,7 @@ class DiskScreen(BaseScreen):
         LOGGER.debug("disk_selection.on_change_screen, saved_index: %s",
                      self.selected_disk_index)
         LOGGER.debug(self.doc.persistent)
-    
+
     def start_discovery(self):
         # start target discovery
         if not self._target_discovery_completed:
@@ -483,14 +604,14 @@ class DiskScreen(BaseScreen):
         if not can_use_gpt and disk_size_gb > max_vtoc_size_gb:
             warning_txt.append(self.disk_warning_too_big)
         warning_txt = " ".join(warning_txt)
-        
+
         if warning_txt:
             # warn the user and give user a chance to change
             result = self.main_win.pop_up(DiskScreen.DISK_WARNING_HEADER,
                                           warning_txt,
                                           DiskScreen.CANCEL_BUTTON,
                                           DiskScreen.CONTINUE_BUTTON)
-            
+
             if not result:
                 raise UIMessage()  # let user select different disk
             # if user didn't quit it is always OK to ignore disk size,
@@ -500,7 +621,8 @@ class DiskScreen(BaseScreen):
 
         # We also need to warn the user if we need to relabel the disk from
         # GPT to SMI-VTOC
-        if disk.label == "GPT" and not can_use_gpt:
+        if disk.label == "GPT" and not can_use_gpt and \
+           disk.disk_prop.dev_type != "iSCSI":
             warning_txt.append(DiskScreen.DISK_WARNING_RELABEL)
         warning_txt = " ".join(warning_txt)
 
@@ -510,12 +632,12 @@ class DiskScreen(BaseScreen):
                                           warning_txt,
                                           DiskScreen.CANCEL_BUTTON,
                                           DiskScreen.CONTINUE_BUTTON)
-            
+
             if not result:
                 raise UIMessage()  # let user select different disk
 
             # if user didn't Cancel it is  OK to relabel the disk.
-            # This is one of the lesser known (and potentially dangerous) 
+            # This is one of the lesser known (and potentially dangerous)
             # features of target controller: select_disk() with
             # use_whole_disk=True can force a relabeling of the disk from GPT
             # to VTOC is necessary for booting from the disk
@@ -553,7 +675,7 @@ def on_activate(disk, disk_select):
     # max_x with white space, so, when shorter strings are displayed after
     # longer ones, the "rest" of the longer string gets erased.
     need_pad_len = max_x - len(display_text)
-    if need_pad_len > 0: 
+    if need_pad_len > 0:
         display_text += " " * need_pad_len
 
     # Add the selected disk to the target controller so appropriate defaults

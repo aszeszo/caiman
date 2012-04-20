@@ -1,4 +1,4 @@
-#
+# 
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -20,48 +20,20 @@
 #
 
 #
-# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
-include ../Makefile.lib
-
-SUBDIRS=	libadm \
-		libbe \
-		libdevinfo \
-		libdiskmgt \
-		libefi \
-		libima \
-		libnvpair \
-		shadow
-
-.PARALLEL:	$(SUBDIRS)
-
-all:=		TARGET= all
-check:=		TARGET= check
-clean:=		TARGET= clean
-clobber:=	TARGET= clobber
-install:=	TARGET= install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-
-all check clean clobber install install_h lint: $(SUBDIRS)
+include ../../Makefile.lib
 
 PYMODS=		__init__.py \
-		cgc.py \
-		controller.py \
-		cuuid.py \
-		discovery.py \
-		instantiation.py \
-		instantiation_zone.py \
-		logical.py \
-		physical.py \
-		size.py \
-		varshared.py \
-		vdevs.py
+		cfunc.py \
+		const.py \
+		cstruct.py \
+		ima.py
 
 PYCMODS=	$(PYMODS:%.py=%.pyc)
-ROOTPYMODS=	$(PYMODS:%=$(ROOTPYTHONVENDORSOLINSTALLTARGET)/%)
-ROOTPYCMODS=	$(PYCMODS:%=$(ROOTPYTHONVENDORSOLINSTALLTARGET)/%)
+ROOTPYMODS=	$(PYMODS:%=$(ROOTPYTHONVENDORSOLINSTALLTARGETLIBIMA)/%)
+ROOTPYCMODS=	$(PYCMODS:%=$(ROOTPYTHONVENDORSOLINSTALLTARGETLIBIMA)/%)
 
 CLOBBERFILES	= $(PYCMODS) 
 CLEANFILES	= $(CLOBBERFILES)
@@ -71,21 +43,17 @@ CLEANFILES	= $(CLOBBERFILES)
 	$(PYTHON) -mpy_compile $<
 	@[ $(<)c = $@ ] || $(MV) $(<)c $@
 
-all:	$(SUBDIRS) $(PYCMODS)
+all:		$(PYCMODS)
 
+$(ROOTPYTHONVENDORSOLINSTALLTARGETLIBIMA) : $(ROOTPYTHONVENDORSOLINSTALLTARGET)
 $(ROOTPYTHONVENDORSOLINSTALLTARGET) : $(ROOTPYTHONVENDORSOLINSTALL)
 $(ROOTPYTHONVENDORSOLINSTALL) : $(ROOTPYTHONVENDOR)
 
-$(ROOTPYMODS)  : $(ROOTPYTHONVENDORSOLINSTALLTARGET)
-$(ROOTPYCMODS) : $(ROOTPYTHONVENDORSOLINSTALLTARGET) $(PYCMODS)
+$(ROOTPYMODS)  : $(ROOTPYTHONVENDORSOLINSTALLTARGETLIBIMA)
+$(ROOTPYCMODS) : $(ROOTPYTHONVENDORSOLINSTALLTARGETLIBIMA) $(PYCMODS)
 
-install:	all $(ROOTPYMODS) $(ROOTPYCMODS) $(SUBDIRS)
+install:	all $(ROOTPYMODS) $(ROOTPYCMODS)
 
-install_h:
+install_h: 
 
-$(SUBDIRS):	FRC
-	cd $@; pwd; $(MAKE) $(TARGET)
-	
-FRC:
-
-include ../Makefile.targ
+include ../../Makefile.targ

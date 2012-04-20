@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -104,7 +104,7 @@ class FinishScreen(BaseScreen):
             Defines abstract method from superclass.
         '''
         eng = InstallEngine.get_instance()
-        profile = eng.data_object_cache.persistent.get_first_child(
+        profile = eng.data_object_cache.volatile.get_first_child(
             name="GUI Install",
             class_type=InstallProfile)
         dest = os.path.join('/a', profile.log_final)

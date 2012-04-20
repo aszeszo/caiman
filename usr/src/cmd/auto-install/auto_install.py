@@ -84,6 +84,7 @@ from solaris_install.manifest.parser import ManifestError, \
     MANIFEST_PARSER_DATA
 from solaris_install.target import Target, discovery, instantiation, varshared
 from solaris_install.target.instantiation_zone import ALT_POOL_DATASET
+from solaris_install.target.physical import Iscsi
 from solaris_install.target.logical import BE, Logical
 from solaris_install.transfer import create_checkpoint
 from solaris_install.transfer.info import Software, Source, Destination, \
@@ -454,6 +455,7 @@ class AutoInstall(object):
                     self.logger.info("Automated Installation succeeded.",
                         extra={self.AI_INFO_PREFIX: 'Installation',
                         self.AI_INFO_MSG: "Succeeded"})
+                    self.log_chap_message()
                 if self.options.alt_zpool_dataset is None:
                     if error_val == self.AI_EXIT_AUTO_REBOOT:
                         self.logger.info("System will be rebooted now")
@@ -537,6 +539,17 @@ class AutoInstall(object):
                                     (zpool.name, zpool.action))
                                 return False
         return True
+
+    def log_chap_message(self):
+        if platform.processor() == "sparc":
+            iscsi = self.doc.volatile.get_descendants(class_type=Iscsi)
+            if iscsi and iscsi[0].chap_name is not None:
+                self.logger.info("CHAP username and password must be set at "
+                                 "the ok prompt")
+                self.logger.info("ok set-ascii-security-key chap-user "
+                                 "<chap name>")
+                self.logger.info("ok set-ascii-security-key chap-password "
+                                 "<chap password>")
 
     def perform_autoinstall(self):
         """
@@ -654,6 +667,7 @@ class AutoInstall(object):
                     self.logger.info("Automated Installation succeeded.",
                         extra={self.AI_INFO_PREFIX: 'Installation',
                         self.AI_INFO_MSG: 'Succeeded'})
+                    self.log_chap_message()
                     # Now do actual transfer of logs
                     self.logger.debug("Transferring log to %s" %
                         (new_be.mountpoint + self.BE_LOG_DIR))
@@ -1086,7 +1100,7 @@ class AutoInstall(object):
                         # specifying that we're allowing the checkpoint to
                         # show progress to stdout.
                         arg_dict = {"zonename": self.options.zonename,
-                            "show_stdout": True}
+                                    "show_stdout": True}
                         self.engine.register_checkpoint(*ckpt_info,
                             kwargs={"arg": arg_dict})
                     else:

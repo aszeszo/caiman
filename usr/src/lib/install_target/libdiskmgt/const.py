@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """
 constants and enums from libdiskmgt.h
@@ -562,3 +562,7 @@ DRIVE_DOWN = 0
 
 # USB floppy drive di_prop string
 DI_FLOPPY = "usbif,class8.4"
+
+# dm_event_type_t enum
+DM_EV_DISK_ADD = 0
+DM_EV_DISK_DELETE = 1

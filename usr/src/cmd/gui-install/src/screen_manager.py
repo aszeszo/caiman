@@ -37,6 +37,8 @@ import warnings
 
 from solaris_install.gui_install.base_screen import NotOkToProceedError
 from solaris_install.gui_install.confirm_screen import ConfirmScreen
+from solaris_install.gui_install.disk_discovery_screen import \
+    DiskDiscoveryScreen
 from solaris_install.gui_install.disk_screen import DiskScreen
 from solaris_install.gui_install.failure_screen import FailureScreen
 from solaris_install.gui_install.finish_screen import FinishScreen
@@ -51,7 +53,8 @@ from solaris_install.gui_install.welcome_screen import WelcomeScreen
 from solaris_install.logger import INSTALL_LOGGER_NAME
 
 MAIN_GLADE = "gui-install.xml"
-DISK_GLADE = "installationdisk.xml"
+DISK_DISCOVERY_GLADE = "disk-discovery.xml"
+DISK_SELECTION_GLADE = "installationdisk.xml"
 TIMEZONE_GLADE = "date-time-zone.xml"
 USER_GLADE = "users.xml"
 SUPPORT_GLADE = "support.xml"
@@ -83,7 +86,8 @@ class ScreenManager(object):
         self.builder = gtk.Builder()
         try:
             self.builder.add_from_file(GLADE_DIR + "/" + MAIN_GLADE)
-            self.builder.add_from_file(GLADE_DIR + "/" + DISK_GLADE)
+            self.builder.add_from_file(GLADE_DIR + "/" + DISK_DISCOVERY_GLADE)
+            self.builder.add_from_file(GLADE_DIR + "/" + DISK_SELECTION_GLADE)
             self.builder.add_from_file(GLADE_DIR + "/" + TIMEZONE_GLADE)
             self.builder.add_from_file(GLADE_DIR + "/" + USER_GLADE)
             self.builder.add_from_file(GLADE_DIR + "/" + SUPPORT_GLADE)
@@ -111,6 +115,7 @@ class ScreenManager(object):
 
         # Instantiate each of the app's screens now
         self._welcome_screen = WelcomeScreen(self.builder)
+        self._disk_discovery_screen = DiskDiscoveryScreen(self.builder)
         self._disk_screen = DiskScreen(self.builder)
         self._timezone_screen = TimeZoneScreen(self.builder)
         self._user_screen = UserScreen(self.builder)
@@ -122,6 +127,7 @@ class ScreenManager(object):
             self.quitapp)
         self.list = [
             self._welcome_screen,
+            self._disk_discovery_screen,
             self._disk_screen,
             self._timezone_screen,
             self._user_screen,
@@ -182,6 +188,25 @@ class ScreenManager(object):
                 self._timezone_screen.on_minutespinner_value_changed,
             "on_ampmcombobox_changed":
                 self._timezone_screen.on_ampmcombobox_changed,
+            #
+            # Disk Discovery screen:
+            #
+            "discovery_local_check_toggled_cb":
+                self.no_op,
+            "discovery_iscsi_check_toggled_cb":
+                self._disk_discovery_screen.iscsi_disks_toggled,
+            "discovery_dhcp_radio_toggled_cb":
+                self._disk_discovery_screen.dhcp_autodiscovery_toggled,
+            "discovery_criteria_radio_toggled_cb":
+                self._disk_discovery_screen.dhcp_criteria_toggled,
+            "discovery_chap_check_toggled_cb":
+                self._disk_discovery_screen.chap_toggled,
+            "discovery_numeric_ip_field_insert_text_cb":
+                self._disk_discovery_screen.numeric_ip_field_insert,
+            "discovery_numeric_port_field_insert_text_cb":
+                self._disk_discovery_screen.numeric_port_field_insert,
+            "discovery_hex_lun_entry_insert_text_cb":
+                self._disk_discovery_screen.hex_lun_field_insert,
             #
             # Disk screen:
             #
@@ -265,6 +290,21 @@ class ScreenManager(object):
                             "partsfoundlabel", "custominfolabel", "label20",
                             "partitionsizelabel", "partitiontypelabel",
                             "partitionavaillabel", "diskwarninglabel",
+                            "discovery_local_check_label",
+                            "discovery_iscsi_check_label",
+                            "discovery_dhcp_label",
+                            "discovery_dhcp_unavail_label",
+                            "discovery_criteria_radio_label",
+                            "discovery_target_ip_label",
+                            "discovery_required_label",
+                            "discovery_lun_label",
+                            "discovery_target_name_label",
+                            "discovery_port_label",
+                            "discovery_initiator_name_label",
+                            "discovery_iscsi_boot_label",
+                            "discovery_chap_label",
+                            "discovery_chap_name_label",
+                            "discovery_chap_pass_label",
                             "support_header_line1",
                             "support_header_line3",
                             "support_email_label",
@@ -280,7 +320,8 @@ class ScreenManager(object):
                             "support_proxy_password_label",
                             "support_aggregation_radio_label",
                             "support_ocm_label",
-                            "support_asr_label"]:
+                            "support_asr_label",
+                            ]:
             # get a handle to the label
             needs_translation = self.builder.get_object(object_name)
             # replace the current label text with the translated text

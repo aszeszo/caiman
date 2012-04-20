@@ -619,7 +619,7 @@ class TargetController(object):
             # label was flipped from EFI to VTOC
             for discovered_disk in self.discovered_disks:
                 if disk.ctd == discovered_disk.ctd:
-                    if discovered_disk.label == "GPT":
+                    if discovered_disk.label != "VTOC": 
                         # Bail if there are children on the disk. These should
                         # have been removed explicitly before attempting to
                         # flip the label on the disk. The Disk object enforces
@@ -897,7 +897,7 @@ class TargetController(object):
 
         LOGGER.debug("Installation size: %s", installation_size)
         LOGGER.debug("Available size: %s", available_size)
-        LOGGER.debug("Memory: %sMB. Swap Required: %s",
+        LOGGER.debug("Memory: %s. Swap Required: %s",
             self._mem_size, swap_required)
 
         if swap_required:
@@ -1443,7 +1443,7 @@ class TargetController(object):
         if available_space < size:
             size = available_space
 
-        return size
+        return int(size)
 
     def _calc_dump_size(self, available_space):
         ''' Calculates size of dump based on amount of physical memory.

@@ -24,6 +24,7 @@
 
 FILES= 	confirmation.xml \
 	date-time-zone.xml \
+	disk-discovery.xml \
 	failure.xml \
 	fdisk-panel.xml \
 	gpt-panel.xml \

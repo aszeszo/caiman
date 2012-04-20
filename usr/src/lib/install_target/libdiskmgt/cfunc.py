@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 """
 C functions from undocumented /usr/lib/libdiskmgt.so
@@ -34,6 +34,7 @@ _LIBDISKMGT = C.CDLL("/usr/lib/libdiskmgt.so", use_errno=True)
 
 # function mapping.  each line is:  (function name, return type, args)
 _funcs = [
+    ("dm_cache_update", None, (C.c_int, C.c_char_p)),
     ("dm_free_descriptor", None, (dm_desc,)),
     ("dm_free_descriptors", None, (C.POINTER(dm_desc),)),
     ("dm_free_name", None, (dm_cstring,)),

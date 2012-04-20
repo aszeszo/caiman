@@ -59,6 +59,7 @@ from solaris_install.target.size import Size
 CROINFO = "/usr/sbin/croinfo"
 DEVFSADM = "/usr/sbin/devfsadm"
 DHCPINFO = "/sbin/dhcpinfo"
+DLADM = "/usr/sbin/dladm"
 EEPROM = "/usr/sbin/eeprom"
 FSTYP = "/usr/sbin/fstyp"
 ISCSIADM = "/usr/sbin/iscsiadm"
@@ -75,8 +76,28 @@ ZVOL_RPATH = "/dev/zvol/rdsk"
 DISK_SEARCH_NAME = "disk"
 ZPOOL_SEARCH_NAME = "zpool"
 
-# regex for matching c#t#d# OR c#d# strings
-DISK_RE = "c\d+(?:t\d+)?d\d+"
+# regex for matching c#t#d# OR c#d# strings.  Use \w rather than \d for the
+# "t" to allow matching of WWNs
+DISK_RE = "c\d+(?:t\w+)?d\d+"
+
+
+def retrieve_drive(name):
+    """ function to return a drive object based on a specific name
+    """
+
+    try:
+        # check to see if the search name is either c#t#d# or c#d#
+        if re.match(DISK_RE, name, re.I):
+            dmd = diskmgt.descriptor_from_key(const.ALIAS, name)
+            alias = diskmgt.DMAlias(dmd.value)
+            drive = alias.drive
+        else:
+            dmd = diskmgt.descriptor_from_key(const.DRIVE, name)
+            drive = diskmgt.DMDrive(dmd.value)
+    except (KeyError, OSError) as err:
+        raise RuntimeError("Unable to look up %s - %s" % (name, err))
+
+    return drive
 
 
 class TargetDiscovery(Checkpoint):
@@ -219,6 +240,17 @@ class TargetDiscovery(Checkpoint):
         new_disk.disk_prop = DiskProp()
         if drive.controllers:
             new_disk.disk_prop.dev_type = drive.controllers[0].attributes.type
+
+            # check for any Iscsi object in the DOC.  If found, change the
+            # dev_type from 'scsi' to 'iSCSI' to allow the installers finer
+            # granularity when choosing these types of LUNs
+            iscsi_check = self.doc.get_descendants(class_type=Iscsi)
+            if iscsi_check:
+                cmd = [ISCSIADM, "list", "target", "-S"]
+                p = run(cmd)
+                if new_disk.ctd in p.stdout:
+                    new_disk.disk_prop.dev_type = "iSCSI"
+
         new_disk.disk_prop.dev_vendor = drive_attributes.vendor_id
 
         # set the alias and receptacle for disks, if possible
@@ -744,11 +776,13 @@ class TargetDiscovery(Checkpoint):
 
         # now walk all the drives in the system to make sure we pick up any
         # disks which have no controller (OVM Xen disks)
+        self.logger.debug("Adding drives without controllers to the DOC")
         for drive in diskmgt.descriptors_by_type(const.DRIVE):
-            # skip USB floppy controllers
-            if drive.controllers and drive.controllers[0].floppy_controller:
+            # skip drives that have controllers.  They would have already been
+            # discovered above.
+            if drive.controllers:
                 continue
-                
+
             # skip any drive whose opath starts with "/dev/zvol/rdsk"
             if drive.attributes.opath.startswith(ZVOL_RPATH):
                 continue
@@ -770,7 +804,6 @@ class TargetDiscovery(Checkpoint):
         """ set up the iSCSI initiator appropriately (if specified)
         such that any physical/logical iSCSI devices can be discovered.
         """
-        SVC = "svc:/network/iscsi/initiator:default"
 
         # pull out all of the iscsi entries from the DOC
         iscsi_list = self.doc.get_descendants(class_type=Iscsi)
@@ -779,130 +812,21 @@ class TargetDiscovery(Checkpoint):
         if not iscsi_list:
             return
 
-        # verify iscsiadm is available
-        if not os.path.exists(ISCSIADM):
-            raise RuntimeError("iSCSI discovery enabled but %s does " \
-                "not exist" % ISCSIADM)
-
-        # ensure the iscsi/initiator service is online
-        state_cmd = [SVCS, "-H", "-o", "STATE", SVC]
-        p = run(state_cmd, check_result=Popen.ANY)
-        if p.returncode != 0:
-            # iscsi/initiator is not installed
-            raise RuntimeError("%s not found - is it installed?" % SVC)
-
-        # if the service is offline, enable it
-        state = p.stdout.strip()
-        if state == "offline":
-            cmd = [SVCADM, "enable", "-s", SVC]
-            run(cmd)
-
-            # verify the service is now online
-            p = run(state_cmd, check_result=Popen.ANY)
-            state = p.stdout.strip()
-
-            if state != "online":
-                raise RuntimeError("Unable to start %s" % SVC)
-
-        elif state != "online":
-            # the service is in some other kind of state, so raise an error
-            raise RuntimeError("%s requires manual servicing" % SVC)
-
+        # check each entry in the iscsi_list.  If any of them do not have a ctd
+        # value already, set up the mapping to the LUN.
         for iscsi in iscsi_list:
-            # check iscsi.source for dhcp.  If set, query dhcpinfo for the
-            # iSCSI boot parameters and set the rest of the Iscsi object
-            # attributes
-            if iscsi.source == "dhcp":
-                p = run([DHCPINFO, "Rootpath"])
+            if not iscsi.ctd_list:
+                # attempt to connect to the target
+                try:
+                    iscsi.setup_iscsi()
+                except (CalledProcessError, RuntimeError):
+                    # remove the iSCSI configuration since it's invalid
+                    iscsi.teardown()
+                    raise
 
-                # RFC 4173 defines the format of iSCSI boot parameters in DHCP
-                # Rootpath as follows:
-                # Rootpath=iscsi:<IP>:<protocol>:<port>:<LUN>:<target>
-                iscsi_str = p.stdout.partition('=')[2]
-                params = iscsi_str.split(':')
-                iscsi.target_ip = params[1]
-                iscsi.target_port = params[3]
-                iscsi.target_lun = params[4]
-                iscsi.target_name = params[5]
-
-            if iscsi.target_name is not None:
-                # set up static discovery of targets
-                discovery_str = iscsi.target_name + "," + iscsi.target_ip
-                if iscsi.target_port is not None:
-                    discovery_str += ":" + iscsi.target_port
-                cmd = [ISCSIADM, "add", "static-config", discovery_str]
-                run(cmd)
-
-                cmd = [ISCSIADM, "modify", "discovery", "--static", "enable"]
-                run(cmd)
-
-                iscsi_list_cmd = [ISCSIADM, "list", "target", "-S",
-                                  discovery_str]
-            else:
-                # set up discovery of sendtargets targets
-                discovery_str = iscsi.target_ip
-                if iscsi.target_port is not None:
-                    discovery_str += ":" + iscsi.target_port
-                cmd = [ISCSIADM, "add", "discovery-address", discovery_str]
-                run(cmd)
-
-                cmd = [ISCSIADM, "modify", "discovery", "--sendtargets",
-                       "enable"]
-                run(cmd)
-
-                iscsi_list_cmd = [ISCSIADM, "list", "target", "-S"]
-
-            # run devfsadm and wait for the iscsi devices to configure
-            run([DEVFSADM, "-i", "iscsi"])
-
-            # list all the targets found
-            iscsi_list = run(iscsi_list_cmd)
-
-            # the output will look like:
-            #
-            # Target: <iqn string>
-            #        Alias: -
-            #        TPGT: 1
-            #        ISID: 4000002a0000
-            #        Connections: 1
-            #        LUN: 1
-            #             Vendor:  SUN
-            #             Product: COMSTAR
-            #             OS Device Name: <ctd>
-            #        LUN: 0
-            #             Vendor:  SUN
-            #             Product: COMSTAR
-            #             OS Device Name: <ctd>
-            #
-            # The LUN number and ctd strings are the only values we're
-            # interested in.
-            iscsi_dict = dict()
-
-            # walk the output from iscsiadm list target to create a mapping
-            # between ctd and LUN number.
-            for line in iscsi_list.stdout.splitlines():
-                line = line.lstrip()
-                if line.startswith("LUN:"):
-                    lun_num = line.split(": ")[1]
-                if line.startswith("OS Device Name:") and lun_num is not None:
-                    iscsi_ctd = line.rpartition("/")[2]
-                    iscsi_dict[iscsi_ctd] = lun_num
-
-                    # reset the lun_num for the next lun
-                    lun_num = None
-
-            # try to map iscsi_lun back to iscsi.target_lun
-            for iscsi_ctd, iscsi_lun in iscsi_dict.items():
-                if iscsi.target_lun is not None:
-                    if iscsi.target_lun == iscsi_lun:
-                        iscsi.parent.ctd = iscsi_ctd.partition("s2")[0]
-                        break
-                else:
-                    iscsi.parent.ctd = iscsi_ctd.partition("s2")[0]
-                    break
-            else:
-                raise RuntimeError("target_lun: %s not found on target"
-                                   % iscsi.target_lun)
+            # map the iSCSI object back to its parent Disk object for AI.
+            if isinstance(iscsi.parent, Disk):
+                iscsi.parent.ctd = iscsi.ctd_list[0]
 
     def setup_croinfo(self):
         """ set up a DataObjectDict representing the output from
@@ -938,6 +862,18 @@ class TargetDiscovery(Checkpoint):
         """
         self.dry_run = dry_run
 
+        # look to see if the persistent tree already has a DISCOVERED Target
+        # node.
+        discovered = \
+            self.doc.persistent.get_descendants(name=Target.DISCOVERED)
+
+        if discovered:
+            # target discovery has already run once.  Before continuing to run
+            # it again, force libdiskmgt to rebuild its cache.
+            self.logger.debug("Found existing Target.DISCOVERED object.  "
+                              "Forcing libdiskmgt to refresh its cache.")
+            diskmgt.cache_update()
+
         # setup croinfo mappings
         self.setup_croinfo()
 
@@ -947,25 +883,17 @@ class TargetDiscovery(Checkpoint):
 
         # check to see if the user specified a search_type
         if self.search_type == DISK_SEARCH_NAME:
-            try:
-                # check to see if the search name is either c#t#d# or c#d#
-                if re.match(DISK_RE, self.search_name, re.I):
-                    dmd = diskmgt.descriptor_from_key(const.ALIAS,
-                                                      self.search_name)
-                    alias = diskmgt.DMAlias(dmd.value)
-                    drive = alias.drive
-                else:
-                    dmd = diskmgt.descriptor_from_key(const.DRIVE,
-                                                      self.search_name)
-                    drive = diskmgt.DMDrive(dmd.value)
-            except OSError as err:
-                raise RuntimeError("Unable to look up %s - %s" % \
-                    (self.search_name, err))
-
-            # insert the drive information into the tree
-            new_disk = self.discover_disk(drive)
-            if new_disk is not None:
-                self.root.insert_children(new_disk)
+            if isinstance(self.search_name, list):
+                for name in self.search_name:
+                    drive = retrieve_drive(name)
+                    new_disk = self.discover_disk(drive)
+                    if new_disk is not None:
+                        self.root.insert_children(new_disk)
+            else:
+                drive = retrieve_drive(self.search_name)
+                new_disk = self.discover_disk(drive)
+                if new_disk is not None:
+                    self.root.insert_children(new_disk)
 
         elif self.search_type == ZPOOL_SEARCH_NAME:
             self.discover_entire_system(add_physical=False)
@@ -984,8 +912,15 @@ class TargetDiscovery(Checkpoint):
             # Add all Boot Environments
             self.discover_BEs()
 
-        # Add the root node to the DOC
-        self.doc.persistent.insert_children(self.root)
+        # If this is the first run of discovery, simply insert the entire root
+        if not discovered:
+            self.doc.persistent.insert_children(self.root)
+        else:
+            # take the first (and only) entry in the list and add each new
+            # child object to the existing discovered tree
+            discovered = discovered[0]
+            for child in self.root.children:
+                discovered.insert_children(child)
 
     def is_pcfs_formatted(self, ctdn):
         """ is_pcfs_formatted() Return a Boolean value of True if the GPT

@@ -57,6 +57,12 @@ file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/__init__.pyc \
     mode=0444
 file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/discovery_selection.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/discovery_selection.pyc \
+    mode=0444
+file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/disk_selection.py \
     mode=0444
 file \
@@ -91,6 +97,12 @@ file \
     mode=0444
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/install_status.pyc \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/iscsi.py \
+    mode=0444
+file \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/iscsi.pyc \
     mode=0444
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/log_viewer.py \
@@ -141,7 +153,9 @@ file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/text_install/welcome.pyc \
     mode=0444
 file path=usr/sbin/text-mode-menu mode=0555
+file path=usr/share/text-install/help/C/discovery_selection.txt group=sys
 file path=usr/share/text-install/help/C/disks.txt group=sys
+file path=usr/share/text-install/help/C/iscsi.txt group=sys
 file path=usr/share/text-install/help/C/sparc_solaris_slices.txt group=sys
 file path=usr/share/text-install/help/C/sparc_solaris_slices_select.txt \
     group=sys

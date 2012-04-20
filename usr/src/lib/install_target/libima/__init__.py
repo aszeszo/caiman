@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -18,34 +19,10 @@
 #
 # CDDL HEADER END
 #
+
 #
-# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
-FILES= 	city_mouseover_l.png \
-	city_mouseover_s.png \
-	city_normal_l.png \
-	city_normal_s.png \
-	city_selected_l.png \
-	city_selected_s.png \
-	generic_disk.png \
-	gnome-spinner.gif \
-	hand.png \
-	iscsi_disk.png \
-	magnifier.png \
-	solaris_logo.png \
-	worldmap.png
-
-ROOTFILES=      $(FILES:%=$(ROOTGUIINST)/%)
-
-include $(SRC)/cmd/Makefile.cmd
-
-FILEMODE= 444
-
-all: $(FILES) $(ROOTFILES)
-
-install: all 
-
-clobber clean:
-
-include $(SRC)/cmd/Makefile.targ
+""" Python package with ctypes wrapper for libima
+"""

@@ -1,0 +1,45 @@
+iSCSI
+
+Important: To install to an iSCSI disk you must ensure that the disk in question can act as a boot disk, and that your system has the necessary support for iSCSI booting.
+
+If you select the 'iSCSI' category, you may need to provide additional information as follows.
+
+If your system supports autodiscovery of iSCSI disks via DHCP, those values will be pre-populated in the proper fields.  To further refine the values, navigate to the field you wish to change.
+
+NOTE: It is a function of the system's DHCP client to support
+this feature. If your system does not support this feature, no values will be pre-populated.
+
+NOTE: For further information about the iSCSI terminology,
+see the iscsiadm(1M) man page.
+
+- Target IP
+  The IP address of the iSCSI target.  Four numbers in the range 0-255 must be entered.  The system at this IP address must be online and accessible from this system.
+  This field is mandatory.
+
+- Target LUN
+  The Logical Unit Number of the iSCSI device located at the IP address above.  The LUN is often a hexadecimal value such as "0", "1", or "a".
+  This field is optional.
+
+- Target Name
+  The name of the iSCSI target in iSCSI Qualified Name (IQN) format.
+  This field is optional.
+
+- Target Port
+  The port number used in conjunction with the above IP address for discovering the iSCSI device.  The default value of "3260" is the port typically used for iSCSI.
+  This field is optional.
+
+- Initiator Name
+  The initiator node name to be set for the iSCSI discovery session.
+  For iSCSI booting, this field is disabled as the initiator node name cannot be modified.
+  This field is optional.
+
+- CHAP Name
+  The CHAP name to be used for authentication.
+  (Challenge-Handshake Authentication Protocol)
+  This field is optional.
+
+- CHAP Password
+  The CHAP secret value for authentication.  If entered, this value must be between 12 and 16 characters long.
+  This field is optional.
+
+If you choose the 'iSCSI' option, there may be a delay when you select 'F2-Continue' while the details entered are validated.  If the iSCSI Target and/or LUN cannot be discovered, an error is displayed.  You cannot proceed until the problem is resolved, either by entering valid criteria or by returning to the discovery selection screen and choosing the 'Local Disks' option

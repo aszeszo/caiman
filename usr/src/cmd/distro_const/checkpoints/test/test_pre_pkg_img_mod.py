@@ -39,7 +39,7 @@ import unittest
 import testlib
 
 from osol_install.install_utils import dir_size
-from solaris_install import DC_LABEL, DC_PERS_LABEL, run, run_silent
+from solaris_install import DC_LABEL, run, run_silent
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.distro_const.checkpoints.pre_pkg_img_mod \
     import PrePkgImgMod, AIPrePkgImgMod, LiveCDPrePkgImgMod
@@ -141,6 +141,42 @@ class TestEtcSystemModification(unittest.TestCase):
             cmd = ["/usr/bin/grep", entry, os.path.join(self.ppim.pkg_img_path,
                                                         "etc/system")]
             self.assertEqual(run_silent(cmd).wait(), 0)
+
+
+class TestDhcpagentModification(unittest.TestCase):
+    """ test case for testing the modification of /etc/default/dhcpagent
+    """
+
+    def setUp(self):
+        # create a dummy filesystem with some files created in the proper
+        # location
+        engine_test_utils.get_new_engine_instance()
+        self.ppim = PrePkgImgMod("Test PPIM")
+        self.pi_filelist = ["/etc/default/dhcpagent"]
+        self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
+
+    def tearDown(self):
+        shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
+        engine_test_utils.reset_engine()
+
+    def test_modify_dhcpagent(self):
+        # write a simplified line to the dhcpagent file
+        with open(os.path.join(self.ppim.pkg_img_path,
+                               "etc/default/dhcpagent"),
+                  "w") as fh:
+            fh.write("PARAM_REQUEST_LIST=1,3,6,12,15,28,43\n")
+
+        self.ppim.modify_dhcpagent()
+
+        # verify the save directory entry exists
+        self.assert_(os.path.isdir(os.path.join(self.ppim.pkg_img_path,
+                                                "save/etc/default")))
+
+        # verify op code 17 is in the modified dhcpagent file
+        cmd = ["/usr/bin/egrep", "^PARAM_REQUEST_LIST",
+               os.path.join(self.ppim.pkg_img_path, "etc/default/dhcpagent")]
+        p = run(cmd)
+        self.assertTrue("17" in p.stdout)
 
 
 class TestCalculateSize(unittest.TestCase):

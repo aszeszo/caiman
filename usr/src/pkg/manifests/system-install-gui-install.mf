@@ -52,6 +52,8 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/base_scr
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/base_screen.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/confirm_screen.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/confirm_screen.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_discovery_screen.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_discovery_screen.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_panel.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_panel.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/gui_install/disk_screen.py
@@ -101,8 +103,10 @@ file path=usr/share/gui-install/city_selected_l.png group=sys
 file path=usr/share/gui-install/city_selected_s.png group=sys
 file path=usr/share/gui-install/confirmation.xml group=sys
 file path=usr/share/gui-install/date-time-zone.xml group=sys
+file path=usr/share/gui-install/disk-discovery.xml group=sys
 file path=usr/share/gui-install/failure.xml group=sys
 file path=usr/share/gui-install/fdisk-panel.xml group=sys
+file path=usr/share/gui-install/generic_disk.png group=sys
 file path=usr/share/gui-install/gnome-spinner.gif group=sys
 file path=usr/share/gui-install/gpt-panel.xml group=sys
 file path=usr/share/gui-install/gui-install.xml group=sys
@@ -110,6 +114,8 @@ file path=usr/share/gui-install/hand.png group=sys
 dir  path=usr/share/gui-install/help group=sys
 dir  path=usr/share/gui-install/help/C group=sys
 file path=usr/share/gui-install/help/C/FINISH_PANEL.txt group=sys
+file path=usr/share/gui-install/help/C/INSTALL_DISK_DISCOVERY_PANEL.txt \
+    group=sys
 file path=usr/share/gui-install/help/C/INSTALL_DISK_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_FAILURE_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_LANGUAGE_PANEL.txt group=sys
@@ -266,6 +272,7 @@ file path=usr/share/gui-install/installmessages/zh_TW.UTF-8/install-05.png \
     group=sys
 file path=usr/share/gui-install/installmessages/zh_TW.UTF-8/install-06.png \
     group=sys
+file path=usr/share/gui-install/iscsi_disk.png group=sys
 file path=usr/share/gui-install/magnifier.png group=sys
 file path=usr/share/gui-install/solaris_logo.png group=sys
 file path=usr/share/gui-install/support.xml group=sys

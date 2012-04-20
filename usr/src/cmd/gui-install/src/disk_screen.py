@@ -31,11 +31,11 @@ pygtk.require('2.0')
 
 import locale
 import logging
+import os
 
 import glib
 import gobject
 import gtk
-import numpy
 
 import osol_install.errsvc as errsvc
 import osol_install.liberrsvc as liberrsvc
@@ -46,15 +46,16 @@ from solaris_install.gui_install.base_screen import BaseScreen, \
 from solaris_install.gui_install.fdisk_panel import FdiskPanel
 from solaris_install.gui_install.gpt_panel import GPTPanel
 from solaris_install.gui_install.gui_install_common import \
-    empty_container, modal_dialog, IMAGE_DIR, COLOR_WHITE, \
-    DEFAULT_LOG_LOCATION, GLADE_ERROR_MSG, N_
+    empty_container, get_td_results_state, is_discovery_complete, \
+    modal_dialog, set_td_results_state, IMAGE_DIR, COLOR_WHITE, \
+    DEFAULT_LOG_LOCATION, GLADE_ERROR_MSG, ISCSI_LABEL, N_
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.target import Target
 from solaris_install.target.controller import TargetController, \
     BadDiskError, BadDiskBlockSizeError, SubSizeDiskError, DEFAULT_ZPOOL_NAME
 from solaris_install.target.logical import Zpool, Zvol, Filesystem
-from solaris_install.target.physical import Disk, Slice
+from solaris_install.target.physical import Disk, Iscsi, Slice
 from solaris_install.target.shadow.physical import ShadowPhysical
 from solaris_install.target.size import Size
 
@@ -103,7 +104,7 @@ class DiskScreen(BaseScreen):
         super(DiskScreen, self).__init__(builder)
         self.name = "Disk Screen"
 
-        self._td_complete = False
+        self._monitor_timeout_id = None
         self._td_disks = list()
         self._selected_disk = None
         self._target_controller = None
@@ -162,17 +163,21 @@ class DiskScreen(BaseScreen):
         self._toplevel = self.set_main_window_content("diskselectiontoplevel")
 
         # Screen-specific configuration
-        self.activate_stage_label("diskstagelabel")
+        self.activate_stage_label("diskselectionstagelabel")
 
         # Initially, hide the Partitioning VBox and Disk selection scrollbar
         self._partitioningvbox.hide()
         self._diskselectionhscrollbar.hide()
 
-        if self._td_complete:
+        if is_discovery_complete():
             self._show_screen_for_td_complete()
         else:
             self._show_screen_for_td_not_complete()
-            glib.timeout_add(200, self._td_completion_monitor)
+            # Only set one timeout monitor at a time, even if user enters the
+            # screen multiple times before TD completes
+            if self._monitor_timeout_id is None:
+                self._monitor_timeout_id = \
+                    glib.timeout_add(200, self._td_completion_monitor)
 
         return False
 
@@ -423,7 +428,7 @@ class DiskScreen(BaseScreen):
 
         # Save the TargetController in the DOC (used to retrieve the
         # minimum_target_size and call setup_vfstab_for_swap())
-        profile = doc.persistent.get_first_child(
+        profile = doc.volatile.get_first_child(
             name="GUI Install",
             class_type=InstallProfile)
         if profile is not None:
@@ -568,86 +573,122 @@ class DiskScreen(BaseScreen):
             scrollbar.show()
 
     #--------------------------------------------------------------------------
-    # Callback methods
+    # Private methods
 
-    def td_callback(self, status, failed_cps):
+    def _process_td_results(self):
         '''
-            This is the callback registered with the InstallEngine to
-            be called when TargetDiscovery completes execution.
-
-            If TD completes successfully, the attributes
+            If TD completed successfully, the attributes
             self._td_disks and self._target_controller will be set.
 
             In any event self._td_complete will be set to True.
         '''
 
-        # Ensure that the checkpoint did not record any errors
-        if status != InstallEngine.EXEC_SUCCESS:
-            # Log the errors, but then attempt to proceed anyway
-            LOGGER.error("ERROR: TargetDiscovery FAILED")
+        self._td_disks = list()
+        self._target_controller = None
+        self._selected_disk = None
 
-            for failed_cp in failed_cps:
-                err_data_list = errsvc.get_errors_by_mod_id(failed_cp)
-                if len(err_data_list):
-                    err_data = err_data_list[0]
-                    err = err_data.error_data[liberrsvc.ES_DATA_EXCEPTION]
-                else:
-                    err = "Unknown error"
-
-                LOGGER.error("Checkpoint [%s] logged error: [%s]" % \
-                    (failed_cp, err))
-
-        # Fetch and save the Disk objects from "discovered targets" in DOC
+        # Fetch the Disk objects from "discovered targets" in DOC
         engine = InstallEngine.get_instance()
         doc = engine.data_object_cache
         discovered_root = None
         try:
             discovered_root = doc.get_descendants(name=Target.DISCOVERED,
-                class_type=Target,
-                max_depth=2,
-                max_count=1,
+                class_type=Target, max_depth=2, max_count=1,
                 not_found_is_err=True)[0]
         except ObjectNotFoundError, err:
             LOGGER.error("TD didn't create 'discovered' Target: [%s]" % \
                 str(err))
+            return
+        LOGGER.info("TD XML:\n%s" % discovered_root.get_xml_tree_str())
+        try:
+            self._td_disks = discovered_root.get_children(class_type=Disk,
+                not_found_is_err=True)
+        except ObjectNotFoundError, err:
+            LOGGER.error("No Disks in 'discovered' Target: [%s]" % \
+                str(err))
+            LOGGER.error("TD XML:\n%s" % \
+                discovered_root.get_xml_tree_str())
+            return
 
-        if discovered_root is not None:
-            LOGGER.info("TD XML:\n%s" % discovered_root.get_xml_tree_str())
+        # Only retain those disks that match the user's selected disk types
+        profile = doc.volatile.get_first_child(name="GUI Install",
+                                               class_type=InstallProfile)
+        if profile is None:
+            raise RuntimeError("INTERNAL ERROR: Unable to retrieve "
+                "InstallProfile from DataObjectCache")
+        LOGGER.debug("Including local disks? : %s", profile.show_local)
+        LOGGER.debug("Including iSCSI disks? : %s", profile.show_iscsi)
+        matching_disks = list()
+        for disk in self._td_disks:
+            if profile.show_iscsi and \
+                disk.disk_prop is not None and \
+                disk.disk_prop.dev_type == "iSCSI":
+                matching_disks.append(disk)
+                LOGGER.debug("Including (iSCSI) disk: %s", disk.ctd)
+                continue
+            if profile.show_local and \
+                (disk.disk_prop is None or \
+                disk.disk_prop.dev_type != "iSCSI"):
+                matching_disks.append(disk)
+                LOGGER.debug("Including (non-iSCSI) disk: %s", disk.ctd)
+                continue
+            LOGGER.debug("Excluding disk: %s", disk.ctd)
+        self._td_disks = matching_disks
+        if not self._td_disks:
+            LOGGER.error("No discovered disks match user criteria")
+            LOGGER.error("Criteria: local disks? : %s", profile.show_local)
+            LOGGER.error("Criteria: iSCSI disks? : %s", profile.show_iscsi)
+            return
 
-            try:
-                self._td_disks = discovered_root.get_children(class_type=Disk,
-                    not_found_is_err=True)
-            except ObjectNotFoundError, err:
-                LOGGER.error("No Disks in 'discovered' Target: [%s]" % \
-                    str(err))
-                LOGGER.error("TD XML:\n%s" % \
-                    discovered_root.get_xml_tree_str())
+        # Set up the TargetController
+        LOGGER.info("TD found %d disks matching criteria", len(self._td_disks))
+        self._target_controller = TargetController(doc)
 
-        # Set up the TargetController and let it select an initial disk
-        if self._td_disks:
-            LOGGER.info("TD found %d disks" % len(self._td_disks))
-            self._target_controller = TargetController(doc)
+        # First, let TargetController choose an initially-selected disk,
+        # as per its rules.
+        try:
+            # Note: we are assuming that TargetController.initialize()
+            # selects a disk not in whole_disk mode
+            selected_disks = self._target_controller.initialize()
+        except BadDiskError, err:
+            LOGGER.error("TargetController failed to select an "
+                "initial disk: [%s]", err)
+            return
+        self._selected_disk = selected_disks[0]
+        LOGGER.info("Disk [%s] selected" % self._selected_disk.ctd)
 
-            try:
-                # Note: we are assuming that TargetController.initialize()
-                # selects a disk not in whole_disk mode
-                selected_disks = self._target_controller.initialize()
-            except BadDiskError, err:
-                LOGGER.error("ERROR - TargetController failed to select an " \
-                    "initial disk: [%s]" % str(err))
+        # If TargetController's choice for initial disk does not match
+        # users choices (iSCSI vs local), then select the first remaining
+        # suitable disk
+        for td_disk in self._td_disks:
+            if td_disk.name_matches(self._selected_disk):
+                # TC's initial disk is in our filtered list - carry on.
+                break
+        else:
+            LOGGER.debug("TargetController's initial disk does not match "
+                         "criteria, so picking a new one")
+            for td_disk in self._td_disks:
+                try:
+                    selected_disks = self._target_controller.select_disk(
+                        td_disk, use_whole_disk=self._wholediskmode)
+                except SubSizeDiskError as err:
+                    LOGGER.debug("TC says disk is too small: [%s] [%s]",
+                                 td_disk, err)
+                    continue
+                except BadDiskError, err:
+                    LOGGER.debug("TC says disk is not suitable: [%s] [%s]",
+                                 td_disk, err)
+                    continue
 
-            if selected_disks:
-                LOGGER.info("TD FINISHED SUCCESSFULLY!")
-
-                LOGGER.info("Disk [%s] selected" % selected_disks[0].ctd)
+                self._selected_disk = selected_disks[0]
+                LOGGER.info("Disk [%s] selected" % self._selected_disk.ctd)
+                break
             else:
-                LOGGER.error("TD DID NOT FINISH SUCCESSFULLY!")
+                LOGGER.error("NONE OF THE REAMINING DISKS ARE SUITABLE")
+                self._selected_disk = None
+                return
 
-        # _td_completion_monitor() will notice this and display the controls
-        self._td_complete = True
-
-    #--------------------------------------------------------------------------
-    # Private methods
+        LOGGER.info("TD AND TC FINISHED SUCCESSFULLY!")
 
     def _set_screen_titles(self):
         # NB This messing about is because we want to re-use the existing
@@ -669,11 +710,12 @@ class DiskScreen(BaseScreen):
                     units=Size.gb_units))
             size_str = size_str % (rec_size, min_size)
 
-        self.set_titles(_("Disk"),
+        self.set_titles(_("Disk Selection"),
             _("Where should Oracle Solaris be installed?"),
             size_str)
 
     def _show_screen_for_td_not_complete(self):
+        self._diskstatuslabel.set_markup('')
         self._set_screen_titles()
 
         # Only create the widgets which don't come from Glade once
@@ -692,41 +734,30 @@ class DiskScreen(BaseScreen):
         self.set_back_next(back_sensitive=True, next_sensitive=False)
 
     def _show_screen_for_td_complete(self):
-        self._set_screen_titles()
+        if not get_td_results_state():
+            self._process_td_results()
+            set_td_results_state(True)
 
-        # Only create the widgets which don't come from Glade once
-        if self._disk_buttons_hbuttonbox is None:
-            self._disk_buttons_hbuttonbox = \
-                self._create_disk_buttons_hbuttonbox()
-            self._create_disk_buttons()
+        self._diskstatuslabel.set_markup('')
 
-        # Match the currently selected disk to one of the disk
-        # radio buttons and make that button active
-        active_button = None
-        selected_disks = self._target_controller.desired_disks
-        if selected_disks:
-            for button in self._disk_buttons:
-                td_disk = gobject.GObject.get_data(button, "Disk")
-                if td_disk.name_matches(selected_disks[0]):
-                    button.set_active(True)
-                    active_button = button
-                    break
-
-        # If an error occurred in TD or TC, then activate the
-        # appropriate widgets
-
+        # If an error occurred in TD or TC, then inform the user
         # ERROR #1 - TD didn't find any Disks
-        if not self._td_disks:
+        # ERROR #2 - TC couldn't select an initial Disk
+        error_occurred = False
+        if not self._td_disks or self._selected_disk is None:
+            error_occurred = True
             markup = '<span font_desc="Bold">%s</span>' % \
-                _("No disks were found.")
+                _("No suitable disks were found.")
             self._diskstatuslabel.set_markup(markup)
             self._diskerrorimage.show()
-            self._diskstatuslabel.show()
 
-        # ERROR #2 - TC couldn't select an initial Disk
-        if not selected_disks:
-            modal_dialog(_("Internal Error"), "%s\n\n%s" % \
-                (_("See log file for details."), DEFAULT_LOG_LOCATION))
+        self._set_screen_titles()
+
+        # Recreate the disk buttons each time, as each execution of
+        # TD can find different disks
+        self._disk_buttons_hbuttonbox = \
+            self._create_disk_buttons_hbuttonbox()
+        self._create_disk_buttons()
 
         empty_container(self._disksviewport)
         self._disksviewport.add(self._disk_buttons_hbuttonbox)
@@ -741,24 +772,40 @@ class DiskScreen(BaseScreen):
             self._diskselectionhscrollbar)
         self._disksviewport.set_hadjustment(viewportadjustment)
 
-        # Set the whoe disk/partition disk radio button to its initial setting
-        if self._wholediskmode:
-            self._wholediskradio.set_active(True)
-        else:
-            self._partitiondiskradio.set_active(True)
+        if not error_occurred:
+            # Match the currently selected disk to one of the disk
+            # radio buttons and make that button active
+            active_button = None
+            for button in self._disk_buttons:
+                td_disk = gobject.GObject.get_data(button, "Disk")
+                if td_disk.name_matches(self._selected_disk):
+                    button.set_active(True)
+                    active_button = button
+                    break
+            else:
+                # _process_td_results should have prevented this
+                raise RuntimeError("INTERNAL ERROR: selected disk does not"
+                                   " match any disk icon")
 
-        # Show the disk partitioning radio buttons and associated widgets
-        self._diskradioalignment.show_all()
+            # Set whole disk/partition disk radio button to initial setting
+            if self._wholediskmode:
+                self._wholediskradio.set_active(True)
+            else:
+                self._partitiondiskradio.set_active(True)
 
-        self._display_selected_disk_details()
+            # Show the disk partitioning radio buttons and associated widgets
+            self._diskradioalignment.show_all()
 
-        if active_button:
-            active_button.grab_focus()
+            self._display_selected_disk_details()
 
-        self._partitioningvbox.show()
+            if active_button:
+                active_button.grab_focus()
+
+            self._partitioningvbox.show()
+
         self._toplevel.show()
 
-        if not self._td_disks or not selected_disks:
+        if error_occurred:
             self.set_back_next(back_sensitive=True, next_sensitive=False)
         else:
             self.set_back_next(back_sensitive=True, next_sensitive=True)
@@ -768,10 +815,11 @@ class DiskScreen(BaseScreen):
             Monitors the completion status of target discovery and shows
             the disk & partitioning controls if this screen is mapped.
         '''
-        if self._td_complete:
+        if is_discovery_complete():
             if (self._toplevel is not None) and \
                 (self._toplevel.flags() & gtk.MAPPED):
                 self._show_screen_for_td_complete()
+            self._monitor_timeout_id = None
             return False
         else:
             return True
@@ -821,27 +869,16 @@ class DiskScreen(BaseScreen):
         '''
            Creates a disk button icon appropriate for the specificed disk.
         '''
-        disk_iconinfo = self._icon_theme.lookup_icon("gnome-dev-harddisk",
-            48, 0)
-        if disk_iconinfo is None:
-            # If we cannot get the icon info from the theme, then
-            # just fall back to making up a blank image
-            markup = '<span font_desc="Bold">%s</span>' % _("Unable "
-                "to display correct 'disk' graphics, but all other "
-                "information is available.")
-            self._diskstatuslabel.set_markup(markup)
-            self._diskerrorimage.show()
-            self._diskstatuslabel.show()
-            LOGGER.warn("WARNING - couldn't get harddisk icon from theme - "
-                 "using blank icon.")
-            disk_width = 48
-            disk_height = 48
-            pixbuf_array = numpy.zeros((disk_height, disk_width, 4), 'B')
-            disk_pixbuf = gtk.gdk.pixbuf_new_from_array(pixbuf_array,
-                gtk.gdk.COLORSPACE_RGB, 8)
+        if disk.disk_prop is not None and disk.disk_prop.dev_type == "iSCSI":
+            # use our own iSCSI disk icon
+            disk_pixbuf = gtk.gdk.pixbuf_new_from_file(
+                os.path.join(IMAGE_DIR, "iscsi_disk.png"))
+            disk_width = disk_pixbuf.get_width()
+            disk_height = disk_pixbuf.get_height()
         else:
-            disk_filename = disk_iconinfo.get_filename()
-            disk_pixbuf = gtk.gdk.pixbuf_new_from_file(disk_filename)
+            # use our own generic disk icon
+            disk_pixbuf = gtk.gdk.pixbuf_new_from_file(
+                os.path.join(IMAGE_DIR, "generic_disk.png"))
             disk_width = disk_pixbuf.get_width()
             disk_height = disk_pixbuf.get_height()
 
@@ -894,9 +931,24 @@ class DiskScreen(BaseScreen):
         '''
             Creates the graphical disk selection radio button widgets
         '''
+        self._disk_buttons = list()
         first_button = None
         for td_disk in self._td_disks:
             name, summary = td_disk.get_details()
+
+            # If applicable, also show the iSCSI LUN for this disk in the
+            # tooltip, by looking at the saved device->LUN dictionary in
+            # the Iscsi obj in DOC
+            if td_disk.ctd is not None:
+                doc = InstallEngine.get_instance().doc
+                iscsi = doc.volatile.get_first_child(name=ISCSI_LABEL,
+                                                     class_type=Iscsi)
+                if iscsi:
+                    if td_disk.ctd in iscsi.iscsi_dict:
+                        summary += "\n" + \
+                            _("iSCSI LUN : %s") % \
+                                iscsi.iscsi_dict[td_disk.ctd].lun_num
+
             label = gtk.Label(name)
             if first_button is None:
                 button = gtk.RadioButton()

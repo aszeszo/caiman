@@ -41,6 +41,7 @@ from solaris_install.gui_install.gui_install_common import modal_dialog, \
 # The HELPFILES list will need to be reordered once the UPGRADE panel(s)
 # are completed.
 HELPFILES = ['WELCOME_PANEL.txt',
+             'INSTALL_DISK_DISCOVERY_PANEL.txt',
              'INSTALL_DISK_PANEL.txt',
              'INSTALL_TIMEZONE_PANEL.txt',
              'INSTALL_USERS_PANEL.txt',

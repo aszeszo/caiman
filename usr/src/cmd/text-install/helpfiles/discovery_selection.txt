@@ -1,0 +1,12 @@
+Disk Discovery
+
+This screen enables you to select what kind of disks should be presented for selection as the target for the installation.
+
+Select one of following types of disks:
+
+- Local disks
+  Disks that are attached to the computer, including internal and external hard disks.
+
+- iSCSI
+  Potentially remote disks that are accessible over a network using the iSCSI standard.
+

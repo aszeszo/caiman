@@ -29,7 +29,7 @@ Text / (n)Curses based UI for installing Oracle Solaris
 import gettext
 import os
 
-from solaris_install import Popen, gpt_firmware_check
+from solaris_install import gpt_firmware_check
 from solaris_install.getconsole import get_console, SERIAL_CONSOLE
 
 #
@@ -63,6 +63,7 @@ LOCALIZED_GB = _("GB")
 
 # Names of registered checkpoints.
 TARGET_DISCOVERY = "TargetDiscovery"
+ISCSI_TARGET_DISCOVERY = "iSCSI TargetDiscovery"
 TARGET_INIT = "TargetInitialization"
 VAR_SHARED_DATASET = "VarSharedDataset"
 TRANSFER_PREP = "PrepareTransfer"
@@ -76,6 +77,8 @@ BOOT_ARCHIVE = "boot-archive"
 TRANSFER_FILES = "transfer-ti-files"
 CREATE_SNAPSHOT = "create-snapshot"
 
+# DOC label
+ISCSI_LABEL = "iSCSI"
 
 import curses
 import locale
@@ -96,13 +99,16 @@ from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME, FileHandler
 from solaris_install.target.controller import TargetController
 from solaris_install.target.libbe.be import be_list
+from solaris_install.target.physical import Iscsi
 from solaris_install.target.size import Size
+from solaris_install.text_install.discovery_selection import DiscoverySelection
 from solaris_install.text_install.disk_selection import DiskScreen
 from solaris_install.text_install.fdisk_partitions import FDiskPart
 from solaris_install.text_install.gpt_partitions import GPTPart
 from solaris_install.text_install.install_progress import InstallProgress
 from solaris_install.text_install.install_status import InstallStatus, \
     RebootException
+from solaris_install.text_install.iscsi import IscsiScreen
 from solaris_install.text_install.log_viewer import LogViewer
 from solaris_install.text_install.partition_edit_screen import \
     GPTPartEditScreen, PartEditScreen
@@ -131,7 +137,25 @@ LOGGER = None
 
 
 def exit_text_installer(logname=None, errcode=0):
-    '''Close out the logger and exit with errcode'''
+    '''Teardown any existing iSCSI objects, Close out the logger and exit with
+    errcode'''
+
+    # get the Iscsi object from the DOC, if present.
+    doc = InstallEngine.get_instance().doc
+    iscsi = doc.volatile.get_first_child(name=ISCSI_LABEL, class_type=Iscsi)
+    if iscsi:
+        # The user exited prematurely, so try to tear down the Iscsi object
+        try:
+            LOGGER.debug("User has exited installer.  Tearing down "
+                         "Iscsi object")
+            iscsi.teardown()
+        except CalledProcessError as err:
+            # only print something to the screen if the errcode is nonzero
+            if errcode != 0:
+                print _("Unable to tear down iSCSI initiator:\n%s" % err)
+            else:
+                LOGGER.debug("Tearing down Iscsi object failed:  %s" % err)
+
     LOGGER.info("**** END ****")
     LOGGER.close()
     if logname is not None:
@@ -165,10 +189,11 @@ def make_screen_list(main_win, target_controller, install_data):
     '''Initialize the screen list. On x86, add screens for editing slices
     within a partition. Also, trigger the target discovery thread.
     '''
-    
+
     result = list()
     result.append(WelcomeScreen(main_win, install_data))
-
+    result.append(DiscoverySelection(main_win))
+    result.append(IscsiScreen(main_win))
     disk_screen = DiskScreen(main_win, target_controller)
     result.append(disk_screen)
     result.append(FDiskPart(main_win, target_controller))
@@ -187,7 +212,7 @@ def make_screen_list(main_win, target_controller, install_data):
     # in parallel in multiple threads and it might lead to deadlock
     # as discussed in Python bug 2320.
     disk_screen.start_discovery()
-    
+
     result.append(SummaryScreen(main_win))
     result.append(InstallProgress(main_win, install_data, target_controller))
     result.append(InstallStatus(main_win, install_data))
@@ -198,7 +223,7 @@ def make_screen_list(main_win, target_controller, install_data):
 def _reboot_cmds(is_x86):
     '''Generate list of cmds to try fast rebooting'''
     cmds = list()
-    
+
     for be_name, be_pool, root_ds, is_active in be_list():
         if is_active:
             if is_x86:
@@ -233,7 +258,7 @@ def prepare_engine(options):
     '''
 
     eng = InstallEngine(debug=options.debug)
-    
+
     # setup_logging() must be called after the engine is initialized.
     setup_logging(options.logname, options.log_level)
 
@@ -316,7 +341,7 @@ def prepare_engine(options):
     eng.register_checkpoint(CREATE_SNAPSHOT,
                             "solaris_install/ict/create_snapshot",
                             "CreateSnapshot")
-    
+
 
 def init_locale():
 
@@ -335,7 +360,7 @@ def init_locale():
 
 def main():
     init_locale()
-    
+
     if os.getuid() != 0:
         sys.exit(_("The %(release)s Text Installer must be run with "
                    "root privileges") % RELEASE)
@@ -353,8 +378,8 @@ def main():
                       choices=["error", "warn", "info", "debug", "input"],
                       metavar="LEVEL")
     parser.add_option("-d", "--debug", action="store_true", dest="debug",
-                      default=False, help=_("Enable debug mode. Sets " 
-                      "logging level to 'input' and enables CTRL-C for " 
+                      default=False, help=_("Enable debug mode. Sets "
+                      "logging level to 'input' and enables CTRL-C for "
                       "killing the program\n"))
     parser.add_option("-b", "--no-color", action="store_true", dest="force_bw",
                       default=False, help=_("Force the installer to run in "
@@ -393,7 +418,7 @@ def main():
                         " Current size is %(x)ix%(y)i.") % \
                         {'x': win_size_x, 'y': win_size_y}
                 exit_text_installer(errcode=msg)
-            
+
             screen_list = ScreenList()
             actions = [Action(curses.KEY_F2, _("Continue"),
                               screen_list.get_next),
@@ -401,13 +426,13 @@ def main():
                               screen_list.previous_screen),
                        Action(curses.KEY_F6, _("Help"), screen_list.show_help),
                        Action(curses.KEY_F9, _("Quit"), screen_list.quit)]
-            
+
             main_win = MainWindow(initscr, screen_list, actions,
                                   force_bw=options.force_bw)
             screen_list.help = HelpScreen(main_win, _("Help Topics"),
                                           _("Help Index"),
                                           _("Select a topic and press "
-                                          "Continue."))
+                                            "Continue."))
             doc = InstallEngine.get_instance().doc
 
             debug_tc = False

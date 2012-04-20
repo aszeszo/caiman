@@ -30,8 +30,10 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-HELP_FILES=	disks.txt \
+HELP_FILES=	discovery_selection.txt \
+                disks.txt \
 		gpt_partitions.txt \
+                iscsi.txt \
 		sparc_solaris_slices_select.txt \
 		sparc_solaris_slices.txt \
 		summary.txt \
