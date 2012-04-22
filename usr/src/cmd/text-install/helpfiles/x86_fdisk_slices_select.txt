@@ -1,8 +1,8 @@
-x86: SELECT SLICE IN SOLARIS PARTITION
+SELECT SLICE IN SOLARIS DOS PARTITION
 
-This screen enables you to select a VTOC slice in a Solaris partition to use for the installation. To indicate which slice to use for the installation, select the slice and change the slice type to rpool. You have the option of resizing the rpool.
+This screen enables you to select a slice in a Solaris DOS partition to use for the installation. To indicate which slice to use for the installation, select the slice and change the slice type to rpool. You have the option of resizing the rpool.
 
-The screen displays the existing slices in the fdisk partition that you selected in the prior screens. The slices are displayed in the order that they are laid out in the partition. The current size and maximum available size for each slice are displayed.
+The screen displays the existing slices in the Solaris DOS partition that you selected in the prior screens. The slices are displayed in the order that they are laid out in the partition. The current size and maximum available size for each slice are displayed.
 
 GUIDELINES
 
@@ -44,8 +44,6 @@ Note: You can use the F7 key to cancel your changes.
 
 NAVIGATION
 
-Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
-
-Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen. If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.
 
 

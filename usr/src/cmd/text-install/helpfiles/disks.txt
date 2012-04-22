@@ -1,36 +1,24 @@
 DISKS
 
-This screen displays the internal disks and external storage devices that can be used as installation targets. To be recognized by the installer, the devices must be plugged in when the installer begins. 
+This screen enables you to choose a disk where the Oracle Solaris operating system will be installed. When a disk is highlighted in this screen, the existing partitions for that disk are displayed.
 
-Note: You do not need to set up a mirrored configuration during installation. You can use the ZFS attach command after installation to perform this task. If you plan to set up a mirrored configuration, remember that the second disk has to be equal or larger than the installation target. 
+IMPORTANT: The installer, by default, uses GPT formatting when installing onto a whole disk or when creating new partitions. However, on SPARC systems, the necessary openboot firmware is required to support GPT installations. If the required firmware is not provided, VTOC slices are used for the disk. 
 
-WARNING: Note the following important considerations for x86 installations:
+Whenever possible, existing GPT partitions, or existing DOS partitions on x86 systems, are retained by default and displayed in this screen. 
 
-	* If the disk was not previously partitioned, the installation, by default, overwrites the whole disk layout. You can, however, modify the default selections in the installer screens to install to a new Solaris partition that is smaller than the whole disk.
-
-	* If a Solaris partition is on the disk, and the installation makes no modifications to the partitions, the installation overwrites the Solaris partition only. Other existing partitions are not changed. 
-
-Note: No actual changes will be made to the system until you complete the installer selection screens and begin the actual installation process.
+In this screen, you select a disk. In the following partitioning screens, you can choose to install into a whole disk, into a new or existing GPT partition, into an existing DOS partition, or into a logical partition within an existing DOS partition on the selected disk.
 
 SIZE
 
-The recommended size and minimum size for the Oracle Solaris OS installation are displayed. The size of each device is displayed in gigabytes. 
+The recommended size and minimum size for the Oracle Solaris OS installation are displayed.
 
 * Devices that are too small for a successful installation are labeled that way. 
 
 * Some devices may be so large that an Oracle Solaris installation cannot use all the space on the device. These devices have a maximum installation size specified.
 
-PARTITIONS OR SLICES
-
-The first section of the screen lists available devices. One device is highlighted by default. The next section of the screen displays the partition or slice information for the currently highlighted device. Partitions are listed for x86 formatted devices. Slices are listed for SPARC formatted devices.
-
-If you want to view the partition or slice information for another device, you can use the arrow keys to select that device. The screen changes to display the partition or slice information for the device that you select.
-
-If there are more than four devices, press the up/down arrow keys repeatedly to scroll down to the other devices. 
-
-CAUTION: If there are no existing partitions or slices for a device, the screen displays proposed partition or slice setup. In this case, all existing data on the device would be destroyed during installation.
-
 PROCEDURE
+
+The first section of the screen lists available devices. One device is highlighted by default. The next section of the screen displays the partition or slice information for the currently highlighted device. Depending on the format of the devices, GPT or DOS partitions are listed for x86 systems, and GPT partitions or slices are listed for SPARC systems. 
 
 To exit this help screen, press F3. Then, in the installer screen, choose one of the following options:
 
@@ -38,9 +26,13 @@ To exit this help screen, press F3. Then, in the installer screen, choose one of
 
      * If you want to select a different device for the installation, use the arrow keys to highlight your preferred device. Partition or slice information will display for the device that you select. Then press F2 to continue. 
 
+Note: The installer uses the selected disk or partition to create a ZFS storage pool. If a second disk is available, you can, after the installed system has been booted, add a second disk to the ZFS pool to create a mirrored configuration. This second disk would need to be as large or larger than the installation target. 
+
+CAUTION: If there are no existing partitions or slices for a device, the screen displays proposed partition or slice setup. In this case, all existing data on the device would be destroyed during installation.
+
+
 NAVIGATION
 
-Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen. If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.
 
-Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.
 

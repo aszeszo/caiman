@@ -67,7 +67,7 @@ class GPTPart(BaseScreen):
                       "proposed.")
     USE_WHOLE_DISK = _("Use the entire disk")
     USE_PART_IN_DISK = _("Use a GPT partition of the disk")
-    GPT_HELP = (TUI_HELP + "%s/gpt_partitions.txt", _("GPT Partitions"))
+    GPT_HELP = (TUI_HELP + "/%s/gpt_partitions.txt", _("GPT Partitions"))
 
     def __init__(self, main_win, target_controller):
         super(GPTPart, self).__init__(main_win)

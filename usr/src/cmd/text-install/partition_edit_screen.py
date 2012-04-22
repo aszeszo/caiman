@@ -314,7 +314,7 @@ class GPTPartEditScreen(PartEditScreen):
     GPT_PART_DESTROY_TEXT = _("indicates the partition's current content will "
                              "be destroyed")
     HEADER_GPT = _("Select GPT Partition: ")
-    GPT_HELP = (TUI_HELP + "/%s/gpt_partitions_select_txt",
+    GPT_HELP = (TUI_HELP + "/%s/gpt_partitions_select.txt",
                 _("Select GPT Partition"))
     SELECTION_ERROR = _("A 'Solaris' partition must be selected for "
                         "installation")

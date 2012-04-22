@@ -1,0 +1,55 @@
+SELECT GPT PARTITION
+
+
+This screen enables the user to make adjustments to the GPT partition layout, such as deleting existing partitions or creating and sizing a Solaris partition.
+
+The screen displays the existing GPT partitions. The partitions are displayed in the order that they are laid out on the disk. The current size and maximum available size for each partition are displayed. 
+
+If the disk has not been previously partitioned, a suggested partitioning is displayed. This suggested partitioning is a single partition that is sized to the whole disk.
+
+If there are multiple, existing Solaris GPT partitions, the first suitable Solaris GPT partition will be chosen by default as the installation target.
+
+
+HOW TO MODIFY SCREEN CONTENT
+
+You can use any of the following options to modify screen content:
+
+* Use the arrow keys to navigate to the partition you want to modify.   
+
+* F5_Change Type - With a partition highlighted, change the partition type by pressing F5 repeatedly to cycle through the partition types until the desired partition type or Unused is displayed. If Unused is selected, the partition is destroyed, and its space is made available when resizing adjacent partitions.
+
+* Size Fields - If the size field is highlighted, you can type changes in that field.
+
+* F7_Reset - Press F7 to restore all data in this screen to the original settings. The changes you specify will be implemented during the installation. You can cancel your modifications by selecting F7 to reset, or by selecting F3 to return to the prior screen and redo your selections.
+
+GUIDELINES
+
+Up to 7 GPT partitions are supported. You can create one or more Solaris partitions during the installation, but you must choose one Solaris partition as the installation target.
+
+* You can use the existing Solaris partition with the current size as the installation target. Or, you can selecting another partition and change its type to Solaris. 
+
+* If you use an existing Solaris partition as the installation target, and you do not change the other partitions, the Solaris partition is overwritten during the installation and the other existing partitions are not changed.
+
+* If there is no existing Solaris partition, you must select a partition and change its type to Solaris. During installation, this modification erases the existing partition contents. 
+
+* If there is available space, you can resize a Solaris partition by typing a new size, up to the displayed available space, for that partition. The available space contains any contiguous unused space before or after the selected partition. If you enlarge a partition, unused space after the partition is used first. Then, unused space before the partition is used, changing the starting sector of the selected partition.
+
+	CAUTION: If you modify a partition size or change its type, the existing partition contents will be erased during installation. Otherwise, existing partition contents are preserved during installation. If your planned changes will destroy a partition during installation, that partition is marked with a red asterisk on this screen. 
+
+* Optional: In addition to setting up a Solaris partition to be used as the installation target, you can specify further modifications to the overall partition layout in this screen as described in "Additional Partitioning Instructions" below.	
+
+
+ADDITIONAL PARTITIONING INSTRUCTIONS
+
+In addition to selecting and setting up a Solaris partition as the installation target, you can specify any of the following modifications to the partition setup: 
+
+* You can delete any partition by changing its partition type dropdown selection to Unused. During installation, the existing partition contents are erased, and the resultant unused space is made available to adjacent partitions.
+
+* You can change the type of any existing partition. During installation, the existing contents will be deleted.
+
+* You can create more than one new Solaris partition. Select an Unused partition and change the type from Unused to Solaris. 
+
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen. If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

@@ -31,9 +31,10 @@ clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
 HELP_FILES=	discovery_selection.txt \
-                disks.txt \
+		disks.txt \
 		gpt_partitions.txt \
-                iscsi.txt \
+		gpt_partitions_select.txt \
+		iscsi.txt \
 		sparc_solaris_slices_select.txt \
 		sparc_solaris_slices.txt \
 		summary.txt \
