@@ -19,6 +19,6 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
-aiuser::::type=role;auths=solaris.network.autoconf.read,solaris.smf.read.*
+aiuser::::auths=solaris.network.autoconf.read,solaris.smf.read.*

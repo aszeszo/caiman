@@ -51,15 +51,16 @@ ENABLE_SCI_PROFILE=/usr/share/auto_install/sc_profiles/enable_sci.xml
 # Installation service list file
 AI_SERVICE_LIST=/var/run/service_list
 
-ISA_INFO=`/usr/bin/uname -p`
-PRTCONF=/usr/sbin/prtconf
-SVCPROP=/usr/bin/svcprop
-SED=/usr/bin/sed
-NAWK=/usr/bin/nawk
 BEADM=/usr/sbin/beadm
-REBOOT=/usr/sbin/reboot
+CHOWN=/usr/bin/chown
 CP=/usr/bin/cp
+ISA_INFO=`/usr/bin/uname -p`
 MKDIR=/usr/bin/mkdir
+NAWK=/usr/bin/nawk
+PRTCONF=/usr/sbin/prtconf
+REBOOT=/usr/sbin/reboot
+SED=/usr/bin/sed
+SVCPROP=/usr/bin/svcprop
 
 . /lib/svc/share/smf_include.sh
 
@@ -140,6 +141,12 @@ if [ ! -d $PROFILE_DIR ] ; then
 elif [ -z "$(ls -A $PROFILE_DIR)" ] ; then
 	$CP $ENABLE_SCI_PROFILE $PROFILE_DIR
 fi
+
+# Make the PROFILE_DIR and the profiles under there owned by 'aiuser' so
+# that a derived manifest script can potentially add or modify profiles in it.
+# Neither PROFILE_DIR nor any of the profiles under it will be symlinks; any
+# unexpected symlinks aren't to be followed.
+$CHOWN -R -h aiuser $PROFILE_DIR
 
 OPTS=
 #

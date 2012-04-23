@@ -19,46 +19,31 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri \
     value=pkg:/system/install/auto-install/auto-install-common@$(PKGVERS)
-set name=pkg.description value="Automated Installer common components"
 set name=pkg.summary value="AI common components"
+set name=pkg.description value="Automated Installer common components"
 set name=info.classification \
     value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
-dir path=etc group=sys
-dir path=etc/user_attr.d group=sys
-dir path=usr group=sys
-dir path=usr/bin
-dir path=usr/lib
-dir path=usr/lib/python2.6
-dir path=usr/lib/python2.6/vendor-packages
-dir path=usr/lib/python2.6/vendor-packages/osol_install
-dir path=usr/lib/python2.6/vendor-packages/osol_install/auto_install
-dir path=usr/lib/python2.6/vendor-packages/solaris_install
-dir path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install
-dir \
-    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints
-dir path=usr/share group=sys
-dir path=usr/share/auto_install group=sys
-dir path=usr/share/auto_install/sc_profiles group=sys
-dir path=usr/share/man
-dir path=usr/share/man/ja_JP.UTF-8
-dir path=usr/share/man/ja_JP.UTF-8/man1m
-dir path=usr/share/man/man1m
-dir path=usr/share/man/man4
-dir path=usr/share/man/zh_CN.UTF-8
-dir path=usr/share/man/zh_CN.UTF-8/man1m
+dir  path=etc group=sys
+dir  path=etc/user_attr.d group=sys
 file path=etc/user_attr.d/system%2Finstall%2Fauto-install group=sys
+dir  path=usr group=sys
+dir  path=usr/bin
 file path=usr/bin/ai_get_manifest mode=0555
 file path=usr/bin/aimanifest mode=0555
 file path=usr/bin/auto-install mode=0555
-file path=usr/lib/python2.6/vendor-packages/osol_install/_libaiscf.so \
-    mode=0444
+dir  path=usr/lib
+dir  path=usr/lib/python2.6
+dir  path=usr/lib/python2.6/vendor-packages
+dir  path=usr/lib/python2.6/vendor-packages/osol_install
+file path=usr/lib/python2.6/vendor-packages/osol_install/_libaiscf.so mode=0444
+dir  path=usr/lib/python2.6/vendor-packages/osol_install/auto_install
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.py \
     mode=0444
@@ -89,16 +74,20 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/service_config.pyc \
     group=sys
-file path=usr/lib/python2.6/vendor-packages/osol_install/libaimdns.so \
-    mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/libaimdns.so mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/libaiscf.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/netif.so mode=0444
+dir  path=usr/lib/python2.6/vendor-packages/solaris_install
+dir  path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/__init__.py \
     mode=0444
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/__init__.pyc \
     mode=0444
+link \
+    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_get_manifest.py \
+    target=../../../../../bin/ai_get_manifest
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_instance.py \
     mode=0444
@@ -111,6 +100,7 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/auto_install.pyc \
     mode=0444
+dir  path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints/__init__.py \
     mode=0444
@@ -165,23 +155,31 @@ file \
 file \
     path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/process_dtd.pyc \
     mode=0444
+dir  path=usr/share group=sys
+dir  path=usr/share/auto_install group=sys
+link path=usr/share/auto_install/default.xml target=manifest/default.xml
 file path=usr/share/auto_install/derived_manifest_test_env.sh group=sys \
     mode=0555
 file path=usr/share/auto_install/manifest/ai_manifest.xml group=sys mode=0444
 file path=usr/share/auto_install/manifest/default.xml group=sys mode=0444
 file path=usr/share/auto_install/manifest/zone_default.xml group=sys mode=0444
+dir  path=usr/share/auto_install/sc_profiles group=sys
 file path=usr/share/auto_install/sc_profiles/sc_sample.xml group=sys mode=0444
 file path=usr/share/auto_install/sc_profiles/static_network.xml group=sys \
     mode=0444
 file path=usr/share/auto_install/version group=sys mode=0444
+dir  path=usr/share/man
+dir  path=usr/share/man/ja_JP.UTF-8
+dir  path=usr/share/man/ja_JP.UTF-8/man1m
 file path=usr/share/man/ja_JP.UTF-8/man1m/aimanifest.1m mode=0444
+dir  path=usr/share/man/man1m
 file path=usr/share/man/man1m/aimanifest.1m mode=0444
+dir  path=usr/share/man/man4
 file path=usr/share/man/man4/ai_manifest.4 mode=0444
+dir  path=usr/share/man/zh_CN.UTF-8
+dir  path=usr/share/man/zh_CN.UTF-8/man1m
 file path=usr/share/man/zh_CN.UTF-8/man1m/aimanifest.1m mode=0444
+group groupname=aiuser gid=61
+user username=aiuser ftpuser=false gcos-field="AI User" group=aiuser uid=61
 license cr_Sun license=cr_Sun
-link \
-    path=usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ai_get_manifest.py \
-    target=../../../../../bin/ai_get_manifest
-link path=usr/share/auto_install/default.xml target=manifest/default.xml
-user username=aiuser ftpuser=false gcos-field="AI User" group=nobody uid=60003
-depend fmri=system/install/locale type=require
+depend type=require fmri=system/install/locale
