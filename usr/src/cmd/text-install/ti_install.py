@@ -46,7 +46,7 @@ from solaris_install.target.controller import TargetController
 from solaris_install.target.size import Size
 from solaris_install.target.libbe.be import be_unmount
 from solaris_install.text_install import TRANSFER_PREP, \
-    VAR_SHARED_DATASET, CLEANUP_CPIO_INSTALL
+    VARSHARE_DATASET, CLEANUP_CPIO_INSTALL
 from solaris_install.text_install import ti_install_utils as ti_utils
 from solaris_install.text_install.progress import InstallProgressHandler
 from solaris_install.text_install.ti_target_utils import \
@@ -248,7 +248,7 @@ def do_ti_install(install_data, screen, update_status_func):
     # checkpoints.  The transfer checkpoints requires data setup from the
     # prepare transfer checkpoint.
     status, failed_cp = engine.execute_checkpoints(
-        start_from=TRANSFER_PREP, pause_before=VAR_SHARED_DATASET)
+        start_from=TRANSFER_PREP, pause_before=VARSHARE_DATASET)
 
     if status != InstallEngine.EXEC_SUCCESS:
         err_data = errsvc.get_errors_by_mod_id(TRANSFER_PREP)[0]

@@ -45,7 +45,7 @@ from osol_install.liberrsvc import ES_DATA_EXCEPTION
 #
 # pylint complains about the following imports -- boot, device_config,
 # boot_archive, instantiation, initialize_smf, transfer_files,
-# apply_sysconfig, INSTALL, update_dumpadm, DataObject, discovery, varshared,
+# apply_sysconfig, INSTALL, update_dumpadm, DataObject, discovery, varshare,
 # setup_swap, create_snapshot, TargetSelectionZone.  However, if these are
 # removed and the engine is run in debug mode then it will be impossible to
 # catch any exceptions.  Once CR 7041360 is fixed then these imports may
@@ -82,7 +82,7 @@ from solaris_install.logger import FileHandler, ProgressHandler, MAX_INT
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.manifest.parser import ManifestError, \
     MANIFEST_PARSER_DATA
-from solaris_install.target import Target, discovery, instantiation, varshared
+from solaris_install.target import Target, discovery, instantiation, varshare
 from solaris_install.target.instantiation_zone import ALT_POOL_DATASET
 from solaris_install.target.physical import Iscsi
 from solaris_install.target.logical import BE, Logical
@@ -109,7 +109,7 @@ class AutoInstall(object):
     FIRST_TRANSFER_CHECKPOINT = 'first-transfer'
     MANIFEST_CHECKPOINTS = ["derived-manifest", "manifest-parser"]
     CHECKPOINTS_BEFORE_TI = ["target-discovery", "target-selection", \
-        "ai-configuration", "var-shared-dataset", \
+        "ai-configuration", "var-share-dataset", \
         TARGET_INSTANTIATION_CHECKPOINT]
     CHECKPOINTS_BEFORE_TI.extend(MANIFEST_CHECKPOINTS)
     CHECKPOINTS_BEFORE_IPS = list(CHECKPOINTS_BEFORE_TI)
@@ -914,7 +914,7 @@ class AutoInstall(object):
         #   G- -- Target Selection
         #   -N -- Target Selection Zone
         #   GN -- AI Configuration
-        #   GN -- Var Shared Dataset
+        #   GN -- Var Share Dataset
         #   G- -- Device Driver Update - Install Root
         #   G- -- Target Instantiation
         #   -N -- Target Instantiation Zone
@@ -956,11 +956,11 @@ class AutoInstall(object):
                 "solaris_install.auto_install.checkpoints.ai_configuration",
                 "AIConfiguration", args=None, kwargs=None)
 
-            # Register VarSharedDataset
-            self.logger.debug("Adding VarSharedDataset Checkpoint")
-            self.engine.register_checkpoint("var-shared-dataset",
-                "solaris_install.target.varshared",
-                "VarSharedDataset", args=None, kwargs=None)
+            # Register VarShareDataset
+            self.logger.debug("Adding VarShareDataset Checkpoint")
+            self.engine.register_checkpoint("var-share-dataset",
+                "solaris_install.target.varshare",
+                "VarShareDataset", args=None, kwargs=None)
 
             # Register TargetInstantiation
             if self.options.alt_zpool_dataset is None:

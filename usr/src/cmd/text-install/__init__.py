@@ -65,7 +65,7 @@ LOCALIZED_GB = _("GB")
 TARGET_DISCOVERY = "TargetDiscovery"
 ISCSI_TARGET_DISCOVERY = "iSCSI TargetDiscovery"
 TARGET_INIT = "TargetInitialization"
-VAR_SHARED_DATASET = "VarSharedDataset"
+VARSHARE_DATASET = "VarShareDataset"
 TRANSFER_PREP = "PrepareTransfer"
 CLEANUP_CPIO_INSTALL = "cleanup-cpio-install"
 INIT_SMF = "initialize-smf"
@@ -276,9 +276,9 @@ def prepare_engine(options):
                            "solaris_install/transfer/media_transfer",
                            "init_prepare_media_transfer")
 
-    eng.register_checkpoint(VAR_SHARED_DATASET,
-                            "solaris_install/target/varshared",
-                            "VarSharedDataset")
+    eng.register_checkpoint(VARSHARE_DATASET,
+                            "solaris_install/target/varshare",
+                            "VarShareDataset")
 
     eng.register_checkpoint(TARGET_INIT,
                             "solaris_install/target/instantiation",
@@ -347,7 +347,7 @@ def init_locale():
 
     locale.setlocale(locale.LC_ALL, "")
     gettext.install("solaris_install_textinstall",
-                    "/usr/share/locale", 
+                    "/usr/share/locale",
                     unicode=True)
     set_wrap_on_whitespace(_("DONT_TRANSLATE_BUT_REPLACE_msgstr_WITH_True_"
                              "OR_False: Should wrap text on whitespace in"

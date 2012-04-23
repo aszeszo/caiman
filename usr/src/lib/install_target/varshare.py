@@ -21,26 +21,26 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
-varshared.py - /var /var/share dataset creation checkpoint.
-Creates BE /var dataset and global /var/shared dataset.
+varshare.py - /var /var/share dataset creation checkpoint.
+Creates BE /var dataset and global /var/share dataset.
 """
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.target import Target
-from solaris_install.target.logical import Filesystem, Zvol, Zpool
+from solaris_install.target.logical import Filesystem, Options, Zvol, Zpool
 
 VAR_DATASET_NAME = "var"
 VAR_DATASET_MOUNTPOINT = "/var"
-SHARED_DATASET_NAME = "VARSHARE"
-SHARED_DATASET_MOUNTPOINT = "/var/share"
+VARSHARE_DATASET_NAME = "VARSHARE"
+VARSHARE_DATASET_MOUNTPOINT = "/var/share"
 
 
-class VarSharedDatasetError(Exception):
-    """Error generated during var/shared filesystem processing"""
+class VarShareDatasetError(Exception):
+    """Error generated during var/share filesystem processing"""
 
     def __init__(self, msg):
         Exception.__init__(self)
@@ -50,12 +50,12 @@ class VarSharedDatasetError(Exception):
         return self.msg
 
 
-class VarSharedDataset(Checkpoint):
+class VarShareDataset(Checkpoint):
     """ class to create /var /var/share datasets
     """
 
     def __init__(self, name):
-        super(VarSharedDataset, self).__init__(name)
+        super(VarShareDataset, self).__init__(name)
 
         # lists for specific elements in the DOC
         self.zpool_list = list()
@@ -95,7 +95,6 @@ class VarSharedDataset(Checkpoint):
         matching name or mountpoint. Return the first matching object found.
 
         Paramaters:
-            dslist  -   List of Zvols/Filesystems
             dsname  -   Dataset name to check for
             dsmp    -   Dataset mountpoint to check for
         """
@@ -135,15 +134,11 @@ class VarSharedDataset(Checkpoint):
         if self.root_pool is not None:
             fs = self.root_pool.add_filesystem(fsname, mountpoint=fsmp)
             fs.in_be = in_be
+            return fs
         else:
-            if in_be:
-                raise VarSharedDatasetError("Failed to add '%s' in_be "
-                    "filesystem object, the root pool could not be "
-                    "located." % (fsname))
-            else:
-                raise VarSharedDatasetError("Failed to add '%s' "
-                    "filesystem object, the root pool could not be "
-                    "located." % (fsname))
+            raise VarShareDatasetError("Failed to add '%s' "
+                "filesystem object, the root pool could not be "
+                "located." % (fsname))
 
     def process_filesystem(self, dsname, dsmountpoint):
         """
@@ -157,7 +152,7 @@ class VarSharedDataset(Checkpoint):
           must be created by the installer. If any Zvol/Filesystem exists in
           the DESIRED tree that conflicts with this raise exception.
 
-        - Filesystem of name "shared", mountpoint "/var/shared", and
+        - Filesystem of name "VARSHARE", mountpoint "/var/share", and
           in_be=False must be created by the installer. If any Zvol/Filesystem
           exists in the DESIRED tree that conflicts with this raise exception.
         """
@@ -166,7 +161,7 @@ class VarSharedDataset(Checkpoint):
         desired_ds = self.in_dataset_list(dsname, dsmountpoint)
         if desired_ds is not None:
             if isinstance(desired_ds, Zvol):
-                raise VarSharedDatasetError("Invalid Zvol specified with "
+                raise VarShareDatasetError("Invalid Zvol specified with "
                         "restricted name '%s'. A dataset of this name is "
                         "created as a filesystem during installation. " % \
                         (dsname))
@@ -175,13 +170,13 @@ class VarSharedDataset(Checkpoint):
                 # Filesystem instance found.
                 # Fail if Filesystem is not on root pool
                 if not desired_ds.parent.is_root:
-                    raise VarSharedDatasetError("Filesystem '%s' being "
+                    raise VarShareDatasetError("Filesystem '%s' being "
                         "created on non-root pool '%s'." % \
                         (dsname, desired_ds.parent.name))
 
                 # Fail if name not correct
                 if desired_ds.name != dsname:
-                    raise VarSharedDatasetError("Invalid dataset name '%s' "
+                    raise VarShareDatasetError("Invalid dataset name '%s' "
                         "provided for filesystem being mounted on '%s'. "
                         "Must be set to '%s'." % \
                         (desired_ds.name, dsmountpoint, dsname))
@@ -190,20 +185,20 @@ class VarSharedDataset(Checkpoint):
                 if desired_ds.mountpoint != dsmountpoint and \
                     not (desired_ds.mountpoint is None and \
                     dsname == VAR_DATASET_NAME):
-                    raise VarSharedDatasetError("Invalid dataset mountpoint "
+                    raise VarShareDatasetError("Invalid dataset mountpoint "
                         "'%s' provided for filesystem '%s'. "
                         "Must be set to '%s'" % \
                         (desired_ds.mountpoint, dsname, dsmountpoint))
 
                 # Fail if "var" Filesystem outside BE
                 if not desired_ds.in_be and dsname == VAR_DATASET_NAME:
-                    raise VarSharedDatasetError("Filesystem '%s' is being "
+                    raise VarShareDatasetError("Filesystem '%s' is being "
                         "specified outside of root pool Boot Environment." % \
                         (dsname))
 
-                # Fail if "shared" Filesystem inside BE
-                if desired_ds.in_be and dsname == SHARED_DATASET_NAME:
-                    raise VarSharedDatasetError("Filesystem '%s' is being "
+                # Fail if "share" Filesystem inside BE
+                if desired_ds.in_be and dsname == VARSHARE_DATASET_NAME:
+                    raise VarShareDatasetError("Filesystem '%s' is being "
                         "specified inside of root pool Boot Environment." % \
                         (dsname))
 
@@ -217,7 +212,11 @@ class VarSharedDataset(Checkpoint):
         if dsname == VAR_DATASET_NAME:
             self.add_filesystem(dsname, dsmountpoint, in_be=True)
         else:
-            self.add_filesystem(dsname, dsmountpoint, in_be=False)
+            new_fs = self.add_filesystem(dsname, dsmountpoint, in_be=False)
+
+            # Set canmount property to noauto for VARSHARE
+            new_options = Options(VAR_DATASET_NAME, {"canmount": "noauto"})
+            new_fs.insert_children(new_options)
 
     def execute(self, dry_run=False):
         """ Primary execution method use by the Checkpoint parent class
@@ -225,9 +224,9 @@ class VarSharedDataset(Checkpoint):
         self.logger.debug("Executing Var Share Dataset Addition")
 
         self.parse_doc()
+        self.dry_run = dry_run
 
-        # Process /var in_be Filesystem and /var/shared global Filesystem
-        # Uncomment line below when implementing SHARED_DATASET
-        for fs, mp in [(VAR_DATASET_NAME, VAR_DATASET_MOUNTPOINT)]:
-#                       (SHARED_DATASET_NAME, SHARED_DATASET_MOUNTPOINT)]:
+        # Process /var in_be Filesystem and /var/share global Filesystem
+        for fs, mp in [(VAR_DATASET_NAME, VAR_DATASET_MOUNTPOINT),
+                       (VARSHARE_DATASET_NAME, VARSHARE_DATASET_MOUNTPOINT)]:
             self.process_filesystem(fs, mp)

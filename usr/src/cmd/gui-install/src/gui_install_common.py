@@ -98,7 +98,7 @@ FIREFOX = '/usr/bin/firefox'
 # Commonly used Checkpoint definitions
 CLEANUP_CPIO_INSTALL = "cleanup-cpio-install"
 TRANSFER_PREP = "PrepareTransfer"
-VAR_SHARED_DATASET = "VarSharedDataset"
+VARSHARE_DATASET = "VarShareDataset"
 
 # Flags for tracking TargetDiscovery status
 TD_LOCAL_COMPLETE = False

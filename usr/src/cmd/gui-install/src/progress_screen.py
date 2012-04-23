@@ -48,7 +48,7 @@ from solaris_install.gui_install.base_screen import BaseScreen
 from solaris_install.gui_install.gui_install_common import modal_dialog, \
     CLEANUP_CPIO_INSTALL, COLOR_WHITE, DEFAULT_LOG_LOCATION, FIREFOX, \
     GLADE_DIR, GLADE_ERROR_MSG, LOG_LOCATION_FINAL, TRANSFER_PREP, \
-    VAR_SHARED_DATASET
+    VARSHARE_DATASET
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.logger import INSTALL_LOGGER_NAME, \
     ProgressHandler
@@ -281,7 +281,7 @@ class ProgressScreen(BaseScreen):
         eng = InstallEngine.get_instance()
         errsvc.clear_error_list()
         eng.execute_checkpoints(start_from=TRANSFER_PREP,
-                               pause_before=VAR_SHARED_DATASET)
+                               pause_before=VARSHARE_DATASET)
 
         # Setup progress handling
         self.setup_progress_handling()

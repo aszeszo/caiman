@@ -42,7 +42,7 @@ from solaris_install.data_object.cache import DataObject, DataObjectCache
 
 
 __all__ = ["cgc", "controller", "cuuid", "discovery", "instantiation",
-           "libdiskmgt", "libnvpair", "logical", "physical", "varshared",
+           "libdiskmgt", "libnvpair", "logical", "physical", "varshare",
            "vdevs"]
 
 CRO_LABEL = "croinfo output"
