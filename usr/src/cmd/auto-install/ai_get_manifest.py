@@ -37,6 +37,7 @@ import socket
 from subprocess import Popen, PIPE
 import re
 import sys
+from struct import pack
 import tempfile
 import time
 import traceback
@@ -51,6 +52,10 @@ SC_PREFIX = 'profile_'
 SC_EXTENSION = '.xml'
 
 AI_MANIFEST_ATTACHMENT_NAME = 'manifest.xml'  # named as MIME attachment
+
+# Network commands
+IPADM = "/usr/sbin/ipadm"
+DLADM = "/usr/sbin/dladm"
 
 
 class AILog:
@@ -368,44 +373,31 @@ class AICriteriaNetworkInterface(AICriteria):
         #
         # Obtain network interface name, which will be queried in next
         # step in order to obtain required network parameters
-        #
-        # Search for the first interface, which is UP - omit loopback
-        # interfaces. Then use ifconfig for query the information about
-        # that interface and store the result.
-        #
-        cmd = "/usr/sbin/ifconfig -au | /usr/bin/grep '[0-9]:' " \
-            "| /usr/bin/grep -v 'LOOPBACK'"
-        AICriteriaNetworkInterface.network_iface, ret = ai_exec_cmd(cmd)
+        # 
+        # get name, class and active property of all network interfaces
+        # Select the 1st interface whose class is 'ip' and is active.
+        cmd = IPADM + " show-if -o ifname,class,active -p"
 
-        if ret != 0:
-            AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Could not obtain name of valid network interface")
-            AICriteriaNetworkInterface.network_iface = None
-        else:
-            AICriteriaNetworkInterface.network_iface = \
-                AICriteriaNetworkInterface.network_iface.split(':')[0]
+        output, ret = ai_exec_cmd(cmd)
 
+        if not ret:
+            for ifprop in output.splitlines():
+                # check for presence of all values
+                if ifprop.count(":") != 2:
+                    continue
+                ifname, ifclass, ifstate = ifprop.split(":")
+                if ifclass == 'ip' and ifstate == 'yes':
+                    AICriteriaNetworkInterface.network_iface = ifname
+                    break
+
+        if AICriteriaNetworkInterface.network_iface:
             AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
                           "Network interface obtained: %s",
                           AICriteriaNetworkInterface.network_iface)
-
-            #
-            # Collect all available information about network interface
-            #
-            cmd = "/usr/sbin/ifconfig %s" % \
-                AICriteriaNetworkInterface.network_iface
-
-            AICriteriaNetworkInterface.ifconfig_iface_info, ret = \
-                ai_exec_cmd(cmd)
-
-            if ret != 0 or \
-               AICriteriaNetworkInterface.ifconfig_iface_info == "":
-                AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                              "Could not obtain information about "
-                              "network interface %s",
-                              AICriteriaNetworkInterface.network_iface)
-
-                AICriteriaNetworkInterface.ifconfig_iface_info = None
+        else:
+            AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
+                          "Could not obtain name of valid network interface "
+                          "name")
 
 
 class AICriteriaMAC(AICriteriaNetworkInterface):
@@ -426,49 +418,27 @@ class AICriteriaMAC(AICriteriaNetworkInterface):
 
         AICriteriaMAC.client_mac_initialized = True
 
-        if AICriteriaNetworkInterface.ifconfig_iface_info is None:
+        if AICriteriaNetworkInterface.network_iface:
+
+            # use dladm to get the mac information
+            cmd = (DLADM + " show-linkprop -p mac-address -co value " +
+                    AICriteriaNetworkInterface.network_iface)
+
+            output, ret = ai_exec_cmd(cmd)
+
+            if not ret:
+                parts = output.strip("\n").split(":")
+                # set mac address if it is formatted properly
+                if len(parts) == 6:
+                    AICriteriaMAC.client_mac = ''.join([val.zfill(2)
+                                                       for val in parts])
+                    AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
+                                  "Client MAC address: %s",
+                                  AICriteriaMAC.client_mac)
+
+        if not AICriteriaMAC.client_mac:
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Could not obtain MAC address")
-        else:
-            AICriteriaMAC.client_mac = AICriteriaNetworkInterface. \
-                ifconfig_iface_info.split("ether", 1)
-
-            if len(AICriteriaMAC.client_mac) < 2:
-                AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                              "Could not obtain client MAC address")
-                AICriteriaMAC.client_mac = None
-            else:
-                AICriteriaMAC.client_mac = AICriteriaMAC.\
-                    client_mac[1].strip().split()[0].strip()
-
-                #
-                # remove ':' and pad with '0's
-                #
-                # This step makes sure that the criteria are
-                # passed to the server in the format which
-                # server can understand. This is just an interim
-                # solution.
-                #
-                # For longer term, all criteria should be
-                # passed to the server in native format letting
-                # the server side control the process of
-                # conversion.
-                #
-
-                client_mac_parts = \
-                    AICriteriaMAC.client_mac.split(":")
-
-                AICriteriaMAC.client_mac = "%s%s%s%s%s%s" % \
-                    (client_mac_parts[0].zfill(2),
-                     client_mac_parts[1].zfill(2),
-                     client_mac_parts[2].zfill(2),
-                     client_mac_parts[3].zfill(2),
-                     client_mac_parts[4].zfill(2),
-                     client_mac_parts[5].zfill(2))
-
-                AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                              "Client MAC address: %s",
-                              AICriteriaMAC.client_mac)
+                          "Could not obtain client MAC address")
 
         AICriteria.__init__(self, AICriteriaMAC.client_mac)
 
@@ -479,6 +449,7 @@ class AICriteriaIP(AICriteriaNetworkInterface):
     """
 
     client_ip = None
+    client_ip_prefix = None
     client_ip_string = None
     client_ip_initialized = False
 
@@ -491,23 +462,31 @@ class AICriteriaIP(AICriteriaNetworkInterface):
             return
 
         AICriteriaIP.client_ip_initialized = True
-        if AICriteriaNetworkInterface.ifconfig_iface_info == None:
+
+        if AICriteriaNetworkInterface.network_iface:
+            cmd = (IPADM + " show-addr -o ADDR -p " +
+                   AICriteriaNetworkInterface.network_iface)
+
+            output, ret = ai_exec_cmd(cmd)
+
+            if not ret:
+                if '/' in output:
+                    AICriteriaIP.client_ip, AICriteriaIP.client_ip_prefix = \
+                        output.strip("\n").split("/")
+
+                    ip_split = AICriteriaIP.client_ip.split(".")
+                    AICriteriaIP.client_ip_string = ''.join([val.zfill(3)
+                                                    for val in ip_split])
+                    AIGM_LOG.post(AILog.AI_DBGLVL_INFO, "Client IP address: "
+                                  "%s", AICriteriaIP.client_ip_string)
+                    AIGM_LOG.post(AILog.AI_DBGLVL_INFO, "Network prefix: %s",
+                                  AICriteriaIP.client_ip_prefix)
+
+        if not AICriteriaIP.client_ip_string:
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Could not obtain IP address")
-        else:
-            AICriteriaIP.client_ip = AICriteriaNetworkInterface. \
-                ifconfig_iface_info.split("inet", 1)[1].strip().\
-                split()[0].strip()
-
-            # remove '.'
-            ip_split = AICriteriaIP.client_ip.split('.')
-            AICriteriaIP.client_ip_string = "%03d%03d%03d%03d" % \
-                (int(ip_split[0]), int(ip_split[1]),
-                 int(ip_split[2]), int(ip_split[3]))
-
-            AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                          "Client IP address: %s",
-                          AICriteriaIP.client_ip_string)
+                          "Could not obtain network address")
+            AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
+                          "Could not obtain network prefix")
 
         AICriteria.__init__(self, AICriteriaIP.client_ip_string)
 
@@ -531,47 +510,21 @@ class AICriteriaNetwork(AICriteriaIP):
 
         AICriteriaNetwork.client_net_initialized = True
 
-        if AICriteriaNetworkInterface.ifconfig_iface_info == None or \
-            AICriteriaIP.client_ip == None:
-            AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Could not obtain network address")
-        else:
-            # extract network mask
-            client_netmask = \
-                long(AICriteriaNetworkInterface.ifconfig_iface_info.
-                    split("netmask", 1)[1].strip().split()[0].strip(), 16)
+        if AICriteriaIP.client_ip_string and \
+           AICriteriaIP.client_ip_prefix:
 
-            # Translate IP address in string format to long
-            ip_part = AICriteriaIP.client_ip.split('.')
-            ip_long = long(ip_part[0]) << 24 | long(ip_part[1]) << \
-                16 | long(ip_part[2]) << 8 | long(ip_part[3])
+            # calculate netmask from ip prefix
+            bits = 0xffffffff ^ (1 << 32 -
+                                 int(AICriteriaIP.client_ip_prefix)) - 1
+            dotted_netmask = socket.inet_ntoa(pack('>I', bits))
 
-            client_network_long = ip_long & client_netmask
+            ip_parts = AICriteriaIP.client_ip.split(".")
+            netmask_parts = dotted_netmask.split(".")
+            AICriteriaNetwork.client_net = ".".join([str(int(i) & int(n))
+                for i, n in zip(ip_parts, netmask_parts)])
 
-            AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                          "Mask: %08lX, IP: %08lX, Network: %08lX",
-                          client_netmask, ip_long, client_network_long)
-
-            AICriteriaNetwork.client_net_string = \
-                "%03ld%03ld%03ld%03ld" % \
-                (client_network_long >> 24,
-                 client_network_long >> 16 & 0xff,
-                 client_network_long >> 8 & 0xff,
-                 client_network_long & 0xff)
-
-            maskbits = 0
-            for shift in range(32):
-                if ((client_netmask >> shift) & 1):
-                    maskbits = 32 - shift
-                    break
-
-            AICriteriaNetwork.client_net = \
-                "%ld.%ld.%ld.%ld/%d" % \
-                (client_network_long >> 24,
-                 client_network_long >> 16 & 0xff,
-                 client_network_long >> 8 & 0xff,
-                 client_network_long & 0xff,
-                 maskbits)
+            AICriteriaNetwork.client_net_string = "".join([val.zfill(3)
+                for val in AICriteriaNetwork.client_net.split(".")])
 
             AIGM_LOG.post(AILog.AI_DBGLVL_INFO, "Client net: %s",
                           AICriteriaNetwork.client_net_string)

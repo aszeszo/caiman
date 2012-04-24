@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 # Description:
 #       It contains common functions used by installadm subcommands
@@ -42,7 +42,7 @@ FIND=/bin/find
 GREP=/bin/grep
 HEAD=/bin/head
 HOSTNAME=/bin/hostname
-IFCONFIG=/usr/sbin/ifconfig
+IPADM=/usr/sbin/ipadm
 LN=/bin/ln
 MKDIR=/bin/mkdir
 MOUNT=/usr/sbin/mount
@@ -191,7 +191,7 @@ function get_ip_for_net
 
 	# Find the IP address(es) for the interface route(1) provided. Use
 	# ipadm(1) to look up interface addresses;
-	server_ip=$(/usr/sbin/ipadm show-addr -p -o ADDR ${interface}/ | \
+	server_ip=$($IPADM show-addr -p -o ADDR ${interface}/ | \
 		    $EGREP -v -- "$IPADM_GREP_STRING")
 
 	# see if interface has multiple VLANs
@@ -221,34 +221,6 @@ function get_ip_for_net
 	server_ip=${server_ip/%\/[0-9]*/}
 	print "$server_ip"
 	return 0
-}
-
-#
-# get_ip_netmask
-#
-# Purpose : Get the netmask set for the given IP address on the current host.
-#           Assumes IP address is currently set on an interface.
-#
-# Arguments :
-#	$1 - IP address
-#
-# Returns netmask in hexidecimal notation (e.g. ffffff00)
-#
-get_ip_netmask()
-{
-	ipaddr=$1
-
-	if [[ -z "$ipaddr" ]]; then
-		return
-	fi
-
-	$IFCONFIG -a | $GREP broadcast | $AWK '{print $2, $4}' | \
-		while read t_ipaddr t_netmask ; do
-			if [ "$t_ipaddr" = "$ipaddr" ]; then
-				print "$t_netmask"
-				break
-			fi
-		done
 }
 
 #
@@ -552,7 +524,7 @@ function get_system_networks
 
 	# get all addresses and
 	# remove <IPv6 | 127.0.0.1 | unconfigured DHCP interfaces>
-	interfaces=$(/usr/sbin/ipadm show-addr -p -o ADDR,STATE | \
+	interfaces=$($IPADM show-addr -p -o ADDR,STATE | \
 	    $EGREP -v "${IPADM_GREP_STRING}|^127.0.0.1" | \
 	    $EGREP -e ':ok$|:tentative$' | \
 	    $SED 's/:ok$//;s/:tentative$//')
@@ -887,129 +859,4 @@ function calculate_net_addr
 
 	print "${s_addr[0]}.${s_addr[1]}.${s_addr[2]}.${s_addr[3]}"
 	return
-}
-
-
-#
-# find_network_attr
-#
-# Purpose : Given an IP address, figure out which network on this
-#	    server it belongs to, or its netmask, depending on $2.
-#	    Workhorse function for find_network(), find_network_nmask() and
-#	    find_network_baseIP()
-#
-# Parameters :
-#	$1 - IP address
-#	$2 - what gets returned: one of "network", "netmask" or "netIPaddr"
-#		- "network" specifies that this function returns the network
-#			corresponding to the IP address (IP addr & netmask)
-#		- "netmask" specifies that this function returns the netmask
-#			of the network corresponding to the IP address
-#		- "netIPaddr" specifies that this function returns the base IP
-#			address of the network corresponding to the IP address
-# Returns :
-#	Network for IP address passed in.
-#
-find_network_attr()
-{
-	typeset ipaddr=$1
-	typeset attr=$2
-
-	if [[ -z "$ipaddr" ]] ; then
-		return
-	fi
-
-	# Iterate through the interfaces to figure what the possible
-	# networks are (in case this is a multi-homed server).
-	# For each network, use its netmask with the given IP address 
-	# to see if resulting network matches.
-	$IFCONFIG -a | $GREP broadcast | $AWK '{print $2, $4}' | \
-		while read t_ipaddr t_netmask ; do
-
-			# convert hex netmask into bits for CIDR notation
-			typeset bits
-			# 32 bits minus however many are masked out for hosts
-			((bits=32-log2(2**32-16#$t_netmask)))
-
-			# get network of this interface
-			if_network=$(calculate_net_addr ${t_ipaddr}/$bits)
-			if [[ -z $if_network ]]; then
-				continue
-			fi
-
-			# get network for passed in ipaddr based
-			# on this interfaces's netmask
-			ip_network=$(calculate_net_addr ${ipaddr}/$bits)
-			if [[ -z $ip_network ]]; then
-				continue
-			fi
-
-			# if networks match, this is the network that
-			# the passed in ipaddr belongs to.
-			if [ "$if_network" = "$ip_network" ] ; then
-				case $attr in
-					"network" )
-						print "$if_network"
-						;;
-					"netmask" )
-						print "$t_netmask"
-						;;
-					"netIPaddr" )
-						print "$t_ipaddr"
-						;;
-				esac
-				break
-			fi
-		done
-}
-
-#
-# find_network
-#
-# Purpose : Given an IP address, figure out which network on this
-#	    server it belongs to.
-#
-# Parameters :
-#	$1 - IP address
-#
-# Returns :
-#	Network for IP address passed in.
-#
-find_network()
-{
-	print $(find_network_attr $1 "network")
-}
-
-#
-# find_network_nmask()
-#
-# Purpose : Given an IP address, figure out which network on this server it
-#	belongs to, and return that network's netmask.
-#
-# Parameters :
-#	$1 - IP address
-#
-# Returns :
-#	Netmask for IP address passed in.
-#
-find_network_nmask()
-{
-	print $(find_network_attr $1 "netmask")
-}
-
-#
-# find_network_baseIP()
-#
-# Purpose : Given an IP address, figure out which network on this server it
-#	belongs to, and return that network's base IP address.
-#
-# Parameters :
-#	$1 - IP address
-#
-# Returns :
-#	Netmask for IP address passed in.
-#
-find_network_baseIP()
-{
-	print $(find_network_attr $1 "netIPaddr")
 }
