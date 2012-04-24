@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''Tests for the Transfer Info interface'''
@@ -358,6 +358,7 @@ class TestIPSInfoFunctions(unittest.TestCase):
                 self.assertEqual(img_type[0].zone, False)
                 self.assertEqual(tr.action, None)
                 self.assertEqual(tr.contents, None)
+                self.assertEqual(tr.reject_list, None)
                 self.assertEqual(tr.app_callback, None)
                 self.assertEqual(tr.purge_history, False)
 
@@ -390,6 +391,138 @@ class TestIPSInfoFunctions(unittest.TestCase):
                 self.assertEqual(img_type[0].zone, False)
                 self.assertEqual(tr.contents, ["SUNWcs", "SUNWcsr"])
                 self.assertEqual(tr.action, "install")
+                self.assertEqual(tr.purge_history, False)
+                self.assertEqual(tr.app_callback, None)
+
+        # pkg reject_list is set
+        tr_node.action = "install"
+        tr_node.contents = ["SUNWcs"]
+        tr_node.reject_list = ["to/be/rejected"]
+        soft_list = self.doc.get_children("transfer test 1", Software)
+        for soft in soft_list:
+            tr_list = soft.get_children(class_type=IPSSpec)
+            for tr in tr_list:
+                src_list = soft.get_children("source", Source)
+                self.assertEqual(len(src_list), 1)
+
+                pub = src_list[0].get_children("publisher", Publisher)
+                origin = pub[0].get_children("origin", Origin)
+                self.assertEqual(origin[0].origin,
+                    "http://pkg.oracle.com/solaris/release")
+
+                dst_list = soft.get_children("destination", Destination)
+                self.assertEqual(len(dst_list), 1)
+
+                image = dst_list[0].get_children("image", Image)
+                self.assertEqual(len(image), 1)
+
+                img_type = image[0].get_children("img_type", ImType)
+                self.assertEqual(len(img_type), 1)
+
+                self.assertEqual(image[0].img_root, "/rpool/dc")
+                self.assertEqual(image[0].action, "create")
+                self.assertEqual(img_type[0].completeness, "full")
+                self.assertEqual(img_type[0].zone, False)
+                self.assertEqual(tr.action, "install")
+                self.assertEqual(tr.contents, ["SUNWcs"])
+                self.assertEqual(tr.reject_list, ["to/be/rejected"])
+                self.assertEqual(tr.purge_history, False)
+                self.assertEqual(tr.app_callback, None)
+
+        # pkg uninstall list is set
+        tr_node.action = "uninstall"
+        tr_node.contents = ["SUNWcs"]
+        soft_list = self.doc.get_children("transfer test 1", Software)
+        for soft in soft_list:
+            tr_list = soft.get_children(class_type=IPSSpec)
+            for tr in tr_list:
+                src_list = soft.get_children("source", Source)
+                self.assertEqual(len(src_list), 1)
+
+                pub = src_list[0].get_children("publisher", Publisher)
+                origin = pub[0].get_children("origin", Origin)
+                self.assertEqual(origin[0].origin,
+                    "http://pkg.oracle.com/solaris/release")
+
+                dst_list = soft.get_children("destination", Destination)
+                self.assertEqual(len(dst_list), 1)
+
+                image = dst_list[0].get_children("image", Image)
+                self.assertEqual(len(image), 1)
+
+                img_type = image[0].get_children("img_type", ImType)
+                self.assertEqual(len(img_type), 1)
+
+                self.assertEqual(image[0].img_root, "/rpool/dc")
+                self.assertEqual(image[0].action, "create")
+                self.assertEqual(img_type[0].completeness, "full")
+                self.assertEqual(img_type[0].zone, False)
+                self.assertEqual(tr.action, "uninstall")
+                self.assertEqual(tr.contents, ["SUNWcs"])
+                self.assertEqual(tr.purge_history, False)
+                self.assertEqual(tr.app_callback, None)
+
+        # pkg avoid list is set
+        tr_node.action = "avoid"
+        tr_node.contents = ["SUNWcs", "SUNWcsr"]
+        soft_list = self.doc.get_children("transfer test 1", Software)
+        for soft in soft_list:
+            tr_list = soft.get_children(class_type=IPSSpec)
+            for tr in tr_list:
+                src_list = soft.get_children("source", Source)
+                self.assertEqual(len(src_list), 1)
+
+                pub = src_list[0].get_children("publisher", Publisher)
+                origin = pub[0].get_children("origin", Origin)
+                self.assertEqual(origin[0].origin,
+                    "http://pkg.oracle.com/solaris/release")
+
+                dst_list = soft.get_children("destination", Destination)
+                self.assertEqual(len(dst_list), 1)
+
+                image = dst_list[0].get_children("image", Image)
+                self.assertEqual(len(image), 1)
+                img_type = image[0].get_children("img_type", ImType)
+                self.assertEqual(len(img_type), 1)
+
+                self.assertEqual(image[0].img_root, "/rpool/dc")
+                self.assertEqual(image[0].action, "create")
+                self.assertEqual(img_type[0].completeness, "full")
+                self.assertEqual(img_type[0].zone, False)
+                self.assertEqual(tr.contents, ["SUNWcs", "SUNWcsr"])
+                self.assertEqual(tr.action, "avoid")
+                self.assertEqual(tr.purge_history, False)
+                self.assertEqual(tr.app_callback, None)
+
+        # pkg unavoid list is set
+        tr_node.action = "unavoid"
+        tr_node.contents = ["SUNWcs", "SUNWcsr"]
+        soft_list = self.doc.get_children("transfer test 1", Software)
+        for soft in soft_list:
+            tr_list = soft.get_children(class_type=IPSSpec)
+            for tr in tr_list:
+                src_list = soft.get_children("source", Source)
+                self.assertEqual(len(src_list), 1)
+
+                pub = src_list[0].get_children("publisher", Publisher)
+                origin = pub[0].get_children("origin", Origin)
+                self.assertEqual(origin[0].origin,
+                    "http://pkg.oracle.com/solaris/release")
+
+                dst_list = soft.get_children("destination", Destination)
+                self.assertEqual(len(dst_list), 1)
+
+                image = dst_list[0].get_children("image", Image)
+                self.assertEqual(len(image), 1)
+                img_type = image[0].get_children("img_type", ImType)
+                self.assertEqual(len(img_type), 1)
+
+                self.assertEqual(image[0].img_root, "/rpool/dc")
+                self.assertEqual(image[0].action, "create")
+                self.assertEqual(img_type[0].completeness, "full")
+                self.assertEqual(img_type[0].zone, False)
+                self.assertEqual(tr.contents, ["SUNWcs", "SUNWcsr"])
+                self.assertEqual(tr.action, "unavoid")
                 self.assertEqual(tr.purge_history, False)
                 self.assertEqual(tr.app_callback, None)
 

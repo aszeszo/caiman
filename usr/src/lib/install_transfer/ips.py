@@ -57,7 +57,7 @@ from solaris_install.transfer.info import Publisher
 from solaris_install.transfer.info import Software
 from solaris_install.transfer.info import Source
 from solaris_install.transfer.info import ACTION, CONTENTS, \
-PURGE_HISTORY, APP_CALLBACK, IPS_ARGS, UPDATE_INDEX
+PURGE_HISTORY, APP_CALLBACK, IPS_ARGS, UPDATE_INDEX, REJECT_LIST
 from solaris_install.transfer.prog import ProgressMon
 
 LICENSE_ACCEPTED = "automatically accepted"
@@ -619,6 +619,11 @@ class AbstractIPS(Checkpoint):
                         self.properties[prop] = str(self.properties[prop])
                     img.set_property(prop, self.properties[prop])
 
+        # Refresh publishers now that we've set the publishers,  otherwise
+        # avoid/unavoid will not work and will cause install failures
+        if not self.dry_run:
+            self.api_inst.refresh(immediate=True)
+
         # Perform the transfer specific operations.
         for trans_val in self._transfer_list:
             if trans_val.get(ACTION) == "install":
@@ -628,15 +633,30 @@ class AbstractIPS(Checkpoint):
                     self.logger.info("Installing packages from:")
                     self.print_repository_uris()
 
+                    reject_list = trans_val.get(REJECT_LIST)
+                    if reject_list:
+                        self.logger.info(
+                            "Transfer set to reject packages matching:")
+                        for pkg in reject_list:
+                            self.logger.info("  %s", pkg)
+                    else:
+                        # Set the reject list to be the default value rather
+                        # than None
+                        self.logger.debug(
+                            "Transfer reject package list is empty")
+                        reject_list = misc.EmptyI
+
                     if not self.dry_run:
                         # Install packages
                         if trans_val.get(IPS_ARGS):
                             self.api_inst.plan_install(
                                      pkg_list=trans_val.get(CONTENTS),
+                                     reject_list=reject_list,
                                      **trans_val.get(IPS_ARGS))
                         else:
                             self.api_inst.plan_install(
-                                    pkg_list=trans_val.get(CONTENTS))
+                                    pkg_list=trans_val.get(CONTENTS),
+                                    reject_list=reject_list)
 
                         if callback:
                             # execute the callback function passing it
@@ -714,8 +734,23 @@ class AbstractIPS(Checkpoint):
                     self.api_inst.execute_plan()
                     self.api_inst.reset()
 
-                else:
-                    self.logger.debug("Dry Run: Uninstalling packages")
+            elif trans_val.get(ACTION) == "avoid":
+                self.logger.info("Setting packages to avoid:")
+                avoid_list = trans_val.get(CONTENTS)
+                for pkg in avoid_list:
+                    self.logger.info("  %s", pkg)
+                if not self.dry_run:
+                    # Avoid packages
+                    self.api_inst.avoid_pkgs(avoid_list)
+
+            elif trans_val.get(ACTION) == "unavoid":
+                self.logger.info("Removing packages from list to avoid:")
+                unavoid_list = trans_val.get(CONTENTS)
+                for pkg in unavoid_list:
+                    self.logger.info("  %s", pkg)
+                if not self.dry_run:
+                    # Avoid packages
+                    self.api_inst.avoid_pkgs(unavoid_list, unavoid=True)
 
             if trans_val.get(PURGE_HISTORY):
                 # purge history if requested.
@@ -812,7 +847,7 @@ class AbstractIPS(Checkpoint):
                     pkg_client_name=PKG_CLIENT_NAME,
                     version_id=PKG5_API_VERSION, root=self.dst,
                     imgtype=self.completeness, is_zone=self.is_zone,
-                    force=True, **self._image_args)
+                    refresh_allowed=False, force=True, **self._image_args)
 
                 # The above call will end up leaving our process's cwd in
                 # the image's root area, which will cause pain later on
@@ -994,6 +1029,7 @@ class TransferIPS(AbstractIPS):
             trans_attr = dict()
             trans_attr[ACTION] = trans.action
             trans_attr[CONTENTS] = trans.contents
+            trans_attr[REJECT_LIST] = trans.reject_list
             trans_attr[PURGE_HISTORY] = trans.purge_history
             trans_attr[APP_CALLBACK] = trans.app_callback
 
@@ -1146,6 +1182,7 @@ class TransferIPSAttr(AbstractIPS):
         # Attributes per transfer
         self.action = None
         self.contents = None
+        self.reject_list = None
         self.purge_history = False
         self.app_callback = None
         self.args = {}
@@ -1217,6 +1254,7 @@ class TransferIPSAttr(AbstractIPS):
 
         trans_attr[ACTION] = self.action
         trans_attr[CONTENTS] = self.contents
+        trans_attr[REJECT_LIST] = self.reject_list
         trans_attr[PURGE_HISTORY] = self.purge_history
         trans_attr[APP_CALLBACK] = self.app_callback
         if not self.index:

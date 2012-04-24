@@ -273,11 +273,45 @@ DTD sample manifest for Automatic Installer input manifest specification.
         form:
       
             <name="entire@0.5.11-0.build#"/>
+
+        It is possible to specify one or more packages that are to be
+        rejected, when evaluating what is to be installed, by using one or
+        more 'reject' tags, for example:
+
+          <software_data>
+            <name>pkg:/entire@latest</name>
+            <name>pkg:/group/system/solaris-large-server</name>
+            <reject>package/to/reject</reject>
+            <reject>another/package/to/reject</reject>
+          </software_data>
+
+        this is the equivalent of the 'pkg install -reject' option.
+
+        The main benefit of using the <reject> over an 'uninstall' action is
+        that these packages are rejected during the plan for the install
+        action as opposed to requiring a new plan like the 'uninstall' action
+        does.
       -->
       <software_data>
         <name>pkg:/entire@latest</name>
         <name>pkg:/group/system/solaris-large-server</name>
       </software_data>
+
+      <!--
+        It is possible to request that any future install specifically avoids
+        any attempts to install some packages that would be otherwise selected
+        by the 'install' action (above), or future 'pkg install' commands.
+
+        The avoid list is stored as part of the image, so is persistent. 
+
+        To remove a package from the avoid list, you can use the action of
+        'unavoid' to remove it.
+       -->
+      <!--
+      <software_data action="avoid">
+        <name>pkg:/unwanted/pkg</name>
+      </software_data>
+      -->
     </software>
     <add_drivers>
       <!--

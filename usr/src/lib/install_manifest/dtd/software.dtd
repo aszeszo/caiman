@@ -18,7 +18,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 
 -->
 
@@ -39,17 +39,24 @@
 <!ATTLIST software name CDATA #IMPLIED>
 <!ATTLIST software type (IPS|SVR4|CPIO|ARCHIVE|IMAGE|P5I|DU|P5P) "IPS">
 
-<!ELEMENT software_data (name*)>
-<!ATTLIST software_data action (install|uninstall|unpack|noinstall) "install">
+<!ELEMENT software_data (name|reject)*>
+<!ATTLIST software_data action (install|uninstall|unpack|avoid|unavoid) "install">
 <!--
 	size is the total size of all the data specified
-        in this software_data section.  This value can
-        be specified for both install and uninstall actions.
-        Size specified is in bytes.  This attribute is optional.
+	in this software_data section.  This value can
+	be specified for both install and uninstall actions.
+	Size specified is in bytes.  This attribute is optional.
 -->
 <!ATTLIST software_data size CDATA #IMPLIED>
 
 <!ELEMENT name (#PCDATA)>
+
+<!--
+    reject is used to signal to an IPS install action that the value
+    specified is to be rejected. It has no effect for any other
+    transfer type.
+-->
+<!ELEMENT reject (#PCDATA)>
 
 <!--
 	Destination element is not required. If specified there can only

@@ -38,6 +38,7 @@ INSTALL = "install"
 IPS = "IPS"
 IPS_ARGS = "ips_args"
 PURGE_HISTORY = "purge_history"
+REJECT_LIST = "reject_list"
 SIZE = "size"
 SOFTWARE_DATA = "software_data"
 SVR4_ARGS = "svr4_args"
@@ -125,11 +126,16 @@ class Software(DataObject):
                         action = IPSSpec.INSTALL
 
                     pkg_list = list()
-                    for name in sub.iterchildren(tag="name"):
-                        pkg_list.append(name.text.strip('"\n\t '))
+                    reject_list = list()
+                    for child in sub.getchildren():
+                        if child.tag == IPSSpec.IPS_NAME_LABEL:
+                            pkg_list.append(child.text.strip('"\n\t '))
+                        elif child.tag == IPSSpec.IPS_REJECT_LABEL:
+                            reject_list.append(child.text.strip('"\n\t '))
 
                     transfer_obj.action = action
                     transfer_obj.contents = pkg_list
+                    transfer_obj.reject_list = reject_list
 
                 elif val == "CPIO":
                     transfer_obj = CPIOSpec()
@@ -623,14 +629,16 @@ class IPSSpec(DataObject):
     IPS_SOFTWARE_DATA_LABEL = "software_data"
     IPS_ACTION_LABEL = "action"
     IPS_NAME_LABEL = "name"
+    IPS_REJECT_LABEL = "reject"
     INSTALL = "install"
     UNINSTALL = "uninstall"
 
-    def __init__(self, action=None, contents=None,
+    def __init__(self, action=None, contents=None, reject_list=None,
                  app_callback=None, purge_history=False):
         super(IPSSpec, self).__init__(IPSSpec.IPS_TRANSFER_LABEL)
         self.action = action
         self.contents = contents
+        self.reject_list = reject_list
         self.app_callback = app_callback
         self.purge_history = purge_history
 
@@ -646,6 +654,9 @@ class IPSSpec(DataObject):
 
         for pkg in self.contents:
             sub_element = etree.SubElement(element, IPSSpec.IPS_NAME_LABEL)
+            sub_element.text = pkg
+        for pkg in self.reject_list:
+            sub_element = etree.SubElement(element, IPSSpec.IPS_REJECT_LABEL)
             sub_element.text = pkg
         return element
 
@@ -667,14 +678,17 @@ class IPSSpec(DataObject):
         if action is None:
             action = IPSSpec.INSTALL
 
-        pkg_list = []
-        names = element.getchildren()
-
-        for name in names:
-            pkg_list.append(name.text.strip('"\n\t '))
+        pkg_list = list()
+        reject_list = list()
+        for child in element.getchildren():
+            if child.tag == IPSSpec.IPS_NAME_LABEL:
+                pkg_list.append(child.text.strip('"\n\t '))
+            elif child.tag == IPSSpec.IPS_REJECT_LABEL:
+                reject_list.append(child.text.strip('"\n\t '))
 
         transfer_obj.action = action
         transfer_obj.contents = pkg_list
+        transfer_obj.reject_list = reject_list
         return transfer_obj
 
 

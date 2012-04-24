@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import unittest
@@ -375,6 +375,92 @@ class TestIPSFunctions(unittest.TestCase):
         self.tr_node2.action = "uninstall"
         self.tr_node2.contents = ["system/library/svm-rcm"]
         self.tr_node2.insert_children([uninstall_args])
+        self.soft_node.insert_children([self.tr_node2])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+        except Exception as err:
+            self.fail(str(err))
+
+    def test_install_reject_noargs(self):
+        '''Test that an IPS package can be rejected'''
+        self.tr_node.action = "install"
+        self.tr_node.contents = ["solaris-large-server"]
+        self.tr_node.reject_list = ["slocate"]
+        self.tr_node2 = IPSSpec()
+        self.tr_node2.action = "install"
+        self.tr_node2.contents = ["system/library/svm-rcm"]
+        self.soft_node.insert_children([self.tr_node2])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+        except Exception as err:
+            self.fail(str(err))
+
+    def test_install_reject_with_args(self):
+        '''Test that an IPS package can be rejected with args'''
+        install_args = Args(arg_dict={"update_index": False})
+        self.tr_node.action = "install"
+        self.tr_node.reject_list = ["slocate"]
+        self.tr_node.contents = ["solaris-large-server"]
+        self.tr_node.insert_children([install_args])
+        self.tr_node2 = IPSSpec()
+        self.tr_node2.action = "install"
+        self.tr_node2.contents = ["system/library/svm-rcm"]
+        self.soft_node.insert_children([self.tr_node2])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+        except Exception as err:
+            self.fail(str(err))
+
+    def test_avoid_noargs(self):
+        '''Test that an IPS package can be avoided'''
+        self.tr_node.action = "avoid"
+        self.tr_node.contents = ["solaris-large-server"]
+        self.tr_node2 = IPSSpec()
+        self.tr_node2.action = "avoid"
+        self.tr_node2.contents = ["system/library/svm-rcm"]
+        self.soft_node.insert_children([self.tr_node2])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+        except Exception as err:
+            self.fail(str(err))
+
+    def test_avoid_with_args(self):
+        '''Test that an IPS package can be avoided with args'''
+        install_args = Args(arg_dict={"update_index": False})
+        self.tr_node.action = "avoid"
+        self.tr_node.contents = ["solaris-large-server"]
+        self.tr_node.insert_children([install_args])
+        self.tr_node2 = IPSSpec()
+        self.tr_node2.action = "avoid"
+        self.tr_node2.contents = ["system/library/svm-rcm"]
+        self.soft_node.insert_children([self.tr_node2])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+        except Exception as err:
+            self.fail(str(err))
+
+    def test_unavoid_noargs(self):
+        '''Test that an IPS package can be unavoided'''
+        self.tr_node.action = "unavoid"
+        self.tr_node.contents = ["solaris-large-server"]
+        self.tr_node2 = IPSSpec()
+        self.tr_node2.action = "unavoid"
+        self.tr_node2.contents = ["system/library/svm-rcm"]
+        self.soft_node.insert_children([self.tr_node2])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+        except Exception as err:
+            self.fail(str(err))
+
+    def test_unavoid_with_args(self):
+        '''Test that an IPS package can be rejected with args'''
+        install_args = Args(arg_dict={"update_index": False})
+        self.tr_node.action = "unavoid"
+        self.tr_node.contents = ["solaris-large-server"]
+        self.tr_node.insert_children([install_args])
+        self.tr_node2 = IPSSpec()
+        self.tr_node2.action = "unavoid"
+        self.tr_node2.contents = ["system/library/svm-rcm"]
         self.soft_node.insert_children([self.tr_node2])
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
