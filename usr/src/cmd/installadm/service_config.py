@@ -37,7 +37,7 @@ import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.installadm_common as com
 
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
-from solaris_install import CalledProcessError, Popen
+from solaris_install import CalledProcessError, Popen, SetUIDasEUID
 
 
 # AI installation service property keys and values
@@ -529,7 +529,7 @@ def enable_install_service(svcname):
 
     # Confirm required keys are available and exit if not
     verify_key_properties(svcname, props)
-
+    
     # Update status in service's properties
     props[PROP_STATUS] = STATUS_ON
     set_service_props(svcname, props)
@@ -542,7 +542,8 @@ def enable_install_service(svcname):
            props[PROP_TXT_RECORD]]
     try:
         logging.log(com.XDEBUG, "Executing: %s", cmd)
-        Popen.check_call(cmd)
+        with SetUIDasEUID():
+            Popen.check_call(cmd)
     except CalledProcessError:
         # Revert status in service's properties
         props = {PROP_STATUS: STATUS_OFF}

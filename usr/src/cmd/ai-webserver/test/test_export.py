@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -38,6 +38,12 @@ import osol_install.auto_install.service as service
 
 gettext.install("ai-test")
 
+
+def do_nothing(*args, **kwargs):
+        '''does nothing'''
+        pass
+
+
 class MockIsService(object):
     '''Class for mock is_service '''
     def __init__(self, *args, **kwargs):
@@ -46,6 +52,7 @@ class MockIsService(object):
     def __call__(self, name):
         return True
 
+
 class MockVersion(object):
     '''Class for mock version '''
     def __init__(self, *args, **kwargs):
@@ -53,6 +60,7 @@ class MockVersion(object):
 
     def __call__(self):
         return service.AIService.EARLIEST_VERSION
+
 
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''
@@ -63,6 +71,8 @@ class ParseOptions(unittest.TestCase):
         config.is_service = MockIsService
         self.svc_version = service.AIService.version
         service.AIService.version = MockVersion()
+        self.check_auth_and_euid = export.check_auth_and_euid
+        export.check_auth_and_euid = do_nothing
 
     def tearDown(self):
         '''unit test tear down
@@ -71,6 +81,7 @@ class ParseOptions(unittest.TestCase):
         '''
         config.is_service = self.config_is_service
         service.AIService.version = self.svc_version
+        export.check_auth_and_euid = self.check_auth_and_euid
 
     def test_parse_no_options(self):
         '''Ensure no options caught'''

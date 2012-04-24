@@ -35,6 +35,12 @@ $(ROOTEXECATTR):
 $(ROOTEXECATTR)/%: exec_attr.%
 	$(INS.rename)
 
+$(ROOTAUTHATTR):
+	$(INS.dir)
+
+$(ROOTAUTHATTR)/%: auth_attr.%
+	$(INS.rename)
+
 $(ROOTLIBSVCMANIFEST)/%: %
 	$(INS.file)
 

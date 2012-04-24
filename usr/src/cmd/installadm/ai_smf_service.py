@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 This file contains a thin wrapper around osol_install.libaiscf and
@@ -37,7 +37,7 @@ import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as libaiscf
 
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
-from solaris_install import Popen, CalledProcessError
+from solaris_install import Popen, CalledProcessError, SetUIDasEUID
 
 _ = com._
 
@@ -216,10 +216,12 @@ def _start_tftpd():
 
         setprop = [SVCCFG, '-s', TFTP_FMRI, 'setprop', 'inetd_start/exec', '=',
                    INET_START % com.BOOT_DIR]
-        Popen.check_call(setprop)
-        Popen.check_call([SVCADM, 'refresh', TFTP_FMRI])
-    
-    Popen.check_call([SVCADM, 'enable', TFTP_FMRI])
+        with SetUIDasEUID():
+            Popen.check_call(setprop)
+            Popen.check_call([SVCADM, 'refresh', TFTP_FMRI])
+
+    with SetUIDasEUID(): 
+        Popen.check_call([SVCADM, 'enable', TFTP_FMRI])
 
 
 def enable_instance():

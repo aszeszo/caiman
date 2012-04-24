@@ -39,7 +39,7 @@ import osol_install.auto_install.installadm_common as com
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw, \
     MACAddress
 from osol_install.libaimdns import getifaddrs
-from solaris_install import Popen, CalledProcessError
+from solaris_install import Popen, CalledProcessError, SetUIDasEUID
 
 
 VERSION = "0.1"
@@ -821,7 +821,8 @@ class DHCPServer(object):
                                % action)
 
         cmd = [SVCADM, action, DHCP_SERVER_IPV4_SVC]
-        Popen.check_call(cmd, stderr=Popen.STORE)
+        with SetUIDasEUID():
+            Popen.check_call(cmd, stderr=Popen.STORE)
 
         # Delay a second to allow for the change to propagate
         time.sleep(1)
@@ -833,7 +834,8 @@ class DHCPServer(object):
             if action in SMF_ONLINE_ACTIONS:
                 for action in SMF_HARD_RESET_ACTIONS:
                     cmd = [SVCADM, action, DHCP_SERVER_IPV4_SVC]
-                    Popen.check_call(cmd, stderr=Popen.STORE)
+                    with SetUIDasEUID():
+                        Popen.check_call(cmd, stderr=Popen.STORE)
                     time.sleep(1)
                 if self._state == SMF_EXPECTED_STATE[action]:
                     return

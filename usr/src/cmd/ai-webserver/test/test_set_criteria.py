@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -38,13 +38,20 @@ import osol_install.auto_install.set_criteria as set_criteria
 
 gettext.install("ai-test")
 
+
+def do_nothing(*args, **kwargs):
+        '''does nothing'''
+        pass
+
+
 class MockDataBase(object):
     '''Class for mock database '''
     def __init__(self):
-        self.queue  = MockQueue()
+        self.queue = MockQueue()
 
     def getQueue(self):
         return self.queue
+
 
 class MockQueue(object):
     '''Class for mock database '''
@@ -53,6 +60,7 @@ class MockQueue(object):
 
     def put(self, query):
         return
+
 
 class MockQuery(object):
     '''Class for mock query '''
@@ -69,6 +77,7 @@ class MockQuery(object):
     def getResponse(self):
         return
 
+
 class MockGetCriteria(object):
     '''Class for mock getCriteria '''
     def __init__(self):
@@ -83,6 +92,7 @@ class MockGetCriteria(object):
         else:
             return self.crit_unstripped
 
+
 class MockisRangeCriteria(object):
     '''Class for mock isRangeCriteria '''
     def __init__(self):
@@ -92,6 +102,7 @@ class MockisRangeCriteria(object):
         if crit in self.range:
             return True
         return False
+
 
 class MockgetManNames(object):
     '''Class for mock getManNames '''
@@ -113,6 +124,7 @@ class MockDataFiles(object):
     def __init__(self):
         self.criteria = None
         self.database = MockDataBase()
+
 
 class SetCriteria(unittest.TestCase):
     '''Tests for set_criteria'''
@@ -149,8 +161,8 @@ class SetCriteria(unittest.TestCase):
         set_criteria.set_criteria(criteria, "myxml", self.files.database,
                                   'manifests')
         expect_query = "UPDATE manifests SET arch='i86pc',MINmem=NULL," + \
-                       "MAXmem='4096',MINipv4=NULL,MAXipv4=NULL,MINmac=NULL," +\
-                       "MAXmac=NULL WHERE name='myxml'"
+                       "MAXmem='4096',MINipv4=NULL,MAXipv4=NULL," +\
+                       "MINmac=NULL,MAXmac=NULL WHERE name='myxml'"
         self.assertEquals(expect_query, self.mockquery.query)
 
     def test_unbounded_max(self):
@@ -252,6 +264,15 @@ class CheckPublishedManifest(unittest.TestCase):
 
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''
+
+    def setUp(self):
+        '''unit test set up'''
+        self.check_auth_and_euid = set_criteria.check_auth_and_euid
+        set_criteria.check_auth_and_euid = do_nothing
+
+    def tearDown(self):
+        '''unit test tear down '''
+        set_criteria.check_auth_and_euid = self.check_auth_and_euid
 
     def test_parse_no_options(self):
         '''Ensure no options caught'''

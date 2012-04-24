@@ -37,6 +37,7 @@ import gettext
 import logging
 import os
 import platform
+import pwd
 import re
 import shutil
 import sys
@@ -51,7 +52,8 @@ from bootmgmt.bootinfo import SystemFirmware
 from solaris_install.logger import INSTALL_LOGGER_NAME
 
 
-_ = gettext.translation('AI', '/usr/share/locale', fallback=True).gettext
+_ = gettext.translation('solaris_install_common', '/usr/share/locale',
+                        fallback=True).gettext
 
 # Useful common directories and path pieces
 
@@ -81,6 +83,13 @@ PKG5_API_VERSION = 66
 DTD_PATH_RE = ".*\.dtd\.\d+$"
 __dtd_path_regexp = re.compile(DTD_PATH_RE)
 
+# AUTHORIZATIONS
+PROFILE_AUTH = "solaris.autoinstall.profile"
+MANIFEST_AUTH = "solaris.autoinstall.manifest"
+CLIENT_AUTH = "solaris.autoinstall.client"
+SERVICE_AUTH = "solaris.autoinstall.service"
+AUTHS = "/usr/bin/auths"
+
 
 class CalledProcessError(subprocess.CalledProcessError):
     '''Expansion of subprocess.CalledProcessError that may optionally
@@ -100,6 +109,19 @@ class StderrCalledProcessError(CalledProcessError):
     '''A subprocess generated output to stderr'''
     def __str__(self):
         return "Command '%s' generated error output" % self.cmd
+
+
+class UnauthorizedUserError(Exception):
+    '''Exception raised when the user does not have a specified
+    authorization.
+    '''
+    def __init__(self, auth=None):
+        self.value = _("Insufficient permissions to perform operation.\n"
+                      "Authorization <%s> required to perform this " 
+                      "operation.") % auth
+
+    def __str__(self):
+        return self.value
 
 
 class _LogBuffer(object):
@@ -438,6 +460,21 @@ class ApplicationData(DataObject):
         return None
 
 
+class SetUIDasEUID(object):
+    """ SetUIDasEUID - context manager for running section of code
+        with the uid set as the user's euid.
+    """
+    def __enter__(self):
+        ''' set the uid as euid '''
+        self.euid = os.geteuid()
+        self.ruid = os.getuid()
+        os.setuid(self.euid)
+
+    def __exit__(self, *exc_info):
+        ''' reset the uid and euid '''
+        os.setreuid(self.ruid, self.euid)
+
+
 # Utility methods to generate paths given files
 def system_temp_path(file=None):
     ''' Return System Temporary Directory, with file string appended'''
@@ -498,3 +535,24 @@ def gpt_firmware_check():
     else:
         # x86 will always be GPT bootable due to GRUB2
         return True
+
+
+def check_auth_and_euid(auth):
+    """
+    Checks whether the user has the specified authorization
+    and euid as 0.
+
+    Raises UnauthorizedUserError if euid is not 0 or user
+           doesn't have authorization.
+    """
+    # raise error if euid is not 0 
+    if os.geteuid() != 0:
+        raise UnauthorizedUserError(auth)
+
+    user = pwd.getpwuid(os.getuid())[0]
+    cmd = [AUTHS, "check", "-u", user, auth]
+
+    try:
+        run(cmd)
+    except CalledProcessError as err:
+        raise UnauthorizedUserError(auth)

@@ -27,8 +27,6 @@ import gettext
 import os.path
 import sys
 
-import lxml.etree
-
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.data_files as df
 
@@ -37,6 +35,8 @@ from optparse import OptionParser
 from osol_install.auto_install.installadm_common import _, \
     validate_service_name
 from osol_install.auto_install.service import AIService
+from solaris_install import check_auth_and_euid, PROFILE_AUTH, \
+    UnauthorizedUserError
 
 
 def get_usage():
@@ -126,6 +126,12 @@ def do_validate_profile(cmd_options=None):
     Arg: cmd_options - command line options
     Effect: validate per command line
     '''
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(PROFILE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
+
     options = parse_options(cmd_options)
     isvalid = True
     # get AI service directory, database name

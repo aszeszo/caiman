@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2012 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 <transform file path=usr/share/locale/C/(.*) -> set action.hash usr/share/locale/C/%<1>>
@@ -76,6 +76,7 @@ file path=usr/share/locale/C/LC_MESSAGES/solaris_install_aiwebserver.po \
     group=other
 file path=usr/share/locale/C/LC_MESSAGES/solaris_install_autoinstall.po \
     group=other
+file path=usr/share/locale/C/LC_MESSAGES/solaris_install_common.po group=other
 file path=usr/share/locale/C/LC_MESSAGES/solaris_install_guiinstall.po \
     group=other
 file path=usr/share/locale/C/LC_MESSAGES/solaris_install_installadm.po \

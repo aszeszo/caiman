@@ -19,13 +19,12 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 installadm - administration of AI services, manifests, and clients
 '''
 import logging
-import os
 import sys
 import traceback
 
@@ -54,7 +53,8 @@ from osol_install.auto_install.installadm_common import _, \
 from osol_install.auto_install.image import ImageError
 from osol_install.auto_install.service import AIService, MountError, \
     VersionError, InvalidServiceError
-from solaris_install import Popen, CalledProcessError
+from solaris_install import Popen, CalledProcessError, check_auth_and_euid, \
+    SERVICE_AUTH, UnauthorizedUserError
 
 
 DEFAULT_LOG_LEVEL = logging.WARN
@@ -95,15 +95,16 @@ def do_enable_service(cmd_options=None):
     '''
     logging.log(XDEBUG, '**** START do_enable_service ****')
 
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(SERVICE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
+
     usage = '\n' + get_enable_usage()
     parser = OptionParser(usage=usage)
 
     args = parser.parse_args(cmd_options)[1]
-
-    # Check for privileges
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for "
-                           "this command."))
 
     # Check for correct number of args
     if len(args) != 1:
@@ -155,15 +156,16 @@ def do_disable_service(cmd_options=None):
     '''
     logging.debug('**** START do_disable_service ****')
 
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(SERVICE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
+
     usage = '\n' + get_disable_usage()
     parser = OptionParser(usage=usage)
 
     (options, args) = parser.parse_args(cmd_options)
-
-    # Check for privileges
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for "
-                           "this command."))
 
     # Check for correct number of args
     if len(args) != 1:

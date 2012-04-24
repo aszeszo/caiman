@@ -34,7 +34,7 @@ import osol_install.auto_install.verifyXML as verifyXML
 from string import Template
 
 from osol_install.auto_install.installadm_common import _
-from solaris_install import Popen
+from solaris_install import Popen, SetUIDasEUID
 
 # profiles stored here internally
 INTERNAL_PROFILE_DIRECTORY = '/var/ai/profile'
@@ -363,8 +363,9 @@ def validate_profile_external_dtd(prof_str,
     # validate against DTD using svccfg apply -n
     pargs = ['/usr/sbin/svccfg', 'apply', '-n', profname]
     # invoke command, save stderr, do not throw exception on failure
-    cmdpipe = Popen.check_call(pargs, stderr=Popen.STORE,
-                               check_result=Popen.ANY)
+    with SetUIDasEUID():
+        cmdpipe = Popen.check_call(pargs, stderr=Popen.STORE,
+                                   check_result=Popen.ANY)
     os.unlink(profname)
     if cmdpipe.returncode == 0:  # success
         return ''

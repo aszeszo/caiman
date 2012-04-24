@@ -20,8 +20,10 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
+
+MSG_DOMAIN = solaris_install_common
 
 include ../Makefile.lib
 
@@ -29,6 +31,8 @@ all:=		TARGET=	all
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
+
+ROOTMSGS= $(POFILE:%=$(ROOTUSRSHAREMSGS)/%)
 
 SRCPYFILES = __init__.py.src
 
@@ -38,16 +42,20 @@ PYMODS =	$(GENERATEDPYFILES) getconsole.py
 
 PYCMODS=	$(PYMODS:%.py=%.pyc)
 
-CLOBBERFILES = $(GENERATEDPYFILES) $(PYCMODS)
+MSGFILES = $(PYMODS)
+
+CLOBBERFILES = $(GENERATEDPYFILES) $(PYCMODS) $(POFILE)
 CLEANFILES = $(CLOBBERFILES)
 
-all:	python
+all:	python $(POFILE)
 
 install: all .WAIT \
 	$(ROOTPYTHONVENDOR) \
 	$(ROOTPYTHONVENDORSOLINSTALL) \
 	$(ROOTPYTHONVENDORSOLINSTALLMODS) \
-	$(ROOTPYTHONVENDORSOLINSTALLCMODS)
+	$(ROOTPYTHONVENDORSOLINSTALLCMODS) \
+	$(ROOTUSRSHAREMSGS) .WAIT \
+	$(ROOTMSGS)
 
 install_h:
 

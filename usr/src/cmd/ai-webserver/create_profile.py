@@ -40,6 +40,8 @@ from stat import S_IRWXU
 
 from osol_install.auto_install.installadm_common import _
 from osol_install.auto_install.service import AIService
+from solaris_install import check_auth_and_euid, PROFILE_AUTH, \
+    UnauthorizedUserError
 
 # Modes of operation.
 DO_CREATE = True
@@ -201,6 +203,12 @@ def do_create_profile(cmd_options=None):
     Effect: add profiles to database per command line
     Raises SystemExit if condition cannot be handled
     '''
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(PROFILE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
+
     options = parse_options(DO_CREATE, cmd_options)
 
     # get AI service image path and database name
@@ -287,6 +295,11 @@ def do_update_profile(cmd_options=None):
     Effect: update existing profile 
     Raises SystemExit if condition cannot be handled
     '''
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(PROFILE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     options = parse_options(DO_UPDATE, cmd_options)
 

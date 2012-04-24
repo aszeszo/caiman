@@ -60,7 +60,7 @@ import pkg.client.progress
 import osol_install.auto_install.installadm_common as com
 
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
-from solaris_install import Popen, PKG5_API_VERSION
+from solaris_install import Popen, PKG5_API_VERSION, SetUIDasEUID
 
 
 _FILE = '/usr/bin/file'
@@ -395,7 +395,8 @@ class InstalladmIsoImage(InstalladmImage):
         
         '''
         cmd = [com.SETUP_IMAGE_SCRIPT, com.IMAGE_CREATE, iso, targetdir]
-        Popen.check_call(cmd, stderr=Popen.STORE)
+        with SetUIDasEUID():
+            Popen.check_call(cmd, stderr=Popen.STORE)
         iso_img = cls(targetdir)
         iso_img.verify()
         iso_img._prep_ai_webserver()

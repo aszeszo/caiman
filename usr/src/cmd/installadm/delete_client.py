@@ -25,7 +25,6 @@ AI delete-client
 '''
 import gettext
 import logging
-import os
 
 import osol_install.auto_install.client_control as clientctrl
 import osol_install.auto_install.installadm_common as com
@@ -34,6 +33,8 @@ import osol_install.auto_install.service_config as config
 from optparse import OptionParser
 
 from osol_install.auto_install.installadm_common import _
+from solaris_install import check_auth_and_euid, CLIENT_AUTH, \
+    UnauthorizedUserError
 
 
 def get_usage():
@@ -72,10 +73,11 @@ def do_delete_client(cmd_options=None):
     client.
 
     '''
-    # check that we are root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for "
-                           "this command.\n"))
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(CLIENT_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     options = parse_options(cmd_options)
     clientid = '01' + str(options.mac)

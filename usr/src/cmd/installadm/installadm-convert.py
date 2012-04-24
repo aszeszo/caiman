@@ -50,7 +50,8 @@ from osol_install.auto_install import create_client
 from osol_install.auto_install.grub import AIGrubCfg as grubcfg
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.auto_install.service import AIService
-from solaris_install import Popen, CalledProcessError
+from solaris_install import Popen, CalledProcessError, check_auth_and_euid, \
+    SERVICE_AUTH, SetUIDasEUID, UnauthorizedUserError
 
 VERSION = _("%prog: version 1.0")
 
@@ -225,8 +226,9 @@ class SUNDHCPData:
         # first get a list of networks served
         cmd = ["/usr/sbin/pntadm", "-L"]
         try:
-            pipe = Popen.check_call(cmd, stdout=Popen.STORE,
-                                    stderr=Popen.DEVNULL)
+            with SetUIDasEUID():
+                pipe = Popen.check_call(cmd, stdout=Popen.STORE,
+                                        stderr=Popen.DEVNULL)
         except CalledProcessError as err:
             # return a DHCPError on failure
             raise SUNDHCPData.DHCPError(err)
@@ -313,8 +315,9 @@ class SUNDHCPData:
         # get a list of all server macros
         cmd = ["/usr/sbin/dhtadm", "-P"]
         try:
-            pipe = Popen.check_call(cmd, stdout=Popen.STORE,
-                                    stderr=Popen.DEVNULL)
+            with SetUIDasEUID():
+                pipe = Popen.check_call(cmd, stdout=Popen.STORE,
+                                        stderr=Popen.DEVNULL)
         except CalledProcessError as err:
             raise SUNDHCPData.DHCPError(err)
 
@@ -365,8 +368,9 @@ class SUNDHCPData:
         systems = dict()
         cmd = ["/usr/sbin/pntadm", "-P", net]
         try:
-            pipe = Popen.check_call(cmd, stdout=Popen.STORE,
-                                    stderr=Popen.DEVNULL)
+            with SetUIDasEUID():
+                pipe = Popen.check_call(cmd, stdout=Popen.STORE,
+                                        stderr=Popen.DEVNULL)
         except CalledProcessError as err:
             raise SUNDHCPData.DHCPError(err)
 
@@ -654,9 +658,10 @@ def set_exec_prop(val):
            'inetd_start/exec="%s"' % val]
 
     try:
-        Popen.check_call(cmd, stdout=Popen.STORE,
-            stderr=Popen.STORE, logger='',
-            stderr_loglevel=logging.DEBUG)
+        with SetUIDasEUID():
+            Popen.check_call(cmd, stdout=Popen.STORE,
+                             stderr=Popen.STORE, logger='',
+                             stderr_loglevel=logging.DEBUG)
     except CalledProcessError:
         sys.stderr.write(cw(_('%(path)s: warning: Unable to set the value of '
                               'key property inetd/start_exec for '
@@ -667,9 +672,10 @@ def set_exec_prop(val):
     cmd = ['/usr/sbin/svcadm', 'refresh', 'tftp/udp6:default']
 
     try:
-        Popen.check_call(cmd, stdout=Popen.STORE,
-            stderr=Popen.STORE, logger='',
-            stderr_loglevel=logging.DEBUG)
+        with SetUIDasEUID():
+            Popen.check_call(cmd, stdout=Popen.STORE,
+                             stderr=Popen.STORE, logger='',
+                             stderr_loglevel=logging.DEBUG)
     except CalledProcessError:
         sys.stderr.write(cw(_('%s: warning: Unable to refresh the service: '
                               'tftp/udp6:default\nThis needs to be done '
@@ -692,9 +698,10 @@ def del_prop_group(ai_service, dry_run):
         cmd = ['/usr/sbin/svccfg', '-s', AI_SVC_FMRI, 'delprop', pg_name]
 
         try:
-            Popen.check_call(cmd, stdout=Popen.STORE,
-                stderr=Popen.STORE, logger='',
-                stderr_loglevel=logging.DEBUG)
+            with SetUIDasEUID():
+                Popen.check_call(cmd, stdout=Popen.STORE,
+                                 stderr=Popen.STORE, logger='',
+                                 stderr_loglevel=logging.DEBUG)
         except CalledProcessError as err:
             sys.stderr.write(cw(_('%(cmd)s failed with: %(error)s')
                                   % {'cmd': cmd, 'error': err.popen.stderr}))
@@ -753,10 +760,11 @@ def remove_boot_archive_from_vfstab(ai_service, service):
                 # unmount filesystem
                 try:
                     cmd = ["/usr/sbin/umount", boot_archive]
-                    Popen.check_call(cmd, stdout=Popen.STORE,
-                        stderr=Popen.STORE, logger='',
-                        stderr_loglevel=logging.DEBUG,
-                        check_result=Popen.SUCCESS)
+                    with SetUIDasEUID():
+                        Popen.check_call(cmd, stdout=Popen.STORE,
+                                         stderr=Popen.STORE, logger='',
+                                         stderr_loglevel=logging.DEBUG,
+                                         check_result=Popen.SUCCESS)
 
                 # if run_cmd errors out we should continue
                 except CalledProcessError as err:
@@ -1855,10 +1863,11 @@ def main():
 
     (options, args) = parser.parse_args()
 
-    # check for root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for "
-                           "this command."))
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(SERVICE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     try:
         inst = smf.AISCF(FMRI="system/install/server")

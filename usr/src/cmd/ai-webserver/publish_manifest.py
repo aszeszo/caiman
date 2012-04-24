@@ -36,6 +36,8 @@ import osol_install.auto_install.data_files as df
 import osol_install.auto_install.service_config as config
 from osol_install.auto_install.installadm_common import _
 from osol_install.auto_install.service import AIService
+from solaris_install import check_auth_and_euid, MANIFEST_AUTH, \
+    UnauthorizedUserError
 
 INFINITY = str(0xFFFFFFFFFFFFFFFF)
 
@@ -518,10 +520,11 @@ def do_publish_manifest(cmd_options=None):
     Publish a manifest, associating it with an install service.
 
     '''
-    # check that we are root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error:\tRoot privileges are required for "
-                           "this command."))
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(MANIFEST_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     # load in all the options and file data.  Validate proper manifests.
     data = parse_options(DO_CREATE, cmd_options)
@@ -555,10 +558,11 @@ def do_update_manifest(cmd_options=None):
     Update the contents of an existing manifest.
 
     '''
-    # check that we are root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error:\tRoot privileges are required for "
-                           "this command."))
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(MANIFEST_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     # load in all the options and file data.  Validate proper manifests.
     data = parse_options(DO_UPDATE, cmd_options)

@@ -56,7 +56,8 @@ from osol_install.auto_install.data_files import DataFiles, insert_SQL, \
 from osol_install.auto_install.grub import AIGrubCfg as grubcfg
 from osol_install.auto_install.image import InstalladmImage, ImageError
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
-from solaris_install import Popen, CalledProcessError, force_delete
+from solaris_install import Popen, CalledProcessError, force_delete, \
+    SetUIDasEUID
 
 MOUNT = '/usr/sbin/mount'
 UNMOUNT = '/usr/sbin/umount'
@@ -300,7 +301,8 @@ class AIService(object):
             # the setup-service-script relies on sending information to
             # stdout/stderr
             logging.debug("Executing: %s", cmd)
-            Popen.check_call(cmd)
+            with SetUIDasEUID():
+                Popen.check_call(cmd)
         except CalledProcessError:
             print >> sys.stderr, _("Failed to setup service directory for "
                                    "service, %s\n" % name)
@@ -415,7 +417,8 @@ class AIService(object):
 
     def _unregister(self):
         cmd = [com.SETUP_SERVICE_SCRIPT, com.SERVICE_DISABLE, self.name]
-        Popen.check_call(cmd, check_result=Popen.ANY)
+        with SetUIDasEUID():
+            Popen.check_call(cmd, check_result=Popen.ANY)
 
     def delete(self):
         '''Deletes this service, removing the image area, mountpoints,
@@ -683,9 +686,10 @@ class AIService(object):
         self._prepare_target(to_mountpoint)
         cmd = [MOUNT, '-F', 'lofs', from_path, to_mountpoint]
         try:
-            Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger='', stderr_loglevel=logging.DEBUG,
-                             check_result=Popen.SUCCESS)
+            with SetUIDasEUID():
+                Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                                 logger='', stderr_loglevel=logging.DEBUG,
+                                 check_result=Popen.SUCCESS)
         except CalledProcessError as err:
             raise MountError(from_path, to_mountpoint, err.popen.stderr)
 
@@ -759,9 +763,11 @@ class AIService(object):
             cmd = list(umount_cmd)
             cmd.append(mountpoint)
             try:
-                Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger='', stderr_loglevel=logging.DEBUG,
-                                 check_result=Popen.SUCCESS)
+                with SetUIDasEUID():
+                    Popen.check_call(cmd, stdout=Popen.STORE,
+                                     stderr=Popen.STORE, logger='',
+                                     stderr_loglevel=logging.DEBUG,
+                                     check_result=Popen.SUCCESS)
             except CalledProcessError as err:
                 failures.append(UnmountError(mountpoint, err.popen.stderr))
 
@@ -1117,7 +1123,9 @@ class AIService(object):
             modified_env['LC_CTYPE'] = lc_all
             del modified_env['LC_ALL']
         modified_env['LC_NUMERIC'] = 'C'
-        Popen.check_call(cmd, env=modified_env)
+        with SetUIDasEUID():
+            Popen.check_call(cmd, env=modified_env)
+
         self._setup_install_conf()
 
     def _setup_install_conf(self):

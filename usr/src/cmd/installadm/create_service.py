@@ -50,7 +50,8 @@ from osol_install.auto_install.service import AIService, AIServiceError, \
     DEFAULT_ARCH, MountError, UnsupportedAliasError
 from osol_install.auto_install.image import ImageError, InstalladmIsoImage, \
     InstalladmPkgImage, is_iso
-from solaris_install import Popen, CalledProcessError
+from solaris_install import Popen, CalledProcessError, check_auth_and_euid, \
+    SERVICE_AUTH, UnauthorizedUserError
 
 
 BASE_DEF_SVC_NAME = "solarisx"
@@ -664,10 +665,11 @@ def do_create_baseservice(options):
 def do_create_service(cmd_options=None):
     ''' Create either a base service or an alias '''
 
-    # check that we are root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for this "
-                           "command.\n"))
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(SERVICE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     logging.log(com.XDEBUG, '**** START do_create_service ****')
 

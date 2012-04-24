@@ -25,7 +25,6 @@ AI delete-service
 '''
 import gettext
 import logging
-import os
 import sys
 
 import osol_install.auto_install.client_control as clientctrl
@@ -37,6 +36,8 @@ from optparse import OptionParser
 
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.auto_install.service import AIService, DEFAULT_ARCH
+from solaris_install import check_auth_and_euid, SERVICE_AUTH, \
+    UnauthorizedUserError
 
 
 def get_usage():
@@ -240,10 +241,11 @@ def do_delete_service(cmd_options=None):
     Entry point for delete_service
 
     '''
-    # check that we are root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for this "
-                           "command.\n"))
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(SERVICE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     # parse server options
     options = parse_options(cmd_options)

@@ -39,6 +39,8 @@ from optparse import OptionParser
 from bootmgmt import BootmgmtError
 from osol_install.auto_install.installadm_common import _, \
     validate_service_name, cli_wrap as cw
+from solaris_install import check_auth_and_euid, SERVICE_AUTH, \
+    UnauthorizedUserError
 
 
 SERVICE_PROPS = [config.PROP_DEFAULT_MANIFEST, 'aliasof', 'imagepath']
@@ -255,10 +257,11 @@ def do_set_service(cmd_options=None):
     '''
     Set a property of a service
     '''
-    # check that we are root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for this "
-                           "command."))
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(SERVICE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     options = parse_options(cmd_options)
 

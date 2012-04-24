@@ -213,6 +213,18 @@ class MockEuid(object):
         return 1
 
 
+class MockSetUIDasEUID(object):
+    '''Class for mock SetUIDasEUID class '''
+
+    def __enter__(self):
+        ''' do nothing '''
+        pass
+
+    def __exit__(self, *exc_info):
+        ''' do nothing '''
+        pass
+
+
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''
 
@@ -483,6 +495,12 @@ class DoUpdateProfile(unittest.TestCase):
         self.os_geteuid = os.geteuid
         os.geteuid = MockEuid.geteuid
 
+        self.check_auth_and_euid = create_profile.check_auth_and_euid
+        create_profile.check_auth_and_euid = do_nothing
+
+        self.SetUIDasEUID = com.SetUIDasEUID
+        com.SetUIDasEUID = MockSetUIDasEUID
+
     def tearDown(self):
         '''unit test tear down'''
 
@@ -493,6 +511,8 @@ class DoUpdateProfile(unittest.TestCase):
         svc.AIService = self.service_AIService
         os.geteuid = self.os_geteuid
         shutil.rmtree(self.tmp_dir)
+        create_profile.check_auth_and_euid = self.check_auth_and_euid
+        com.SetUIDasEUID = self.SetUIDasEUID
 
     def test_profile(self):
         ''' test update profile'''

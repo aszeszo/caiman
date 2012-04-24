@@ -35,6 +35,8 @@ from optparse import OptionParser
 
 from osol_install.auto_install.installadm_common import _
 from osol_install.auto_install.service import AIService
+from solaris_install import check_auth_and_euid, MANIFEST_AUTH, \
+    UnauthorizedUserError
 
 
 def get_usage():
@@ -169,10 +171,11 @@ def do_delete_manifest(cmd_options=None):
     Delete a manifest from an install service.
 
     '''
-    # check that we are root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for "
-                           "this command."))
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(MANIFEST_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     options = parse_options(cmd_options)
 

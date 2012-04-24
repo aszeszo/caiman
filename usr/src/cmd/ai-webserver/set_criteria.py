@@ -39,8 +39,10 @@ import osol_install.auto_install.publish_manifest as pub_man
 from optparse import OptionParser
 
 from osol_install.auto_install.installadm_common import _, \
-    AI_SERVICE_DIR_PATH, validate_service_name
+    validate_service_name
 from osol_install.auto_install.service import AIService
+from solaris_install import check_auth_and_euid, MANIFEST_AUTH, PROFILE_AUTH, \
+    UnauthorizedUserError
 
 
 def get_usage():
@@ -94,6 +96,16 @@ def parse_options(cmd_options=None):
     options, args = parser.parse_args(cmd_options)
     if len(args):
         parser.error(_("Unexpected argument(s): %s" % args))
+
+    # based on the argument, check for authorization and euid
+    try:
+        if options.manifest_name is not None:
+            check_auth_and_euid(MANIFEST_AUTH)
+
+        if options.profile_name: 
+            check_auth_and_euid(PROFILE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     # Check that we have the install service's name and
     # an AI manifest name
@@ -228,10 +240,6 @@ def do_set_criteria(cmd_options=None):
     Modify the criteria associated with a manifest.
 
     '''
-    # check that we are root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for "
-                           "this command."))
 
     options = parse_options(cmd_options)
 

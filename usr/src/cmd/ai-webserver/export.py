@@ -24,7 +24,6 @@
 '''
 export - write out a manifest or profile
 '''
-import errno
 import gettext
 import os
 import shutil
@@ -36,8 +35,9 @@ import osol_install.auto_install.service_config as config
 from optparse import OptionParser
 
 from osol_install.auto_install.service import AIService
-from osol_install.auto_install.installadm_common import _, \
-    validate_service_name
+from osol_install.auto_install.installadm_common import _
+from solaris_install import check_auth_and_euid, MANIFEST_AUTH, PROFILE_AUTH, \
+    UnauthorizedUserError
 
 
 SCREEN = "/dev/stdout"
@@ -83,6 +83,16 @@ def parse_options(cmd_options=None):
 
     if not len(options.mnames) and not len(options.pnames):
         parser.error(_("A manifest or profile name is required."))
+
+    # based on the argument, check for authorization and euid
+    try:
+        if len(options.mnames):
+            check_auth_and_euid(MANIFEST_AUTH)
+      
+        if len(options.pnames):
+            check_auth_and_euid(PROFILE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     options.file_count = len(options.mnames) + len(options.pnames)
 

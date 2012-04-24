@@ -40,6 +40,8 @@ from osol_install.auto_install.installadm_common import _, \
     validate_service_name, cli_wrap as cw
 from osol_install.auto_install.service import AIService, MountError, \
     DEFAULT_ARCH
+from solaris_install import check_auth_and_euid, SERVICE_AUTH, \
+    UnauthorizedUserError
 
 
 def get_usage():
@@ -89,10 +91,11 @@ def do_rename_service(cmd_options=None):
     of leaving the final product as close to functional as possible
 
     '''
-    # check that we are root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for this "
-                           "command.\n"))
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(SERVICE_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     (svcname, newsvcname) = parse_options(cmd_options)
 

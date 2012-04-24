@@ -26,7 +26,6 @@ AI create-client
 '''
 import gettext
 import logging
-import os
 
 import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.client_control as clientctrl
@@ -38,7 +37,8 @@ from optparse import OptionParser, OptionValueError
 
 from bootmgmt import BootmgmtError
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
-from solaris_install import Popen
+from solaris_install import Popen, check_auth_and_euid, CLIENT_AUTH, \
+    UnauthorizedUserError
 
 
 def get_usage():
@@ -167,10 +167,11 @@ def create_new_client(arch, service, mac_address, bootargs=None,
 def do_create_client(cmd_options=None):
     '''Parse the user supplied arguments and create the specified client'''
 
-    # check that we are root
-    if os.geteuid() != 0:
-        raise SystemExit(_("Error: Root privileges are required for "
-                           "this command."))
+    # check for authorization and euid
+    try:
+        check_auth_and_euid(CLIENT_AUTH)
+    except UnauthorizedUserError as err:
+        raise SystemExit(err)
 
     # parse server options
     options = parse_options(cmd_options)
