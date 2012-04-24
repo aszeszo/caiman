@@ -655,9 +655,11 @@ class IPSSpec(DataObject):
         for pkg in self.contents:
             sub_element = etree.SubElement(element, IPSSpec.IPS_NAME_LABEL)
             sub_element.text = pkg
-        for pkg in self.reject_list:
-            sub_element = etree.SubElement(element, IPSSpec.IPS_REJECT_LABEL)
-            sub_element.text = pkg
+        if self.reject_list is not None:
+            for pkg in self.reject_list:
+                sub_element = etree.SubElement(element,
+                                               IPSSpec.IPS_REJECT_LABEL)
+                sub_element.text = pkg
         return element
 
     @classmethod
