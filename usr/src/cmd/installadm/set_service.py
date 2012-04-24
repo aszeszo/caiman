@@ -214,7 +214,8 @@ def set_aliasof(options):
         except BootmgmtError as err:
             failures.append(err)
             print >> sys.stderr, (_('\nError: Unable to recreate client, '
-                                    '%s:\n%s') % (client, err))
+                                    '%(client)s:\n%(error)s')
+                                    % {'client': client, 'error': err})
     if failures:
         return 1
     return 0

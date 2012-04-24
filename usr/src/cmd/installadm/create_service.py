@@ -393,8 +393,9 @@ def do_alias_service(options):
                                    bootargs=options.bootargs)
     except (GrubError, BootmgmtError) as err:
         AIService(options.svcname).delete()
-        raise SystemExit(_('\nError: Unable to create alias, %s:\n%s') %
-                         (options.svcname, err))
+        raise SystemExit(_('\nError: Unable to create alias, '
+                           '%(service)s:\n%(error)s')
+                           % {'service': options.svcname, 'error': err})
     except AIServiceError as err:
         raise SystemExit(err)
 
@@ -596,8 +597,9 @@ def do_create_baseservice(options):
                                        bootargs=options.bootargs)
     except (GrubError, BootmgmtError) as err:
         AIService(options.svcname).delete()
-        raise SystemExit(_('\nError: Unable to create service, %s:\n%s') %
-                         (options.svcname, err))
+        raise SystemExit(_('\nError: Unable to create service, '
+                           '%(service)s:\n%(error)s')
+                           % {'service': options.svcname, 'error': err})
     except AIServiceError as err:
         raise SystemExit(err)
 
@@ -625,8 +627,9 @@ def do_create_baseservice(options):
                                               alias=options.svcname)
         except (GrubError, BootmgmtError) as err:
             AIService(defaultarch).delete()
-            raise SystemExit(_('\nError: Unable to create alias, %s:\n%s') %
-                             (defaultarch, err))
+            raise SystemExit(_('\nError: Unable to create alias, '
+                               '%(arch)s:\n%(error)s') % {'arch': defaultarch,
+                               'error': err})
         except AIServiceError as err:
             raise SystemExit(err)
         except UnsupportedAliasError as err:

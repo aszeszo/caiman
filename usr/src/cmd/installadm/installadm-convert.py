@@ -51,7 +51,6 @@ from osol_install.auto_install.grub import AIGrubCfg as grubcfg
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from osol_install.auto_install.service import AIService
 from solaris_install import Popen, CalledProcessError
-from textwrap import fill
 
 VERSION = _("%prog: version 1.0")
 
@@ -659,10 +658,11 @@ def set_exec_prop(val):
             stderr=Popen.STORE, logger='',
             stderr_loglevel=logging.DEBUG)
     except CalledProcessError:
-        sys.stderr.write(cw(_('%s: warning: Unable to set the value of '
+        sys.stderr.write(cw(_('%(path)s: warning: Unable to set the value of '
                               'key property inetd/start_exec for '
-                              'tftp/udp6 service to "%s"\n' %
-                              (os.path.basename(sys.argv[0]), val))))
+                              'tftp/udp6 service to "%(value)s"\n' %
+                              {'path': os.path.basename(sys.argv[0]),
+                               'value': val})))
 
     cmd = ['/usr/sbin/svcadm', 'refresh', 'tftp/udp6:default']
 
@@ -696,10 +696,11 @@ def del_prop_group(ai_service, dry_run):
                 stderr=Popen.STORE, logger='',
                 stderr_loglevel=logging.DEBUG)
         except CalledProcessError as err:
-            sys.stderr.write(cw(_('%s failed with: %s') % (cmd,
-                             err.popen.stderr)))
-            sys.stderr.write(cw(_('%s: warning: Unable to delete the '
-                                  'property group: %s' % (cmd, pg_name))))
+            sys.stderr.write(cw(_('%(cmd)s failed with: %(error)s')
+                                  % {'cmd': cmd, 'error': err.popen.stderr}))
+            sys.stderr.write(cw(_('%(cmd)s: warning: Unable to delete the '
+                                  'property group: %(property)s' %
+                                  {'cmd': cmd, 'property': pg_name})))
 
 
 def remove_boot_archive_from_vfstab(ai_service, service):
@@ -787,9 +788,10 @@ def remove_boot_archive_from_vfstab(ai_service, service):
                     sys.stderr.write(str(err) + "\n")
             # boot archive was not found in /etc/vfstab
             except (ValueError, IndexError):
-                sys.stderr.write(cw(_("Boot archive (%s) for service %s not "
-                                      "in vfstab.\n") % (boot_archive,
-                                      service_name)))
+                sys.stderr.write(cw(_("Boot archive (%(archive)s) for service "
+                                      "%(service)s not in vfstab.\n")
+                                      % {'archive': boot_archive,
+                                         'service': service_name}))
 
 
 def generate_new_service_name(services, ai_service):
@@ -1274,7 +1276,8 @@ def create_config(services, dryrun, ai_service):
     # a symlink back to install.conf
     if os.path.exists(install_conf):
         system_conf = os.path.join(SERVICE_DIR, ai_service, 'system.conf')
-        print _("Move %s to %s") % (install_conf, system_conf)
+        print _(("Move %(conf)s to %(sysconf)s") % {'conf': install_conf,
+                 'sysconf': system_conf})
         if not dryrun:
             shutil.move(install_conf, system_conf)
             os.symlink(system_conf, install_conf)
@@ -1329,7 +1332,8 @@ def move_service_directory(services, dryrun, ai_service):
             cw(_("Error: %s exists and is not a directory" % SERVICE_DIR)))
 
     if os.path.exists(sdpath) and os.path.isdir(sdpath):
-        print _("    Move %s to %s") % (sdpath, new_service_path)
+        print _(("    Move %(path)s to %(newpath)s") % {'path': sdpath,
+                'newpath': new_service_path})
         # Move the service path to the new service location
         if not dryrun:
             try:
@@ -1344,7 +1348,8 @@ def move_service_directory(services, dryrun, ai_service):
             portpath = os.path.join('/var/ai', service['port'])
             if os.path.exists(portpath) and os.path.isdir(portpath):
                 # /var/ai/<port> exists so move it
-                print _("    Move %s to %s") % (portpath, new_service_path)
+                print _(("    Move %(path)s to %(newpath)s")
+                         % {'path': portpath, 'newpath': new_service_path})
                 print _("    Create link from %s to %s") % (new_service_path,
                         os.path.join(SERVICE_DIR, service['port']))
                 if not dryrun:
@@ -1369,7 +1374,8 @@ def move_service_directory(services, dryrun, ai_service):
         grub_path = TFTPBOOT + '/menu.lst.' + ai_service
         if os.path.exists(grub_path) and os.path.isfile(grub_path):
             new_grub = os.path.join(new_service_path, 'menu.lst')
-            print _("    Move %s to %s") % (grub_path, new_grub)
+            print _(("    Move %(path)s to %(newpath)s") % {'path': grub_path,
+                     'newpath': new_grub})
 
             if not dryrun:
                 try:
@@ -1406,7 +1412,8 @@ def move_service_directory(services, dryrun, ai_service):
         netboot_path = os.path.join(NETBOOT, ai_service, 'wanboot.conf')
         if os.path.exists(netboot_path) and os.path.isfile(netboot_path):
             new_netboot = os.path.join(ipath, 'wanboot.conf')
-            print _("    Move %s to %s") % (netboot_path, new_netboot)
+            print _(("    Move %(path)s to %(newpath)s")
+                     % {'path': netboot_path, 'newpath': new_netboot})
             if not dryrun:
                 try:
                     shutil.move(netboot_path, new_netboot)
@@ -1474,7 +1481,8 @@ def convert_client(clients, dry_run, ai_service):
 
             # remove the client specific entries in tftpboot
             print _("    Remove %s") % client_menu_lst
-            print _("    Remove %s/%s") % (TFTPBOOT, clientid)
+            print _(("    Remove %(tftpboot)s/%(clientid)s")
+                    % {'tftpboot': TFTPBOOT, 'clientid': clientid})
             if not dry_run:
                 try:
                     # /tftpboot/<clientid> is a symlink - remove it
@@ -1631,8 +1639,9 @@ def upgrade_svc_vers_0_1(services, dry_run, ai_service):
                 # Move the default manifest back into place
                 shutil.move(temp_nm, default_file)
                 sys.stderr.write(cw(_('Warning: Unable to add the default '
-                                      'manifest: %s for service: %s\n' %
-                                      (default_file, ai_service))))
+                                      'manifest: %(file)s for service: '
+                                      '%(service)s\n' % {'file': default_file,
+                                      'service': ai_service})))
                 return
 
             # delete the temporary file
@@ -1669,8 +1678,9 @@ def copy_image_path(service_name, service_info, dry_run):
             break
         iter += 1
 
-    print cw(_("Create a unique instance of image path for %s at %s") %
-            (service_name, new_image_path))
+    print cw(_("Create a unique instance of image path for %(service)s "
+               "at %(imagepath)s") % {'service': service_name,
+               'imagepath': new_image_path})
     if not dry_run:
         # copy the image directory
         shutil.copytree(service_info['path'], new_image_path, symlinks=True)
@@ -1975,8 +1985,9 @@ def main():
                 service_name == 'default-sparc':
                 new_service_name = generate_new_service_name(services,
                                                          service_name)
-                print _("Change service name %s to %s") % (service_name,
-                        new_service_name)
+                print _(("Change service name %(name)s to %(new_name)s")
+                         % {'name': service_name,
+                            'new_name': new_service_name})
 
                 # Create a new service entry in the service dictionary
                 # and delete the old entry
@@ -1991,8 +2002,9 @@ def main():
         print _("\nThe following services were not converted:\n")
         for errored_service in unconverted_services:
             # Print out the service and the reason that it wasn't converted
-            print cw(_("  %s: %s\n" % (errored_service,
-                str(unconverted_services[errored_service]).lstrip("Error: "))))
+            print cw(_("  %(errorsvc)s: %(error)s\n"
+                % {'errorsvc': errored_service, 'error':
+                str(unconverted_services[errored_service]).lstrip("Error: ")}))
 
     # Enable the AI service
     print _("Enable the AI SMF service")

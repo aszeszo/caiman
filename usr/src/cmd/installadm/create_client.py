@@ -191,8 +191,9 @@ def do_create_client(cmd_options=None):
                           options.mac_address, bootargs)
     except (OSError, BootmgmtError, aismf.ServicesError,
             config.ServiceCfgError, svc.MountError) as err:
-        raise SystemExit(_('\nError: Unable to create client, %s:\n%s') %
-                         (options.mac_address, err))
+        raise SystemExit(_('\nError: Unable to create client, '
+                           '%(mac)s:\n%(error)s') %
+                           {'mac': options.mac_address, 'error': err})
 
 
 if __name__ == "__main__":
