@@ -1253,7 +1253,11 @@ class UIPartition(object):
                 # of the specified type in that gap.  We do not want to
                 # use the start sector and size value in the empty objects
                 # because those are fake values.
-                existing_gaps = self.parent.doc_obj.get_gaps()
+                if self.is_logical():
+                    existing_gaps = \
+                        self.parent.doc_obj.get_logical_partition_gaps()
+                else:
+                    existing_gaps = self.parent.doc_obj.get_gaps()
 
                 if not existing_gaps:
                     # There's no free space anymore, do not do anything
