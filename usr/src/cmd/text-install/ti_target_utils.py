@@ -1165,8 +1165,13 @@ class UIPartition(object):
         '''Returns True if it is possible to edit this partition's size'''
 
         if self.ui_type == UI_TYPE_IN_USE:
+            # for logical partitions, only allow the user to change the size of
+            # Solaris2 partitions
             if int(self.doc_obj.name) > MAX_PRIMARY_PARTS:
-                return False
+                if self.doc_obj.part_type == UIPartition.SOLARIS:
+                    return True
+                else:
+                    return False
 
             if self.doc_obj.part_type in UIPartition.EDITABLE_PART_TYPES:
                 return True
