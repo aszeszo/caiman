@@ -104,6 +104,10 @@ class PartEditScreen(BaseScreen):
                             "installation")
     SPARC_SELECTION_ERROR = _("An 'rpool' slice must be selected for "
                               "installation")
+    MULTIPLE_SOLARIS2_ERROR  = _("Invalid layout, more than one 'Solaris2' "
+                                 "partition found")
+    PART_TOO_SMALL = _("'Solaris2' partition is too small, installation "
+                       "requires at least %(size).1fGB")
     HELP_FORMAT = "    %s"
 
     def __init__(self, main_win, target_controller, x86_slice_mode=False):
@@ -249,9 +253,22 @@ class PartEditScreen(BaseScreen):
         '''
 
         if self.is_x86:
+            # check for multiple Solaris2 partitions
+            desired_disk = get_desired_target_disk(self.doc)
+            solaris_list = [p.is_solaris for p in \
+                            desired_disk.get_children(class_type=Partition)]
+            if len(solaris_list) > 1:
+                raise UIMessage(PartEditScreen.MULTIPLE_SOLARIS2_ERROR)
+
             solaris_part = get_solaris_partition(self.doc)
             if solaris_part is None:
                 raise UIMessage(PartEditScreen.X86_SELECTION_ERROR)
+
+            # verify the size of the Solaris2 partition is large enough
+            min_size = self.tc.minimum_target_size
+            if min_size > solaris_part.size:
+                raise UIMessage(PartEditScreen.PART_TOO_SMALL % 
+                                {"size": min_size.get(Size.gb_units)})
 
             disk = solaris_part.parent
 
@@ -316,6 +333,8 @@ class GPTPartEditScreen(PartEditScreen):
     HEADER_GPT = _("Select GPT Partition: ")
     GPT_HELP = (TUI_HELP + "/%s/gpt_partitions_select.txt",
                 _("Select GPT Partition"))
+    PART_TOO_SMALL = _("Selected partition is too small, installation "
+                       "requires at least %(size).1fGB")
     SELECTION_ERROR = _("A 'Solaris' partition must be selected for "
                         "installation")
 
@@ -425,6 +444,12 @@ class GPTPartEditScreen(PartEditScreen):
                 raise UIMessage(GPTPartEditScreen.SELECTION_ERROR)
         else:
             gpt_partition = ui_object.data_obj.doc_obj
+
+        # verify the size of the selected partition is large enough
+        min_size = self.tc.minimum_target_size
+        if min_size > gpt_partition.size:
+            raise UIMessage(GPTPartEditScreen.PART_TOO_SMALL % 
+                            {"size": min_size.get(Size.gb_units)})
 
         # unset in_zpool and in_vdev on the parent Disk object
         disk.in_zpool = None

@@ -263,6 +263,7 @@ class FDiskPart(BaseScreen):
                 LOGGER.debug("Setting whole_disk for %s", self.disk)
                 self.disk = self.tc.select_disk(self.disk,
                                                 use_whole_disk=True)[0]
+                self.disk.whole_disk = True
             else:
                 # it's a partition, set the in_zpool attribute in the object
                 # for now.  The next screen will fill in needed slices
