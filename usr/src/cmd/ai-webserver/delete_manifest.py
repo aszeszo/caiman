@@ -126,9 +126,9 @@ def delete_manifest_from_db(db, manifest_instance, service_name, data_loc):
         # (0..numInstances)
         if instance > AIdb.numInstances(man_name, db.getQueue()) or \
             instance < 0:
-            raise SystemExit(_("Error:\tManifest %s has %i instances" %
-                             (man_name,
-                              AIdb.numInstances(man_name, db.getQueue()))))
+            raise SystemExit(_("Error:\tManifest %(name)s has %(num)i "
+                               "instances" % {'name': man_name, 'num':
+                               AIdb.numInstances(man_name, db.getQueue())}))
 
         # remove instance from database
         query = ("DELETE FROM manifests WHERE name = '%s' AND "

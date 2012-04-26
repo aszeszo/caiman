@@ -191,8 +191,8 @@ def copy_profile_internally(profile_string):
         os.write(tfp, profile_string)
         os.close(tfp)
     except OSError, err:
-        print >> sys.stderr, _("Error writing profile %s: %s") % \
-                (full_profile_path, err)
+        print >> sys.stderr, _("Error writing profile %(path)s: %(err)s") % \
+                {'path': full_profile_path, 'err': err}
         return False
     return full_profile_path
 
@@ -256,8 +256,9 @@ def do_create_profile(cmd_options=None):
         # check for any scope violations
         if sc.is_name_in_table(profile_name, queue, AIdb.PROFILES_TABLE):
             print >> sys.stderr, \
-                    _("Error:  A profile named %s is already in the database "
-                      "for service %s.") % (profile_name, options.service_name)
+                    _("Error:  A profile named %(name)s is already in the "
+                      "database for service %(service)s.") % \
+                      {'name': profile_name, 'service': options.service_name}
             has_errors = True
             continue
         # open profile file specified by user on command line
@@ -365,8 +366,8 @@ def do_update_profile(cmd_options=None):
     try:
         shutil.copyfile(tmp_profile_path, db_profile_path)
     except IOError as err:
-        raise SystemExit(_("Error:\t writing profile %s: %s") %
-                         (profile_name, err))
+        raise SystemExit(_("Error writing profile %(profile)s: %(err)s") %
+                         {'profile': profile_name, 'err': err})
     finally:
         os.unlink(tmp_profile_path)
 

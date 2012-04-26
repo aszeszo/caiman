@@ -25,8 +25,6 @@
 data_files
 """
 
-import errno
-import gettext
 import linecache
 import logging
 import os.path
@@ -105,9 +103,10 @@ def verifyCriteria(schema, criteria_path, db, table=AIdb.MANIFESTS_TABLE,
     logging.debug('criteria file passed RNG validation')
 
     if errors:
-        raise ValueError(_("Error:\tFile %s failed validation:\n"
-                           "\tline %s: %s") % (criteria_path, errors.line,
-                           errors.message))
+        raise ValueError(_("Error:\tFile %(path)s failed validation:\n"
+                           "\tline %(line)s: %(msg)s") %
+                           {'path': criteria_path, 'line': errors.line,
+                            'msg': errors.message})
     try:
         verifyXML.prepValuesAndRanges(root, db, table)
     except ValueError, err:
@@ -323,7 +322,8 @@ def _copy_file(source, target):
         shutil.copyfile(source, target)
     except IOError as err:
         raise SystemExit(_("Error:\tUnable to copy script to dest: "
-                           "\n\t%s: %s") % (err.strerror, err.filename))
+                           "\n\t%(err)s: %(filename)s") %
+                           {'err': err.strerror, 'filename': err.filename})
 
     # change read and write for owner
     os.chmod(target, PERM_OWNER_RW)
@@ -351,8 +351,8 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
         with open(profile, 'r') as fip:
             raw_profile = fip.read()
     except IOError as strerror:
-        print >> sys.stderr, _("Error opening profile %s:  %s") % \
-                (profile_name, strerror)
+        print >> sys.stderr, _("Error opening profile %(name)s:  %(err)s") % \
+                {'name': profile_name, 'err': strerror}
         return 
 
     errmsg = ''
@@ -377,14 +377,15 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
                 break
         if found:
             errmsg = \
-                _("Error: template variable %s in profile %s was not "
-                  "found in the user's environment.") % (value, profile_name)
+                _("Error: template variable %(value)s in profile %(name)s "
+                  "was not found in the user's environment.") % \
+                  {'value': value, 'name': profile_name}
         else:
             errmsg = \
-                _("Error: template variable %s in profile %s is not a "
-                  "valid template variable.  Valid template variables:  ") \
-                % (value, profile_name) + '\n\t' + \
-                ', '.join(sc.TEMPLATE_VARIABLES.keys())
+                _("Error: template variable %(value)s in profile %(name)s is "
+                  "not a valid template variable.  Valid template " 
+                  "variables:  ") % {'value': value, 'name': profile_name} + \
+                  '\n\t' + ', '.join(sc.TEMPLATE_VARIABLES.keys())
         err = list()  # no supplemental message text needed for this exception
     # for all errors
     if errmsg:
@@ -897,11 +898,12 @@ class DataFiles(object):
         if os.path.exists(dtd_to_use):
             versioned_DTD = os.path.join(self.image_path, IMG_AI_MANIFEST_DTD)
             if (schema_basename == "ai.dtd" and os.path.exists(versioned_DTD)):
-                print (_("Warning: manifest \"%s\" DOCTYPE specifies "
+                print (_("Warning: manifest \"%(file)s\" DOCTYPE specifies "
                     "\"ai.dtd\"\n"
-                    "while versioned DTD \"%s\" exists in the image.  "
-                    "Attempting to proceed...") % (manifest_file,
-                    os.path.basename(IMG_AI_MANIFEST_DTD)))
+                    "while versioned DTD \"%(manifest_dtd)s\" exists in "
+                    "the image.  Attempting to proceed...") %
+                    {'file': manifest_file,
+                    'manifest_dtd': os.path.basename(IMG_AI_MANIFEST_DTD)})
             self._AIschema = dtd_to_use
 
         # RNG schema
@@ -1051,10 +1053,10 @@ class DataFiles(object):
                     # manifest_path is a property that may raise an
                     # AssertionError
                     man_path = self.manifest_path
-                    raise ValueError(_("Error:\tFile %s failed validation:"
-                                 "\n\t%s") %
-                                 (os.path.basename(man_path),
-                                  errors.message))
+                    raise ValueError(_("Error:\tFile %(path)s failed "
+                                       "validation:\n\t%(error)s") %
+                                     {'path': os.path.basename(man_path),
+                                      'error': errors.message})
                 # manifest_path will throw an AssertionError if it does not
                 # have a path use a different error message
                 except AssertionError:

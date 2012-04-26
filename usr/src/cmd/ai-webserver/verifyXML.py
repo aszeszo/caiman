@@ -180,8 +180,9 @@ def checkArch(value):
     """
 
     if value not in com.KNOWN_ARCHS:
-        arch_err_msg = _("Warning: Architecture '%s' is not listed in list " \
-            "of known architectures: %s") % (value, com.KNOWN_ARCHS)
+        arch_err_msg = _("Warning: Architecture '%(value)s' is not listed " \
+                         "in list of known architectures: %(arch)s") % \
+                         {'value': value, 'arch': com.KNOWN_ARCHS}
         raise ValueError(arch_err_msg)
 
 
@@ -202,8 +203,9 @@ def checkCPU(value):
     """
 
     if value not in com.KNOWN_CPUS:
-        cpu_err_msg = _("Warning: CPU class '%s' is not listed in list of " \
-            "known CPU classes: %s") % (value, com.KNOWN_CPUS)
+        cpu_err_msg = _("Warning: CPU class '%(value)s' is not listed in " \
+                        "list of known CPU classes: %(cpus)s") % \
+                        {'value': value, 'cpus': com.KNOWN_CPUS}
         raise ValueError(cpu_err_msg)
 
 

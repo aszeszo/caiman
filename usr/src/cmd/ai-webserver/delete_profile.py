@@ -131,8 +131,10 @@ def delete_profiles(profs, dbo, table):
             except OSError, (errno, errmsg):
                 if errno != ENOENT:  # does not exist
                     print >> sys.stderr, _(
-                            "Error (%s):  Problem deleting %s (%s): %s") \
-                            % (errno, profile_name, deldict['file'], errmsg)
+                            "Error (%(errno)s):  Problem deleting %(name)s "
+                            "(%(file)s): %(msg)s") % {'errno': errno, \
+                            'name': profile_name, 'file': deldict['file'], \
+                            'msg': errmsg}
                 has_errors = True
                 continue
     return has_errors

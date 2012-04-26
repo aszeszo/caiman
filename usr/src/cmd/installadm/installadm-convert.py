@@ -1358,8 +1358,9 @@ def move_service_directory(services, dryrun, ai_service):
                 # /var/ai/<port> exists so move it
                 print _(("    Move %(path)s to %(newpath)s")
                          % {'path': portpath, 'newpath': new_service_path})
-                print _("    Create link from %s to %s") % (new_service_path,
-                        os.path.join(SERVICE_DIR, service['port']))
+                print _("    Create link from %(newpath)s to %(path)s") % \
+                        {'newpath': new_service_path, 'path':
+                        os.path.join(SERVICE_DIR, service['port'])}
                 if not dryrun:
                     try:
                         shutil.move(portpath, new_service_path)

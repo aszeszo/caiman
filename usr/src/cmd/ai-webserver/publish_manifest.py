@@ -158,8 +158,9 @@ def parse_options(do_create, cmd_options=None):
     try:
         image_path = service.image.path
     except KeyError as err:
-        raise SystemExit(_("Data for service %s is corrupt. Missing "
-                           "property: %s\n") % (options.service_name, err))
+        raise SystemExit(_("Data for service %(service)s is corrupt. Missing "
+                           "property: %(err)s\n") %
+                           {'service': options.service_name, 'err': err})
 
     service_dir = service.config_dir
     dbname = service.database_path
@@ -477,12 +478,12 @@ def find_colliding_manifests(criteria, db, collisions, append_manifest=None):
                 collisions[man_inst].find(crit + ",") != -1)
               ):
                 if str(db_criterion).lower() != str(man_criterion).lower():
-                    raise SystemExit(_("Error:\tManifest has a range "
-                                       "collision with manifest:%s/%i"
-                                       "\n\tin criteria: %s!") %
-                                     (man_inst[0], man_inst[1],
-                                      crit.replace('MIN', '', 1).
-                                      replace('MAX', '', 1)))
+                    raise SystemExit(_
+                        ("Error:\tManifest has a range collision with "
+                         "manifest: %(manifest0)s/%(manifest1)i\n\tin "
+                         "criteria: %(crit)s!") % {'manifest0': man_inst[0],
+                         'manifest1': man_inst[1], 'crit':
+                         crit.replace('MIN', '', 1).replace('MAX', '', 1)})
 
             # Either the range did not collide or this is not a range
             # criteria.  (If the value of this criteria in the db does
