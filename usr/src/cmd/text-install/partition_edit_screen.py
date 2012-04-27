@@ -104,7 +104,7 @@ class PartEditScreen(BaseScreen):
                             "installation")
     SPARC_SELECTION_ERROR = _("An 'rpool' slice must be selected for "
                               "installation")
-    MULTIPLE_SOLARIS2_ERROR  = _("Invalid layout, more than one 'Solaris2' "
+    MULTIPLE_SOLARIS2_ERROR = _("Invalid layout, more than one 'Solaris2' "
                                  "partition found")
     PART_TOO_SMALL = _("'Solaris2' partition is too small, installation "
                        "requires at least %(size).1fGB")
@@ -164,8 +164,9 @@ class PartEditScreen(BaseScreen):
         if disk.label == "GPT":
             raise SkipException
 
-        if disk.whole_disk:
-            LOGGER.debug("disk.whole_disk=True, skip editting")
+        if disk.whole_disk or disk.use_whole_segment:
+            LOGGER.debug("disk.whole_disk or disk.use_whole_segment is True, "
+                         "skip editing")
 
             # perform final target validation
             perform_final_validation(self.doc)
@@ -255,8 +256,8 @@ class PartEditScreen(BaseScreen):
         if self.is_x86:
             # check for multiple Solaris2 partitions
             desired_disk = get_desired_target_disk(self.doc)
-            solaris_list = [p.is_solaris for p in \
-                            desired_disk.get_children(class_type=Partition)]
+            solaris_list = [p for p in desired_disk.get_children(
+                            class_type=Partition) if p.is_solaris]
             if len(solaris_list) > 1:
                 raise UIMessage(PartEditScreen.MULTIPLE_SOLARIS2_ERROR)
 
@@ -362,7 +363,7 @@ class GPTPartEditScreen(PartEditScreen):
             raise SkipException
 
         if disk.whole_disk:
-            LOGGER.debug("disk.whole_disk=True, skip editting")
+            LOGGER.debug("disk.whole_disk=True, skip editing")
 
             # perform final target validation
             perform_final_validation(self.doc)

@@ -185,7 +185,7 @@ class FDiskPart(BaseScreen):
             LOGGER.debug(str(self.disk))
 
             if self.disk.whole_disk:
-                LOGGER.debug("disk.whole_disk=True, skip editting")
+                LOGGER.debug("disk.whole_disk=True, skip editing")
                 raise SkipException
 
             if self.disk.is_boot_disk():
@@ -263,7 +263,6 @@ class FDiskPart(BaseScreen):
                 LOGGER.debug("Setting whole_disk for %s", self.disk)
                 self.disk = self.tc.select_disk(self.disk,
                                                 use_whole_disk=True)[0]
-                self.disk.whole_disk = True
             else:
                 # it's a partition, set the in_zpool attribute in the object
                 # for now.  The next screen will fill in needed slices
@@ -275,5 +274,10 @@ class FDiskPart(BaseScreen):
                 self.disk.whole_disk = False
             else:
                 self.disk.in_zpool = None
+
+        # set an attribute on the desired disk so we don't enter the
+        # partition/slice edit screen.
+        if isinstance(self.disk, Disk):
+            self.disk.use_whole_segment = self.use_whole_segment
 
         dump_doc("At the end of fdisk_partitions.continue")

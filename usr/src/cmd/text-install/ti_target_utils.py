@@ -875,7 +875,6 @@ class UIPartition(object):
         self.parent = parent
         self.ui_type = UI_TYPE_NOT_USED
         self.cycle_types = None
-        self.prev_cycle_idx = 0
 
         max_all_parts = MAX_SLICES
 
@@ -1297,6 +1296,10 @@ class UIPartition(object):
                 if new_part.is_solaris:
                     new_part.bootid = Partition.ACTIVE
             else:
+                if self.doc_obj is not None and \
+                   self.doc_obj.part_type == UIPartition.EXT_DOS:
+                    for logical in self.parent.doc_obj.logical_partitions:
+                        self.parent.doc_obj.delete_partition(logical)
                 if new_type == UIPartition.UNUSED:
                     LOGGER.debug("Changing type to unused deleting %s",
                                  self.name)

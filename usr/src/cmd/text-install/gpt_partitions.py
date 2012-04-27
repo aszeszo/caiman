@@ -123,7 +123,7 @@ class GPTPart(BaseScreen):
         self.main_win.set_header_text(header_text)
 
         if self.disk.whole_disk:
-            LOGGER.debug("disk.whole_disk=True, skip editting")
+            LOGGER.debug("disk.whole_disk=True, skip editing")
             raise SkipException
 
         y_loc = 1
@@ -178,7 +178,6 @@ class GPTPart(BaseScreen):
             LOGGER.debug("Setting whole_disk for %s", self.disk)
             self.use_whole_segment = True
             self.disk = self.tc.select_disk(self.disk, use_whole_disk=True)[0]
-            self.disk.whole_disk = True
         else:
             LOGGER.debug("Setting whole_disk to false")
             self.use_whole_segment = False
