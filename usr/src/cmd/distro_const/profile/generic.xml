@@ -28,6 +28,9 @@
   <!--
       svc.startd(1M) services
   -->
+  <service name='system/auditd' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
   <service name='system/boot-archive-update' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
