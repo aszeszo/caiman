@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_distro_const
@@ -326,9 +326,13 @@ class TestParseManifest(unittest.TestCase):
         # instantiate the engine
         self.eng = engine_test_utils.get_new_engine_instance()
 
+        # set the logger
+        dc.DC_LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
+
     def tearDown(self):
         os.close(self.fh)
         os.remove(self.path)
+        dc.DC_LOGGER = None
         engine_test_utils.reset_engine()
 
     def test_parse_manifest(self):
@@ -348,6 +352,30 @@ class TestParseManifest(unittest.TestCase):
             class_type=dc_exec.Execution))
         self.assertTrue(doc.volatile.get_descendants(
             class_type=dc_exec.Checkpoint))
+
+    def test_blank_distro_name(self):
+        """ verify a blank distro name raises an exception
+        """
+        distro = self.root.find("distro")
+        distro.set("name", "")
+
+        xmltree = etree.tostring(self.root, pretty_print=True)
+        with open(self.path, "w+") as fh:
+            fh.write(xmltree)
+
+        self.assertRaises(RuntimeError, dc.parse_manifest, self.path)
+
+    def test_distro_name_with_only_whitespace(self):
+        """ verify a distro name full of whitespace raises an exception
+        """
+        distro = self.root.find("distro")
+        distro.set("name", " \t\t\n   ")
+
+        xmltree = etree.tostring(self.root, pretty_print=True)
+        with open(self.path, "w+") as fh:
+            fh.write(xmltree)
+
+        self.assertRaises(RuntimeError, dc.parse_manifest, self.path)
 
 
 class TestValidateTarget(unittest.TestCase):

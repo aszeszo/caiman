@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import sys
@@ -82,7 +82,10 @@ class Distro(SimpleXmlHandlerBase):
 
     @classmethod
     def from_xml(cls, element):
-        name = element.get(cls.NAME_LABEL)
+        name = element.get(cls.NAME_LABEL).strip()
+        if not name:
+            raise ParsingError("distribution name must not be blank")
+
         add_timestamp = \
             element.get(cls.ADD_TIMESTAMP_LABEL)
         http_proxy = element.get(cls.HTTP_PROXY_LABEL)
