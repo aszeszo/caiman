@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -28,8 +28,10 @@ Similar to InnerWindow
 '''
 
 import curses
+import string
 
 import terminalui
+
 from terminalui import LOG_LEVEL_INPUT
 from terminalui.inner_window import InnerWindow
 
@@ -60,8 +62,7 @@ class ScrollWindow(InnerWindow):
         self.window.touchwin()
         for win in self.more_windows:
             win.touchwin()
-        for obj in self.all_objects:
-            obj.redrawwin()
+                
         self.no_ut_refresh()
 
     def _init_win(self, parent):
@@ -83,7 +84,7 @@ class ScrollWindow(InnerWindow):
         self.area.lower_right_y = self.area.y_loc + self.area.lines
         self.area.lower_right_x = self.area.x_loc + self.area.columns
 
-    def __init__(self, area, **kwargs):
+    def __init__(self, area, enable_spelldict=False, **kwargs):
         '''ScrollWindow Constructor. See also InnerWindow.__init__
 
         area (required) - For ScrollWindows, area.scrollable_lines
@@ -113,6 +114,16 @@ class ScrollWindow(InnerWindow):
         self.key_dict[curses.KEY_DOWN] = self.on_arrow_key
         self.key_dict[curses.KEY_LEFT] = self.on_arrow_key
         self.key_dict[curses.KEY_RIGHT] = self.on_arrow_key
+        if enable_spelldict:
+            # add 'space' (ascii value 32), '-' (value 45) and backspace to the
+            # key_dict
+            self.key_dict[32] = self.on_letter_key
+            self.key_dict[45] = self.on_letter_key
+            self.key_dict[curses.KEY_BACKSPACE] = self.on_letter_key
+            self.key_dict.update(dict.fromkeys(map(ord, string.lowercase),
+                                               self.on_letter_key))
+        self.spell_dict = dict()
+        self.spell_str = ""
 
     def set_use_vert_scroll_bar(self, use_vert_scroll_bar):
         '''Setter for self.use_vert_scroll_bar. Triggers a redraw of
@@ -272,11 +283,36 @@ class ScrollWindow(InnerWindow):
                              max(0, self.current_line[1]))
         self.no_ut_refresh()
 
+    def on_letter_key(self, input_key):
+        '''Activate the object whose first letter corresponds to the key
+        pressed
+        
+        '''
+        # reset the spell string if the user presses <backspace>
+        if input_key == curses.KEY_BACKSPACE:
+            self.spell_str = ""
+            return None
+
+        # add this letter to the spelling list
+        self.spell_str += chr(input_key)
+
+        # look for this entry in the spell_dict
+        for entry in sorted(self.spell_dict):
+            if entry.startswith(self.spell_str):
+                self.activate_object_force(self.spell_dict[entry],
+                                           force_to_top=True)
+                return None
+        else:
+            return input_key
+
     def on_arrow_key(self, input_key):
         '''Activate the next/previous object, or, for pure text windows, simply
         scroll down/up one line or right/left one column
 
         '''
+        # reset the spell string
+        self.spell_str = ""
+
         offset = ScrollWindow.ARROW_DICT[input_key][0]
         at_endpt = getattr(self, ScrollWindow.ARROW_DICT[input_key][1])
         if self.active_object is not None:

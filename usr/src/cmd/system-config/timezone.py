@@ -141,7 +141,8 @@ class TimeZone(BaseScreen):
         area.columns = self.win_size_x
         LOGGER.debug("area.lines=%s, area.columns=%s",
                       area.lines, area.columns)
-        self.scroll_region = ScrollWindow(area, window=self.center_win)
+        self.scroll_region = ScrollWindow(area, enable_spelldict=True,
+                                          window=self.center_win)
         
         utc = 0
         if self.screen == TimeZone.REGIONS:
@@ -150,12 +151,16 @@ class TimeZone(BaseScreen):
             utc_item = ListItem(utc_area, window=self.scroll_region,
                                 text=TimeZone.UTC_TEXT,
                                 data_obj=SystemInfo.UTC)
+            self.scroll_region.spell_dict[TimeZone.UTC_TEXT] = utc
             utc = 1
         
         # add the entries to the screen
         for idx, timezone in enumerate(tz_list):
+            # add this timezone to the scroll_region's spelling dict
+            self.scroll_region.spell_dict[timezone.lower()] = idx + utc
+
             LOGGER.log(LOG_LEVEL_INPUT, "tz idx = %i name= %s",
-                        idx, tz_list[idx])
+                       idx, tz_list[idx])
             hilite = min(menu_item_max_width, len(timezone) + 1)
             win_area = WindowArea(1, hilite, idx + utc, TimeZone.SCROLL_SIZE)
             list_item = ListItem(win_area, window=self.scroll_region,
