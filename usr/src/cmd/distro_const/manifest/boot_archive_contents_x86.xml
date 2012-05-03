@@ -249,5 +249,6 @@
   <name>usr/lib/security/pam_dhkeys.so.1</name>
   <name>usr/lib/security/pam_unix_cred.so.1</name>
   <name>usr/lib/security/pam_unix_auth.so.1</name>
+  <name>usr/lib/security/pam_user_policy.so.1</name>
   <name>usr/lib/security/pam_dial_auth.so.1</name>
 </software_data>
