@@ -58,7 +58,6 @@ class GPTPart(BaseScreen):
 
     BOOT_TEXT = _("Boot")
     HEADER_TYPE_BOOTABLE = _(" %(type)s %(bootable)s")
-    USE_WHOLE_DISK = _("Use the whole disk")
     HEADER_GPT = _("GPT Partitions: ")
     PARAGRAPH = _("%(release)s can be installed on the whole disk or a "
                   "GPT partition on the disk.") % RELEASE

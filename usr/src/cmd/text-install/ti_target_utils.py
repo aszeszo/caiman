@@ -63,7 +63,7 @@ UI_MIN_EMPTY_PRIMARY_PART = "1gb"
 UI_MIN_EMPTY_LOGICAL_PART = "0.1gb"
 UI_MIN_EMPTY_SLICE = "1gb"
 
-UI_TYPE_IN_USE = "UI Object In-use" # partition/slice in use
+UI_TYPE_IN_USE = "UI Object In-use"  # partition/slice in use
 UI_TYPE_EMPTY_SPACE = "UI Object EMPTY"   # unused components
 UI_TYPE_NOT_USED = "UI Object not-in-use" 
 
@@ -381,7 +381,7 @@ class UIDisk(object):
                 for i in range(MAX_PRIMARY_PARTS + MAX_EXT_PARTS + 1):
                     self.all_parts.append(UIPartition(self.tc, parent=self))
                 return
-            else: # SPARC - has to be slices
+            else:  # SPARC - has to be slices
                 for i in range(MAX_SLICES):
                     self.all_parts.append(UISlice(self.tc, parent=self))
                 return
@@ -1008,7 +1008,6 @@ class UIPartition(object):
                                  str(part.size))
                 except Exception, ex:
                     LOGGER.debug("UIPart: after fill unused..." + str(ex))
-                    pass
 
     def get_description(self):
         if self.ui_type == UI_TYPE_IN_USE:
@@ -1419,15 +1418,15 @@ class UISlice(object):
             # try to get value from in_use dictionary
             in_use = self.doc_obj.in_use 
             if in_use is None:
-                return self.doc_obj.name 
+                return UNUSED_TEXT
 
             if in_use['used_name']:
-                return (in_use['used_name'])[0]
+                return in_use['used_name'][0]
 
             if in_use['used_by']:
-                return (in_use['used_by'])[0]
+                return in_use['used_by'][0]
 
-            return self.doc_obj.name 
+            return UNUSED_TEXT
         elif self.ui_type == UI_TYPE_EMPTY_SPACE:
             return UNUSED_TEXT
         else:
@@ -1492,7 +1491,7 @@ class UISlice(object):
         return (Size(str(max_space) + Size.sector_units))
     
     def editable(self):
-        '''Returns True if it is possible to edit this partition's size'''
+        '''Returns True if it is possible to edit this slice's size'''
         if self.ui_type == UI_TYPE_IN_USE:
             if self.doc_obj.in_zpool == "rpool":
                 return True
@@ -1568,8 +1567,7 @@ class UISlice(object):
 
         has_solaris_data = (self.parent.get_solaris_data() is not None)
 
-        types = set()
-        types.update(UISlice.TYPES)
+        types = set(UISlice.TYPES)
         if extra_type is not None:
             types.update(extra_type)
         types = list(types)
@@ -1608,7 +1606,7 @@ class UISlice(object):
                     # because those are fake values.
                     existing_gaps = self.parent.doc_obj.get_gaps()
 
-                    if not existing_gaps:
+                    if existing_gaps:
 
                         # sort the gaps by size, largest gap will be at
                         # the end of the list.
@@ -1639,10 +1637,16 @@ class UISlice(object):
                     self.parent.doc_obj.insert_children(discovered_obj)
                 else:
                     LOGGER.debug("Unable to reset to discovered value")
-                
+
             else:
                 if new_type == UISlice.UNUSED:
                     LOGGER.debug("Changing to unused, deleting")
                     LOGGER.debug("Target Call: deleting %s", self.name)
                     self.parent.doc_obj.delete_slice(self.doc_obj)
+                elif new_type == ROOT_POOL:
+                    # the slice is already carved up.  Simply set slice
+                    # attributes for root pool creation
+                    self.doc_obj.in_zpool = ROOT_POOL
+                    self.doc_obj.in_vdev = DEFAULT_VDEV_NAME
+                    self.doc_obj.tag = V_ROOT
         dump_doc("After change slice type")

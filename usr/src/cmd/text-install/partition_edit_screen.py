@@ -164,7 +164,7 @@ class PartEditScreen(BaseScreen):
         if disk.label == "GPT":
             raise SkipException
 
-        if disk.whole_disk or disk.use_whole_segment:
+        if disk.whole_disk or getattr(disk, "use_whole_segment", False):
             LOGGER.debug("disk.whole_disk or disk.use_whole_segment is True, "
                          "skip editing")
 

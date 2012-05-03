@@ -289,7 +289,8 @@ class DiskWindow(InnerWindow):
             if self.has_partition_data:
                 self.orig_ext_part_field = None
                 for obj in self.left_win.objects:
-                    if (obj.data_obj.is_extended()):
+                    if isinstance(obj.data_obj, UIPartition) and \
+                       obj.data_obj.is_extended():
                         self.orig_ext_part_field = obj
                         self.orig_logicals_active = True
                         break
@@ -499,7 +500,7 @@ class DiskWindow(InnerWindow):
 
         self.update_avail_space(part_info=part_info)
         if self.has_partition_data:
-            if part_info.is_extended():
+            if isinstance(part_info, UIPartition) and part_info.is_extended():
                 self.ext_part_field = part_field
 
     def _update_edit_field(self, part_info, part_field, edit_field):
