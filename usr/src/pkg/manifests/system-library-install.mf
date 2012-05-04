@@ -280,3 +280,5 @@ license cr_Sun license=cr_Sun
 depend type=require \
     fmri=pkg:/system/library/boot-management@0.5.11,5.11-0.175.1.0.0.12.18901
 depend type=require fmri=system/boot-environment-utilities
+# Add a dependency for libima.so
+depend type=require fmri=system/library/storage/snia-ima
