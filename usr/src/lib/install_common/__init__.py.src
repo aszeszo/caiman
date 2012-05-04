@@ -115,10 +115,8 @@ class UnauthorizedUserError(Exception):
     '''Exception raised when the user does not have a specified
     authorization.
     '''
-    def __init__(self, auth=None):
-        self.value = _("Insufficient permissions to perform operation.\n"
-                      "Authorization <%s> required to perform this " 
-                      "operation.") % auth
+    def __init__(self, msg):
+        self.value = msg
 
     def __str__(self):
         return self.value
@@ -545,14 +543,19 @@ def check_auth_and_euid(auth):
     Raises UnauthorizedUserError if euid is not 0 or user
            doesn't have authorization.
     """
-    # raise error if euid is not 0 
-    if os.geteuid() != 0:
-        raise UnauthorizedUserError(auth)
-
     user = pwd.getpwuid(os.getuid())[0]
     cmd = [AUTHS, "check", "-u", user, auth]
 
     try:
         run(cmd)
     except CalledProcessError as err:
-        raise UnauthorizedUserError(auth)
+        raise UnauthorizedUserError(_("Insufficient permissions to perform "
+                                      "operation.\nAuthorization <%s> "
+                                      "required to perform this operation." % \
+                                      auth))
+
+    # raise error if euid is not 0 
+    if os.geteuid() != 0:
+        raise UnauthorizedUserError(_("Insufficient permission to perform "
+                                      "operation.\neuid required to be "
+                                      "0 to perform this operation."))
