@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ instantiation.py - target instantiation checkpoint.  Parses the Data Object
@@ -87,7 +87,17 @@ class TargetInstantiationZone(TargetInstantiation):
             shared_fs_zfs_properties_list = list()
             for fs in fs_list:
                 if fs.action == "create":
+                    # if mountpoint is set then append to zfs_options
                     zfs_options = fs.get_first_child(class_type=Options)
+                    if fs.mountpoint:
+                        if zfs_options:
+                            # Add mountpoint to zfs_options data_dict
+                            zfs_options.data_dict["mountpoint"] = fs.mountpoint
+                        else:
+                            # Create new Options object
+                            zfs_options = Options(fs.name,
+                                                {"mountpoint": fs.mountpoint})
+
                     if fs.in_be:
                         # Append filesystem name to BE filesystem list
                         be_fs_list.append(fs.name)
