@@ -1,7 +1,7 @@
 '\" te
-.\" Copyright (c) 2011, Oracle and/or its affiliates.
-.\" All rights reserved.
-.TH aimanifest 1M "22 Jul 2011" "SunOS 5.11" "System Administration Commands"
+.\" Copyright (c) 2011, 2012, Oracle and/or its
+.\" affiliates. All rights reserved.
+.TH aimanifest 1M "04 May 2012" "SunOS 5.11" "System Administration Commands"
 .SH NAME
 aimanifest \- Modify an XML file used by Automated Installer (AI)
 .SH SYNOPSIS
@@ -676,33 +676,33 @@ false
 \fBExample 3 \fRAdd a Publisher by Using Values Paths
 .sp
 .LP
-The package repository in this example is a file repository at \fBfile:///net/host2/export/extras_repo\fR. The publisher is \fBextras\fR.
+The package repository in this example is a file repository at \fBfile:///net/host2/export/extras_repo\fR. The publisher is \fBextras\fR. Since a \fBsoftware\fR element can have only one \fBsource\fR element, this example adds the new \fBpublisher\fR element to the \fBsource\fR element that contains the \fBsolaris\fR publisher.
 
 .sp
 .in +2
 .nf
 $ \fBaimanifest add \e\fR
-> \fBsoftware/source/publisher@name extras\fR
+> \fBsoftware[@type=IPS]/source[publisher@name=solaris]/publisher@name \e\fR
+\fBextras\fR
 $ \fBaimanifest add \e\fR
-> \fBsoftware/source/publisher[@name=extras]/origin@name \e\fR
+> \fBpublisher[@name=extras]/origin@name \e\fR
 > \fBfile:///net/host2/export/extras_repo\fR
-$ \fBaimanifest set \e\fR
-> \fBsoftware[source/publisher@name=extras]@name extras\fR
-$ \fBaimanifest set \e\fR
-> \fBsoftware[source/publisher@name=extras]@type IPS\fR
 .fi
 .in -2
 .sp
 
 .sp
 .LP
-These \fBaimanifest\fR commands result in the following AI manifest entries. The \fBsoftware\fR element is the first element in the \fIpath\fR where same-tagged siblings are allowed, so this section of XML code follows the last \fBsoftware\fR section that is already in the output file.
+These \fBaimanifest\fR commands result in the following AI manifest entries if you started with the \fBdefault.xml\fR AI manifest. The \fBdestination\fR and \fBsoftware_data\fR elements are omitted for brevity.
 
 .sp
 .in +2
 .nf
-<software name="extras" type="IPS">
+<software type="IPS">
   <source>
+    <publisher name="solaris">
+      <origin name="http://pkg.oracle.com/solaris/release"/>
+    </publisher>
     <publisher name="extras">
       <origin name="file:///net/host2/export/extras_repo"/>
     </publisher>
@@ -720,12 +720,13 @@ This example is the same as the previous example but uses a different method to 
 .sp
 .in +2
 .nf
-$ \fBSW_PATH=$(aimanifest add -r \e\fR
-> \fB/auto_install/ai_instance/software@name extras)\fR
-$ \fBaimanifest set ${SW_PATH}@type IPS\fR
-$ \fBPUB_PATH=$(aimanifest add ${SW_PATH}/source/publisher@name extras)\fR
-$ \fBaimanifest add \e\fR
-\fB${PUB_PATH}/origin@name file:///net/host2/export/extras_repo)\fR
+$ \fBNEW_PUB=$(aimanifest add -r \e\fR
+> \fBsoftware[@type=IPS]/source[publisher@name=solaris]/publisher@name \e\fR
+\fBextras)\fR
+$ \fBecho $NEW_PUB\fR
+/auto_install[1]/ai_instance[1]/software[1]/source[1]/publisher[2]
+$ \fBaimanifest add ${NEW_PUB}/origin@name \e\fR
+\fBfile:///net/host2/export/extras_repo\fR
 .fi
 .in -2
 .sp
@@ -734,7 +735,7 @@ $ \fBaimanifest add \e\fR
 \fBExample 5 \fRAdd a Publisher By Adding a Manifest Fragment
 .sp
 .LP
-This example is the same as the previous example but uses a third method to achieve the same result.
+This example adds the \fBextras\fR publisher by loading a file that contains a partial AI manifest. In this case, the result is a separate, additional \fBsoftware\fR element of type IPS with the \fBextras\fR publisher defined. This new \fBsoftware\fR element is inserted after the original IPS \fBsoftware\fR element that defines the \fBsolaris\fR publisher. Packages named in \fBsoftware_data\fR elements within this new \fBsoftware\fR element are only searched for from the \fBextras\fR publisher or other publishers defined in this new \fBsoftware\fR element. This manifest fragment also defines a package to install, since a \fBsoftware\fR element with no software to install is not useful.
 
 .sp
 .LP
@@ -745,12 +746,15 @@ Create a file named \fBextras.xml\fR with the following content:
 .nf
 <auto_install>
   <ai_instance>
-    <software name="extras" type="IPS">
+    <software type="IPS">
       <source>
         <publisher name="extras">
           <origin name="file:///net/host2/export/extras_repo"/>
         </publisher>
       </source>
+      <software_data action="install">
+        <name>pkg:/package/from/extras_repo</name>
+      </software_data> 
     </software>
   </ai_instance>
 </auto_install>
@@ -759,7 +763,7 @@ Create a file named \fBextras.xml\fR with the following content:
 
 .sp
 .LP
-Even though you only want the software section, you must include the \fBauto_install\fR and \fBai_instance\fR elements as well. You must include everything that would be required in the \fIpath\fR operand. If the loaded file specifies attributes for the \fBauto_install\fR or \fBai_instance\fR elements, then those attribute values replace existing values or are added.
+Even though you only want the \fBsoftware\fR section, you must include the \fBauto_install\fR and \fBai_instance\fR elements as well. If the loaded file specifies attributes for the \fBauto_install\fR or \fBai_instance\fR elements, then those attribute values replace existing values or are added.
 
 .sp
 .LP
@@ -777,13 +781,13 @@ $ \fBaimanifest load -i extras.xml\fR
 \fBExample 6 \fRAdd a Package by Using a Values Path
 .sp
 .LP
-This example adds a package to the \fBsoftware\fR element that has a \fBpublisher\fR element with name \fBextras\fR from the previous example by specifying the publisher name as a value in the path. The example also shows using a relative path specification.
+This example adds a package to the \fBsoftware\fR element that has a \fBpublisher\fR element with name \fBsolaris\fR by specifying the publisher name as a value in the path.
 
 .sp
 .in +2
 .nf
 $ \fBaimanifest add \e\fR
-> \fBsoftware[source/publisher@name=extras]/software_data/name \e\fR
+> \fBsoftware[source/publisher@name=solaris]/software_data/name \e\fR
 > \fBpkg:/system/utils\fR
 .fi
 .in -2
@@ -791,21 +795,18 @@ $ \fBaimanifest add \e\fR
 
 .sp
 .LP
-This \fBaimanifest\fR command adds the following \fBsoftware_data\fR section.
+This \fBaimanifest\fR command adds the second \fBsoftware_data\fR element shown below if you started with the \fBdefault.xml\fR AI manifest.
 
 .sp
 .in +2
 .nf
-<software name="extras" type="IPS">
-  <source>
-    <publisher name="extras">
-      <origin name="file:///net/host2/export/extras_repo"/>
-    </publisher>
-  </source>
-  <software_data>
-    <name>pkg:/system/utils</name>
-  </software_data>
-</software>
+<software_data action="install">
+  <name>pkg:/entire@latest</name>
+  <name>pkg:/group/system/solaris-large-server</name>
+</software_data>
+<software_data>
+  <name>pkg:/system/utils</name>
+</software_data>
 .fi
 .in -2
 
@@ -813,18 +814,64 @@ This \fBaimanifest\fR command adds the following \fBsoftware_data\fR section.
 \fBExample 7 \fRAdd a Package by Using a Returned Path
 .sp
 .LP
-This example is the same as the previous example but uses a different method to achieve the same result. Instead of specifying the name of the publisher as a value in the path, this example uses the path to the \fBsoftware\fR element that was saved in \fBSW_PATH\fR in the example "Add a Publisher by Using Returned Paths."
+This example is the same as the previous example but uses a different method to achieve the same result. This example uses the \fBget\fR subcommand with the returned path option to add the package to the \fBsoftware\fR element where the \fBsolaris\fR publisher is defined.
 
 .sp
 .in +2
 .nf
-$ \fBaimanifest add ${SW_PATH}/software_data/name pkg:/system/utils\fR
+$ \fBNEW_PKG=$(aimanifest get -r \e\fR
+\fBsoftware[source/publisher@name=solaris] | awk '{print $2 }')\fR
+$ \fBecho $NEW_PKG\fR
+/auto_install[1]/ai_instance[1]/software[1]
+$ \fBaimanifest add ${NEW_PKG}/software_data/name \e\fR
+\fBpkg:/system/utils\fR
 .fi
 .in -2
 .sp
 
 .LP
-\fBExample 8 \fRValidate a Manifest
+\fBExample 8 \fRAdd a Package By Adding a Manifest Fragment
+.sp
+.LP
+This example adds the package by loading a file that contains a partial AI manifest. In this case, the result is a separate, additional \fBsoftware\fR element of type IPS inserted after the original IPS \fBsoftware\fR element. This new \fBsoftware\fR element contains only a \fBsoftware_data\fR element; no \fBsource\fR element is specified. Packages named in \fBsoftware_data\fR elements within this new \fBsoftware\fR element are searched for from publishers defined in the preceding \fBsoftware\fR element.
+
+.sp
+.LP
+Create a file named \fBnewpkg.xml\fR with the following content:
+
+.sp
+.in +2
+.nf
+<auto_install>
+  <ai_instance>
+    <software type="IPS">
+      <software_data>
+        <name>pkg:/system/utils</name>
+      </software_data>
+    </software>
+  </ai_instance>
+</auto_install>
+.fi
+.in -2
+
+.sp
+.LP
+Even though you only want the \fBsoftware\fR section, you must include the \fBauto_install\fR and \fBai_instance\fR elements as well. If the loaded file specifies attributes for the \fBauto_install\fR or \fBai_instance\fR elements, then those attribute values replace existing values or are added.
+
+.sp
+.LP
+Use the following command to add this \fBsoftware\fR section to the \fBAIM_MANIFEST\fR manifest:
+
+.sp
+.in +2
+.nf
+$ \fBaimanifest load -i newpkg.xml\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 9 \fRValidate a Manifest
 .sp
 .LP
 Validate the \fBAIM_MANIFEST\fR manifest.

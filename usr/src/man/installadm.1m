@@ -1,13 +1,13 @@
 '\" te
 .\" Copyright (c) 2008, 2012, Oracle and/or its
 .\" affiliates. All rights reserved.
-.TH installadm 1M "14 Mar 2012" "SunOS 5.11" "System Administration Commands"
+.TH installadm 1M "20 Apr 2012" "SunOS 5.11" "System Administration Commands"
 .SH NAME
 installadm \- Manages automated installations on a network
 .SH SYNOPSIS
 .LP
 .nf
-/usr/bin/installadm [-h|--help]
+/usr/sbin/installadm [-h|--help]
 .fi
 
 .LP
@@ -785,11 +785,11 @@ Optional: Lists the clients of the install services on a local server.
 .ad
 .sp .6
 .RS 4n
-Optional: Lists the manifests and scripts associated with the install services on a local server.
+Optional: Lists the manifests and scripts associated with the install services on a local server, including criteria for each manifest. Criteria associated with the default manifest for the service are labeled as ignored. Inactive manifests are labeled. Inactive manifests have no associated criteria and are not the default manifest for that service.
 .sp
-When \fB-n\fR is not specified, displays an abbreviated listing per service. This includes the default manifest or script, and all non-default manifests and scripts that have criteria associated with them. Criteria are not listed.
+When \fB-n\fR is not specified, displays all manifests and scripts for all services.
 .sp
-When \fB-n\fR is specified, displays all manifests and scripts for the given service, using a more complete listing format that includes criteria for each manifest. Inactive manifests, which have no associated criteria and are not designated as the default, are so marked. Criteria associated with a default manifest are marked as inactive.
+When \fB-n\fR is specified, displays all manifests and scripts for the given service.
 .RE
 
 .sp
@@ -800,11 +800,11 @@ When \fB-n\fR is specified, displays all manifests and scripts for the given ser
 .ad
 .sp .6
 .RS 4n
-Optional: Lists the profiles associated with the install services on a local server.
+Optional: Lists the profiles associated with the install services on a local server, including criteria for each profile.
 .sp
-When \fB-n\fR is not specified, displays an abbreviated listing per service that includes the profile names.
+When \fB-n\fR is not specified, displays all profiles for all services.
 .sp
-When \fB-n\fR is specified, displays the profiles for the requested service along with their criteria.
+When \fB-n\fR is specified, displays the profiles for the given service.
 .RE
 
 .RE
@@ -899,7 +899,7 @@ Optional: Specifies the path name of a criteria XML file containing criteria to 
 .ad
 .sp .6
 .RS 4n
-Optional: Specifies that this manifest or script is the new default manifest or script for the service. Any criteria specified are ignored until the manifest or script is no longer the default.
+Optional: Specifies that this manifest or script is the new default manifest or script for the service. Any criteria specified are stored, but these criteria are ignored until a different manifest or script is made the default.
 .RE
 
 .RE
@@ -1441,7 +1441,7 @@ lw(1.38i) lw(4.13i)
 CriteriaDescription
 \fBarch\fRArchitecture per \fBuname -m\fR.
 \fBcpu\fRCPU class per \fBuname -p\fR.
-\fBhostname\fRAssigned hostname.
+\fBhostname\fRAssigned host name.
 \fBipv4\fRIP version 4 network address.
 \fBmac\fRT{
 Hexadecimal MAC address with colon (:) separators.
@@ -1742,14 +1742,16 @@ Use the following sample command to list the profiles on a local server.
 .in +2
 .nf
 $ \fBinstalladm list -p\fR
-Service Name Profile
------------- -------
-sparc2       myprofile.xml
-             myprofile2.xml
-svc0817      profile3
-svc0819      profile4.xml
-             newprofile
-             foo.xml
+Service/Profile Name            Criteria
+--------------------            --------
+default-i386
+   sc_sample.xml                None
+
+default-sparc
+   newprofile-1                 ipv4     = 10.0.2.100 - 10.0.2.199
+                                mem      = 1024 MB - unbounded
+                                network  = 10.0.0.0
+   newprofile-2                 None
 .fi
 .in -2
 .sp
@@ -1777,9 +1779,9 @@ In this example, the manifest does not contain a name attribute, so the manifest
 .in +2
 .nf
 # \fBinstalladm list -m -n svc1\fR
-Manifest       Criteria
---------       --------
-my_manifest    mac  = AA:BB:CC:DD:EE:FF
+Manifest      Status    Criteria
+--------      ------    --------
+my_manifest             mac  = AA:BB:CC:DD:EE:FF
 .fi
 .in -2
 .sp
@@ -1808,9 +1810,9 @@ In this example, the manifest name is taken from the \fB-m\fR option.
 .in +2
 .nf
 # \fBinstalladm list -m -n svc1\fR
-Manifest       Criteria
---------       --------
-chosen_name    ipv4 = 10.0.2.100 - 10.0.2.199
+Manifest      Status    Criteria
+--------      ------    --------
+chosen_name             ipv4 = 10.0.2.100 - 10.0.2.199
 .fi
 .in -2
 .sp
@@ -1847,10 +1849,10 @@ In this example, the manifest name is taken from the \fBname\fR attribute of the
 .in +2
 .nf
 # \fBinstalladm list -m -n svc1\fR
-Manifest    Criteria
---------    --------
-my_name     arch = i86pc
-            mem  = 2048 MB - unbounded
+Manifest      Status    Criteria
+--------      ------    --------
+my_name                 arch = i86pc
+                        mem  = 2048 MB - unbounded
 .fi
 .in -2
 .sp

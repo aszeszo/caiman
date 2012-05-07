@@ -1,7 +1,7 @@
 '\" te
-.\" Copyright (c) 2008, 2012, Oracle and/or its affiliates.
-.\" All rights reserved.
-.TH ai_manifest 4 "22 Feb 2012" "SunOS 5.11" "File Formats"
+.\" Copyright (c) 2008, 2012, Oracle and/or its
+.\" affiliates. All rights reserved.
+.TH ai_manifest 4 "03 May 2012" "SunOS 5.11" "File Formats"
 .SH NAME
 ai_manifest \- Automated installation manifest file format
 .SH SYNOPSIS
@@ -162,19 +162,19 @@ The whole of one disk is used to install the Oracle Solaris OS. This disk is usu
 .TP
 .ie t \(bu
 .el o
-For x86, an \fBfdisk\fR partition is allocated that consumes the full disk contents. See the \fBfdisk\fR(1M) man page for more information about \fBfdisk\fR partitions.
+For x86 and SPARC with GPT aware firmware, a GPT partition is allocated that consumes the full disk contents. See the \fB-B\fR option of the \fBzpool create\fR command in the \fBzpool\fR(1M) man page.
 .RE
 .RS +4
 .TP
 .ie t \(bu
 .el o
-A single slice 0 is allocated that is the full size of the disk for SPARC or the full size of the \fBfdisk\fR partition for x86.
+For SPARC systems that are not capable of using GPT, a single slice 0 that is the full size of the disk is created.
 .RE
 .RS +4
 .TP
 .ie t \(bu
 .el o
-A single root pool is created that uses the complete slice 0.
+A single root pool is created that uses either the complete slice 0 or the complete GPT partition.
 .RE
 .RS +4
 .TP
@@ -350,7 +350,7 @@ The \fBname_type\fR attribute specifies the type of the target device name. The 
 .ad
 .sp .6
 .RS 4n
-This is a CTD name such as \fBc0t0d0\fR or an MPXIO name such as \fBc0t2000002037CD9F72d0\fR. This type of name is commonly seen when running the \fBformat\fR(1M) command.
+This is a CTD name such as \fBc0t0d0\fR or \fBc0t2000002037CD9F72d0\fR. This type of name is commonly seen when running the \fBformat\fR(1M) command.
 .sp
 .in +2
 .nf
@@ -449,7 +449,7 @@ Use the \fBiscsi\fR element to specify an iSCSI disk as the installation target.
 .na
 \fB\fBsource\fR\fR
 .ad
-.RS 15n
+.RS 23n
 .rt  
 The \fBsource\fR attribute specifies the source of the iSCSI configuration data. The \fBsource\fR attribute can have the following values:
 .sp
@@ -491,32 +491,15 @@ When the value of the \fBsource\fR attribute is \fBdhcp\fR, do not specify any o
 .ne 2
 .mk
 .na
-\fB\fBtarget_name\fR\fR
+\fB\fBtarget_ip\fR\fR
 .ad
-.RS 15n
+.RS 23n
 .rt  
-The \fBtarget_name\fR attribute specifies the iSCSI Qualified Name (IQN) or the Extended Unique Identifier (EUI) of the iSCSI target, as shown in the following example:
-.sp
-.in +2
-.nf
-iqn.1986-03.com.sun:02:a4a694bc-6de2-ee50-8979-e25ba29acb86
-.fi
-.in -2
-
-If the \fBtarget_name\fR attribute is not provided, AI uses \fBiscsiadm\fR(1M) in \fBsendtargets\fR mode.
+The value of this attribute is the IP address of the iSCSI target. The target at this IP address must be online and accessible from this system. This attribute is required.
 .sp
 .in +2
 .nf
 <iscsi target_lun="0" target_ip="192.168.1.34"/>
-.fi
-.in -2
-
-If the \fBtarget_name\fR attribute is provided, AI uses static discovery.
-.sp
-.in +2
-.nf
-<iscsi target_name="iqn.1986-03.com.sun:02:a4a694bc-6de2-ee50-8979-e25ba29acb86"
-    target_lun="0" target_ip="192.168.1.34"/>
 .fi
 .in -2
 
@@ -528,11 +511,29 @@ If the \fBtarget_name\fR attribute is provided, AI uses static discovery.
 .na
 \fB\fBtarget_lun\fR\fR
 .ad
-.RS 15n
+.RS 23n
 .rt  
 If an iSCSI target provides more than one LUN, specify which LUN to use by specifying an integer value for \fBtarget_lun\fR. LUN numbers are indexed from 0. To specify the first LUN, specify a \fBtarget_lun\fR value of 0.
 .sp
-If only one LUN is provided, this attribute can be omitted.
+If only one LUN is provided, this attribute can be omitted. If more than one LUN is provided by the iSCSI target, then this attribute is required.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtarget_name\fR\fR
+.ad
+.RS 23n
+.rt  
+The \fBtarget_name\fR attribute specifies the iSCSI Qualified Name (IQN) or the Extended Unique Identifier (EUI) of the iSCSI target, as shown in the following example:
+.sp
+.in +2
+.nf
+iqn.1986-03.com.sun:02:a4a694bc-6de2-ee50-8979-e25ba29acb86
+.fi
+.in -2
+
 .RE
 
 .sp
@@ -541,7 +542,7 @@ If only one LUN is provided, this attribute can be omitted.
 .na
 \fB\fBtarget_port\fR\fR
 .ad
-.RS 15n
+.RS 23n
 .rt  
 If not specified, the default \fBtarget_port\fR of 3260 (the iSCSI standard port) is used. This attribute enables you to specify an alternative port number.
 .RE
@@ -550,20 +551,59 @@ If not specified, the default \fBtarget_port\fR of 3260 (the iSCSI standard port
 .ne 2
 .mk
 .na
-\fB\fBtarget_ip\fR\fR
+\fB\fBinitiator_name\fR\fR
 .ad
-.RS 15n
+.RS 23n
 .rt  
-The value of this attribute is the IP address of the server.
-.sp
-.in +2
-.nf
-<iscsi target_lun="0" target_ip="192.168.1.34"/>
-.fi
-.in -2
-
+The \fBinitiator_name\fR attribute specifies the IQN or the EUI of the iSCSI initiator.
 .RE
 
+.sp
+.ne 2
+.mk
+.na
+\fBCHAP authentication\fR
+.ad
+.RS 23n
+.rt  
+The following two attributes provide CHAP (Challenge-Handshake Authentication Protocol) authentication:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBchap_name\fR\fR
+.ad
+.RS 17n
+.rt  
+The \fBchap_name\fR attribute specifies the CHAP username to be used for authentication.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBchap_password\fR\fR
+.ad
+.RS 17n
+.rt  
+The \fBchap_password\fR attribute specifies the CHAP password to be used for authentication.
+.RE
+
+SPARC clients can optionally set \fBchap-user\fR and \fBchap-password\fR at the Open Boot PROM (\fBok\fR) prompt. For more information, see "iSCSI Boot" in \fBboot\fR(1M).
+.RE
+
+.sp
+.LP
+The \fBiscsi\fR element does not have an \fBaction\fR attribute. AI uses iSCSI devices but does not operate directly on them.
+.sp
+.LP
+If the \fBtarget_name\fR attribute is not provided, AI uses \fBiscsiadm\fR(1M) in \fBsendtargets\fR mode.
+.sp
+.LP
+If the \fBtarget_name\fR attribute is provided, AI uses static discovery.
+.sp
+.LP
+Given this information, the iSCSI device is made available for installation.
 .SS "Target Device Properties"
 .sp
 .LP
@@ -720,10 +760,113 @@ The \fBin_vdev\fR attribute links this disk to a virtual device defined in the \
 If the \fBin_vdev\fR attribute is specified here, then do not specify \fBin_vdev\fR for any subordinate partitions or slices.
 .RE
 
-.SS "Partitions"
+.SS "GPT Partitions"
 .sp
 .LP
-Partitions can only be specified when installing to an x86 system. If partitions are specified for a SPARC system, the installation fails. The \fBpartition\fR element has the following attributes:
+GUID Partition Table partitions are the preferred x86 and SPARC partitioning method. GPT partitions are usable directly by ZFS without requiring slices. The \fBgpt_partition\fR element has the following attributes:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBname\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBname\fR attribute is the GPT partition number. Values 0-7 are valid for Oracle Solaris.
+.sp
+The \fBname\fR attribute is required.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBaction\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBaction\fR attribute can have the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate\fR\fR
+.ad
+.sp .6
+.RS 4n
+This is the default action for a partition. The \fBcreate\fR action tells the installer to create a partition with the specified name. If a partition with the same name already exists, that existing partition is deleted first.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelete\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBdelete\fR action tells the installer to delete the named partition. If the named partition does not exist, the \fBdelete\fR action is skipped and a warning message is output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpreserve\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBpreserve\fR action tells the installer to leave the named partition untouched. This action is commonly used if another operating system is installed at another location on the same disk.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpart_type\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBpart_type\fR attribute specifies the GUID partition type. The value can be a supported GUID alias, such as \fBsolaris\fR, or an explicit GUID hexadecimal string value.
+.sp
+The \fBpart_type\fR attribute is required.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBin_zpool\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBin_zpool\fR attribute links this partition to a ZFS pool defined in the \fBlogical\fR section of the AI manifest. The value of the \fBin_zpool\fR attribute must match the value of the \fBname\fR attribute of the corresponding \fBzpool\fR element.
+.sp
+If the \fBin_zpool\fR attribute is specified, then do not specify \fBin_zpool\fR for the associated \fBdisk\fR element or any subordinate \fBslice\fR elements.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBin_vdev\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fBin_vdev\fR attribute links this partition to a virtual device defined in the \fBlogical\fR section of the AI manifest. The value of the \fBin_vdev\fR attribute must match the value of the \fBname\fR attribute of the corresponding \fBvdev\fR element.
+.sp
+If the \fBin_vdev\fR attribute is specified, then do not specify \fBin_vdev\fR for the associated \fBdisk\fR element or any subordinate \fBslice\fR elements.
+.RE
+
+.sp
+.LP
+GPT partitions can have a \fBsize\fR sub-element to specify the size of the partition. See the beginning of the "Disk Layout" section for details about how to use the \fBsize\fR element.
+.SS "Legacy Partitions"
+.sp
+.LP
+Legacy \fBfdisk\fR partitions can only be specified when installing to an x86 system. If \fBfdisk\fR partitions are specified for a SPARC system, the installation fails. The \fBpartition\fR element is used for \fBfdisk\fR partitions. The \fBpartition\fR element has the following attributes:
 .sp
 .ne 2
 .mk
@@ -1061,10 +1204,10 @@ Use the \fBlogical\fR section of the \fBtarget\fR section to specify any number 
 Multiple pools can be defined by using the \fBzpool\fR sub-element of the \fBlogical\fR element. Only one of these pools can be the root pool. The installation fails if multiple root pools are defined.
 .sp
 .LP
-If a \fBzpool\fR element defines a root pool, and no target disks, partitions, or slices are specified in the AI manifest, then the installer selects a target as described in "Installation Location" above. This selection is automatically assigned to the root pool.
+If a \fBzpool\fR element defines a root pool, and no target disks, partitions (GPT or \fBfdisk\fR), or slices are specified in the AI manifest, then the installer selects a target as described in "Installation Location" above. This selection is automatically assigned to the root pool.
 .sp
 .LP
-If target disks, partitions, or slices are specified in the AI manifest, then the \fBzpool\fR must be associated with at least one of these disks, partitions, or slices. To make this association, use the \fBin_zpool\fR attribute of the \fBdisk\fR element, the \fBpartition\fR element, or the \fBslice\fR element.
+If target disks, partitions (GPT or \fBfdisk\fR), or slices are specified in the AI manifest, then the \fBzpool\fR must be associated with at least one of these disks, partitions (GPT or \fBfdisk\fR), or slices. To make this association, use the \fBin_zpool\fR attribute of the \fBdisk\fR element, the \fBgpt_partition\fR element, the \fBpartition\fR element, or the \fBslice\fR element.
 .sp
 .LP
 The \fBzpool\fR element has the following attributes:
@@ -1078,7 +1221,7 @@ The \fBzpool\fR element has the following attributes:
 .rt  
 This is the name of the new pool. This value must be a name that can be passed to the \fBzpool create\fR command.
 .sp
-This name could be used as the value of an \fBin_zpool\fR attribute of a \fBdisk\fR, \fBpartition\fR, or \fBslice\fR element to define that disk, partition, or slice as a constituent device in the \fBzpool\fR.
+This name could be used as the value of an \fBin_zpool\fR attribute of a \fBdisk\fR, \fBgpt_partition\fR, \fBpartition\fR, or \fBslice\fR element to define that disk, GPT partition, \fBfdisk\fR partition, or slice as a constituent device in the \fBzpool\fR.
 .RE
 
 .sp
@@ -1211,13 +1354,13 @@ Any number of virtual device redundancy groups (\fBvdev\fR element), ZFS dataset
 Use the \fBvdev\fR element to define the size or structure of a \fBzpool\fR. You can specify multiple \fBvdev\fR elements, each with a different redundancy type.
 .sp
 .LP
-If a \fBzpool\fR contains more than one \fBvdev\fR element, then you must use the \fBin_vdev\fR attribute on any \fBdisk\fR, \fBpartition\fR, or \fBslice\fR elements that are defined with \fBin_zpool\fR attributes.
+If a \fBzpool\fR contains more than one \fBvdev\fR element, then you must use the \fBin_vdev\fR attribute on any \fBdisk\fR, \fBgpt_partition\fR, \fBpartition\fR, or \fBslice\fR elements that are defined with \fBin_zpool\fR attributes.
 .sp
 .LP
-You can omit the \fBin_zpool\fR attribute on a disk, partition, or slice if the \fBvdev\fR name is unique throughout the AI manifest.
+You can omit the \fBin_zpool\fR attribute on a disk, GPT partition, \fBfdisk\fR partition, or slice if the \fBvdev\fR name is unique throughout the AI manifest.
 .sp
 .LP
-If a \fBzpool\fR contains only one \fBvdev\fR element, you can omit the \fBin_vdev\fR attribute on a \fBdisk\fR, \fBpartition\fR, or \fBslice\fR.
+If a \fBzpool\fR contains only one \fBvdev\fR element, you can omit the \fBin_vdev\fR attribute on a \fBdisk\fR, \fBgpt_partition\fR, \fBpartition\fR, or \fBslice\fR.
 .sp
 .LP
 The \fBvdev\fR element has the following attributes:
@@ -1231,7 +1374,7 @@ The \fBvdev\fR element has the following attributes:
 .rt  
 This is the name of the new \fBvdev\fR.
 .sp
-This name should be used as the value of an \fBin_vdev\fR attribute of a \fBdisk\fR, \fBpartition\fR, or \fBslice\fR element to define that disk, partition, or slice as a constituent device in the \fBvdev\fR
+This name should be used as the value of an \fBin_vdev\fR attribute of a \fBdisk\fR, \fBgpt_partition\fR, \fBpartition\fR, or \fBslice\fR element to define that disk, partition (GPT or \fBfdisk\fR), or slice as a constituent device in the \fBvdev\fR
 .RE
 
 .sp
@@ -1326,7 +1469,7 @@ A \fBredundancy\fR type of \fBmirror\fR with multiple devices.
 
 .sp
 .LP
-To add a device to a \fBvdev\fR, use the \fBin_zpool\fR and \fBin_vdev\fR attributes of a \fBdisk\fR, \fBpartition\fR, or \fBslice\fR element. The following example specifies a root pool named \fBrpool\fR that is mirrored over two disks:
+To add a device to a \fBvdev\fR, use the \fBin_zpool\fR and \fBin_vdev\fR attributes of a \fBdisk\fR, \fBgpt_partition\fR, \fBpartition\fR, or \fBslice\fR element. The following example specifies a root pool named \fBrpool\fR that is mirrored over two disks:
 .sp
 .in +2
 .nf
@@ -1558,7 +1701,7 @@ This is the default value. When \fBuse\fR is \fBnone\fR, the \fBzvol\fR is creat
 .ad
 .RS 8n
 .rt  
-When \fBuse\fR is \fBswap\fR, the \fBzvol\fR is created and used as a swap device. The \fBzvol\fR is also used as a swap device during the installation.
+When \fBuse\fR is \fBswap\fR, the \fBzvol\fR is created and used as a swap device. The \fBzvol\fR is also used as a swap device during the installation. The \fBsize\fR sub-element of the \fBzvol\fR element can have the value \fBmax\fR. When the \fBmax\fR keyword is specified, the size of the volume will be 90% of the free space on the pool on which the volume is created. Only one volume on a pool can specify a size of \fBmax\fR.
 .RE
 
 .sp
@@ -1576,7 +1719,7 @@ When \fBuse\fR is \fBdump\fR, the \fBzvol\fR is created and used as a dump devic
 
 .sp
 .LP
-Use the \fBsize\fR sub-element to specify the size of the \fBzvol\fR See the beginning of the "Disk Layout" section for details about how to use the \fBsize\fR element.
+Use the \fBsize\fR sub-element to specify the size of the \fBzvol\fR. See the beginning of the "Disk Layout" section for details about how to use the \fBsize\fR element.
 .sp
 .LP
 Use the \fBoptions\fR sub-element to set ZFS volume options on a \fBzvol\fR. Use of the \fBoptions\fR element for a \fBzvol\fR is similar to the use of the \fBdataset_options\fR element for a \fBzpool\fR, as shown in the following example:
@@ -1743,9 +1886,7 @@ The \fBsoftware\fR element has the following structure:
              optional software components
         -->
     </destination>
-    <!-- one or more source elements
-         IPS type: only one source element
-    -->
+    <!-- zero or one source element -->
     <source>
         <!-- one or more publisher or dir elements
              IPS, P5I, and SVR4 types:
@@ -1771,13 +1912,10 @@ The \fBsoftware\fR element has the following structure:
 The default installation type if the \fBtype\fR attribute is not specified is \fBIPS\fR.
 .sp
 .LP
-For installations of type IPS, only a single \fBsource\fR element can be specified.
+Use the \fBsource\fR element to specify which publishers to use for installing the packages. Multiple publishers can be specified in one \fBsource\fR element. Each publisher must have at least one origin. Each publisher can have multiple origins and mirrors.
 .sp
 .LP
-Use the \fBsource\fR element to specify which publishers to use for installing the packages. Multiple publishers can be specified. Each publisher must have at least one origin. Each publisher can have multiple origins and mirrors.
-.sp
-.LP
-The order in which publishers are defined in the AI manifest is the order in which the publishers are searched for IPS packages to install and the order in which the publishers are set in the installed system.
+The order in which publishers are defined in the AI manifest is the order in which the publishers are searched for IPS packages to install and the order in which the publishers are set in the installed image.
 .sp
 .LP
 When installing a non-global zone, the system repository is used by the zone. Any publishers specified in the AI manifest are added in the order in which they appear in the AI manifest, after the publishers provided by the system repository. See \fBpkg\fR(1) and \fBpkg.sysrepo\fR(1m) for more information about the system repository.
@@ -1803,7 +1941,7 @@ The following example specifies multiple publishers, one of which has a mirror a
 
 .sp
 .LP
-Use the \fBsoftware_data\fR element to specify packages to install or uninstall. The \fBaction\fR attribute can have one of the following two values:
+Use the \fBsoftware_data\fR element to specify packages to install or uninstall. The \fBaction\fR attribute can have one of the following values:
 .sp
 .ne 2
 .mk
@@ -1812,7 +1950,41 @@ Use the \fBsoftware_data\fR element to specify packages to install or uninstall.
 .ad
 .RS 13n
 .rt  
-Installs the IPS packages specified in the \fBname\fR sub-elements. This is the default if the \fBaction\fR attribute is not specified. At least one \fBsoftware_data\fR element must have an action of install.
+Installs the IPS packages specified in the \fBname\fR sub-elements. This is the default if the \fBaction\fR attribute is not specified. At least one \fBsoftware_data\fR element must have an \fBaction\fR of \fBinstall\fR.
+.sp
+Packages specified in \fBname\fR sub-elements might install other packages that are not explicitly named. If one of those packages is a package that you do not want to install, you can specify the name of the package that you do not want to install in a \fBreject\fR sub-element.
+.sp
+The \fBreject\fR sub-element only applies to the \fBinstall\fR section in which the \fBreject\fR sub-element appears. If a package is the value of a \fBreject\fR sub-element in one \fBinstall\fR section, but is only installed in a different \fBinstall\fR section, then the package is installed and not rejected.
+.sp
+Rejected packages that are the target of group dependencies are placed on the avoid list. See the \fBavoid\fR action below.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBavoid\fR\fR
+.ad
+.RS 13n
+.rt  
+Adds the IPS packages in the \fBname\fR sub-elements to the avoid list.
+.sp
+Packages on the avoid list are not installed if they are the target of a group dependency.
+.sp
+Packages on the avoid list are installed if they are the target of a require dependency. If that require dependency is removed (for example, the package that contains the require dependency is uninstalled), the avoided package is uninstalled.
+.sp
+Only packages that are not currently installed can be avoided. Therefore, \fBavoid\fR sections must come before the \fBinstall\fR sections where you install the packages that have dependencies on the packages you want to avoid.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBunavoid\fR\fR
+.ad
+.RS 13n
+.rt  
+Removes the IPS packages in the \fBname\fR sub-elements from the avoid list.
 .RE
 
 .sp
@@ -1823,21 +1995,25 @@ Installs the IPS packages specified in the \fBname\fR sub-elements. This is the 
 .ad
 .RS 13n
 .rt  
-Removes the IPS packages specified in the \fBname\fR sub-elements.
+Removes the IPS packages specified in the \fBname\fR sub-elements. Uninstalled packages that are the target of group dependencies are placed on the avoid list. See the \fBavoid\fR action above.
 .RE
 
 .sp
 .LP
-Other values of the \fBaction\fR attribute are not supported for IPS installations.
+Any avoid list created during the installation continues to exist in the installed image.
 .sp
 .LP
-For each of these actions, one or more packages can be specified in the \fBname\fR element, as shown in the following example:
+The following example illustrates the use of \fBsoftware_data\fR sections with different \fBaction\fR values in a \fBsoftware\fR section of type IPS:
 .sp
 .in +2
 .nf
-<software_data> <!-- defaults to install action -->
+<software_data action="avoid">
+    <name>pkg:/to/avoid</name>
+</software_data>
+<software_data action="install">
     <name>pkg:/entire</name>
     <name>pkg:/group/system/solaris-large-server</name>
+    <reject>pkg:/to/reject</reject>
 </software_data>
 <software_data action="uninstall">
     <name>pkg:/unwanted/pkg</name>
@@ -1914,9 +2090,6 @@ Copies the files from the source to the new boot environment. This is the defaul
 Removes the files from the new boot environment.
 .RE
 
-.sp
-.LP
-Other values of the \fBaction\fR attribute are not supported for SVR4 installations.
 .sp
 .LP
 For each of these actions, one or more packages can be specified in the \fBname\fR element, as shown in the following example:
