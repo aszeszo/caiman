@@ -511,7 +511,8 @@ class Filesystem(DataObject):
 
         if in_be is not None:
             try:
-                filesystem.in_be = {"true": True, "false": False}[in_be.lower()]
+                filesystem.in_be = {"true": True,
+                                    "false": False}[in_be.lower()]
             except KeyError:
                 raise ParsingError("Filesystem element's in_be attribute " +
                                    "must be either 'true' or 'false'")
