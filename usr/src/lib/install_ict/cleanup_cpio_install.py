@@ -56,10 +56,10 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
          system
        - Remove miscellanous directory trees used as work areas during
          installation
-       - Relocate configuration files from the save directory
        - Remove install-specific packages that are not needed by the installed
          system
        - Reset pkg(1) image UUID for preferred publisher
+       - Relocate configuration files from the save directory
     '''
     def __init__(self, name):
         '''Initializes the class
@@ -196,27 +196,6 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
                 if not dry_run:
                     os.rmdir(os.path.join(root, work_dir))
 
-        # Relocate configuration files from the save directory
-        savedir = os.path.join(self.target_dir, 'save')
-        if os.path.exists(savedir):
-            self.logger.debug('Executing: Relocate configuration files')
-            for root, dirs, files in os.walk(savedir, topdown=False):
-                if not files:
-                    continue
-
-                target = root.replace('/save', '')
-                if not dry_run:
-                    if not os.access(target, os.F_OK):
-                        os.makedirs(target, 0755)
-
-                for name in files:
-                    move_file = os.path.join(root, name)
-                    self.logger.debug('Moving %s to %s', move_file, target)
-                    if not dry_run:
-                        shutil.copy2(move_file, target)
-
-            shutil.rmtree(savedir)
-
         if not dry_run:
             try:
                 api_inst = api.ImageInterface(self.target_dir,
@@ -306,6 +285,44 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
         if not dry_run:
             publisher = api_inst.get_highest_ranked_publisher()
             publisher.reset_client_uuid()
+
+        #
+        # Now that all pkg(5) operations are finished, restore files
+        # from the save directory. This order of steps is intentional,
+        # as pkg(5) operations may have wanted to modify files which
+        # are to be restored.
+        #
+        # As an example, uninstalling media/internal package removed
+        # media specific 'jack' user from the target system. That (among other
+        # things) removed related entry from shadow(4) file (now to be
+        # restored from save area).
+        #
+        savedir = os.path.join(self.target_dir, 'save')
+        if os.path.exists(savedir):
+            self.logger.debug('Executing: Relocate configuration files')
+            for root, dirs, files in os.walk(savedir, topdown=False):
+                if not files:
+                    continue
+
+                target = root.replace('/save', '')
+                if not dry_run:
+                    if not os.access(target, os.F_OK):
+                        os.makedirs(target, 0755)
+
+                for name in files:
+                    src_file = os.path.join(root, name)
+                    dst_file = os.path.join(target, name)
+                    self.logger.debug('Moving %s to %s', src_file, dst_file)
+                    if not dry_run:
+                        #
+                        # Use shutil.move(), as it transfers also file
+                        # permissions and ownership. Assuming that files
+                        # in save area were created with desired permissions
+                        # and ownership.
+                        #
+                        shutil.move(src_file, dst_file)
+
+            shutil.rmtree(savedir)
 
         # Remove the files and directories in the cleanup_list
         self.logger.debug('Executing: Cleanup of %s', self.cleanup_list)

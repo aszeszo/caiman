@@ -57,17 +57,20 @@ NODENAME = """  <service name="system/identity" type="service" version="1">
   </service>"""
 
 
-class TestSetPassword(unittest.TestCase):
-    """ test case to test setting the password
+class TestCustomizeConfigFiles(unittest.TestCase):
+    """ test case to test customizing various configuration files
     """
 
     def setUp(self):
         # create a dummy filesystem with some files created in the proper
         # location
         engine_test_utils.get_new_engine_instance()
-        self.pi_filelist = ["/etc/passwd", "/etc/shadow", "/usr/lib/"]
+        self.pi_filelist = ["etc/passwd", "etc/shadow", "etc/system",
+                            "etc/default/dhcpagent", "etc/inet/hosts",
+                            "usr/lib/"]
         self.ppim = PrePkgImgMod("Test PPIM")
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
+        self.ppim.save_path = os.path.join(self.ppim.pkg_img_path, "save")
 
         # copy /usr/lib/libc.so and /usr/lib/libc.so.1 to the pkg_img_path
         shutil.copy2("/usr/lib/libc.so",
@@ -82,55 +85,30 @@ class TestSetPassword(unittest.TestCase):
         shutil.copy2("/etc/shadow", os.path.join(self.ppim.pkg_img_path,
                                                  "etc/shadow"))
 
+        # write a simplified line to the dhcpagent file
+        with open(os.path.join(self.ppim.pkg_img_path,
+                               "etc/default/dhcpagent"),
+                  "w") as fh:
+            fh.write("PARAM_REQUEST_LIST=1,3,6,12,15,28,43\n")
+
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
         engine_test_utils.reset_engine()
 
-    def test_cleartext_password(self):
-        self.ppim.root_password = "test"
-        self.ppim.is_plaintext = "true"
-        self.ppim.set_password()
-
-        with open(os.path.join(self.ppim.pkg_img_path, "etc/shadow")) as fh:
-            line = fh.readline()
-            if line.startswith("root"):
-                self.assert_(self.ppim.root_password not in line)
-
-    def test_encrypted_password(self):
+    def test_customize_config_files(self):
         self.ppim.root_password = "test"
         self.ppim.is_plaintext = "false"
-        self.ppim.set_password()
 
+        self.ppim.customize_config_files()
+
+        # /etc/shadow
+        # verify that root password was set up
         with open(os.path.join(self.ppim.pkg_img_path, "etc/shadow")) as fh:
             line = fh.readline()
             if line.startswith("root"):
                 self.assert_(self.ppim.root_password in line)
 
-
-class TestEtcSystemModification(unittest.TestCase):
-    """ test case for testing the modification of /etc/system
-    """
-
-    def setUp(self):
-        # create a dummy filesystem with some files created in the proper
-        # location
-        engine_test_utils.get_new_engine_instance()
-        self.ppim = PrePkgImgMod("Test PPIM")
-        self.pi_filelist = ["/etc/system"]
-        self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
-
-    def tearDown(self):
-        shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
-        engine_test_utils.reset_engine()
-
-    def test_modify_etc_system(self):
-        # test with a missing /etc/system file
-        self.ppim.modify_etc_system()
-
-        # verify the save directory entry exists
-        self.assert_(os.path.isdir(os.path.join(self.ppim.pkg_img_path,
-                                                "save/etc")))
-
+        # /etc/system
         # verify the 'saved' /etc/system file is 0 bytes
         self.assert_(os.path.getsize(os.path.join(self.ppim.pkg_img_path,
                                                   "save/etc/system")) == 0)
@@ -142,32 +120,7 @@ class TestEtcSystemModification(unittest.TestCase):
                                                         "etc/system")]
             self.assertEqual(run_silent(cmd).wait(), 0)
 
-
-class TestDhcpagentModification(unittest.TestCase):
-    """ test case for testing the modification of /etc/default/dhcpagent
-    """
-
-    def setUp(self):
-        # create a dummy filesystem with some files created in the proper
-        # location
-        engine_test_utils.get_new_engine_instance()
-        self.ppim = PrePkgImgMod("Test PPIM")
-        self.pi_filelist = ["/etc/default/dhcpagent"]
-        self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
-
-    def tearDown(self):
-        shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
-        engine_test_utils.reset_engine()
-
-    def test_modify_dhcpagent(self):
-        # write a simplified line to the dhcpagent file
-        with open(os.path.join(self.ppim.pkg_img_path,
-                               "etc/default/dhcpagent"),
-                  "w") as fh:
-            fh.write("PARAM_REQUEST_LIST=1,3,6,12,15,28,43\n")
-
-        self.ppim.modify_dhcpagent()
-
+        # /etc/default/dhcpagent
         # verify the save directory entry exists
         self.assert_(os.path.isdir(os.path.join(self.ppim.pkg_img_path,
                                                 "save/etc/default")))
@@ -177,6 +130,10 @@ class TestDhcpagentModification(unittest.TestCase):
                os.path.join(self.ppim.pkg_img_path, "etc/default/dhcpagent")]
         p = run(cmd)
         self.assertTrue("17" in p.stdout)
+
+        # verify that /etc/inet/hosts was saved
+        self.assert_(os.path.isfile(os.path.join(self.ppim.pkg_img_path,
+                                                "save/etc/inet/hosts")))
 
 
 class TestCalculateSize(unittest.TestCase):
@@ -229,7 +186,7 @@ class TestSymlinkVi(unittest.TestCase):
         engine_test_utils.reset_engine()
 
 
-class TestSaveFiles(unittest.TestCase):
+class TestCustomizeLiveCDFiles(unittest.TestCase):
     """ test case for testing the saving of important files in /save
     """
 
@@ -239,6 +196,8 @@ class TestSaveFiles(unittest.TestCase):
         engine_test_utils.get_new_engine_instance()
         self.ppim = LiveCDPrePkgImgMod("Test PPIM")
         self.pi_filelist = [
+            "etc/shadow", "etc/system", "etc/default/dhcpagent",
+            "etc/inet/hosts",
             "usr/share/dbus-1/services/", "etc/gconf/schemas/",
             "usr/share/gnome/autostart/", "etc/xdg/autostart/",
             "etc/xdg/autostart/updatemanagernotifier.desktop",
@@ -250,12 +209,26 @@ class TestSaveFiles(unittest.TestCase):
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
         self.ppim.save_path = os.path.join(self.ppim.pkg_img_path, "save")
 
+        # copy /usr/lib/libc.so and /usr/lib/libc.so.1 to the pkg_img_path
+        os.makedirs(os.path.join(self.ppim.pkg_img_path, "usr/lib"))
+        shutil.copy2("/usr/lib/libc.so",
+                     os.path.join(self.ppim.pkg_img_path, "usr/lib/"))
+
+        shutil.copy2("/usr/lib/libc.so.1",
+                     os.path.join(self.ppim.pkg_img_path, "usr/lib/"))
+
+        # copy /etc/passwd and shadow to the pkg_img_path
+        shutil.copy2("/etc/passwd", os.path.join(self.ppim.pkg_img_path,
+                                                 "etc/passwd"))
+        shutil.copy2("/etc/shadow", os.path.join(self.ppim.pkg_img_path,
+                                                 "etc/shadow"))
+
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
         engine_test_utils.reset_engine()
 
-    def test_save_files(self):
-        self.ppim.save_files()
+    def test_customize_livecd_config_files(self):
+        self.ppim.customize_config_files()
 
         # verify each file or directory is in /save
         for entry in self.pi_filelist:
@@ -321,7 +294,7 @@ class TestConfigureSMF(unittest.TestCase):
         engine_test_utils.reset_engine()
 
     def test_configure_smf_default_hostname(self):
-        # insert a system/identity:node serivce into the var/svc manifest
+        # insert a system/identity:node service into the var/svc manifest
         manifest = os.path.join(self.ppim.pkg_img_path,
                                 "var/svc/manifest/system/var_stub.xml")
         with open(manifest, "r") as fh:

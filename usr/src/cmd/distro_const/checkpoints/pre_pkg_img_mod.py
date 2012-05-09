@@ -111,9 +111,84 @@ class PrePkgImgMod(Checkpoint):
         for profile in svc_profile_list:
             self.svc_profiles.append(profile.source)
 
-    def set_password(self):
-        """ class method to set the root password
+    def save_files_directories(self, save_list, preserve=False):
+        """ class method for saving key files and directories for restoration
+        after installation. File permissions and ownership are preserved.
+        Missing target directories are created.
+
+        If 'preserve' is set to False (default case), files are moved
+        to save area (source files are removed).
+        If 'preserve' is set to True, files are copied to save area
+        (source files are preserved).
         """
+
+        for df in save_list:
+            # If object does not exist, skip it.
+            full_path = os.path.join(self.pkg_img_path, df)
+            dest_path = os.path.join(self.save_path, df)
+            if not os.path.exists(full_path):
+                self.logger.error("WARNING:  unable to find " + full_path +
+                                  " to save for later restoration!")
+                continue
+
+            # If object is directory, just create it in save area.
+            if os.path.isdir(full_path) and not os.path.exists(dest_path):
+                os.makedirs(dest_path)
+                continue
+
+            # If object is file, copy (or move it) to save area. Create missing
+            # directories as part of that process.
+            if os.path.isfile(full_path) and not os.path.exists(dest_path):
+                dir_path = os.path.dirname(dest_path)
+                if not os.path.exists(dir_path):
+                    os.makedirs(dir_path)
+
+                if preserve:
+                    # copy the file along with its metadata
+                    shutil.copy2(full_path, dir_path)
+
+                    # shutil.copy2() does not preserve file ownership,
+                    # take care of that manually.
+                    df_stat = os.lstat(full_path)
+                    os.lchown(dest_path, df_stat.st_uid, df_stat.st_gid)
+                else:
+                    # move the file and preserve file metadata
+                    shutil.move(full_path, dir_path)
+
+    def customize_config_files(self):
+        """ class method to save and/or tune various configuration files
+        """
+
+        #
+        # Save the original /boot/grub/menu.lst file if it exists. It will not
+        # exist on GRUB2 based images so it is silently ignored if not present.
+        # Specific to i386 platform.
+        #
+        if platform.processor() == "i386":
+            save_list = ["boot/grub/menu.lst"]
+            if os.path.exists(os.path.join(self.pkg_img_path, save_list[0])):
+                self.save_files_directories(save_list)
+
+        #
+        # Save pristine /etc/inet/hosts file, since it is modified by
+        # identity:node smf service during media boot.
+        #
+        self.save_files_directories(["etc/inet/hosts"], preserve=True)
+
+        #
+        # Modify /etc/system to make ZFS consume less memory.
+        # Save original system(4) file.
+        #
+        self.save_files_directories(["etc/system"], preserve=True)
+
+        etc_system = os.path.join(self.pkg_img_path, "etc/system")
+        with open(etc_system, "a+") as fh:
+            fh.write("set zfs:zfs_arc_max=0x4002000\n")
+            fh.write("set zfs:zfs_vdev_cache_size=0\n")
+
+        # Configure the root password. Save original shadow(4) file.
+        self.save_files_directories(["etc/shadow"], preserve=True)
+
         self.logger.debug("root password is: " + self.root_password)
         self.logger.debug("is root password plaintext: " +
                           str(self.is_plaintext))
@@ -132,130 +207,40 @@ class PrePkgImgMod(Checkpoint):
         pfile.setvalue(root_entry)
         pfile.writefile()
 
-    def modify_etc_system(self):
-        """ class method to modify etc/system
-        """
-        # path to the save directory
-        save_path = os.path.join(self.pkg_img_path, "save")
-
-        if not os.path.exists(save_path):
-            os.mkdir(save_path)
-
-        # create /save/etc directory, if needed
-        if not os.path.exists(os.path.join(save_path, "etc")):
-            os.mkdir(os.path.join(save_path, "etc"))
-
-        # save a copy of /etc/system
-        etc_system = os.path.join(self.pkg_img_path, "etc/system")
-        if os.path.exists(etc_system):
-            shutil.copy2(etc_system, os.path.join(save_path, "etc/system"))
-
-        # Modify /etc/system to make ZFS consume less memory
-        with open(etc_system, "a+") as fh:
-            fh.write("set zfs:zfs_arc_max=0x4002000\n")
-            fh.write("set zfs:zfs_vdev_cache_size=0\n")
-
-    def modify_dhcpagent(self):
-        """ method to modify /etc/default/dhcpagent to include the Rootpath
-        bootp-dhcp-parameter for finding iSCSI information from the DHCP server
-
-        This method can be removed if/when CR 7129888 is addressed
-        """
+        #
+        # Modify /etc/default/dhcpagent to include the Rootpath
+        # bootp-dhcp-parameter for finding iSCSI information from the DHCP
+        # server.
+        #
+        # This method can be removed if/when CR 7129888 is addressed.
+        #
 
         # verify /etc/default/dhcpagent exists
         dhcpagent = os.path.join(self.pkg_img_path, "etc/default/dhcpagent")
         if not os.path.exists(dhcpagent):
-            self.logger.debug("skipping save of /etc/default/dhcpagent")
-            return
+            self.logger.debug("skipping modification of "
+                              "/etc/default/dhcpagent, file does not exist")
+        else:
+            # Save pristine dhcpagent file.
+            self.save_files_directories(["etc/default/dhcpagent"],
+                                        preserve=True)
 
-        # path to the save directory
-        save_path = os.path.join(self.pkg_img_path, "save")
+            # open the file and read it into memory
+            with open(dhcpagent, "r") as fh:
+                contents = fh.read()
 
-        if not os.path.exists(save_path):
-            os.mkdir(save_path)
+            new_file = list()
+            for line in contents.splitlines():
+                if line.startswith("PARAM_REQUEST_LIST") and "17" not in line:
+                    # append the parameter to enable rootpath
+                    new_file.append(line + ",17")
+                else:
+                    new_file.append(line)
 
-        # create /save/etc/default directory, if needed
-        if not os.path.exists(os.path.join(save_path, "etc/default")):
-            os.makedirs(os.path.join(save_path, "etc/default"))
-
-        # save a copy of /etc/default/dhcpagent
-        shutil.copy2(dhcpagent,
-                     os.path.join(save_path, "etc/default/dhcpagent"))
-
-        # open the file and read it into memory
-        with open(dhcpagent, "r") as fh:
-            contents = fh.read()
-
-        new_file = list()
-        for line in contents.splitlines():
-            if line.startswith("PARAM_REQUEST_LIST") and "17" not in line:
-                # append the parameter to enable rootpath
-                new_file.append(line + ",17")
-            else:
-                new_file.append(line)
-
-        # rewrite the file
-        with open(dhcpagent, "w+") as fh:
-            fh.write("\n".join(new_file))
-            fh.write("\n")
-
-    def save_etc_inet_hosts(self):
-        """ class method to save pristine hosts(4) file. hosts(4) file
-        is modified by identity:node smf service and we don't want those
-        changes to be propagated to the target system.
-        """
-        # create save/etc/inet directory, if needed
-        if not os.path.exists(os.path.join(self.save_path, "etc/inet")):
-            os.makedirs(os.path.join(self.save_path, "etc/inet"))
-
-        # save a copy of /etc/inet/hosts
-        etc_inet_hosts = os.path.join(self.pkg_img_path, "etc/inet/hosts")
-        if os.path.exists(etc_inet_hosts):
-            shutil.copy2(etc_inet_hosts, os.path.join(self.save_path,
-                                                      "etc/inet/hosts"))
-
-    def save_menu_lst(self):
-        """ class method to save the original /boot/grub/menu.lst file if it
-            exists. It will not exist on GRUB2 based images so it is silently
-            ignored if not present.
-        """
-
-        save_list = ["boot/grub/menu.lst"]
-        if os.path.exists(os.path.join(self.pkg_img_path, save_list[0])):
-            self.save_files_directories(save_list)
-
-    def save_files_directories(self, save_list=None):
-        """ class method for saving key files and directories for restoration
-        after installation. Missing target directories are created.
-        """
-
-        # If there is nothing to save, just return
-        if save_list is None or len(save_list) == 0:
-            return
-
-        for df in save_list:
-            # If object does not exist, skip it.
-            full_path = os.path.join(self.pkg_img_path, df)
-            dest_path = os.path.join(self.save_path, df)
-            if not os.path.exists(full_path):
-                self.logger.error("WARNING:  unable to find " + full_path +
-                                  " to save for later restoration!")
-                continue
-
-            # If object is directory, just create it in save area.
-            if os.path.isdir(full_path) and not os.path.exists(dest_path):
-                os.makedirs(dest_path)
-                continue
-
-            # If object is file, move it to save area. Create missing
-            # directories as part of that process.
-            if os.path.isfile(full_path) and not os.path.exists(dest_path):
-                dir_path = os.path.dirname(dest_path)
-                if not os.path.exists(dir_path):
-                    os.makedirs(dir_path)
-
-                # move the file and preserve file metadata
-                shutil.move(full_path, dir_path)
+            # rewrite the file
+            with open(dhcpagent, "w+") as fh:
+                fh.write("\n".join(new_file))
+                fh.write("\n")
 
     def configure_smf(self):
         """ class method for the configuration of SMF manifests
@@ -362,11 +347,8 @@ class PrePkgImgMod(Checkpoint):
 
         self.parse_doc()
 
-        # set root's password
-        self.set_password()
-
-        # save /boot/grub/menu.lst
-        self.save_menu_lst()
+        # Customize various configuration files.
+        self.customize_config_files()
 
         # preload smf manifests
         self.configure_smf()
@@ -490,11 +472,8 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         self.parse_doc()
 
-        # set root's password
-        self.set_password()
-
-        # save /boot/grub/menu.lst
-        self.save_menu_lst()
+        # Customize various configuration files.
+        self.customize_config_files()
 
         # preload smf manifests
         self.configure_smf()
@@ -532,10 +511,6 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         self.get_pkg_version("auto-install")
         self.get_license()
-        self.modify_etc_system()
-
-        # modify /etc/default/dhcpagent
-        self.modify_dhcpagent()
 
         # write out the .image_info file
         self.calculate_size()
@@ -575,17 +550,20 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         """
         return 180
 
-    def save_files(self):
-        """ class method for saving key files and directories for restoration
-        after installation. Files are moved to the 'save' area.
+    def customize_config_files(self):
+        """ class method for saving and/or modifying key files. Files are
+            saved for restoration after installation.
+
+            In addition to standard set of key files, LiveCD also tunes
+            GNOME configuration.
         """
-        self.logger.debug("Creating the save directory with files and " +
-                          "directories for restoration after installation")
+
+        # First carry out customization common to all media type.
+        super(LiveCDPrePkgImgMod, self).customize_config_files()
 
         # remove gnome-power-manager, vp-sysmon, and updatemanagernotifier
         # from the liveCD and restore after installation
         save_list = [
-            "etc/gconf/schemas",
             "etc/xdg/autostart/updatemanagernotifier.desktop",
             "usr/share/dbus-1/services/gnome-power-manager.service",
             "usr/share/gnome/autostart/gnome-power-manager.desktop",
@@ -599,10 +577,10 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # installation
         panel_file = "etc/gconf/schemas/panel-default-setup.entries"
 
-        # copy the file to the save directory first
-        shutil.copy2(os.path.join(self.pkg_img_path, panel_file),
-                     os.path.join(self.save_path, panel_file))
+        # save the file first
+        self.save_files_directories([panel_file], preserve=True)
 
+        # now modify it
         with open(os.path.join(self.pkg_img_path, panel_file), "r") as fh:
             panel_file_data = fh.read()
 
@@ -730,26 +708,11 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         self.parse_doc()
 
-        # set root's password
-        self.set_password()
-
-        # save /boot/grub/menu.lst
-        self.save_menu_lst()
+        # Customize various configuration files.
+        self.customize_config_files()
 
         # preload smf manifests
         self.configure_smf()
-
-        # save key files and directories
-        self.save_files()
-
-        # modify /etc/system
-        self.modify_etc_system()
-
-        # modify /etc/default/dhcpagent
-        self.modify_dhcpagent()
-
-        # save pristine /etc/inet/hosts file
-        self.save_etc_inet_hosts()
 
         # create the gnome caches
         self.generate_gnome_caches()
@@ -784,20 +747,11 @@ class TextPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         self.parse_doc()
 
-        # set root's password
-        self.set_password()
+        # Customize various configuration files.
+        self.customize_config_files()
 
         # preload smf manifests
         self.configure_smf()
-
-        # modify /etc/system
-        self.modify_etc_system()
-
-        # modify /etc/default/dhcpagent
-        self.modify_dhcpagent()
-
-        # save pristine /etc/inet/hosts file
-        self.save_etc_inet_hosts()
 
         # write out the .image_info file
         self.calculate_size()
