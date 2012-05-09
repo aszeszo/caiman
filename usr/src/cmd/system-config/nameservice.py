@@ -477,7 +477,7 @@ class NSLDAPProfile(NameService):
                                         text=self.nameservice.ldap_search_base,
                                         error_win=self.main_win.error_line)
         self.main_win.do_update()
-        self.center_win.activate_object(self.ldap_ip)
+        self.center_win.activate_object(self.ldap_profile)
 
     def validate(self):
         validate_ldap_profile(self.ldap_profile.get_text())

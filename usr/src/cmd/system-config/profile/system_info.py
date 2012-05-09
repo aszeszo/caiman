@@ -327,7 +327,9 @@ class SystemInfo(data_object.DataObject):
         smf_pg_config = SMFPropertyGroup('config')
         smf_instance_system_identity.insert_children([smf_pg_config])
 
-        smf_pg_config.add_props(nodename=self.hostname)
+        # force the property type to 'astring'
+        smf_pg_config.setprop(name="nodename", ptype="astring",
+                              value=self.hostname)
 
         #
         # fmri:

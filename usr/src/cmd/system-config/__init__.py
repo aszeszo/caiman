@@ -880,8 +880,8 @@ def parse_unconfig_args(parser, args):
             sys.exit(SU_FATAL_ERR)
 
         print _("Interactive configuration requested.")
-        print _("System Configuration Interactive (SCI) tool will be" +
-            " launched on console.")
+        print _("System Configuration Interactive (SCI) tool will be "
+                "launched on console.")
 
         cmd = [TTY]
         try:
