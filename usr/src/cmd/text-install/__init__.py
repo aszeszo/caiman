@@ -475,7 +475,6 @@ def main():
         else:
             print "\t%s" % exc_type.__name__
         print _("Full traceback data is in the installation log")
-        print _("Please file a bug at http://defect.opensolaris.org")
         errcode = 1
     exit_text_installer(options.logname, errcode)
 
