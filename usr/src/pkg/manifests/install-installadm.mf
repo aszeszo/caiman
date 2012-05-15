@@ -189,6 +189,12 @@ file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/set_service.pyc \
     group=sys
 file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/update_service.py \
+    group=sys
+file \
+    path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/update_service.pyc \
+    group=sys
+file \
     path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/validate_profile.py \
     group=sys
 file \

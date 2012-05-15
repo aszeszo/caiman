@@ -29,13 +29,21 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 
 '''
 
-import unittest
+import errno
 import os
 import shutil
 import tempfile
+import unittest
+
+import pkg.client.api
+import pkg.client.imagetypes
+import pkg.client.progress
 import osol_install.auto_install.image as image
 import osol_install.auto_install.installadm_common as com
-from osol_install.auto_install.image import InstalladmImage, ImageError
+from osol_install.auto_install.image import InstalladmImage, ImageError, \
+    InstalladmPkgImage
+import osol_install.auto_install.service_config as config
+from solaris_install import PKG5_API_VERSION
 
 
 class TestInstalladmImage(unittest.TestCase):
@@ -126,7 +134,11 @@ class TestInstalladmImage(unittest.TestCase):
         # create old symlink normally created by _prep_ai_webserver
         old_link = os.path.join(com.WEBSERVER_DOCROOT, test_path.lstrip("/"))
         old_link_parent = os.path.dirname(old_link)
-        os.makedirs(old_link_parent)
+        try:
+            os.makedirs(old_link_parent)
+        except OSError as err:
+            if err.errno != errno.EEXIST:
+                raise
         os.symlink(test_path, old_link)
         self.assertTrue(os.path.exists(old_link))
 
@@ -142,6 +154,92 @@ class TestInstalladmImage(unittest.TestCase):
                                 newtempdirname.lstrip("/"))
         self.assertTrue(os.path.islink(new_link))
         shutil.rmtree(newtempdirname)
+
+    def test_copy(self):
+        '''test image copy'''
+        # create image
+        test_path = self.tempdirname
+        open(os.path.join(test_path, 'solaris.zlib'), 'w')
+        myfilepath = os.path.join(test_path, 'myfile')
+        open(myfilepath, 'w')
+        os.symlink('myfile', os.path.join(test_path, 'mysym'))
+        os.makedirs(os.path.join(test_path, 'a/b/c'))
+        myimage = InstalladmImage(test_path)
+
+        # copy image and verify
+        newimage = myimage.copy(prefix='mytest')
+        newpath = newimage.path
+        self.assertTrue(os.path.exists(os.path.join(newpath, 'solaris.zlib')))
+        self.assertTrue(os.path.isdir(os.path.join(newpath, 'a/b/c')))
+        self.assertTrue(os.path.islink(os.path.join(newpath, 'mysym')))
+        self.assertTrue(os.path.exists(os.path.join(newpath, 'myfile')))
+        self.assertEqual(os.readlink(os.path.join(newpath, 'mysym')), 'myfile')
+        symname = os.path.join(com.WEBSERVER_DOCROOT, newpath.lstrip("/"))
+        self.assertTrue(os.path.islink(symname))
+        self.assertEqual(os.readlink(symname), newpath)
+        shutil.rmtree(newpath)
+
+    def test_delete(self):
+        '''test image delete'''
+        # create image
+        test_path = self.tempdirname
+        open(os.path.join(test_path, 'solaris.zlib'), 'w')
+        self.assertTrue(os.path.exists(test_path))
+        myfilepath = os.path.join(test_path, 'myfile')
+        open(myfilepath, 'w')
+        os.symlink('myfile', os.path.join(test_path, 'mysym'))
+        os.makedirs(os.path.join(test_path, 'a/b/c'))
+        myimage = InstalladmImage(test_path)
+        webserver_link = os.path.join(com.WEBSERVER_DOCROOT,
+                                test_path.lstrip("/"))
+        try:
+            os.makedirs(os.path.dirname(webserver_link))
+        except OSError as err:
+            if err.errno != errno.EEXIST:
+                raise
+        os.symlink(test_path, webserver_link)
+
+        # delete and verify
+        myimage.delete()
+        self.assertFalse(os.path.exists(test_path))
+        self.assertFalse(os.path.exists(webserver_link))
+
+    def test_is_pkg_based(self):
+        '''test is_pkg_based'''
+        # create and test non-pkg image
+        test_path = self.tempdirname
+        open(os.path.join(test_path, 'solaris.zlib'), 'w')
+        self.assertTrue(os.path.exists(test_path))
+        myimage = InstalladmPkgImage(test_path)
+        self.assertFalse(myimage.is_pkg_based())
+
+        # create and test pkg(5) image
+        imagedir = tempfile.mkdtemp(dir="/tmp")
+        tracker = pkg.client.progress.CommandLineProgressTracker()
+        pkg.client.api.image_create('test_image', PKG5_API_VERSION,
+            imagedir, pkg.client.imagetypes.IMG_USER, is_zone=False,
+            progtrack=tracker)
+        myimage = InstalladmPkgImage(imagedir)
+        self.assertTrue(myimage.is_pkg_based())
+        shutil.rmtree(imagedir)
+
+    def test_check_fmri(self):
+        '''test check_fmri'''
+        # create pkg(5) image
+
+        # create and test pkg(5) image
+        imagedir = tempfile.mkdtemp(dir="/tmp")
+        tracker = pkg.client.progress.CommandLineProgressTracker()
+        pkg.client.api.ImageInterface(
+            '/', PKG5_API_VERSION, tracker, None, 'installadm')
+
+        pkgimage = pkg.client.api.image_create('installadm', PKG5_API_VERSION,
+            imagedir, pkg.client.imagetypes.IMG_USER, is_zone=False,
+            progtrack=tracker)
+
+        myimage = InstalladmPkgImage(imagedir, pkg_image=pkgimage)
+        myimage.check_fmri('pkgs:/solaris/foobarnotapackage')
+        shutil.rmtree(imagedir)
 
     def test_verify(self):
         '''test image verify'''
@@ -193,6 +291,125 @@ class TestInstalladmImage(unittest.TestCase):
         with open(image_info, 'w') as info:
             info.write('IMAGE_VERSION=4.0')
         self.assertEqual(myimage.version, 3.0)
+
+
+class TestModuleFunctions(unittest.TestCase):
+    '''Tests for other module functions'''
+
+    @classmethod
+    def setUpClass(cls):
+        '''Class-level set up'''
+        cls.image_dir_path = com.IMAGE_DIR_PATH
+        com.IMAGE_DIR_PATH = tempfile.mkdtemp(dir="/tmp")
+        cls.ai_service_dir_path = com.AI_SERVICE_DIR_PATH
+        com.AI_SERVICE_DIR_PATH = tempfile.mkdtemp(dir="/tmp")
+        cls.configai_service_dir_path = config.AI_SERVICE_DIR_PATH
+        config.AI_SERVICE_DIR_PATH = com.AI_SERVICE_DIR_PATH
+
+    @classmethod
+    def tearDownClass(cls):
+        '''Class-level teardown'''
+        if os.path.exists(com.IMAGE_DIR_PATH):
+            shutil.rmtree(com.IMAGE_DIR_PATH)
+        com.IMAGE_DIR_PATH = cls.image_dir_path
+        if os.path.exists(com.AI_SERVICE_DIR_PATH):
+            shutil.rmtree(com.AI_SERVICE_DIR_PATH)
+        com.AI_SERVICE_DIR_PATH = cls.ai_service_dir_path
+        config.AI_SERVICE_DIR_PATH = cls.configai_service_dir_path
+
+    def test_set_permissions(self):
+        '''test set_permissions'''
+        # save original umask
+        orig_umask = os.umask(0022)
+
+        os.umask(0066)
+        imagedir = tempfile.mkdtemp(dir="/tmp")
+        image.set_permissions(imagedir)
+        mode = os.stat(imagedir).st_mode
+        self.assertEqual(mode, 040755)
+        os.rmdir(imagedir)
+
+        # return umask to the original value
+        os.umask(orig_umask)
+
+    def test_check_imagepath(self):
+        '''test check_imagepath'''
+        # test for relative pathname
+        self.assertRaises(ValueError, image.check_imagepath, 'my/relpath')
+        self.assertRaises(ValueError, image.check_imagepath, './my/relpath')
+
+        # test empty dir ok
+        imagedir = tempfile.mkdtemp(dir="/tmp")
+        image.check_imagepath(imagedir)
+        os.rmdir(imagedir)
+
+        # test non-empty dir fails
+        imagedir = tempfile.mkdtemp(dir="/tmp")
+        open(os.path.join(imagedir, 'myfile'), 'w')
+        self.assertRaises(ValueError, image.check_imagepath, imagedir)
+        shutil.rmtree(imagedir)
+
+        # test valid image fails
+        imagedir = tempfile.mkdtemp(dir="/tmp")
+        open(os.path.join(imagedir, com.AI_NETIMAGE_REQUIRED_FILE), 'w')
+        self.assertRaises(ValueError, image.check_imagepath, imagedir)
+        shutil.rmtree(imagedir)
+
+    def test_default_path_ok(self):
+        '''test default_path_ok'''
+
+        self.assertTrue(image.default_path_ok('this_is_my_service'))
+        imgpath = os.path.join(com.IMAGE_DIR_PATH, 'this_is_my_service')
+        os.makedirs(imgpath)
+        self.assertFalse(image.default_path_ok('this_is_my_service'))
+        os.rmdir(imgpath)
+
+    def test_get_default_service_name(self):
+        '''test get_default_service_name'''
+        imagedir = tempfile.mkdtemp(dir="/tmp")
+        svcname = 'my_svc_name'
+        myimage = InstalladmImage(imagedir)
+        image_info = os.path.join(imagedir, '.image_info')
+
+        with open(image_info, 'w') as info:
+            info.write('SERVICE_NAME=' + svcname)
+        name = image.get_default_service_name(image=myimage, iso=True)
+        self.assertEqual(name, svcname)
+
+        # now try again, but have the default path exist
+        defpath = os.path.join(com.IMAGE_DIR_PATH, svcname)
+        os.makedirs(defpath)
+        name = image.get_default_service_name(image=myimage, iso=True)
+        self.assertEqual(name, svcname + '_1')
+
+        # now have the servicename already exist
+        svcdir = os.path.join(com.AI_SERVICE_DIR_PATH, svcname)
+        svcdir2 = os.path.join(com.AI_SERVICE_DIR_PATH, svcname + '_1')
+        try:
+            os.makedirs(svcdir)
+            os.makedirs(svcdir2)
+        except OSError as err:
+            if err.errno != errno.EEXIST:
+                raise
+        open(os.path.join(svcdir, '.config'), 'w')
+        open(os.path.join(svcdir2, '.config'), 'w')
+        name = image.get_default_service_name(image=myimage, iso=True)
+        self.assertEqual(name, svcname + '_2')
+
+        # invalid service name in image_info
+        os.remove(image_info)
+        with open(image_info, 'w') as info:
+            info.write('SERVICE_NAME=my.invalid.name')
+        name = image.get_default_service_name(image=myimage, iso=True)
+        self.assertEqual(name, image.BASE_DEF_SVC_NAME + '_1')
+
+        # Same thing, but default path exists
+        os.mkdir(os.path.join(com.IMAGE_DIR_PATH,
+                              image.BASE_DEF_SVC_NAME + '_1'))
+        name = image.get_default_service_name(image=myimage, iso=True)
+        self.assertEqual(name, image.BASE_DEF_SVC_NAME + '_2')
+
+        shutil.rmtree(imagedir)
 
 
 class TestIsIso(unittest.TestCase):

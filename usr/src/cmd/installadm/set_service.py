@@ -132,6 +132,67 @@ def do_set_service_default_manifest(options):
         raise SystemExit(error)
 
 
+def do_update_basesvc(aliassvc, basesvcname):
+    '''Updates the baseservice of an alias
+    Input:
+        aliassvc - service object of alias
+        basesvcname - name of baseservice
+    Returns:
+        failures - list of errs encountered
+
+    '''
+    logging.debug('do_update_basesvc: alias=%s, basename=%s',
+                  aliassvc.name, basesvcname)
+    # Remove clients of alias
+    clients = config.get_clients(aliassvc.name)
+    for clientid in clients:
+        logging.debug('removing client %s', clientid)
+        clientctrl.remove_client(clientid, suppress_dhcp_msgs=True)
+
+    failures = list()
+    try:
+        aliassvc.update_basesvc(basesvcname)
+    except (OSError, config.ServiceCfgError, BootmgmtError) as err:
+        print >> sys.stderr, \
+            (_("Failed to set %(aliasname)s as alias of: %(bname)s") %
+               {'aliasname': aliassvc.name, 'bname': basesvcname})
+        print >> sys.stderr, err
+        failures.append(err)
+    except svc.MultipleUnmountError as err:
+        print >> sys.stderr, _("Failed to disable alias")
+        print >> sys.stderr, err
+        failures.append(err)
+    except svc.MountError as err:
+        print >> sys.stderr, _("Failed to enable alias")
+        print >> sys.stderr, err
+        failures.append(err)
+    except svc.UnsupportedAliasError as err:
+        print >> sys.stderr, err
+        failures.append(err)
+
+   # Re-add clients to updated alias
+    arch = aliassvc.arch
+    for clientid in clients.keys():
+        # strip off leading '01'
+        client = clientid[2:]
+        bootargs = None
+        if config.BOOTARGS in clients[clientid]:
+            bootargs = clients[clientid][config.BOOTARGS]
+        logging.debug('re-adding clientid=%s, bootargs=%s', clientid, bootargs)
+
+        # Don't suppress messages, because user may need to update
+        # DHCP configuration
+        try:
+            create_client.create_new_client(arch, aliassvc, client,
+                bootargs=bootargs, suppress_dhcp_msgs=False)
+        except BootmgmtError as err:
+            failures.append(err)
+            print >> sys.stderr, (_('\nError: Unable to recreate client, '
+                                    '%(client)s:\n%(error)s') %
+                                    {'client': client, 'error': err})
+    return failures
+
+
 def set_aliasof(options):
     '''Change a service's base service'''
     logging.debug("set alias %s's basesvc to %s",
@@ -175,49 +236,8 @@ def set_aliasof(options):
                               {'aliasname': aliasname,
                                'svcname': basesvcname}))
 
-    # Remove clients of alias
-    clients = config.get_clients(aliasname)
-    for clientid in clients.keys():
-        clientctrl.remove_client(clientid, suppress_dhcp_msgs=True)
+    failures = do_update_basesvc(aliassvc, basesvcname)
 
-    failures = list()
-    try:
-        aliassvc.update_basesvc(basesvcname)
-    except (OSError, config.ServiceCfgError, BootmgmtError) as err:
-        print >> sys.stderr, (_("Failed to set 'aliasof' property of : %s") %
-                                aliasname)
-        print >> sys.stderr, err
-        failures.append(err)
-    except svc.MultipleUnmountError as err:
-        print >> sys.stderr, _("Failed to disable alias")
-        print >> sys.stderr, err
-        failures.append(err)
-    except svc.MountError as err:
-        print >> sys.stderr, _("Failed to enable alias")
-        print >> sys.stderr, err
-        failures.append(err)
-    except svc.UnsupportedAliasError as err:
-        print >> sys.stderr, err
-        failures.append(err)
-
-    # Re-add clients to updated alias
-    arch = aliassvc_arch
-    for clientid in clients.keys():
-        # strip off leading '01'
-        client = clientid[2:]
-        bootargs = None
-        if config.BOOTARGS in clients[clientid]:
-            bootargs = clients[clientid][config.BOOTARGS]
-        # Don't suppress messages, because user may need to update
-        # DHCP configuration
-        try:
-            create_client.create_new_client(arch, aliassvc, client,
-                bootargs=bootargs, suppress_dhcp_msgs=False)
-        except BootmgmtError as err:
-            failures.append(err)
-            print >> sys.stderr, (_('\nError: Unable to recreate client, '
-                                    '%(client)s:\n%(error)s')
-                                    % {'client': client, 'error': err})
     if failures:
         return 1
     return 0

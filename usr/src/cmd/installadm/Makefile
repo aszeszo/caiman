@@ -60,7 +60,8 @@ PYMODULES=	__init__.py \
 		rename_service.py \
 		service.py \
 		service_config.py \
-		set_service.py
+		set_service.py \
+		update_service.py
 
 PYTHON_MODULES=	aimdns.py aimdnsd.py
 

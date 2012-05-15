@@ -31,11 +31,11 @@ import gettext
 import logging
 import os
 import shutil
-import stat
 import sys
 import tempfile
 
 import osol_install.auto_install.ai_smf_service as aismf
+import osol_install.auto_install.image as img
 import osol_install.auto_install.installadm_common as com
 import osol_install.auto_install.service_config as config
 import pkg.client.api_errors
@@ -54,7 +54,6 @@ from solaris_install import Popen, CalledProcessError, check_auth_and_euid, \
     SERVICE_AUTH, UnauthorizedUserError
 
 
-BASE_DEF_SVC_NAME = "solarisx"
 BASE_IMAGE_DIR = aismf.get_imagedir()
 
 
@@ -76,56 +75,6 @@ def check_ip_address(option, opt_str, value, parser):
         except (ValueError, TypeError):
             raise OptionValueError(_("\nMalformed IP address: '%s'\n") % value)
     setattr(parser.values, option.dest, value)
-
-
-def check_imagepath(imagepath):
-    '''
-    Check if image path exists.  If it exists, check whether it has
-    a valid net image. An empty dir is ok.
-
-    Raises: ValueError if a problem exists with imagepath
-
-    '''
-    # imagepath must be a full path
-    if not os.path.isabs(imagepath):
-        raise ValueError(_("\nA full pathname is required for the "
-                           "image path.\n"))
-
-    # imagepath must not exist, or must be empty
-    if os.path.exists(imagepath):
-        try:
-            dirlist = os.listdir(imagepath)
-        except OSError as err:
-            raise ValueError(err)
-        
-        if dirlist:
-            if com.AI_NETIMAGE_REQUIRED_FILE in dirlist:
-                raise ValueError(_("\nThere is a valid image at (%s)."
-                                   "\nPlease delete the image and try "
-                                   "again.\n") % imagepath)
-            else:
-                raise ValueError(_("\nTarget directory is not empty: %s\n") %
-                                 imagepath)
-
-
-def set_permissions(imagepath):
-    ''' Set the permissions for the imagepath to 755 (rwxr-xr-x).
-        Read, Execute other permissions are necessary for the
-        webserver and tftpd to be able to read the imagepath.
-
-        Raises SystemExit if the stat and fstat st_ino differ.
-    '''
-    image_stat = os.stat(imagepath)
-    fd = os.open(imagepath, os.O_RDONLY)
-    fd_stat = os.fstat(fd)
-    if fd_stat.st_ino == image_stat.st_ino:
-        os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | \
-                      stat.S_IRGRP | stat.S_IXGRP | \
-                      stat.S_IROTH | stat.S_IXOTH)
-    else:
-        raise SystemExit(_("The imagepath (%s) changed during "
-                           "permission assignment") % imagepath)
-    os.close(fd)
 
 
 def get_usage():
@@ -276,7 +225,7 @@ def parse_options(cmd_options=None):
             parser.error(_("The --publisher option is invalid for "
                            "ISO-based services"))
 
-    if options.publisher:
+    if options.publisher is not None:
         # Convert options.publisher from a string of form 'prefix=uri' to a
         # tuple (prefix, uri)
         publisher = options.publisher.split("=")
@@ -292,70 +241,11 @@ def parse_options(cmd_options=None):
         if not options.imagepath == '/':
             options.imagepath = options.imagepath.rstrip('/')
         try:
-            check_imagepath(options.imagepath)
+            img.check_imagepath(options.imagepath)
         except ValueError as error:
             raise SystemExit(error)
     
     return options
-
-
-def default_path_ok(svc_name, specified_path=None):
-    ''' check if default path for service image is available
-
-    Returns: True if default path is ok to use (doesn't exist)
-             False otherwise
-
-    '''
-    # if path specified by the user, we won't be
-    # using the default path, so no need to check
-    if specified_path:
-        return True
-
-    def_imagepath = os.path.join(BASE_IMAGE_DIR, svc_name)
-    if os.path.exists(def_imagepath):
-        return False
-    return True
-
-
-def get_default_service_name(image_path=None, image=None, iso=False):
-    ''' get default service name
-    
-    Input:   specified_path - imagepath, if specified by user
-             image - image object created from image
-             iso - boolean, True if service is iso based, False otherwise
-    Returns: default name for service.
-             For iso-based services, the default name is based
-             on the SERVICE_NAME from the .image_info file if available,
-             otherwise is BASE_DEF_SVC_NAME_<num>
-             For pkg based services, the default name is obtained
-             from pkg metadata, otherwise BASE_DEF_SVC_NAME_<num>
-
-    '''
-    if image:
-        # Try to generate a name based on the metadata. If that
-        # name exists, append a number until a unique name is found.
-        count = 0
-        if iso:
-            basename = image.read_image_info().get('service_name')
-        else:
-            basename = image.get_basename()
-        try:
-            com.validate_service_name(basename)
-            svc_name = basename
-        except ValueError:
-            basename = BASE_DEF_SVC_NAME
-            count = 1
-            svc_name = basename + "_" + str(count)
-    else:
-        count = 1
-        basename = BASE_DEF_SVC_NAME
-        svc_name = basename + "_" + str(count)
-    
-    while (config.is_service(svc_name) or
-        not default_path_ok(svc_name, image_path)):
-        count += 1
-        svc_name = basename + "_" + str(count)
-    return svc_name
 
 
 def do_alias_service(options):
@@ -496,7 +386,7 @@ def do_create_baseservice(options):
         if options.svcname:
             options.imagepath = os.path.join(BASE_IMAGE_DIR, options.svcname)
             try:
-                check_imagepath(options.imagepath)
+                img.check_imagepath(options.imagepath)
             except ValueError as error:
                 raise SystemExit(error)
         else:
@@ -544,9 +434,9 @@ def do_create_baseservice(options):
                 options.srcimage)
             if isinstance(err, pkg.client.api_errors.VersionException):
                 print >> sys.stderr, cw(_("The IPS API version specified, "
-                    + str(err.received_version) +
-                    ", is incompatible with the expected version, "
-                    + str(err.expected_version) + "."))
+                    "%(specver)s, is incompatible with the expected version, "
+                    "%(expver)s.") % {'specver': str(err.received_version),
+                                      'expver': str(err.expected_version)})
             elif isinstance(err,
                             pkg.client.api_errors.CatalogRefreshException):
                 for pub, error in err.failed:
@@ -563,8 +453,8 @@ def do_create_baseservice(options):
             specified_path = None
         else:
             specified_path = options.imagepath
-        options.svcname = get_default_service_name(specified_path,
-                                                   image=image, iso=have_iso)
+        options.svcname = img.get_default_service_name(specified_path,
+            image=image, iso=have_iso)
 
     print _("\nCreating %(arch)s service: %(name)s\n") % \
             {'arch': image.arch,
@@ -575,7 +465,7 @@ def do_create_baseservice(options):
     if tempdir is not None:
         new_imagepath = os.path.join(BASE_IMAGE_DIR, options.svcname)
         try:
-            check_imagepath(new_imagepath)
+            img.check_imagepath(new_imagepath)
         except ValueError as error:
             # leave image in temp location so that service can be created
             logging.debug('unable to move image to %s: %s',
@@ -584,7 +474,7 @@ def do_create_baseservice(options):
             options.imagepath = image.move(new_imagepath)
             logging.debug('image moved to %s', options.imagepath)
 
-    set_permissions(options.imagepath)
+    img.set_permissions(options.imagepath)
     print _("Image path: %s\n") % options.imagepath
     try:
         if options.dhcp_ip_start:
@@ -621,7 +511,7 @@ def do_create_baseservice(options):
     # service of this architecture
     if should_be_default_for_arch(service):
         defaultarch = 'default-' + image.arch
-        print (_("\nCreating %s alias.\n") % defaultarch)
+        print (_("\nCreating %s alias\n") % defaultarch)
         try:
             defaultarchsvc = AIService.create(defaultarch, image,
                                               bootargs=options.bootargs,

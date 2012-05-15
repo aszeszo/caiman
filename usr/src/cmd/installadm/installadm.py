@@ -46,6 +46,7 @@ from osol_install.auto_install import publish_manifest
 from osol_install.auto_install import rename_service
 from osol_install.auto_install import set_criteria
 from osol_install.auto_install import set_service
+from osol_install.auto_install import update_service
 from osol_install.auto_install import validate_profile
 from osol_install.auto_install.installadm_common import _, \
     CHECK_SETUP_SCRIPT, validate_service_name, XDEBUG, setup_logging, \
@@ -228,6 +229,8 @@ def main():
                               rename_service.get_usage()),
         'set-service':       (set_service.do_set_service,
                               set_service.get_usage()),
+        'update-service':    (update_service.do_update_service,
+                              update_service.get_usage()),
         'list':              (ai_list.do_list,
                               ai_list.get_usage()),
         'enable':            (do_enable_service,
@@ -269,6 +272,7 @@ def main():
             "delete-service",
             "rename-service",
             "set-service",
+            "update-service",
             "list",
             "enable",
             "disable",
@@ -363,7 +367,7 @@ def main():
             return func(sys.argv[index + 1:])
         except VersionError as err:
             print >> sys.stderr, err
-            return 4
+            return 3
         except Exception:
             sys.stderr.write(_("%s:\n"
                                "\tUnhandled error encountered:\n") % sub_cmd)

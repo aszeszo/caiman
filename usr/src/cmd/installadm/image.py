@@ -51,18 +51,25 @@ import errno
 import logging
 import os
 import shutil
+import stat
+import sys
+import time
 
 import pkg.client.api
 import pkg.client.imageconfig
 import pkg.client.imagetypes
 import pkg.client.progress
+import pkg.version
 
+import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.installadm_common as com
+import osol_install.auto_install.service_config as config
 
 from osol_install.auto_install.installadm_common import _, cli_wrap as cw
 from solaris_install import Popen, PKG5_API_VERSION, SetUIDasEUID
 
 
+BASE_DEF_SVC_NAME = "solarisx"
 _FILE = '/usr/bin/file'
 
 
@@ -145,7 +152,7 @@ class InstalladmImage(object):
         return image_info
 
     def move(self, new_path):
-        '''Move image area to new location and update webserver symlinks.
+        '''Move image area to new location and update webserver symlink.
            To rename self._path, caller should ensure new_path does not exist.
            Return new image path
         '''
@@ -162,11 +169,28 @@ class InstalladmImage(object):
         self._prep_ai_webserver()
         return self._path
     
+    def copy(self, prefix=''):
+        '''Copy an image and set up webserver symlinks
+        Input: prefix - prefix for temporary location of new image
+        Returns: new image object
+        '''
+        base_dir = os.path.dirname(self.path)
+        new_path = "%s/%s-%f" % (base_dir, prefix, time.time())
+        logging.debug("Copying image to %s", new_path)
+        shutil.copytree(self.path, new_path, symlinks=True)
+        new_image = self.__class__(new_path)
+        new_image._prep_ai_webserver()
+        return new_image
+
+    def delete(self):
+        '''Delete image and remove webserver symlink'''
+        logging.debug("Deleting image %s", self.path)
+        shutil.rmtree(self.path)
+        self._remove_ai_webserver_symlink()
+
     @property
     def path(self):
-        '''
-        Returns the image path
-        '''
+        '''Returns the image path'''
         return self._path
     
     @property
@@ -317,6 +341,14 @@ class InstalladmPkgImage(InstalladmImage):
                                 self._PKG_CLIENT_NAME)
         return self._pkgimg
     
+    def is_pkg_based(self):
+        '''Returns True if image is pkg(5) based, False otherwise'''
+        try:
+            self.pkg_image
+        except pkg.client.api_errors.ImageNotFoundException:
+            return False
+        return True
+
     def _install_package(self, fmri_or_p5i):
         try:
             p5i_data = self.pkg_image.parse_p5i(location=fmri_or_p5i)
@@ -350,18 +382,128 @@ class InstalladmPkgImage(InstalladmImage):
         
         self.pkg_image.plan_install(pkgs)
 
-        # accept licenses
-        plan = self.pkg_image.describe()
-        for pfmri, src, dest, accepted, displayed in plan.get_licenses():
-            if not dest.must_accept:
-                continue
-            self.pkg_image.set_plan_license_status(pfmri, dest.license,
-                                                   accepted=True)
-
+        self.accept_licenses()
         self.pkg_image.prepare()
         self.pkg_image.execute_plan()
         self.pkg_image.reset()
-    
+
+    def accept_licenses(self):
+        '''Accept licenses'''
+        plan = self.pkg_image.describe()
+        for pfmri, src, dest, accepted, displayed in plan.get_licenses():
+            self.pkg_image.set_plan_license_status(pfmri, dest.license,
+                displayed=True if dest.must_display else None,
+                accepted=True if dest.must_accept else None)
+
+    def check_fmri(self, fmri):
+        '''Calls pkg.client.api.ImageInterface.parse_fmri_patterns()
+           to check if fmri is valid
+        Input: fmri to check
+        Returns: PkgFmri object
+        Raises: ValueError if there is a problem with the fmri
+
+        '''
+        for pattern, err, pfmri, matcher in \
+            self.pkg_image.parse_fmri_patterns(fmri):
+            if err:
+                if isinstance(err, pkg.version.VersionError):
+                    # For version errors, include the pattern so
+                    # that the user understands why it failed.
+                    print >> sys.stderr, \
+                        cw(_("Illegal FMRI '%(patt)s': %(error)s" %
+                           {'patt': pattern, 'error': err}))
+                    raise ValueError(err)
+                else:
+                    # Including the pattern is redundant for other
+                    # exceptions.
+                    raise ValueError(err)
+            return pfmri
+
+    def check_update(self, fmri=None, publisher=None):
+        '''Checks to see if any updates are available for this image.
+           If so, self.pkg_image will be left "ready" to complete the
+           update.
+
+        Input: fmri - pkg to which to potentially update
+               publisher - tuple (prefix, origin) to use for update. If
+                           that publisher already exists in the image, its
+                           origins/mirrors are reset to the passed in origin.
+                           Otherwise, the new publisher is added. All other
+                           publishers in the image are removed.
+        Returns: True if update available; False if not
+
+        '''
+        logging.debug('check_update fmri=%s, publisher=%s', fmri, publisher)
+        logging.debug("currently installed pfmri is: %s",
+                      self.get_installed_pfmri())
+        if fmri is not None:
+            # validate fmri specified by user
+            pkgfmri = self.check_fmri(fmri)
+            fmri = [str(pkgfmri)]
+
+        if publisher is not None:
+            new_repo = pkg.client.publisher.Repository(origins=[publisher[1]])
+            new_repo_uri = new_repo.origins[0].uri
+            new_pub = pkg.client.publisher.Publisher(publisher[0],
+                                                     repository=new_repo)
+            if fmri:
+                # ensure that user didn't specify conflicting publisher names
+                if pkgfmri.publisher and pkgfmri.publisher != new_pub.prefix:
+                    raise ValueError(cw(
+                        _('\nError: FMRI publisher, "%(pub1)s", does not '
+                          'match specified --publisher, "%(pub2)s".\n' %
+                          {'pub1': pkgfmri.publisher,
+                           'pub2': new_pub.prefix})))
+
+            # Replace existing publisher(s) with that specified by user
+            same_pub = None
+            if self.pkg_image.has_publisher(new_pub.prefix):
+                # Specified publisher already exists
+                same_pub = self.pkg_image.get_publisher(new_pub.prefix,
+                                                        duplicate=True)
+                logging.debug('basesvc has same pub %s', same_pub.prefix)
+                logging.debug('origins are:\n%s', '\n'.join(orig.uri for
+                              orig in same_pub.repository.origins))
+                logging.debug('replacing origins with new uri, %s',
+                              new_repo_uri)
+                same_pub.repository.reset_origins()
+                same_pub.repository.reset_mirrors()
+                same_pub.repository.add_origin(new_repo_uri)
+                self.pkg_image.update_publisher(same_pub, search_first=True)
+            else:
+                # create a new publisher
+                logging.debug('adding pub %s, origin %s',
+                              new_pub.prefix, new_repo_uri)
+                self.pkg_image.add_publisher(new_pub, search_first=True)
+
+            # Remove any other publishers
+            for pub in self.pkg_image.get_publishers(duplicate=True)[1:]:
+                logging.debug('removing pub %s', pub.prefix)
+                self.pkg_image.remove_publisher(prefix=pub.prefix)
+
+        for plan_desc in self.pkg_image.gen_plan_update(pkgs_update=fmri):
+            continue
+        return (not self.pkg_image.planned_nothingtodo())
+
+    def update(self, fmri=None, publisher=None):
+        '''Check to see if update is needed for image and, if so, do the
+        update.
+        Input: fmri - pkg to which to potentially update
+               publisher - tuple (prefix, origin) to use for update. This
+                           replaces any publishers in the image.
+        Returns: True if update was needed; False if not
+
+        '''
+        logging.debug('in update, fmri=%s, publisher=%s', fmri, publisher)
+        update_needed = self.check_update(fmri=fmri, publisher=publisher)
+        logging.debug('update_needed=%s', update_needed)
+        if update_needed:
+            self.accept_licenses()
+            self.pkg_image.prepare()
+            self.pkg_image.execute_plan()
+        self.pkg_image.reset()
+        return update_needed
+
     def get_basename(self):
         '''Get pkg service basename '''
         basename = "solarisx"
@@ -385,6 +527,21 @@ class InstalladmPkgImage(InstalladmImage):
         logging.debug("get_basename returning %s", basename)
         return basename
 
+    def get_installed_pfmri(self):
+        '''Get installed pkg fmri'''
+        try:
+            pkg_list = self.pkg_image.get_pkg_list(
+                pkg.client.api.ImageInterface.LIST_INSTALLED,
+                raise_unmatched=True, return_fmris=True)
+            try:
+                pfmri = pkg_list.next()[0]
+            except StopIteration:
+                raise ImageError(_("\nError:\tUnable to obtain pkg name from "
+                                   "image.\n"))
+        except pkg.client.api_errors.ApiException:
+            raise
+        return pfmri
+
 
 class InstalladmIsoImage(InstalladmImage):
     '''Handles creation of an InstalladmImage from an AI iso'''
@@ -401,6 +558,113 @@ class InstalladmIsoImage(InstalladmImage):
         iso_img.verify()
         iso_img._prep_ai_webserver()
         return iso_img
+
+
+def default_path_ok(svc_name, specified_path=None):
+    ''' check if default path for service image is available
+
+    Returns: True if default path is ok to use (doesn't exist)
+             False otherwise
+
+    '''
+    # if path specified by the user, we won't be using the
+    # default path, so no need to check
+    if specified_path is not None:
+        return True
+
+    def_imagepath = os.path.join(aismf.get_imagedir(), svc_name)
+    return not os.path.exists(def_imagepath)
+
+
+def get_default_service_name(image_path=None, image=None, iso=False):
+    ''' get default service name
+   
+    Input:   image_path - imagepath, if specified by user
+             image - image object created from image
+             iso - boolean, True if service is iso based, False otherwise
+    Returns: default name for service.
+             For iso-based services, the default name is based
+             on the SERVICE_NAME from the .image_info file if available,
+             otherwise is BASE_DEF_SVC_NAME_<num>
+             For pkg based services, the default name is obtained
+             from pkg metadata, otherwise BASE_DEF_SVC_NAME_<num>
+
+    '''
+    if image is not None:
+        # Try to generate a name based on the metadata. If that
+        # name exists, append a number until a unique name is found.
+        count = 0
+        if iso:
+            basename = image.read_image_info().get('service_name')
+        else:
+            basename = image.get_basename()
+        try:
+            com.validate_service_name(basename)
+            svc_name = basename
+        except ValueError:
+            basename = BASE_DEF_SVC_NAME
+            count = 1
+            svc_name = basename + "_" + str(count)
+    else:
+        count = 1
+        basename = BASE_DEF_SVC_NAME
+        svc_name = basename + "_" + str(count)
+   
+    while (config.is_service(svc_name) or
+        not default_path_ok(svc_name, image_path)):
+        count += 1
+        svc_name = basename + "_" + str(count)
+    return svc_name
+
+
+def check_imagepath(imagepath):
+    '''
+    Check if image path exists.  If it exists, check whether it has
+    a valid net image. An empty dir is ok.
+
+    Raises: ValueError if a problem exists with imagepath
+
+    '''
+    # imagepath must be a full path
+    if not os.path.isabs(imagepath):
+        raise ValueError(_("\nA full pathname is required for the "
+                           "image path.\n"))
+
+    # imagepath must not exist, or must be empty
+    if os.path.exists(imagepath):
+        try:
+            dirlist = os.listdir(imagepath)
+        except OSError as err:
+            raise ValueError(err)
+
+        if dirlist:
+            if com.AI_NETIMAGE_REQUIRED_FILE in dirlist:
+                raise ValueError(_("\nThere is a valid image at (%s)."
+                                   "\nPlease delete the image and try "
+                                   "again.\n") % imagepath)
+            else:
+                raise ValueError(_("\nTarget directory is not empty: %s\n") %
+                                 imagepath)
+
+
+def set_permissions(imagepath):
+    ''' Set the permissions for the imagepath to 755 (rwxr-xr-x).
+        Read, Execute other permissions are necessary for the
+        webserver and tftpd to be able to read the imagepath.
+
+        Raises SystemExit if the stat and fstat st_ino differ.
+    '''
+    image_stat = os.stat(imagepath)
+    fd = os.open(imagepath, os.O_RDONLY)
+    fd_stat = os.fstat(fd)
+    if fd_stat.st_ino == image_stat.st_ino:
+        os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | \
+                      stat.S_IRGRP | stat.S_IXGRP | \
+                      stat.S_IROTH | stat.S_IXOTH)
+    else:
+        raise SystemExit(_("The imagepath (%s) changed during "
+                           "permission assignment") % imagepath)
+    os.close(fd)
 
 
 def is_iso(filepath):
