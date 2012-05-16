@@ -158,7 +158,12 @@ class InstalladmImage(object):
         '''
         self._remove_ai_webserver_symlink()
         try:
+            # This directory need to have at least o+x permission.
+            orig_umask = os.umask(00)
+            modified_umask = orig_umask & 0776
+            os.umask(modified_umask)
             os.makedirs(os.path.dirname(new_path))
+            os.umask(orig_umask)
         except OSError as err:
             if err.errno != errno.EEXIST:
                 raise
@@ -236,7 +241,12 @@ class InstalladmImage(object):
         '''Enable the AI webserver to access the image path'''
         target_path = os.path.dirname(self.path).lstrip("/")
         try:
+            # This directory need to have at least o+x permission.
+            orig_umask = os.umask(00)
+            modified_umask = orig_umask & 0776
+            os.umask(modified_umask)
             os.makedirs(os.path.join(com.WEBSERVER_DOCROOT, target_path))
+            os.umask(orig_umask)
         except OSError as err:
             if err.errno != errno.EEXIST:
                 raise

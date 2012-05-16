@@ -760,7 +760,14 @@ def _write_config_file(service_name, cfg):
 
     svcdir = os.path.join(AI_SERVICE_DIR_PATH, service_name)
     try:
+        # These directories need to have at least o+x permission because
+        # cgi_get_manifest.py script which is run as webservd user reads
+        # .config file there.
+        orig_umask = os.umask(00)
+        modified_umask = orig_umask & 0776
+        os.umask(modified_umask)
         os.makedirs(svcdir)
+        os.umask(orig_umask)
     except OSError as err:
         if err.errno != errno.EEXIST:
             raise

@@ -391,7 +391,12 @@ def do_create_baseservice(options):
                 raise SystemExit(error)
         else:
             try:
+                # This directory need to have at least o+x permission.
+                orig_umask = os.umask(00)
+                modified_umask = orig_umask & 0776
+                os.umask(modified_umask)
                 os.makedirs(BASE_IMAGE_DIR)
+                os.umask(orig_umask)
             except OSError as err:
                 if err.errno != errno.EEXIST:
                     raise
