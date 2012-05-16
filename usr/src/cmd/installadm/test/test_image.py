@@ -38,6 +38,7 @@ import unittest
 import pkg.client.api
 import pkg.client.imagetypes
 import pkg.client.progress
+import osol_install.auto_install.ai_smf_service as aismf
 import osol_install.auto_install.image as image
 import osol_install.auto_install.installadm_common as com
 from osol_install.auto_install.image import InstalladmImage, ImageError, \
@@ -293,6 +294,15 @@ class TestInstalladmImage(unittest.TestCase):
         self.assertEqual(myimage.version, 3.0)
 
 
+class MockGetImageDir(object):
+    '''Class for mock get_imagedir '''
+    def __init__(self, path):
+        self.imagedir = path
+        
+    def __call__(self):
+        return self.imagedir
+
+
 class TestModuleFunctions(unittest.TestCase):
     '''Tests for other module functions'''
 
@@ -301,6 +311,9 @@ class TestModuleFunctions(unittest.TestCase):
         '''Class-level set up'''
         cls.image_dir_path = com.IMAGE_DIR_PATH
         com.IMAGE_DIR_PATH = tempfile.mkdtemp(dir="/tmp")
+        # aismf lines must follow com.IMAGE_DIR_PATH reassignment above
+        cls.aismf_get_imagedir = aismf.get_imagedir
+        aismf.get_imagedir = MockGetImageDir(com.IMAGE_DIR_PATH)
         cls.ai_service_dir_path = com.AI_SERVICE_DIR_PATH
         com.AI_SERVICE_DIR_PATH = tempfile.mkdtemp(dir="/tmp")
         cls.configai_service_dir_path = config.AI_SERVICE_DIR_PATH
@@ -312,6 +325,7 @@ class TestModuleFunctions(unittest.TestCase):
         if os.path.exists(com.IMAGE_DIR_PATH):
             shutil.rmtree(com.IMAGE_DIR_PATH)
         com.IMAGE_DIR_PATH = cls.image_dir_path
+        aismf.get_imagedir = cls.aismf_get_imagedir
         if os.path.exists(com.AI_SERVICE_DIR_PATH):
             shutil.rmtree(com.AI_SERVICE_DIR_PATH)
         com.AI_SERVICE_DIR_PATH = cls.ai_service_dir_path
