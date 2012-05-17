@@ -50,11 +50,14 @@ dir  path=usr/share/gui-install group=sys
 dir  path=usr/share/gui-install/help group=sys
 dir  path=usr/share/gui-install/help/C group=sys
 file path=usr/share/gui-install/help/C/FINISH_PANEL.txt group=sys
+file path=usr/share/gui-install/help/C/INSTALL_DISK_DISCOVERY_PANEL.txt \
+    group=sys
 file path=usr/share/gui-install/help/C/INSTALL_DISK_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_FAILURE_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_LANGUAGE_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_PROGRESS_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_REVIEW_PANEL.txt group=sys
+file path=usr/share/gui-install/help/C/INSTALL_SUPPORT_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_TIMEZONE_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/INSTALL_USERS_PANEL.txt group=sys
 file path=usr/share/gui-install/help/C/WELCOME_PANEL.txt group=sys
@@ -113,7 +116,11 @@ file path=usr/share/sysconfig/help/C/welcome.txt group=sys
 dir  path=usr/share/text-install group=sys
 dir  path=usr/share/text-install/help group=sys
 dir  path=usr/share/text-install/help/C group=sys
+file path=usr/share/text-install/help/C/discovery_selection.txt group=sys
 file path=usr/share/text-install/help/C/disks.txt group=sys
+file path=usr/share/text-install/help/C/gpt_partitions.txt group=sys
+file path=usr/share/text-install/help/C/gpt_partitions_select.txt group=sys
+file path=usr/share/text-install/help/C/iscsi.txt group=sys
 file path=usr/share/text-install/help/C/sparc_solaris_slices.txt group=sys
 file path=usr/share/text-install/help/C/sparc_solaris_slices_select.txt \
     group=sys
