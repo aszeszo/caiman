@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """init module for the distribution constructor"""
@@ -36,8 +36,8 @@ import shutil
 import sys
 import time
 
-import distro_spec
-import execution_checkpoint
+import solaris_install.distro_const.distro_spec
+import solaris_install.distro_const.execution_checkpoint
 
 import osol_install.errsvc as errsvc
 import solaris_install.transfer.info as transfer

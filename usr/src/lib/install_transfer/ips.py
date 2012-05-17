@@ -428,9 +428,9 @@ class AbstractIPS(Checkpoint):
             self.check_cancel_event()
 
         except api_errors.CatalogRefreshException, cre:
-            '''Handle CatalogRefreshException especially since it doesn't
-               pretty-print it's contents in a __str__() impl.
-            '''
+            #  Handle CatalogRefreshException especially since it doesn't
+            #  pretty-print it's contents in a __str__() impl.
+            
             raise RuntimeError(self.catalog_failures_to_str(cre))
         finally:
             self._cleanup()

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ execution_checkpoint
@@ -35,7 +35,6 @@ import sys
 
 from lxml import etree
 
-from solaris_install.data_object import DataObject, ParsingError
 from solaris_install.data_object.cache import DataObjectCache
 from solaris_install.data_object.simple import SimpleXmlHandlerBase
 

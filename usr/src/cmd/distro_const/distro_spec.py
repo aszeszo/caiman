@@ -24,6 +24,13 @@
 # Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
+""" distro_spec
+
+ Distro object class for handling the <distro> elements
+ in the manifest.
+
+"""
+
 import sys
 
 from lxml import etree
@@ -31,13 +38,6 @@ from lxml import etree
 from solaris_install.data_object import ParsingError
 from solaris_install.data_object.cache import DataObjectCache
 from solaris_install.data_object.simple import SimpleXmlHandlerBase
-
-""" distro_spec
-
- Distro object class for handling the <distro> elements
- in the manifest.
-
-"""
 
 
 class Distro(SimpleXmlHandlerBase):

@@ -249,8 +249,8 @@ class BootArchiveArchive(Checkpoint):
             skip_dirs = list()
             for d in dirs:
                 if os.path.join(root, d) in exclude_dirs:
-                    self.logger.debug("adding %s to directory skip list due"
-                                      " to exclude list", os.path.join(root, d))
+                    self.logger.debug("adding %s to directory skip list due to"
+                                      " exclude list", os.path.join(root, d))
                     skip_dirs.append(d)
             for sd in skip_dirs:
                 dirs.remove(sd)
