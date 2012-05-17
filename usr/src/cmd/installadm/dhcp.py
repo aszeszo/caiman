@@ -1446,7 +1446,7 @@ def _get_domain(svc):
     try:
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger='', stderr_loglevel=logging.DEBUG)
-        return p.stdout.strip()
+        return p.stdout.replace('\\', '')
     except CalledProcessError:
         logging.debug("Property not set: %s", cmd)
         return None
@@ -1476,7 +1476,7 @@ def _get_dns_search(svc):
 
         # return output as a quoted string "example.com","sales.example.com"
 
-        search_domains = p.stdout.strip().split()
+        search_domains = p.stdout.replace('\\', '').split()
         return ','.join(['"' + x + '"' for x in search_domains])
     except CalledProcessError:
         logging.debug("Property not set: %s", cmd)
@@ -1506,7 +1506,7 @@ def _get_nameservers(svc):
     try:
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger='', stderr_loglevel=logging.DEBUG)
-        servers = p.stdout.strip().split()
+        servers = p.stdout.replace('\\', '').split()
         if servers is not None:
             return  ', '.join([ip for ip in servers])
     except CalledProcessError:
