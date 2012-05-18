@@ -40,14 +40,11 @@ import osol_install.liberrsvc as liberrsvc
 from solaris_install import gpt_firmware_check
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
-from solaris_install.target.libefi.const import EFI_USR, EFI_SYSTEM, \
-    EFI_BIOS_BOOT, EFI_RESERVED, PARTITION_GUID_PTAG_MAP, EFI_NUMUSERPAR, \
-    EFI_PREFERRED_RSVPAR
-from solaris_install.target.libefi.cstruct import EFI_MAXPAR
+from solaris_install.target.libefi.const import EFI_SYSTEM, \
+    EFI_BIOS_BOOT, EFI_RESERVED, EFI_NUMUSERPAR, EFI_PREFERRED_RSVPAR
 from solaris_install.target import Target, vdevs
 from solaris_install.target.controller import TargetController, \
-    DEFAULT_VDEV_NAME, DEFAULT_ZPOOL_NAME, SwapDumpGeneralError, \
-    SwapDumpSpaceError
+    DEFAULT_VDEV_NAME, SwapDumpGeneralError, SwapDumpSpaceError
 from solaris_install.target.logical import Logical, Zpool, Vdev, BE, Zvol, \
     Filesystem, DatasetOptions, PoolOptions
 from solaris_install.target.physical import Disk, Iscsi, GPTPartition, \
@@ -57,8 +54,6 @@ from solaris_install.target.shadow.physical import ShadowPhysical
 from solaris_install.target.size import Size
 
 DISK_RE = "c\d+(?:t\d+)?d\d+"
-
-import sys
 
 
 def is_iterable(obj):  # move to common?
@@ -74,6 +69,23 @@ class SelectionError(Exception):
 
     def __str__(self):
         return self.msg
+
+
+class DiskMatches(object):
+    '''Used to find the set of discovered disks that match the
+       set of disk(s) specified in the AI manifest
+    '''
+    def __init__(self, disk):
+        self.disk = disk
+        self.matches = list()
+        self.mapped_disk = None
+
+    @property
+    def nr_matches(self):
+        return len(self.matches)
+
+    def add_match(self, match):
+        self.matches.append(match)
 
 
 class TargetSelection(Checkpoint):
@@ -158,50 +170,6 @@ class TargetSelection(Checkpoint):
         self._dataset_options = dict()  # Map of zpool names to DatasetOptions
         self._disk_map = dict()      # Map of disks to Disk objects
 
-    def _find_disk(self, disk):
-        '''Find a disk matching some criteria
-
-           Disk can be identified in the following order of preference :
-               1. disk.ctd (device name)
-               2. disk.volid (volume name)
-               3. disk.devid (device id)
-               4. disk.devpath (device path)
-               5. disk.receptacle (disk silk screen name)
-               6. disk.is_boot_disk() (contains keyword "boot_disk")
-
-               7. If None of the above are specified, a disk can be
-                  identified via any/all of the three disk properties:
-                    - dev_type
-                    - dev_vendor
-                    - dev_size
-                  In this scenario, first matching disk will be returned.
-        '''
-
-        for discovered_disk in self._discovered_disks:
-            # Attempt to match ctd/volid/devpath/devid first
-            if discovered_disk.name_matches(disk):
-                return discovered_disk
-
-            # Attempt to match disk_prop.  Only match disk properties if all
-            # ctd/volid/devpath/devid/receptacle/wwn are None, then attempt to
-            # match on boot disk or one of the disk properties if specified
-            if disk.ctd is None and disk.volid is None and \
-               disk.devpath is None and disk.devid is None and \
-               disk.receptacle is None and disk.wwn is None:
-
-                # Attempt to match disk_prop. Any of the properties
-                # dev_type/dev_vendor/dev_size must been specified
-                if discovered_disk.disk_prop is not None and \
-                    disk.disk_prop is not None:
-                    if discovered_disk.disk_prop.prop_matches(disk.disk_prop):
-                        return discovered_disk
-
-                # Attempt to match on boot_disk
-                if disk.is_boot_disk() and discovered_disk.is_boot_disk():
-                    return discovered_disk
-
-        return None
-
     def _pretty_print_disk(self, disk):
         '''Print disk identifier rather than whole disk's str()'''
         if is_iterable(disk):
@@ -210,7 +178,7 @@ class TargetSelection(Checkpoint):
                 if len(ret_str) != 0:
                     ret_str += ", "
                 ret_str += self._pretty_print_disk(_disk)
-                return ret_str
+            return ret_str
         else:
             if isinstance(disk, Disk):
                 if disk.ctd is not None:
@@ -1667,7 +1635,7 @@ class TargetSelection(Checkpoint):
                     # Get device ctd from end of device path
                     device_ctd = device.split('/')[-1]
 
-                    # Create a dummy disk object for _find_disk() to work with
+                    # Create a dummy disk object for _get_candidate_disks()
                     disk = Disk("foo")
 
                     # Retrieve the disk only portion of the ctd
@@ -1675,13 +1643,13 @@ class TargetSelection(Checkpoint):
                     if match is not None:
                         disk.ctd = match.group()
 
-                        # Attempt to find a matching discovered disk
+                        # Attempt to find a matching disk
                         # this should always be successful
-                        discovered_disk = self._find_disk(disk)
-                        if discovered_disk is not None:
+                        matched_disk = self._get_candidate_disks(disk)
+                        if matched_disk.nr_matches == 1:
                             devkey = zpool.name + ":" + disk.ctd + ":" + \
                                      device_ctd
-                            zpool_map[devkey] = discovered_disk
+                            zpool_map[devkey] = matched_disk.matches[0]
                         else:
                             raise SelectionError("Unable to find discovered "
                                 "disk '%s', used in zpool '%s'." %
@@ -2800,11 +2768,11 @@ class TargetSelection(Checkpoint):
                 raise SelectionError(
                     "No slice large enough to install to was found on disk")
 
-    def _handle_disk(self, disk):
+    def _handle_disk(self, disk, discovered_disk):
         '''Handle a disk object.
 
-           Find the disk in the discovered tree, take a copy, and then if
-           necessary add/remove partitions based on version passed that came
+           Make a copy of the discovered disk, and then if necessary
+           add/remove partitions based on version passed that came
            from the manifest.
 
            Returns: the new disk to be inserted into the DESIRED Tree
@@ -2815,20 +2783,6 @@ class TargetSelection(Checkpoint):
 
         ret_disk = None
         errsvc.clear_error_list()
-
-        discovered_disk = self._find_disk(disk)
-
-        if discovered_disk is None:
-            raise SelectionError(
-               "Unable to locate the disk '%s' on the system." %
-                self._pretty_print_disk(disk))
-
-        if discovered_disk.ctd in self._disk_map:
-            # Seems that the disk is specified more than once in the manifest!
-            raise SelectionError(
-                "Disk '%s' matches already used disk '%s'." %
-                (self._pretty_print_disk(disk), discovered_disk.ctd))
-
         # Check that in_zpool and in_vdev values from manifest are valid
         self._check_valid_zpool_vdev(disk)
         self._wipe_disk = False
@@ -3285,6 +3239,89 @@ class TargetSelection(Checkpoint):
         self._root_vdev = None
         self._be = None
 
+    def _get_candidate_disks(self, disk):
+        ''' Find all of the disks in the discovered disk list that
+            match the disk specification from the manifest
+        '''
+
+        matched_disks = DiskMatches(disk)
+        for discovered_disk in self._discovered_disks:
+            # Attempt to match ctd/volid/devpath/devid first
+            if discovered_disk.name_matches(disk):
+                # there will only be a single match so return
+                matched_disks.add_match(discovered_disk)
+                return matched_disks
+
+            # Attempt to match each of the discovered disks against disk_prop.
+            # Only match disk properties if all ctd/receptacle/wwn are None,
+            # then attempt to match on boot disk or one of the disk properties
+            # specified
+            if disk.ctd is None and disk.volid is None and \
+               disk.devpath is None and disk.devid is None and \
+               disk.receptacle is None and disk.wwn is None:
+                # Attempt to match disk_prop. Any of the properties
+                # dev_type/dev_vendor/dev_size must been specified
+                if discovered_disk.disk_prop is not None and \
+                   disk.disk_prop is not None:
+                    if discovered_disk.disk_prop.prop_matches(disk.disk_prop):
+                        matched_disks.add_match(discovered_disk)
+
+                # Attempt to match on boot_disk
+                if disk.is_boot_disk() and discovered_disk.is_boot_disk():
+                    matched_disks.add_match(discovered_disk)
+                    return matched_disks
+
+        return matched_disks
+
+    def _generate_candidate_disk_list(self, disks):
+        ''' Map all of the disks specified in the AI manifest to devices
+            specified in the discovered tree.  This will be a candidate
+            list of devices that each device specification in the AI
+            manifest could potentially map to.  For explicit specifications
+            like ctd, devid, ... the list of devices would be at most a
+            single device.  For the non-deterministic criteria (disk_size,
+            dev_vendor, ...) the potential mappings would be 0 or more
+            disks from the discovered list.  The candidate list is then
+            sorted by the number of matches (least to most).  This sorted
+            list is used to create the desired target list.
+        '''
+
+        # For each disk specified in the manifest generate
+        # a list of matches from the discovered disk list
+        candidate_disk_list = list()
+        for disk in disks:
+            if self._is_generated_root_pool:
+                # Fail if manifest has disk references to temporary pool
+                # that was just created
+                if disk.in_zpool == self._root_pool.name or \
+                   disk.in_vdev == self._root_vdev.name:
+                    raise SelectionError("Invalid selection of non-existent "
+                                         "pool or vdev for disk")
+
+            candidate_disk_list.append(self._get_candidate_disks(disk))
+
+        # Now process the disks in order of possible matches (least to most)
+        candidate_disk_list.sort(key=lambda obj: obj.nr_matches)
+        mapped_disk_list = list()
+        for candidate_disk in candidate_disk_list:
+            # Traverse the set of matches looking for an unused disk
+            for matched_disk in candidate_disk.matches:
+                if matched_disk.ctd not in mapped_disk_list:
+                    candidate_disk.mapped_disk = matched_disk
+                    mapped_disk_list.append(matched_disk.ctd)
+
+                    self.logger.debug(
+                        "Mapped disk specification %s -> %s." %
+                        (self._pretty_print_disk(candidate_disk.disk),
+                        self._pretty_print_disk(candidate_disk.mapped_disk)))
+                    break
+            else:
+                raise SelectionError(
+                    "Unable to locate the disk '%s' on the system." %
+                    self._pretty_print_disk(candidate_disk.disk))
+
+        return candidate_disk_list
+
     def _handle_target(self, target):
         '''Process target section in manifest'''
 
@@ -3330,19 +3367,14 @@ class TargetSelection(Checkpoint):
                 self.controller.initialize(no_initial_disk=True,
                                            unique_zpool_name=not self.dry_run)
 
-                # Disk specified in target may not contain a name, find
-                # A matching disk in the discovered tree
-                discovered_disks = list()
-                for disk in disks:
-                    dd = self._find_disk(disk)
-                    if dd is not None:
-                        discovered_disks.append(dd)
+                # Get the list of disks from the discovered list that map to
+                # the set of desired disks from the AI manifest
+                candidate_disk_list = \
+                    self._generate_candidate_disk_list(disks)
+                mapped_disks = [candidate.mapped_disk for candidate in
+                                candidate_disk_list]
 
-                if not discovered_disks:
-                    raise SelectionError("Failed to match target disk(s) "
-                        "discovered disks.")
-
-                selected_disks = self.controller.select_disk(discovered_disks,
+                selected_disks = self.controller.select_disk(mapped_disks,
                     use_whole_disk=True)
 
                 # Target Controller will insert default root pool need to
@@ -3432,22 +3464,22 @@ class TargetSelection(Checkpoint):
                             in_vdev=root_vdev_name)
                         self._disk_map[disk.ctd] = disk
 
-            # disks in manifest
-            for disk in disks:
-                if self._is_generated_root_pool:
-                    # Fail if manifest has disk references to temporary pool we
-                    # just created.
-                    if disk.in_zpool == self._root_pool.name or \
-                       disk.in_vdev == self._root_vdev.name:
-                        raise SelectionError(
-                            "Invalid selection of non-existent pool"
-                            " or vdev for disk")
+            if disks:
+                candidate_disk_list = \
+                    self._generate_candidate_disk_list(disks)
+                for candidate_disk in candidate_disk_list:
+                    new_disk = self._handle_disk(candidate_disk.disk,
+                        candidate_disk.mapped_disk)
+                    if new_disk is not None:
+                        if new_desired_target is None:
+                            new_desired_target = \
+                                self._get_new_desired_target()
+                        new_desired_target.insert_children(new_disk)
 
-                new_disk = self._handle_disk(disk)
-                if new_disk is not None:
-                    if new_desired_target is None:
-                        new_desired_target = self._get_new_desired_target()
-                    new_desired_target.insert_children(new_disk)
+                if new_desired_target is not None:
+                    self.logger.info("Selected Disk(s) : %s" % \
+                        self._pretty_print_disk(
+                        new_desired_target.get_descendants(class_type=Disk)))
 
             # If disks were added to temporary root pool, make it permanent
             if self._is_generated_root_pool:

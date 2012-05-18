@@ -1,4 +1,3 @@
-
 #
 # CDDL HEADER START
 #
@@ -90,7 +89,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         </disk>
         <disk whole_disk="false">
           <disk_name name="c99t1d0" name_type="ctd"/>
-          <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
+          <disk_prop dev_type="scsi" dev_vendor="Hitachi"
            dev_size="625141760secs"/>
           <partition action="preserve" name="1" part_type="191">
             <size val="348144615secs" start_sector="0"/>
@@ -2200,7 +2199,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ..</logical>
         ..<disk whole_disk="false">
         ....<disk_name name="c99t1d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        ....<disk_prop dev_type="scsi" dev_vendor="Hitachi" \
         dev_size="625141760secs"/>
         ....<partition action="use_existing_solaris2" name="1" part_type="191">
         ......<size val="348144615secs" start_sector="0"/>
@@ -3200,6 +3199,250 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_props_1(self):
+        ''' Test success if user specifies a disk property'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="True">
+                <disk_prop dev_type="FIXED"/>
+              </disk>
+              <logical noswap="true" nodump="true"/>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
+        ....<disk_name name="c99t4d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="\d+secs"/>
+        ..</disk>
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_props_2_1(self):
+        ''' Test success if user specifies a disk property and a disk name'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="True">
+                <disk_prop dev_type="scsi" dev_vendor="Hitachi"/>
+              </disk>
+              <disk whole_disk="True">
+                <disk_name name="c99t4d0" name_type="ctd"/>
+              </disk>
+              <logical noswap="true" nodump="true"/>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
+        ....<disk_prop dev_type="scsi" dev_vendor="Hitachi" \
+        dev_size="625141760secs"/>
+        ..</disk>
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
+        ....<disk_name name="c99t4d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="\d+secs"/>
+        ..</disk>
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="mirror"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_props_2_1_err(self):
+        ''' Test Fail if a disk property and disk name point to same disk'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="True">
+                <disk_name name="c99t1d0" name_type="ctd"/>
+              </disk>
+              <disk whole_disk="True">
+                <disk_prop dev_type="scsi"/>
+              </disk>
+              <logical noswap="true" nodump="true"/>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml,
+            fail_ex_str="Unable to locate the disk '[dev_type='scsi']'"
+            " on the system.")
+
+    def test_target_selection_props_2_2(self):
+        ''' Test success if user specifies 2 disk properties'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="True">
+                <disk_prop dev_vendor="Hitachi"/>
+              </disk>
+              <disk whole_disk="True">
+                <disk_prop dev_size="625141760secs"/>
+              </disk>
+              <logical noswap="true" nodump="true"/>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
+        ....<disk_prop dev_type="scsi" dev_vendor="Hitachi" \
+        dev_size="\d+secs"/>
+        ..</disk>
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
+        ....<disk_name name="c99t4d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="625141760secs"/>
+        ..</disk>
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="mirror"/>
+        ......<be name="ai_test_solaris"/>
+        ....</zpool>
+        ..</logical>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_props_2_with_pools(self):
+        ''' Test success if user specifies 2 disk props and pools specified'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk in_zpool="rpool" whole_disk="True">
+                <disk_prop dev_vendor="Hitachi"/>
+              </disk>
+              <disk in_zpool="data" whole_disk="True">
+                <disk_prop dev_size="625141760secs"/>
+              </disk>
+              <logical noswap="true" nodump="true">
+                <zpool name="rpool" is_root="true">
+                    <filesystem name="export" mountpoint="/export"/>
+                    <filesystem name="export/home"/>
+                    <be name="solaris"/>
+                </zpool>
+                <zpool name="data"/>
+              </logical>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="rpool" action="create" is_root="true">
+        ......<filesystem name="export" action="create" \
+        mountpoint="/export" in_be="false"/>
+        ......<filesystem name="export/home" action="create" \
+        mountpoint="/export/home/" in_be="false"/>
+        ......<be name="solaris"/>
+        ......<vdev name="vdev" redundancy="none"/>
+        ....</zpool>
+        ....<zpool name="data" action="create" is_root="false">
+        ......<vdev name="vdev" redundancy="none"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
+        ....<disk_prop dev_type="scsi" dev_vendor="Hitachi" \
+        dev_size="\d+secs"/>
+        ..</disk>
+        ..<disk in_zpool="data" in_vdev="vdev" whole_disk="true">
+        ....<disk_name name="c99t4d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="625141760secs"/>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_props_3_2(self):
+        ''' Test success if user specifies 2 disk properties and 1 disk name'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk whole_disk="True">
+                <disk_prop dev_size="625139712secs"/>
+              </disk>
+              <disk whole_disk="True">
+                <disk_name name="c99t0d0" name_type="ctd"/>
+              </disk>
+              <disk whole_disk="True">
+                <disk_prop dev_vendor="Hitachi"/>
+              </disk>
+              <logical noswap="true" nodump="true"/>
+            </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
+        ....<disk_name name="c99t0d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="\d+secs"/>
+        ..</disk>
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
+        ....<disk_name name="c99t1d0" name_type="ctd"/>
+        ....<disk_prop dev_type="scsi" dev_vendor="Hitachi" \
+        dev_size="\d+secs"/>
+        ..</disk>
+        ..<disk in_zpool="rpool" in_vdev="vdev" whole_disk="true">
+        ....<disk_name name="c99t4d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="625141760secs"/>
+        ..</disk>
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="rpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="mirror"/>
         ......<be name="ai_test_solaris"/>
         ....</zpool>
         ..</logical>
