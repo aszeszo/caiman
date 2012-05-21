@@ -459,7 +459,7 @@ class DMPath(DMDescriptor):
     ATYPE = DMPathAttr
 
     @property
-    def conroller(self):
+    def controller(self):
         """controller or None associated with this path"""
         try:
             return self.get_associated_descriptors(const.CONTROLLER)[0]

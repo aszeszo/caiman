@@ -168,23 +168,16 @@ class TargetDiscovery(Checkpoint):
             self.logger.debug("disk '%s' is offline" % new_disk.name)
             return None
 
-        # set attributes for the disk
-        new_disk.wwn = getattr(drive.aliases[0].attributes, "wwn", None)
-
-        existing_wwns = [d.wwn for d in \
-                         self.root.get_descendants(class_type=Disk) \
-                         if d.wwn is not None]
-
-        if new_disk.wwn is not None and new_disk.wwn in existing_wwns:
-            # this wwn has already been discovered, so skip further discovery
-            return None
+        # set the wwn string, including lun if available
+        wwn = getattr(drive.aliases[0].attributes, "wwn", None)
+        if wwn is not None:
+            lun = getattr(drive.aliases[0].attributes, "lun", None)
+            if lun is not None:
+                new_disk.wwn = "%s,%d" % (wwn, lun)
+            else:
+                new_disk.wwn = wwn
 
         for alias in drive.aliases:
-            # check to see if the wwn changes between drive aliases
-            if getattr(alias.attributes, "wwn", None) != new_disk.wwn:
-                self.logger.warning("disk '%s' has different wwn for the "
-                                    "aliases" % new_disk.ctd)
-                return None
             if drive_media is not None:
                 if self.verify_disk_read(alias.name,
                                          drive_media.attributes.blocksize):
