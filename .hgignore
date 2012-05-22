@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -32,8 +32,9 @@
 \.po$
 \.so$
 \.so\.\d$
-\.sw\.
+\.sw.$
 \.make\.state$
+\~$
 ^proto
 ^packages
 ^webrev
