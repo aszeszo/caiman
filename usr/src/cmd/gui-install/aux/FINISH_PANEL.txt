@@ -9,6 +9,6 @@ You can either quit or reboot from this panel.
 
 	* After a successful installation, to start the installed system, select Reboot. The reboot process might take a few minutes.
 
-	Note – Eject the Live CD as the next boot begins. Or, select the "Boot from Hard Disk" option on the GRUB menu.
+	Note: Eject the Live CD as the next boot begins. Or, select the "Boot from Hard Disk" option on the GRUB menu.
 
 	* To exit, select Quit and shutdown your system.
