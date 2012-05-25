@@ -604,7 +604,7 @@
                             <child>
                               <object class="GtkLabel" id="support_aggregation_radio_label">
                                 <property name="visible">True</property>
-                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Aggregration Hubs - specify hubs used for centralized support data&lt;/span&gt;</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;_Aggregation Hubs - specify hubs used for centralized support data&lt;/span&gt;</property>
                                 <property name="use_markup">True</property>
                                 <property name="use_underline">True</property>
                                 <property name="mnemonic_widget">support_aggregation_radio</property>
