@@ -198,7 +198,6 @@ class BootArchiveArchive(Checkpoint):
             with open(etc_system, "a+") as fh:
                 fh.write("set root_is_ramdisk=1\n")
                 fh.write("set ramdisk_size=%d\n" % size)
-                fh.write("set kernel_cage_enable=0\n")
 
         self.lofi = Lofi(ramdisk, mountpoint, size)
         self.lofi.nbpi = self.nbpi
