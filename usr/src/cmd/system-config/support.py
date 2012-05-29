@@ -573,10 +573,10 @@ class SupportProxyScreen(BaseScreen):
     INTRO_3 = _("Enter username and password only if "
                 "configuring a secure proxy.")
 
-    HOSTNAME_LABEL = "Hostname:"
-    PORT_LABEL = "Port:"
-    USERNAME_LABEL = "Username:"
-    PASSWORD_LABEL = "Password:"
+    HOSTNAME_LABEL = _("Hostname:")
+    PORT_LABEL = _("Port:")
+    USERNAME_LABEL = _("Username:")
+    PASSWORD_LABEL = _("Password:")
 
     HELP_DATA = (SCI_HELP + "/%s/support_net_config.txt", _("Support"))
 
