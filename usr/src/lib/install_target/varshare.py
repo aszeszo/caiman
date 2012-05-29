@@ -31,7 +31,7 @@ Creates BE /var dataset and global /var/share dataset.
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.target import Target
-from solaris_install.target.logical import Filesystem, Options, Zvol, Zpool
+from solaris_install.target.logical import BE, Filesystem, Options, Zvol, Zpool
 
 VAR_DATASET_NAME = "var"
 VAR_DATASET_MOUNTPOINT = "/var"
@@ -113,6 +113,7 @@ class VarShareDataset(Checkpoint):
 
     @property
     def root_pool(self):
+        """ Return root pool from list of zpools """
         if self._root_pool is not None:
             return self._root_pool
 
@@ -204,7 +205,50 @@ class VarShareDataset(Checkpoint):
 
                 # At this point we have a Filesystem object which matches
                 # what is required by installation, no need to add new object
-                # to desired tree, simply return.
+                # to desired tree.
+
+                # Validate compression and canmount ZFS properties
+                if desired_ds.name == VARSHARE_DATASET_NAME:
+                    opt_dict = dict()
+
+                    # If compression set on /var, ensure it's inherited by
+                    # VARSHARE unless compression for VARSHARE was specified
+                    # manually
+                    var_comp = self.get_fs_opt(VAR_DATASET_NAME,
+                            VAR_DATASET_MOUNTPOINT, "compression")
+                    varshare_comp = self.get_fs_opt(VARSHARE_DATASET_NAME,
+                            VARSHARE_DATASET_MOUNTPOINT, "compression")
+
+                    if var_comp is not None and varshare_comp is None:
+                        # Ensure compression set on VARSHARE
+                        opt_dict["compression"] = var_comp
+                    elif var_comp != varshare_comp:
+                        self.logger.debug("ZFS dataset property "
+                            "'compression' manually set to '%s' for dataset "
+                             "'%s' in manifest." % \
+                            (varshare_comp, VARSHARE_DATASET_NAME))
+                    else:
+                        # Check for BE option for compression and inherit
+                        # from here if not set on var itself
+                        be = self.target.get_descendants(class_type=BE)[0]
+                        be_comp = self.get_option(be, "compression")
+                        if be_comp:
+                            opt_dict["compression"] = be_comp
+
+                    canmount = self.get_fs_opt(VARSHARE_DATASET_NAME,
+                                    VARSHARE_DATASET_MOUNTPOINT, "canmount")
+                    if canmount is None:
+                        # Set canmount property to noauto for VARSHARE
+                        opt_dict["canmount"] = "noauto"
+                    elif canmount != "noauto":
+                        self.logger.debug("ZFS dataset property "
+                            "'canmount' manually set to '%s' for dataset "
+                            "'%s' in manifest." % \
+                            (canmount, VARSHARE_DATASET_NAME))
+
+                    # Add options if necessary
+                    if opt_dict:
+                        self.add_options_to_fs(desired_ds, opt_dict)
                 return
 
         # If we get to here, we have not found filesystem in desired tree
@@ -215,8 +259,49 @@ class VarShareDataset(Checkpoint):
             new_fs = self.add_filesystem(dsname, dsmountpoint, in_be=False)
 
             # Set canmount property to noauto for VARSHARE
-            new_options = Options(VAR_DATASET_NAME, {"canmount": "noauto"})
-            new_fs.insert_children(new_options)
+            opt_dict = {"canmount": "noauto"}
+
+            # Inherit compression if set on var
+            var_comp = self.get_fs_opt(VAR_DATASET_NAME,
+                VAR_DATASET_MOUNTPOINT, "compression")
+            if var_comp is not None:
+                opt_dict["compression"] = var_comp
+            else:
+                be = self.target.get_descendants(class_type=BE)[0]
+                be_comp = self.get_option(be, "compression")
+                if be_comp:
+                    opt_dict["compression"] = be_comp
+
+            self.add_options_to_fs(new_fs, opt_dict)
+
+    def add_options_to_fs(self, fs, opt_dict):
+        """ Add options specified in opt_dict to specified filesystem """
+        fs_opts = fs.get_descendants(class_type=Options)
+
+        # Should only have at most one options element
+        if fs_opts:
+            for key in opt_dict:
+                fs_opts[0].data_dict[key] = opt_dict[key]
+        else:
+            new_options = Options(fs.name, opt_dict)
+            fs.insert_children(new_options)
+
+    def get_option(self, obj, optname):
+        """ Retrieve option string from obj, return None if not found """
+        if obj:
+            opts = obj.get_descendants(class_type=Options)
+            # Should only have at most one options element
+            if opts:
+                if optname in opts[0].data_dict:
+                    return opts[0].data_dict[optname]
+        return None
+
+    def get_fs_opt(self, dsname, dsmount, optname):
+        """ Given a filesystem name, retrieve the specified option from
+            the DOC if set. If not found return None.
+        """
+        fs = self.in_dataset_list(dsname, dsmount)
+        return self.get_option(fs, optname)
 
     def execute(self, dry_run=False):
         """ Primary execution method use by the Checkpoint parent class
