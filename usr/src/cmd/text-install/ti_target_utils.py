@@ -1384,7 +1384,7 @@ class UISlice(object):
         elif self.ui_type == UI_TYPE_EMPTY_SPACE:
             return self.empty_space_obj.name
         else:
-            raise RuntimeError("Partition not in use.  No name")
+            raise RuntimeError("Slice not in use.  No name")
 
     @property
     def size(self):
@@ -1393,7 +1393,16 @@ class UISlice(object):
         elif self.ui_type == UI_TYPE_EMPTY_SPACE:
             return Size("0gb")
         else:
-            raise RuntimeError("Partition not in use.  No size information.")
+            raise RuntimeError("Slice not in use.  No size information.")
+
+    @property
+    def start_sector(self):
+        if self.ui_type == UI_TYPE_IN_USE:
+            return self.doc_obj.start_sector
+        elif self.ui_type == UI_TYPE_EMPTY_SPACE:
+            return self.empty_space_obj.start_sector
+        else:
+            raise RuntimeError("Slice not in use.  No size information.")
 
     def get_end_sector(self):
 
@@ -1402,7 +1411,7 @@ class UISlice(object):
         elif self.ui_type == UI_TYPE_EMPTY_SPACE:
             obj = self.empty_space_obj
         else:
-            raise RuntimeError("Partition not in use")
+            raise RuntimeError("Slice not in use")
 
         size_in_sector = (obj.size).get(Size.sector_units)
         return (obj.start_sector + size_in_sector)
@@ -1463,6 +1472,7 @@ class UISlice(object):
                 int(slice_info.name) != BACKUP_SLICE):
                 next_slice = slice_info
                 break
+        
         if prev_slice is None:
             start_pt = 0
         else:
@@ -1481,7 +1491,7 @@ class UISlice(object):
                 # Default to the parent's size if there happens to be no S2
                 end_pt = self.parent.size.get(Size.sector_units)
         else:
-            end_pt = next_slice.get_end_sector()
+            end_pt = next_slice.start_sector
 
         max_space = end_pt - start_pt
 
