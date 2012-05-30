@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -83,8 +83,10 @@ class TestService(unittest.TestCase):
 
         # create service
         props = {config.PROP_SERVICE_NAME: 'mysvc',
+                 config.PROP_STATUS: 'off',
+                 config.PROP_TXT_RECORD: 'aiwebserver=myserver:5555',
                  config.PROP_IMAGE_PATH: self.imagedir}
-        config.set_service_props('mysvc', props)
+        config.create_service_props('mysvc', props)
         myservice = service.AIService('mysvc')
 
         # Update path in wanboot file, read file back in, and

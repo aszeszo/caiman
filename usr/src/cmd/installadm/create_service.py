@@ -326,6 +326,13 @@ def should_be_default_for_arch(newservice):
         if service == newservice.name:
             continue
         svc = AIService(service)
+        try:
+            props = config.get_service_props(service)
+            config.verify_key_properties(service, props)
+        except config.ServiceCfgError as err:
+            # if service is missing keys, print info and skip it
+            print >> sys.stderr, err
+            continue
         if svc.arch == newservice.arch and svc.image.version >= 3:
             make_default = False
             break

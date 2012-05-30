@@ -192,10 +192,17 @@ def set_service_props(service_name, props):
         service_name - An AI service name
         props - A dictionary of properties to update for the specified
                    service_name.
+    Raises:
+        ServiceCfgError if config file does not exist for the service (to
+        create it, use create_service_props())
 
     '''
     logging.log(com.XDEBUG, '**** START service_config.set_service_props '
                 'service_name=%s ****', service_name)
+    if not os.path.exists(_get_configfile_path(service_name)):
+        raise ServiceCfgError(cw(_('\nError: attempting to set service '
+            'properties, but config file does not exist for "%s"')
+            % service_name))
     _write_service_config(service_name, props)
 
 
@@ -581,6 +588,12 @@ def check_for_enabled_services():
     # If any install services are enabled (on), don't change the state
     # of the installadm SMF service.
     for service in all_svc_props:
+        try:
+            verify_key_properties(service, all_svc_props[service])
+        except ServiceCfgError:
+            # this service is missing key properties, so don't consider
+            # it when deciding to change the state
+            continue
         if all_svc_props[service][PROP_STATUS] == STATUS_ON:
             logging.log(com.XDEBUG, "At least one service currently "
                           "enabled, not going to maintenance.")

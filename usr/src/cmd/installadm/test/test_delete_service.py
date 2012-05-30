@@ -51,8 +51,10 @@ class ParseOptions(unittest.TestCase):
         # create service
         cls.imagedir = tempfile.mkdtemp(dir="/tmp")
         props = {config.PROP_SERVICE_NAME: 'mysvc',
-                 config.PROP_IMAGE_PATH: cls.imagedir}
-        config.set_service_props('mysvc', props)
+                 config.PROP_STATUS: 'off',
+                 config.PROP_TXT_RECORD: 'aiwebserver=myserver:5555',
+		 config.PROP_IMAGE_PATH: cls.imagedir}
+        config.create_service_props('mysvc', props)
         cls.myservice = service.AIService('mysvc')
 
     @classmethod
