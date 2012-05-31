@@ -2244,7 +2244,7 @@ class ICT(object):
         '''
         _register_task(inspect.currentframe())
         cmd = '/usr/bin/pkg -R ' + self.basedir + \
-            ' property -H preferred-publisher'
+            ' property -H publisher-search-order'
         status, co = _cmd_out(cmd)
         if status != 0:
             prerror('pkg(1) failed to obtain name of preferred publisher - '
@@ -2253,7 +2253,8 @@ class ICT(object):
             return ICT_PKG_RESET_UUID_FAILED
 
         try:
-            preferred_publisher = co[0].split()[1]
+            #preferred_publisher = co[0].split()[1]
+            preferred_publisher = co[0].split()[1].split()[0].strip("[]',")
 
         except IndexError:
             prerror('Could not determine name of preferred publisher from '
