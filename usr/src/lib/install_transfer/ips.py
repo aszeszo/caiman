@@ -430,7 +430,7 @@ class AbstractIPS(Checkpoint):
         except api_errors.CatalogRefreshException, cre:
             #  Handle CatalogRefreshException especially since it doesn't
             #  pretty-print it's contents in a __str__() impl.
-            
+
             raise RuntimeError(self.catalog_failures_to_str(cre))
         finally:
             self._cleanup()
@@ -480,9 +480,31 @@ class AbstractIPS(Checkpoint):
 
         self.prog_tracker = self.image_args.get("progtrack", self.prog_tracker)
 
-        # Set the image args we always want set.
+        invalid_prefix_uri = None
         if self.img_action == self.CREATE:
+            # Set the image args we always want set.
             self.set_image_args()
+        elif not self.dry_run and not self._publ:
+            # It's either None or empty string, so fail
+            # Should always have index 0 since DTD won't allow otherwise, but
+            # should ignore in case of dry_run since unlikely to be set.
+            invalid_prefix_uri = self._origin[0]
+
+        if invalid_prefix_uri is None:
+            for idx, element in enumerate(self._add_publ):
+                if not element:
+                    # It's either None or empty string, so fail
+                    # Should always have index 0 since DTD won't allow
+                    # otherwise.
+                    invalid_prefix_uri = self._add_origin[idx][0]
+                    break
+
+        if invalid_prefix_uri is not None:
+            raise ValueError(
+                "Only the publisher being used for image creation can have\n"
+                "its prefix auto-discovered, please specify the prefix for\n"
+                "the publisher with the URI:\n  %s"
+                % invalid_prefix_uri)
 
     def _transfer(self):
         '''If an update of the image has been specified, the publishers of the
@@ -780,6 +802,10 @@ class AbstractIPS(Checkpoint):
            prefix, repo_uri, origins, and mirrors.  If we're creating a
            zone image, we also need to set the use-system-repo property
            in the props argument.
+
+           For the publisher used to create the image, it is possible to
+           omit the prefix (_publ) and allow IPS to do auto-discovery from
+           the repo itself.
         '''
         self._image_args = copy.copy(self.image_args)
         self._image_args["progtrack"] = self.prog_tracker
@@ -847,7 +873,7 @@ class AbstractIPS(Checkpoint):
                     pkg_client_name=PKG_CLIENT_NAME,
                     version_id=PKG5_API_VERSION, root=self.dst,
                     imgtype=self.completeness, is_zone=self.is_zone,
-                    refresh_allowed=False, force=True, **self._image_args)
+                    force=True, **self._image_args)
 
                 # The above call will end up leaving our process's cwd in
                 # the image's root area, which will cause pain later on

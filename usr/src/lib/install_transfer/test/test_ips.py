@@ -523,6 +523,84 @@ class TestIPSFunctions(unittest.TestCase):
         except Exception as err:
             self.fail(str(err))
 
+    def test_source_omit_name_first_success(self):
+        '''Test that omitting name is allowed for first publisher'''
+        src = Source()
+        pub = Publisher("")
+        origin = Origin("http://ipkg.sfbay.sun.com/dev/")
+        pub.insert_children([origin])
+        src.insert_children([pub])
+        self.soft_node.insert_children([src])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+        except Exception as err:
+            self.fail(str(err))
+
+    def test_source_omit_additional_publ_name_fails_1(self):
+        '''Test that adding additional sources omitting name fails'''
+        src = Source()
+        pub = Publisher("")
+        origin = Origin("http://ipkg.sfbay.sun.com/dev/")
+        pub.insert_children([origin])
+        src.insert_children([pub])
+        self.soft_node.insert_children([src])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+        except Exception as err:
+            self.fail(str(err))
+
+        # Now add another publisher to the repo
+        self.ips_image.action = "update"
+        pub2 = Publisher("")
+        origin2 = Origin("http://ipkg.sfbay.sun.com/extra/")
+        pub2.insert_children([origin2])
+        src.insert_children([pub2])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+            self.fail("Shouldn't succeed omitting name of second publisher")
+        except ValueError as err:
+            pass
+        except Exception as err:
+            self.fail(str(err))
+
+    def test_source_omit_additional_publ_name_fails_2(self):
+        '''Test that adding additional sources omitting name fails'''
+        src = Source()
+        pub = Publisher("")
+        origin = Origin("http://ipkg.sfbay.sun.com/dev/")
+        pub.insert_children([origin])
+        src.insert_children([pub])
+        self.soft_node.insert_children([src])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+        except Exception as err:
+            self.fail(str(err))
+
+        # Now add another publisher to the repo
+        self.ips_image.action = "update"
+        pub2 = Publisher("extra")
+        origin2 = Origin("http://ipkg.sfbay.sun.com/extra/")
+        pub2.insert_children([origin2])
+        src.insert_children([pub2])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+        except Exception as err:
+            self.fail(str(err))
+
+        # Now add another publisher to the repo
+        self.ips_image.action = "update"
+        pub3 = Publisher("")
+        origin3 = Origin("http://ipkg.sfbay.sun.com/an-other/")
+        pub3.insert_children([origin3])
+        src.insert_children([pub3])
+        try:
+            self.tr_ips.execute(dry_run=DRY_RUN)
+            self.fail("Shouldn't succeed omitting name of third publisher")
+        except ValueError as err:
+            pass
+        except Exception as err:
+            self.fail(str(err))
+
     def test_source_replacement(self):
         '''Test that replacing a source succeeds'''
         # Setup an IPS image
