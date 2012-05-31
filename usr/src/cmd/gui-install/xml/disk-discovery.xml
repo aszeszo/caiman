@@ -272,7 +272,7 @@
                                     <child>
                                       <object class="GtkLabel" id="discovery_target_ip_1_dot_label">
                                         <property name="visible">True</property>
-                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;.&lt;/span&gt;</property>
+                                        <property name="label">&lt;span font_desc="Bold"&gt;.&lt;/span&gt;</property>
                                         <property name="use_markup">True</property>
                                       </object>
                                     </child>
@@ -305,7 +305,7 @@
                                     <child>
                                       <object class="GtkLabel" id="discovery_target_ip_2_dot_label">
                                         <property name="visible">True</property>
-                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;.&lt;/span&gt;</property>
+                                        <property name="label">&lt;span font_desc="Bold"&gt;.&lt;/span&gt;</property>
                                         <property name="use_markup">True</property>
                                       </object>
                                     </child>
@@ -338,7 +338,7 @@
                                     <child>
                                       <object class="GtkLabel" id="discovery_target_ip_3_dot_label">
                                         <property name="visible">True</property>
-                                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;.&lt;/span&gt;</property>
+                                        <property name="label">&lt;span font_desc="Bold"&gt;.&lt;/span&gt;</property>
                                         <property name="use_markup">True</property>
                                       </object>
                                     </child>
