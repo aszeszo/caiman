@@ -807,17 +807,18 @@ def resize_validate(edit_field, disk_win=None):
     text = edit_field.get_text().lstrip()
     radixchar = locale.localeconv()['decimal_point']
     if text.endswith(" "):
-        raise UIMessage(_('Only the digits 0-9 and %s are valid.') % radixchar)
+        raise UIMessage(_('Only the digits 0-9 and "%s" are valid.') % 
+                          radixchar)
     vals = text.split(radixchar)
     if len(vals) > 2:
-        raise UIMessage(_('A number can only have one %s') % radixchar)
+        raise UIMessage(_('A number can only have one "%s"') % radixchar)
     try:
         if len(vals[0]) > 0:
             int(vals[0])
         if len(vals) > 1 and len(vals[1]) > 0:
             int(vals[1])
     except ValueError:
-        raise UIMessage(_('Only the digits 0-9 and %s are valid.')
+        raise UIMessage(_('Only the digits 0-9 and "%s" are valid.')
                         % radixchar)
     if len(vals) > 1 and len(vals[1]) > 1:
         raise UIMessage(_("Size can be specified to only one decimal place."))

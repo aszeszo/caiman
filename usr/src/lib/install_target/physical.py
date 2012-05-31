@@ -2716,21 +2716,16 @@ class Disk(DataObject):
                     cmd = [UMOUNT, "-f", disk_dev]
                     run(cmd)
 
-    def _release_swap(self):
-        """ method to release all swap devices associated
-            with a given disk
+    def _release_ufs_swap(self):
+        """ method to release all UFS swap devices associated on this disk
         """
-        disk_dev = "/dev/dsk/%s" % self.ctd
         # get a list of all swap devices on the system
         cmd = [SWAP, "-l"]
         p = run(cmd, check_result=Popen.ANY)
-
-        # remove the header and trailing newline
-        swap_list = p.stdout.split("\n")[1:-1]
-        for swap in swap_list:
-            swap_dev = swap.split()[0]
-            if swap_dev.startswith(disk_dev):
-                cmd = [SWAP, "-d", disk_dev + "swap"]
+        for line in p.stdout.splitlines():
+            if self.ctd in line:
+                swap_dev = line.split()[0]
+                cmd = [SWAP, "-d", swap_dev]
                 run(cmd)
 
     def _create_ufs_swap(self, swap_slice_list, dry_run):
@@ -2765,7 +2760,7 @@ class Disk(DataObject):
         # release ufs swap.
         if not dry_run:
             # release ufs swap
-            self._release_swap()
+            self._release_ufs_swap()
             # unmount ufs filesystems
             self._unmount_ufs_filesystems()
 
