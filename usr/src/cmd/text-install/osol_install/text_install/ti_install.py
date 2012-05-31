@@ -71,7 +71,7 @@ ICT_USER_GID = "10"
 INSTALL_FINISH_PROG = "/sbin/install-finish"
 
 # Initial BE name
-INIT_BE_NAME = "solaris"
+INIT_BE_NAME = "illumos"
 
 # definitions for ZFS pool
 INSTALL_SNAPSHOT = "install"
