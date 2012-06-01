@@ -471,8 +471,8 @@ class TestValidateTarget(unittest.TestCase):
 
         self.assertRaises(RuntimeError, dc.validate_target)
 
-    def test_create_root_pool(self):
-        """ test to make sure the create action on the bootfs correctly errors
+    def test_create_pool(self):
+        """ test to make sure the create action on a zpool correctly errors
         """
         # create a basic zpool object with an action of create
         zpool = Zpool("rpool")
@@ -489,32 +489,26 @@ class TestValidateTarget(unittest.TestCase):
 
         self.assertRaises(RuntimeError, dc.validate_target)
 
-    def test_simple_target(self):
-        """ test to make sure a simple target validates correctly.  No actual
-        ZFS code is executed here.
+    def test_no_pool(self):
+        """ test to make sure validate target fails if no pool is specified
+        """
+        self.doc.volatile.insert_children(self.target)
+        self.assertRaises(RuntimeError, dc.validate_target)
+
+    def test_no_filesystem(self):
+        """ test to make sure validate target fails if no filesystem is
+        specified.
         """
         # create a basic zpool object
         zpool = Zpool("rpool")
         zpool.action = "use_existing"
 
-        # create one filesystem object
-        fs = Filesystem("rpool/test1")
-        fs.dataset_path = fs.name
-
         # create the DOC structure
         self.logical.insert_children(zpool)
-        zpool.insert_children(fs)
 
         self.doc.volatile.insert_children(self.target)
 
-        zpool_name, dataset, action, dataset_mp = dc.validate_target()
-        self.assertTrue(zpool_name == zpool.name)
-        self.assertTrue(dataset == "rpool/test1")
-        self.assertTrue(action == "create")
-        # the mountpoint will be None since the Filesystem.from_xml() method
-        # is not called to determine the actual mountpoint
-        self.assertFalse(dataset_mp)
-
+        self.assertRaises(RuntimeError, dc.validate_target)
 
 class TestSetHTTPProxy(unittest.TestCase):
     """ test case for testing the set_http_proxy function

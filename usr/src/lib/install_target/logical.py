@@ -481,33 +481,6 @@ class Filesystem(DataObject):
             filesystem.action = action
         if mountpoint is not None:
             filesystem.mountpoint = mountpoint
-        else:
-            # Recursively strip the dataset_path until the mountpoint is
-            # found.
-            stripped_entries = []
-            dataset_list = name.split("/")
-
-            # add the parent's name (the zpool name) to the list
-            dataset_list.insert(0, element.getparent().get("name"))
-
-            while dataset_list:
-                try:
-                    test_dataset = Filesystem("/".join(dataset_list))
-                    test_dataset_mp = test_dataset.get("mountpoint")
-                except CalledProcessError:
-                    # strip off the last element and save it for later
-                    stripped_entries.append(dataset_list[-1])
-                    dataset_list = dataset_list[:-1]
-                    continue
-                else:
-                    # the mountpoint was found so add the stripped entries
-                    # (in reverse) to generate the proper path.
-                    filesystem.mountpoint = os.path.join(test_dataset_mp,
-                        "/".join(reversed(stripped_entries)))
-                    break
-            else:
-                # set the mountpoint to None
-                filesystem.mountpoint = None
 
         if in_be is not None:
             try:
@@ -583,7 +556,7 @@ class Filesystem(DataObject):
                              stderr_loglevel=logging.DEBUG, logger=ILN)
         return p.stdout.strip()
 
-    def create(self, dry_run):
+    def create(self, dry_run=False):
         """ create the filesystem
         """
         if not self.exists:

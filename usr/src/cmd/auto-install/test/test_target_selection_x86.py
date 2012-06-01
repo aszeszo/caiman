@@ -3379,7 +3379,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<filesystem name="export" action="create" \
         mountpoint="/export" in_be="false"/>
         ......<filesystem name="export/home" action="create" \
-        mountpoint="/export/home/" in_be="false"/>
+        in_be="false"/>
         ......<be name="solaris"/>
         ......<vdev name="vdev" redundancy="none"/>
         ....</zpool>
