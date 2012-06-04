@@ -315,7 +315,7 @@ class TestCPIOFunctions(unittest.TestCase):
             self.fail(str(err))
 
     def test_cpio_w_empty_list(self):
-        ''' Test that an error is raised when contents list is empty'''
+        ''' Test that "empty contents list" scenario is handled'''
         # Set up the source
         src = Source()
         path = Dir(self.TEST_SRC_DIR)
@@ -333,10 +333,13 @@ class TestCPIOFunctions(unittest.TestCase):
         self.tr_node.action = "install"
         self.tr_node.contents = []
 
-        self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
+        try:
+            self.tr_cpio.execute(dry_run=True)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_cpio_no_contents(self):
-        ''' Test that an error is raised when no contents exist'''
+        ''' Test that "no contents" scenario is handled'''
         # Set up the source
         src = Source()
         path = Dir(self.TEST_SRC_DIR)
@@ -353,7 +356,10 @@ class TestCPIOFunctions(unittest.TestCase):
         # The CPIO values that are specified - no contents
         self.tr_node.action = "install"
 
-        self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
+        try:
+            self.tr_cpio.execute(dry_run=True)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_skip_file_list_file(self):
         '''Test the success of using skip_file_list'''
@@ -709,8 +715,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         progress_estimate = self.tr_cpio.get_progress_estimate()
         expect_estimate = \
-            int((float(size_to_transfer/1024) / self.tr_cpio.DEFAULT_SIZE) * \
-                self.tr_cpio.DEFAULT_PROG_EST)
+            int((float(size_to_transfer / 1024) / self.tr_cpio.DEFAULT_SIZE) \
+                * self.tr_cpio.DEFAULT_PROG_EST)
 
         self.assertEqual(progress_estimate, expect_estimate)
 

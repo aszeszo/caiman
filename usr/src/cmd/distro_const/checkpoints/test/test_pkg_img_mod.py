@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_pkg_img_mod
@@ -123,6 +123,7 @@ class TestCreateMiscArchive(unittest.TestCase):
                          "/etc/",
                          "/etc/sbin/lofiadm",
                          "/etc/file1/file2",
+                         "/save/etc/shadow",
                          "/var/",
                          "/var/file2/file3/file4",
                          "/var/file3/file3/file4/file5",

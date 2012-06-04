@@ -471,25 +471,4 @@ class NetPrepareMediaTransfer(AbstractCheckpoint):
 
         setup_doc_content(manifest_name, NetPrepareMediaTransfer.MEDIA_SOURCE)
 
-        # Take a look at "transfer-media" node of the DOC, and download
-        # all listed files
-
-        doc = InstallEngine.get_instance().data_object_cache
-
-        software_nodes = doc.volatile.get_descendants(class_type=Software)
-
-        for software in software_nodes:
-            if software._name == TRANSFER_MEDIA:
-                cpio_spec = software.get_children(class_type=CPIOSpec,
-                                                  not_found_is_err=True)
-                file_list = (cpio_spec[0]).contents
-                for file in file_list:
-                    # download each file
-                    dst_name = \
-                        os.path.join(NetPrepareMediaTransfer.MEDIA_SOURCE, \
-                        file)
-                    self.logger.debug("Downloading " + file)
-                    download_files(server_url + "/" + file, dst_name,
-                                   self.logger)
-
         unmount_libc_overlay(self.logger)

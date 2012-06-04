@@ -413,6 +413,11 @@ class AbstractCPIO(Checkpoint):
         '''
         if trans.action == "install":
             fl_data = self.validate_contents(trans.contents)
+
+            # if there is nothing to transfer, just return
+            if fl_data is None:
+                return None
+
             if isinstance(fl_data, list):
                 # Go through the list and find directory entries
                 bflist = list(fl_data)
@@ -488,11 +493,14 @@ class AbstractCPIO(Checkpoint):
             self.pmon.startmonitor(self.dst, self.distro_size)
 
         for trans in self._transfer_list:
-            # before starting any transforms, installs or uninstalls, first
-            # verify this transaction has contents to operate on
+            # Before starting any transforms, installs or uninstalls, first
+            # verify this transaction has contents to operate on. Tolerate
+            # if there is no contents to be manipulated, and skip the action
+            # in such case.
             if trans.get(CONTENTS) is None:
-                raise RuntimeError("%s action has no contents" % \
+                self.logger.debug("Skipping %s action, it has no contents" % \
                                    trans.get(ACTION))
+                continue
             if trans.get(ACTION) == "transform":
                 if not self.dry_run:
                     self.run_exec_file(trans.get(CONTENTS))

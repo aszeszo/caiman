@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ pkg_img_mod
@@ -214,6 +214,7 @@ class PkgImgMod(Checkpoint):
         shutil.move("opt", "miscdirs")
         shutil.move("etc", "miscdirs")
         shutil.move("var", "miscdirs")
+        shutil.move("save", "miscdirs")
 
         # add Software node to install items from /mnt/misc
 
@@ -322,21 +323,6 @@ class PkgImgMod(Checkpoint):
         self.add_content_list_to_doc(content_list)
 
         os.chdir(cwd)
-
-    def populate_save_list(self):
-        '''Store a list of files under the 'save' directory. Net-booted
-        text installer uses this list to determine what files it needs from
-        the boot server
-        '''
-        save_files = []
-        save_dir = os.path.join(self.pkg_img_path, "save")
-        for root, _none, files in os.walk(save_dir):
-            for f in files:
-                relpath = os.path.relpath(os.path.join(root, f),
-                                          start=self.pkg_img_path)
-                save_files.append(relpath)
-
-        self.add_content_list_to_doc(save_files)
 
     def execute(self, dry_run=False):
         """Customize the pkg_image area. Assumes that a populated pkg_image
@@ -503,8 +489,13 @@ class AIPkgImgMod(TextPkgImgMod):
             else:
                 self.strip_sparc_platform()
 
-            # populate the value from the save directory into the DOC
-            self.populate_save_list()
+            # Generate transfer manifest with empty contents
+            # for "transfer-media" transaction, since text installer booted
+            # from network has nothing to transfer from media
+            # to install target.
+            # We can't completely omit that transaction in transfer manifest,
+            # as transfer mechanism insists on having that defined.
+            self.add_content_list_to_doc([])
 
         finally:
             # return to the initial directory
