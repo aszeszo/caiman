@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <!--
- Copyright (c) 2004, 2011, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2004, 2012, Oracle and/or its affiliates. All rights reserved.
 
  CDDL HEADER START
 
@@ -70,7 +70,7 @@
 	<exec_method
 		type='method'
 		name='stop'
-		exec='/lib/svc/method/net-physical %m'
+		exec='/lib/svc/method/net-physical %m %{restarter/contract}'
 		timeout_seconds='60' />
 
 	<exec_method
