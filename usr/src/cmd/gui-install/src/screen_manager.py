@@ -150,7 +150,6 @@ class ScreenManager(object):
             "on_helpbutton_clicked": self.help,
             "on_backbutton_clicked": self.prev_screen,
             "on_nextbutton_clicked": self.next_screen,
-            "on_upgradebutton_clicked": self.no_op,
             "on_installbutton_clicked": self.next_screen,
             "on_rebootbutton_clicked": self.next_screen,
             "on_releasenotesbutton_clicked": self.no_op,
