@@ -904,16 +904,18 @@ class AIService(object):
         # when adding to this function.
         self._image = None
 
+        valid_svc = True
         try:
             self.check_valid()
         except InvalidServiceError:
-            print >> sys.stderr, cw(_("\nOne or more of this alias' manifests "
-                                      "or profiles is no longer valid. This "
-                                      "service will be disabled until they "
-                                      "have been removed or fixed.\n"))
+            valid_svc = False
+            print >> sys.stderr, cw(_("\nOne or more of the manifests or "
+                "profiles for '%s' is no longer valid. This service will be "
+                "disabled until they have been removed or fixed.\n") %
+                self.name)
 
         # Enable the alias to pick up the new image
-        if was_mounted:
+        if valid_svc and was_mounted:
             self.enable()
 
         # Configure DHCP for this service
