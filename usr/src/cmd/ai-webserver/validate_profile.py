@@ -75,6 +75,15 @@ def parse_options(cmd_options=None):
     if len(args) > 0:
         parser.error(_("Unexpected argument(s): %s" % args))
 
+    # check for authorization and euid for '-p' to validate
+    # internal profiles. This check is not required while
+    # validating external profiles(-P).
+    if options.profile_name:
+        try:
+            check_auth_and_euid(PROFILE_AUTH)
+        except UnauthorizedUserError as err:
+            raise SystemExit(err)
+
     if options.service_name:
         try:
             validate_service_name(options.service_name)
@@ -126,11 +135,6 @@ def do_validate_profile(cmd_options=None):
     Arg: cmd_options - command line options
     Effect: validate per command line
     '''
-    # check for authorization and euid
-    try:
-        check_auth_and_euid(PROFILE_AUTH)
-    except UnauthorizedUserError as err:
-        raise SystemExit(err)
 
     options = parse_options(cmd_options)
     isvalid = True

@@ -42,6 +42,10 @@ import osol_install.auto_install.validate_profile as validate_profile
 
 gettext.install("ai-test")
 
+def do_nothing(*args, **kwargs):
+    '''does nothing'''
+    pass
+
 class MockDataBase(object):
     '''Class for mock database '''
     def __init__(self):
@@ -168,9 +172,36 @@ class ParseOptions(unittest.TestCase):
 
     def test_parse_multi_options(self):
         '''Ensure multiple profiles processed'''
+
+        # mask authorization verification function
+        self.check_auth_and_euid = validate_profile.check_auth_and_euid
+        validate_profile.check_auth_and_euid = do_nothing
+
         myargs = ["-n", "mysvc", "-p", "profile", "-p", "profile2"] 
         options = validate_profile.parse_options(myargs)
+
+        # restore authorization verification function
+        validate_profile.check_auth_and_euid = self.check_auth_and_euid
+
         self.assertEquals(options.profile_name, ["profile", "profile2"])
+
+    def test_parse_external_profile(self):
+        '''Ensure parsing external profile option'''
+        myargs = ["-n", "mysvc", "-P", "profile.xml"]
+        options = validate_profile.parse_options(myargs)
+        self.assertEquals(options.profile_path, ["profile.xml"])
+
+    def test_parse_internal_profile(self):
+        '''Ensure parsing internal profile option'''
+        myargs = ["-n", "mysvc", "-p", "profile"]
+        # for non-root users, expect SystemExit
+        if os.getuid() != 0:
+            self.assertRaises(SystemExit, validate_profile.parse_options,
+                              myargs)
+        else:
+            options = validate_profile.parse_options(myargs)
+            self.assertEquals(options.profile_name, ["profile"])
+
 
 if __name__ == '__main__':
     unittest.main()
