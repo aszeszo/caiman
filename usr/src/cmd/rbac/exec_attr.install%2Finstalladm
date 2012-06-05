@@ -23,4 +23,3 @@
 #
 Install Manifest Management:solaris:cmd:RO::/usr/sbin/installadm:euid=0
 Install Profile Management:solaris:cmd:RO::/usr/sbin/installadm:euid=0
-Install Service Management:solaris:cmd:RO::/usr/sbin/installadm-convert:euid=0

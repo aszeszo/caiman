@@ -132,7 +132,8 @@ case "$1" in
 		echo "The following services are incompatible with this"
 		echo "version of $SMF_FMRI:"
 		echo $old_services
-		echo "Please run $UPGRADE_SCRIPT to upgrade them"
+		echo "Please boot Solaris 11 11/11, run $UPGRADE_SCRIPT"
+		echo "and then rerun the Solaris upgrade"
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 

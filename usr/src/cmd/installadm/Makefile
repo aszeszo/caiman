@@ -67,7 +67,7 @@ PYTHON_MODULES=	aimdns.py aimdnsd.py
 
 MSGFILES =      $(PYMODULES) $(PYTHON_MODULES) $(PYTHON_EXECS:%=%.py) 
 
-PYTHON_EXECS =	installadm installadm-convert
+PYTHON_EXECS =	installadm
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
@@ -99,9 +99,6 @@ python:
 
 installadm:	installadm.py
 		cp installadm.py installadm
-
-installadm-convert:	installadm-convert.py
-		cp installadm-convert.py installadm-convert
 
 clean:
 	rm -f $(SCRIPTS) *.pyc $(PYTHON_EXECS) $(POFILE)

@@ -208,7 +208,6 @@ file \
     group=sys
 dir  path=usr/sbin
 file path=usr/sbin/installadm mode=0555
-file path=usr/sbin/installadm-convert mode=0555
 dir  path=usr/share group=sys
 dir  path=usr/share/auto_install group=sys
 file path=usr/share/auto_install/criteria_schema.rng group=sys
