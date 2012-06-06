@@ -304,7 +304,7 @@ class CriteriaPrintObject(PrintObject):
             for key in criteria.keys():
                 if criteria[key] is not None:
                     self.has_crit = True
-                break
+                    break
             if self.has_crit:
                 # We need criteria in human readable form to be able to
                 # print it
