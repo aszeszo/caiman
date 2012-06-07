@@ -163,9 +163,16 @@ class TargetDiscovery(Checkpoint):
         drive_attributes = drive.attributes
         drive_media = drive.media
 
+        if drive_media is None:
+            # since the drive has no media, we can't determine any attributes
+            # about it (geometry, slices, partitions, etc.) so simply return
+            # None
+            self.logger.debug("disk '%s' has no media" % drive.name)
+            return None
+
         # if a drive is offline or down return None
         if drive_attributes.status == "DOWN":
-            self.logger.debug("disk '%s' is offline" % new_disk.name)
+            self.logger.debug("disk '%s' is offline" % drive.name)
             return None
 
         # set the wwn string, including lun if available
@@ -178,12 +185,17 @@ class TargetDiscovery(Checkpoint):
                 new_disk.wwn = wwn
 
         for alias in drive.aliases:
-            if drive_media is not None:
-                if self.verify_disk_read(alias.name,
-                                         drive_media.attributes.blocksize):
-                    new_disk.active_ctds.append(alias.name)
-                else:
-                    new_disk.passive_ctds.append(alias.name)
+            if self.verify_disk_read(alias.name,
+                                     drive_media.attributes.blocksize):
+                new_disk.active_ctds.append(alias.name)
+            else:
+                new_disk.passive_ctds.append(alias.name)
+
+        # if only passive_ctds are found, return None
+        if new_disk.passive_ctds and not new_disk.active_ctds:
+            self.logger.debug("disk '%s' only has passive aliases" %
+                              drive.name)
+            return None
 
         # set the new_disk ctd string
         if new_disk.wwn is None:
@@ -251,92 +263,85 @@ class TargetDiscovery(Checkpoint):
             new_disk.disk_prop.dev_chassis = self.cro_dict[new_disk.ctd][1]
             new_disk.receptacle = self.cro_dict[new_disk.ctd][2]
 
-        # walk the media node to extract partitions and slices
-        if drive_media is None:
-            # since the drive has no media, we can't determine any attributes
-            # about it (geometry, slices, partitions, etc.) so simply return
-            # None
-            return None
-        else:
-            # store the attributes locally so libdiskmgt doesn't have to keep
-            # looking them up
-            drive_media_attributes = drive_media.attributes
+        # store the media attributes locally so libdiskmgt doesn't have to keep
+        # looking them up
+        drive_media_attributes = drive_media.attributes
 
-            # retrieve the drive's geometry
-            new_disk = self.set_geometry(drive_media_attributes, new_disk)
+        # retrieve the drive's geometry
+        new_disk = self.set_geometry(drive_media_attributes, new_disk)
 
-            # keep a list of slices already visited so they're not discovered
-            # again later
-            visited_slices = []
+        # keep a list of slices already visited so they're not discovered
+        # again later
+        visited_slices = []
 
-            # if this system is x86 and the drive reports *VTOC* slices but no
-            # fdisk partitions, don't report any of the slices. This probably
-            # means there is no label at all on the disk:
-            # On x86 libdiskmgmt will report slices, but no partitions
-            # when the disk has no partition table/label at all.
-            if self.arch == "i386" \
-                and drive_media.slices \
-                and not drive_media.partitions \
-                and new_disk.label != "GPT":
-                # Unset the erroneous disk label
-                new_disk._label = None
-                return new_disk
+        # if this system is x86 and the drive reports *VTOC* slices but no
+        # fdisk partitions, don't report any of the slices. This probably
+        # means there is no label at all on the disk:
+        # On x86 libdiskmgmt will report slices, but no partitions
+        # when the disk has no partition table/label at all.
+        if self.arch == "i386" \
+           and drive_media.slices \
+           and not drive_media.partitions \
+           and new_disk.label != "GPT":
+            # Unset the erroneous disk label
+            new_disk._label = None
+            return new_disk
 
-            if new_disk.label == "VTOC":
-                for partition in drive_media.partitions:
-                    new_partition = self.discover_partition(partition,
+        if new_disk.label == "VTOC":
+            for partition in drive_media.partitions:
+                new_partition = self.discover_partition(partition,
+                    drive_media_attributes.blocksize)
+
+                # add the partition to the disk object
+                new_disk.insert_children(new_partition)
+
+                # check for slices associated with this partition
+                # if found, add them as children
+                for slc in partition.media.slices:
+                    # discover the slice
+                    new_slice = self.discover_slice(slc,
                         drive_media_attributes.blocksize)
 
-                    # add the partition to the disk object
-                    new_disk.insert_children(new_partition)
+                    # constrain when a slice is added to the DOC.
+                    # We only want to add a slice when the partition id
+                    # is a Solaris partition (non EFI)
+                    if new_partition.is_solaris:
+                        new_partition.insert_children(new_slice)
 
-                    # check for slices associated with this partition
-                    # if found, add them as children
-                    for slc in partition.media.slices:
-                        # discover the slice
-                        new_slice = self.discover_slice(slc,
-                            drive_media_attributes.blocksize)
+                    # keep a record this slice so it's not discovered again
+                    visited_slices.append(slc.name)
 
-                        # constrain when a slice is added to the DOC.
-                        # We only want to add a slice when the partition id
-                        # is a Solaris partition (non EFI)
-                        if new_partition.is_solaris:
-                            new_partition.insert_children(new_slice)
+            for slc in drive_media.slices:
+                # discover the slice if it's not already been found
+                if slc.name not in visited_slices:
+                    new_slice = self.discover_slice(slc,
+                        drive_media_attributes.blocksize)
+                    new_disk.insert_children(new_slice)
 
-                        # keep a record this slice so it's not discovered again
-                        visited_slices.append(slc.name)
-
-                for slc in drive_media.slices:
-                    # discover the slice if it's not already been found
-                    if slc.name not in visited_slices:
-                        new_slice = self.discover_slice(slc,
-                            drive_media_attributes.blocksize)
-                        new_disk.insert_children(new_slice)
-
-            # If the disk has a GPT label then the protective MBR
-            # reported by libdiskmgt should be ignored. The GPT partitions
-            # are reported by libdiskmgt as "slices", similar to VTOC slices
-            elif new_disk.label == "GPT":
-                # EFI/GPT label on disc. Discover GPT partitions.
-                # libdiskmgt's information about GPT partitions is incomplete
-                # so use libefi to fill in what is missing.
-                fh = os.open(new_disk.opath, os.O_RDONLY | os.O_NDELAY)
+        # If the disk has a GPT label then the protective MBR
+        # reported by libdiskmgt should be ignored. The GPT partitions
+        # are reported by libdiskmgt as "slices", similar to VTOC slices
+        elif new_disk.label == "GPT":
+            # EFI/GPT label on disc. Discover GPT partitions.
+            # libdiskmgt's information about GPT partitions is incomplete
+            # so use libefi to fill in what is missing.
+            fh = os.open(new_disk.opath, os.O_RDONLY | os.O_NDELAY)
+            try:
+                gptp = efi_read(fh)
                 try:
-                    gptp = efi_read(fh)
-                    try:
-                        for slc in drive_media.slices:
-                            efi_part = gptp.contents.efi_parts[
-                                slc.attributes.index]
-                            new_gpart = self.discover_gptpartition(slc,
-                                drive_media_attributes.blocksize,
-                                efi_part)
-                            new_disk.insert_children(new_gpart)
-                    finally:
-                        efi_free(gptp)
+                    for slc in drive_media.slices:
+                        efi_part = gptp.contents.efi_parts[
+                            slc.attributes.index]
+                        new_gpart = self.discover_gptpartition(slc,
+                            drive_media_attributes.blocksize,
+                            efi_part)
+                        new_disk.insert_children(new_gpart)
                 finally:
-                    os.close(fh)
+                    efi_free(gptp)
+            finally:
+                os.close(fh)
 
-            return new_disk
+        return new_disk
 
     def verify_disk_read(self, ctd, blocksize):
         """
