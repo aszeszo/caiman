@@ -39,6 +39,7 @@ import pkg.client.progress as progress
 import pkg.client.publisher as publisher
 import pkg.misc as misc
 
+from pkg.fmri import PkgFmri
 from pkg.client import global_settings
 from pkg.client.api import IMG_TYPE_ENTIRE, IMG_TYPE_PARTIAL
 from solaris_install import PKG5_API_VERSION
@@ -87,6 +88,7 @@ class InstallCLIProgressTracker(progress.NullProgressTracker):
         self._act_started = False
         self._ind_started = False
         self._item_started = False
+        self._package_dict = {}
 
     def _logger_output(self, message):
         if self.show_stdout:
@@ -112,7 +114,12 @@ class InstallCLIProgressTracker(progress.NullProgressTracker):
             self._dl_started = True
 
         if self._dl_cur_pkg != self.cur_pkg:
-            self._logger_output("Download: %s ..." % self.cur_pkg)
+            if (self.cur_pkg in self._package_dict):
+                fmri = self._package_dict[self.cur_pkg]
+                self._logger_output("Download: %s ...", fmri.get_fmri())
+            else:
+                # only hits this at end when the cur_pkg becomes empty str
+                self._logger_output("Download: %s ..." % self.cur_pkg)
             self._dl_cur_pkg = self.cur_pkg
 
     def dl_output_done(self):
@@ -147,6 +154,9 @@ class InstallCLIProgressTracker(progress.NullProgressTracker):
         self._logger_output("%s ... Done." % self.item_phase)
         self._item_started = False
 
+    def set_package_dict(self, package_dict):
+        self._package_dict = package_dict
+
 
 class InstallFancyProgressTracker(progress.FancyUNIXProgressTracker):
     ''' Subclass of the IPS api's FancyUNIXProgressTracker; we leverage
@@ -168,6 +178,7 @@ class InstallFancyProgressTracker(progress.FancyUNIXProgressTracker):
         self._act_started = False
         self._ind_started = False
         self._item_started = False
+        self._package_dict = {}
 
     def eval_output_start(self):
         super(InstallFancyProgressTracker, self).eval_output_start()
@@ -192,7 +203,12 @@ class InstallFancyProgressTracker(progress.FancyUNIXProgressTracker):
             self._dl_started = True
 
         if self._dl_cur_pkg != self.cur_pkg:
-            self.trans_logger.debug("Download: %s ..." % self.cur_pkg)
+            if (self.cur_pkg in self._package_dict):
+                fmri = self._package_dict[self.cur_pkg]
+                self.trans_logger.debug("Download: %s ...", fmri.get_fmri())
+            else:
+                # only hits this at end when the cur_pkg becomes empty str
+                self.trans_logger.debug("Download: %s ..." % self.cur_pkg)
             self._dl_cur_pkg = self.cur_pkg
 
     def dl_output_done(self):
@@ -233,6 +249,9 @@ class InstallFancyProgressTracker(progress.FancyUNIXProgressTracker):
         super(InstallFancyProgressTracker, self).item_output_done()
         self.trans_logger.debug("%s ... Done." % self.item_phase)
         self._item_started = False
+
+    def set_package_dict(self, package_dict):
+        self._package_dict = package_dict
 
 
 class AbstractIPS(Checkpoint):
@@ -315,6 +334,9 @@ class AbstractIPS(Checkpoint):
         self._add_origin = []
         self._add_mirror = []
         self._image_args = {}
+
+        # list for holding package plans (publisher, package, version)
+        self._package_dict = {}
 
         # publisher list to hold a reference between publishers and
         # origins/mirrors
@@ -726,6 +748,15 @@ class AbstractIPS(Checkpoint):
                             self.logger.info("Package licenses may be viewed "
                                 "using the command:")
                             self.logger.info("  pkg info --license <pkg_fmri>")
+
+                        # building up a collection of packages so we have
+                        # the publisher and version info for each package
+                        package_dict = {}
+                        plan = self.api_inst.describe().get_changes()
+                        for pkg_plan in plan:
+                            fmri = PkgFmri(pkg_plan[1].__str__())
+                            package_dict[fmri.get_name()] = fmri
+                        self.prog_tracker.set_package_dict(package_dict)
 
                         # Execute the transfer action
                         self.api_inst.prepare()
