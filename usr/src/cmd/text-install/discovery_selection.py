@@ -56,7 +56,7 @@ class DiscoverySelection(BaseScreen):
     ISCSI_DETAIL = _("Discover iSCSI LUNs")
 
     ITEM_OFFSET = 2
-    ITEM_MAX_WIDTH = 14
+    ITEM_MAX_WIDTH = 21
     ITEM_DESC_OFFSET = ITEM_MAX_WIDTH + ITEM_OFFSET + 1
 
     HELP_DATA = (TUI_HELP + "/%s/discovery_selection.txt",
