@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -39,7 +39,6 @@ import os
 import linecache
 import pwd
 import platform
-import re
 import shutil
 import stat
 import sys
@@ -73,6 +72,7 @@ SYSTEM_CONF = "/etc/netboot/system.conf"
 
 DEVPROP = "/usr/sbin/devprop"
 ISAINFO = "/usr/bin/isainfo"
+PRTCONF = "/usr/sbin/prtconf"
 SU = "/usr/bin/su"
 TEST = "/usr/bin/test"
 UNAME = "/usr/sbin/uname"
@@ -348,9 +348,24 @@ class DerivedManifestModule(AbstractCheckpoint):
         os.environ["SI_CPU"] = processor  # Same as SI_ARCH
         os.environ["SI_HOSTNAME"] = nodename
         os.environ["SI_KARCH"] = machine
-        os.environ["SI_MODEL"] = os.environ["SI_PLATFORM"] = \
-            self.call_cmd([UNAME, "-i"],
-                          "Error getting system model / platform via uname -i")
+
+        if processor == "sparc":
+            prtconf_b = self.call_cmd([PRTCONF, "-b"],
+                                      "Error getting system model / "
+                                      "platform via prtconf -b")
+            try:
+                os.environ["SI_MODEL"] = os.environ["SI_PLATFORM"] = \
+                    prtconf_b.split(None, 1)[1]
+            except IndexError:
+                # Keep going.  Script may not be using these variables.
+                # The fact that prtconf had an error is logged.
+                pass
+        else:
+            os.environ["SI_MODEL"] = os.environ["SI_PLATFORM"] = \
+                self.call_cmd([UNAME, "-i"],
+                              "Error getting system model / platform via "
+                              "uname -i")
+
         os.environ["SI_NATISA"] = \
             self.call_cmd([ISAINFO, "-n"],
                           "Error getting system native instruction set "

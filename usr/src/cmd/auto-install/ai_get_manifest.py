@@ -33,6 +33,7 @@ import getopt
 import gettext
 import httplib
 import os
+import platform
 import socket
 from subprocess import Popen, PIPE
 import re
@@ -259,8 +260,20 @@ class AICriteriaPlatform(AICriteria):
                                  AICriteriaPlatform.client_platform)
             return
 
-        cmd = "/usr/bin/uname -i"
-        AICriteriaPlatform.client_platform, ret = ai_exec_cmd(cmd)
+        (system, nodename, release, version, machine, processor) = \
+            platform.uname()
+
+        if processor == "sparc":
+            prtconf_b, ret = ai_exec_cmd("/usr/sbin/prtconf -b")
+            if ret == 0 and prtconf_b:
+                # String after first space of first line.
+                AICriteriaPlatform.client_platform = \
+                    prtconf_b.splitlines()[0].split(None, 1)[1]
+            else:
+                AICriteriaPlatform.client_platform = ""
+        else:
+            cmd = "/usr/bin/uname -i"
+            AICriteriaPlatform.client_platform, ret = ai_exec_cmd(cmd)
 
         if ret != 0 or AICriteriaPlatform.client_platform == "":
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
@@ -373,7 +386,7 @@ class AICriteriaNetworkInterface(AICriteria):
         #
         # Obtain network interface name, which will be queried in next
         # step in order to obtain required network parameters
-        # 
+        #
         # get name, class and active property of all network interfaces
         # Select the 1st interface whose class is 'ip' and is active.
         cmd = IPADM + " show-if -o ifname,class,active -p"

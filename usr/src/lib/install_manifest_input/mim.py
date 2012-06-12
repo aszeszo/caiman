@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -69,9 +69,9 @@ IDENTIFIER = "[A-Za-z]\w*"
 
 # Allowed element values are:
 # - Any non-whitespace char except double quote, enveloped by double quotes
-DBL_QUOTED_VALUE = "(\"[^ \t\n\r\f\v/\[\]=@\"]+\")"
+DBL_QUOTED_VALUE = "(\"[^ \t\n\r\f\v\"]+\")"
 # - Any non-whitespace char except single quote, enveloped by single quotes
-SGL_QUOTED_VALUE = "('[^ \t\n\r\f\v/\[\]=@\']+')"
+SGL_QUOTED_VALUE = "('[^ \t\n\r\f\v\']+')"
 # - Any non-whitespace char except quotes and @/[]= when not enveloped by
 #   quotes.
 UNQUOTED_VALUE = "([^ \t\n\r\f\v\'\"/\[\]=@]+)"

@@ -31,7 +31,6 @@ import logging
 import re
 
 import solaris_install.sysconfig.profile
-import solaris_install.sysconfig.profile.support_info
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig import _, SCI_HELP
 from solaris_install.sysconfig.profile.network_info import NetworkInfo
@@ -461,14 +460,14 @@ class SupportNetConfigScreen(BaseScreen):
     # Identify choices for internal use
     CHOICES = [
                (SupportInfo.DIRECT,
-                _("No proxy           "
-                  "Use system Internet connection parameters.")),
+                _("No proxy"),
+                _("Use system Internet connection parameters.")),
                (SupportInfo.PROXY,
-                _("Proxy              "
-                  "Enter proxy information on the next screen")),
+                _("Proxy"),
+                _("Enter proxy information on the next screen")),
                (SupportInfo.HUB,
-                _("Aggregation Hubs   "
-                  "Enter hubs information on the next screen"))
+                _("Aggregation Hubs"),
+                _("Enter hubs information on the next screen"))
               ]
 
     HEADER_TEXT = _("Support - Network Configuration")
@@ -490,6 +489,12 @@ class SupportNetConfigScreen(BaseScreen):
         self.window_area = WindowArea()
 
         self.choice_dict = dict()
+
+        self.max_title_len = 0
+        for (key, title, text) in self.CHOICES:
+            title_len = textwidth(title)
+            if title_len > self.max_title_len:
+                self.max_title_len = title_len
 
         self.current_choice = None
 
@@ -544,11 +549,12 @@ class SupportNetConfigScreen(BaseScreen):
         # Display all choices.
         for choice in SupportNetConfigScreen.CHOICES:
             self.window_area.y_loc = y_loc
-            key, text = choice
-            self.window_area.columns = min(textwidth(text) + 1,
+            key, title, text = choice
+            line = title.ljust(self.max_title_len + 2) + text
+            self.window_area.columns = min(textwidth(line) + 1,
                                            full_field_width)
             widget = ListItem(self.window_area, window=self.center_win,
-                              text=text)
+                              text=line)
             widget.item_key = key
             self.choice_dict[key] = widget
             y_loc += 2
