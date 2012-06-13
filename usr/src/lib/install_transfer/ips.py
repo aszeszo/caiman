@@ -116,7 +116,7 @@ class InstallCLIProgressTracker(progress.NullProgressTracker):
         if self._dl_cur_pkg != self.cur_pkg:
             if (self.cur_pkg in self._package_dict):
                 fmri = self._package_dict[self.cur_pkg]
-                self._logger_output("Download: %s ...", fmri.get_fmri())
+                self._logger_output("Download: %s ..." % fmri.get_fmri())
             else:
                 # only hits this at end when the cur_pkg becomes empty str
                 self._logger_output("Download: %s ..." % self.cur_pkg)
@@ -205,7 +205,7 @@ class InstallFancyProgressTracker(progress.FancyUNIXProgressTracker):
         if self._dl_cur_pkg != self.cur_pkg:
             if (self.cur_pkg in self._package_dict):
                 fmri = self._package_dict[self.cur_pkg]
-                self.trans_logger.debug("Download: %s ...", fmri.get_fmri())
+                self.trans_logger.debug("Download: %s ..." % fmri.get_fmri())
             else:
                 # only hits this at end when the cur_pkg becomes empty str
                 self.trans_logger.debug("Download: %s ..." % self.cur_pkg)
