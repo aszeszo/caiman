@@ -66,6 +66,6 @@ Select the Aggregation Hubs option and complete the hub field for a service only
 
 FOR MORE INFORMATION
 
-For further information about Oracle Configuration Manager, see the "Oracle Configuration Manager Installation and Administration Guide". See also http://www.oracle.com/support/policies.html.
+For further information about Oracle Configuration Manager, see the "Oracle Configuration Manager Installation and Administration Guide". See also http://www.oracle.com/goto/solarisautoreg.
 
 For further information about ASR, see the documentation included at http://www.oracle.com/asr.

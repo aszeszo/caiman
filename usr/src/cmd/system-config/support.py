@@ -85,7 +85,7 @@ class SupportMOSScreen(BaseScreen):
         "Provide your email address to be informed of security issues, "
         "install the product and initiate configuration manager.")
     INTRO_2 = _(
-        "Please see http://www.oracle.com/support/policies.html for details.")
+        "Please see http://www.oracle.com/goto/solarisautoreg for details.")
     EMAIL_LABEL = _("Email:")
     EMAIL_FOOTER_TEXT = _("Easier for you if you use your My Oracle Support "
                           "email address/username.")

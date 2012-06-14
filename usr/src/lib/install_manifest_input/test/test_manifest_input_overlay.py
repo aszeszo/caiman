@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 Tests of Manifest Input Module overlay() functionality.
@@ -41,6 +41,7 @@ from solaris_install.manifest_input.mim import ManifestInput
 # non-final lines. To the python interpreter these are superfluous, but the
 # unit test framework looks at them to know the length of the full message
 # string to print.  Please do not delete them.
+
 
 class TestMIMOverlayCommon(unittest.TestCase):
     '''
@@ -101,8 +102,8 @@ class TestOverlayA(TestMIMOverlayCommon):
     Break a manifest apart and piece it together using overlay functionality.
 
     This class orchestrates a test whereby a proper manifest (BASE_MANIFEST)
-    which (is assumed to) contain <sc_embedded_manifest>, <add_drivers> and
-    <software> is split into three sections, each containing one section, and
+    which (is assumed to) contain <target>, <software> and <configuration>
+    is split into three sections, each containing one section, and
     overlay is used to put the sections back together into a viable manifest
     again.
     '''
@@ -113,12 +114,12 @@ class TestOverlayA(TestMIMOverlayCommon):
     # Names of the XML files which hold one section apiece.
     TARGET_XML = "/tmp/test_target.xml"
     SOFTWARE_XML = "/tmp/test_software.xml"
-    ADD_DRIVER_XML = "/tmp/test_add_drivers.xml"
+    CONFIG_XML = "/tmp/test_config.xml"
 
     # Paths to roots of each of the three sections.
     TARGET_SUBTREE = "/auto_install/ai_instance/target"
     SOFTWARE_SUBTREE = "/auto_install/ai_instance/software"
-    ADD_DRIVER_SUBTREE = "/auto_install/ai_instance/add_drivers"
+    CONFIG_SUBTREE = "/auto_install/ai_instance/configuration"
 
     # Diff command.
     DIFF = "/usr/bin/diff"
@@ -149,7 +150,7 @@ class TestOverlayA(TestMIMOverlayCommon):
         TestMIMOverlayCommon.setUp(self)
 
         # Assume the manifest used has separate sibling sections for
-        # add_drivers, software and sc_embedded_manifest, and no others.
+        # configuration, software and sc_embedded_manifest, and no others.
         # Create three files, each with one of the sections.
 
         # Read in base manifest, and write it out, stripping whitespace lines.
@@ -159,19 +160,12 @@ class TestOverlayA(TestMIMOverlayCommon):
         TestOverlayA.strip_blank_lines(self.FULL_XML)
 
         # Generate the three files with subsections.
-        self.prune(self.ADD_DRIVER_SUBTREE)
         self.prune(self.SOFTWARE_SUBTREE)
         self.tree.write(self.TARGET_XML, pretty_print=True)
 
         self.tree = etree.parse(self.BASE_MANIFEST, parser)
-        self.prune(self.ADD_DRIVER_SUBTREE)
         self.prune(self.TARGET_SUBTREE)
         self.tree.write(self.SOFTWARE_XML, pretty_print=True)
-
-        self.tree = etree.parse(self.BASE_MANIFEST, parser)
-        self.prune(self.TARGET_SUBTREE)
-        self.prune(self.SOFTWARE_SUBTREE)
-        self.tree.write(self.ADD_DRIVER_XML, pretty_print=True)
 
     def tearDown(self):
         '''
@@ -184,17 +178,14 @@ class TestOverlayA(TestMIMOverlayCommon):
             os.unlink(self.TARGET_XML)
         if os.path.exists(self.SOFTWARE_XML):
             os.unlink(self.SOFTWARE_XML)
-        if os.path.exists(self.ADD_DRIVER_XML):
-            os.unlink(self.ADD_DRIVER_XML)
 
     def test_overlay_1(self):
         '''
         Put original manifest together from pieces, and verify it.
         '''
         mim = ManifestInput(self.AIM_MANIFEST_FILE)
-        mim.load(self.TARGET_XML, not self.OVERLAY)
-        mim.load(self.ADD_DRIVER_XML, self.OVERLAY)
-        mim.load(self.SOFTWARE_XML, self.OVERLAY)
+        mim.load(self.SOFTWARE_XML, not self.OVERLAY)
+        mim.load(self.TARGET_XML, self.OVERLAY)
         mim.commit()
         TestOverlayA.strip_blank_lines(self.AIM_MANIFEST_FILE)
 
@@ -581,34 +572,34 @@ class TestOverlayInsertionOrderCommon(TestMIMOverlayCommon):
     '''
     def check_insertion_order(self):
         '''
-        Verify that target, sofware, add_drivers nodes are present and in order
+        Verify that target, sofware, configuration nodes exist and in order
         '''
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
         ai_instance_node = mim._xpath_search("/auto_install[1]/ai_instance[1]")
-        found_target = found_software = found_add_drivers = False
+        found_target = found_software = found_config = False
         for child in ai_instance_node[0]:
             if child.tag == "target":
-                self.assertTrue(not found_software and not found_add_drivers,
-                                "Target element not added before software " + 
-                                "or add_drivers elements")
+                self.assertTrue(not found_software and not found_config,
+                                "Target element not added before software " +
+                                "or configuration elements")
                 found_target = True
                 continue
             if child.tag == "software":
-                self.assertTrue(found_target and not found_add_drivers,
+                self.assertTrue(found_target and not found_config,
                                 "Software element not added between target " +
-                                "and add_drivers elements")
+                                "and configuration elements")
                 found_software = True
                 continue
-            if child.tag == "add_drivers":
+            if child.tag == "configuration":
                 self.assertTrue(found_target and found_software,
-                                "Add_drivers element not added after target " +
-                                "and software elements")
+                                "Configuration element not added after "
+                                "target and software elements")
                 return
         self.assertTrue(found_target, "Target element not added")
         self.assertTrue(found_software, "Software element not added")
-        self.assertTrue(found_add_drivers, "Add_drivers element not added")
+        self.assertTrue(found_config, "Configuration element not added")
 
 
 class TestOverlay11(TestOverlayInsertionOrderCommon):
@@ -617,13 +608,13 @@ class TestOverlay11(TestOverlayInsertionOrderCommon):
     def setUp(self):
         TestOverlayInsertionOrderCommon.setUp(self)
 
-        # Set up initial file with <target> and <add_drivers> sections.  DTD
-        # specifies that <software> goes between <target> and <add_drivers>.
+        # Set up initial file with <target> and <configuration> sections.  DTD
+        # specifies that <software> goes between <target> and <configuration>.
         with open(self.MAIN_XML_FILE, "w") as main_xml:
             main_xml.write('<auto_install>\n')
             main_xml.write('  <ai_instance name="firstname">\n')
             main_xml.write('    <target/>\n')
-            main_xml.write('    <add_drivers/>\n')
+            main_xml.write('    <configuration source="abc" name="def"/>\n')
             main_xml.write('  </ai_instance>\n')
             main_xml.write('</auto_install>\n')
 
@@ -647,7 +638,7 @@ class TestOverlay11(TestOverlayInsertionOrderCommon):
 
     def test_overlay_11(self):
         '''
-        Verify that software section went between target and add_drivers.
+        Verify that software section went between target and configuration.
         '''
         self.check_insertion_order()
 
@@ -664,12 +655,12 @@ class TestOverlay12(TestOverlayInsertionOrderCommon):
             main_xml.write('<auto_install>\n')
             main_xml.write('  <ai_instance name="firstname">\n')
             main_xml.write('    <software/>\n')
-            main_xml.write('    <add_drivers/>\n')
+            main_xml.write('    <configuration source="abc" name="def"/>\n')
             main_xml.write('  </ai_instance>\n')
             main_xml.write('</auto_install>\n')
 
         # Set up overlay file with <target> that goes before <software> and
-        # <add_drivers>
+        # <configuration>
         with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
             ovrl_xml.write('<auto_install>\n')
             ovrl_xml.write('  <ai_instance>\n')
@@ -690,7 +681,7 @@ class TestOverlay12(TestOverlayInsertionOrderCommon):
 
     def test_overlay_12(self):
         '''
-        Verify that target section went before software and add_drivers.
+        Verify that target section went before software and configuration.
         '''
         self.check_insertion_order()
 
@@ -703,8 +694,8 @@ class TestOverlay13(TestOverlayInsertionOrderCommon):
     def setUp(self):
         TestOverlayInsertionOrderCommon.setUp(self)
 
-        # Set up initial file with <target> and <add_drivers> sections.  DTD
-        # specifies that <add_drivers> goes after <target> and <software>.
+        # Set up initial file with <target> and <configuration> sections.  DTD
+        # specifies that <configuration> goes after <target> and <software>.
         with open(self.MAIN_XML_FILE, "w") as main_xml:
             main_xml.write('<auto_install>\n')
             main_xml.write('  <ai_instance name="firstname">\n')
@@ -716,7 +707,7 @@ class TestOverlay13(TestOverlayInsertionOrderCommon):
         with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
             ovrl_xml.write('<auto_install>\n')
             ovrl_xml.write('  <ai_instance>\n')
-            ovrl_xml.write('    <add_drivers/>\n')
+            ovrl_xml.write('    <configuration source="abc" name="def"/>\n')
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
 
@@ -733,7 +724,7 @@ class TestOverlay13(TestOverlayInsertionOrderCommon):
 
     def test_overlay_13(self):
         '''
-        Verify that add_drivers section went after target and software.
+        Verify that configuration section went after target and software.
         '''
         self.check_insertion_order()
 
@@ -742,15 +733,15 @@ class TestOverlay14(TestMIMOverlayCommon):
     '''
     Place element which normally goes after an element that is not present.
 
-    Like above, but <software> node is missing.  Tests that <add_drivers> gets
-    added after <target>.
+    Like above, but <software> node is missing.  Tests that <configuration>
+    gets added after <target>.
     '''
 
     def setUp(self):
         TestMIMOverlayCommon.setUp(self)
 
-        # Set up initial file with <target> and <add_drivers> sections.  DTD
-        # specifies that <software> goes between <target> and <add_drivers>.
+        # Set up initial file with <target> and <configuration> sections.  DTD
+        # specifies that <software> goes between <target> and <configuration>.
         with open(self.MAIN_XML_FILE, "w") as main_xml:
             main_xml.write('<auto_install>\n')
             main_xml.write('  <ai_instance name="firstname">\n')
@@ -761,7 +752,7 @@ class TestOverlay14(TestMIMOverlayCommon):
         with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
             ovrl_xml.write('<auto_install>\n')
             ovrl_xml.write('  <ai_instance>\n')
-            ovrl_xml.write('    <add_drivers/>\n')
+            ovrl_xml.write('    <configuration source="abc" name="def"/>\n')
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
 
@@ -778,7 +769,7 @@ class TestOverlay14(TestMIMOverlayCommon):
 
     def test_overlay_14(self):
         '''
-        Verify that add_drivers goes after target.
+        Verify that configuration goes after target.
 
         Normally it would go after software, but software is missing and
         software comes after target.
@@ -787,21 +778,21 @@ class TestOverlay14(TestMIMOverlayCommon):
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
         ai_instance_node = mim._xpath_search("/auto_install[1]/ai_instance[1]")
-        found_target = found_add_drivers = False
+        found_target = found_config = False
         for child in ai_instance_node[0]:
             if child.tag == "target":
-                self.assertTrue(not found_add_drivers,
+                self.assertTrue(not found_config,
                                 "Target element not added before software " +
-                                "or add_drivers elements")
+                                "or configuration elements")
                 found_target = True
                 continue
-            if child.tag == "add_drivers":
+            if child.tag == "configuration":
                 self.assertTrue(found_target,
-                                "Add_drivers element not added after target " +
-                                "and software elements")
+                                "Configuration element not added after "
+                                "target and software elements")
                 return
         self.assertTrue(found_target, "Target element not added")
-        self.assertTrue(found_add_drivers, "Add_drivers element not added")
+        self.assertTrue(found_config, "Configure element not added")
 
 
 class TestOverlay15(TestMIMOverlayCommon):
@@ -816,8 +807,8 @@ class TestOverlay15(TestMIMOverlayCommon):
     def setUp(self):
         TestMIMOverlayCommon.setUp(self)
 
-        # Set up initial file with <target> and <add_drivers> sections.  DTD
-        # specifies that <software> goes between <target> and <add_drivers>.
+        # Set up initial file with <target> and <configuration> sections.  DTD
+        # specifies that <software> goes between <target> and <configuration>.
         with open(self.MAIN_XML_FILE, "w") as main_xml:
             main_xml.write('<auto_install>\n')
             main_xml.write('  <ai_instance name="firstname">\n')

@@ -38,7 +38,7 @@ import gtk
 from solaris_install.engine import InstallEngine
 from solaris_install.gui_install.base_screen import BaseScreen, \
     NotOkToProceedError
-from solaris_install.gui_install.gui_install_common import \
+from solaris_install.gui_install.gui_install_common import _, \
     empty_container, modal_dialog, COLOR_WHITE, RELEASE, GLADE_ERROR_MSG
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.logger import INSTALL_LOGGER_NAME
@@ -265,23 +265,44 @@ class ConfirmScreen(BaseScreen):
 
         empty_container(self.supportvbox, destroy=True)
         support = from_engine().support
-        support_str = ""
-        if not support.mos_email and not support.mos_password:
-            support_str += _("No support configured")
-        else:
-            if not support.mos_password:
-                support_str += _("Anonymous support")
-            else:
-                support_str += _("My Oracle Support")
-
-            if support.netcfg == SupportInfo.PROXY:
-                support_str += " " + _("via Proxy")
-            elif support.netcfg == SupportInfo.HUB:
-                support_str += " " + _("via Hub")
-        text_str = _("Support configuration: %s") % support_str
-        add_detail_line(self.supportvbox, text_str)
         self.logger.info("-- Support --")
-        self.logger.info('\t' + text_str)
+        if ((not support.mos_email and not support.mos_password) or
+            (not support.ocm_available and not support.asr_available)):
+            text_str = _("No OCM or ASR support configured")
+            add_detail_line(self.supportvbox, text_str)
+            self.logger.info('\t' + text_str)
+        else:
+            # One or both of OCM and ASR is installed if we got here.
+            ocm_str = asr_str = None
+            if not support.mos_password:
+                ocm_str = _("Anonymous OCM support\n")
+            else:
+                if support.ocm_available:
+                    ocm_str = _("My Oracle Support for OCM")
+                if support.asr_available:
+                    asr_str = _("My Oracle Support for ASR")
+            if ocm_str:
+                add_detail_line(self.supportvbox, ocm_str)
+                self.logger.info('\t' + ocm_str)
+                ocm_str = None
+                if support.netcfg == SupportInfo.PROXY:
+                    ocm_str = _("OCM server contacted via Proxy")
+                elif support.ocm_hub:
+                    ocm_str = _("OCM server contacted via Hub")
+                if ocm_str:
+                    add_detail_line(self.supportvbox, ocm_str)
+                    self.logger.info('\t' + ocm_str)
+            if asr_str:
+                add_detail_line(self.supportvbox, asr_str)
+                self.logger.info('\t' + asr_str)
+                asr_str = None
+                if support.netcfg == SupportInfo.PROXY:
+                    asr_str = _("ASR server contacted via Proxy")
+                elif support.asr_hub:
+                    asr_str = _("ASR server contacted via ASR Manager")
+                if asr_str:
+                    add_detail_line(self.supportvbox, asr_str)
+                    self.logger.info('\t' + asr_str)
 
         empty_container(self.accountvbox, destroy=True)
         if profile.loginname is None:

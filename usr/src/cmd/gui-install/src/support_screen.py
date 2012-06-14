@@ -38,7 +38,7 @@ import gtk
 
 from solaris_install.gui_install.base_screen import BaseScreen, \
     NotOkToProceedError
-from solaris_install.gui_install.gui_install_common import \
+from solaris_install.gui_install.gui_install_common import _, \
     make_url, modal_dialog, open_browser, GLADE_ERROR_MSG, INTERNAL_ERR_MSG
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig.profile import from_engine
@@ -351,25 +351,6 @@ class SupportScreen(BaseScreen):
             modal_dialog(msg1, msg2)
             raise NotOkToProceedError(msg1)
 
-        # WARNING - don't allow user to skip registration without
-        # showing them a warning message
-        if not email and not self._allow_no_reg_override:
-            # set flag so we only show this once; next time just proceed
-            self._allow_no_reg_override = True
-            msg1 = SupportInfo.MSGS["no_email"]
-            msg2 = NO_REG_WARN_MSG
-            LOGGER.info("Validation Warning:")
-            LOGGER.info(msg1)
-            ok_to_proceed = modal_dialog(msg1, msg2, two_buttons=True,
-                                         yes_no=True)
-
-            if ok_to_proceed:
-                self._clear_sc_profile()
-                return
-
-            self._support_email_entry.grab_focus()
-            raise NotOkToProceedError(msg1)
-
         # Determine if user inputs have changed in any material way from
         # last time authentication was attempted
         any_changes = False
@@ -407,6 +388,25 @@ class SupportScreen(BaseScreen):
                     any_changes = True
                 elif asr_url != self._asr_url:
                     any_changes = True
+
+        # WARNING - don't allow user to skip registration without
+        # showing them a warning message
+        if not email and not self._allow_no_reg_override:
+            # set flag so we only show this once; next time just proceed
+            self._allow_no_reg_override = True
+            msg1 = SupportInfo.MSGS["no_email"]
+            msg2 = NO_REG_WARN_MSG
+            LOGGER.info("Validation Warning:")
+            LOGGER.info(msg1)
+            ok_to_proceed = modal_dialog(msg1, msg2, two_buttons=True,
+                                         yes_no=True)
+
+            if ok_to_proceed:
+                self._clear_sc_profile()
+                return
+
+            self._support_email_entry.grab_focus()
+            raise NotOkToProceedError(msg1)
 
         # Save values entered for comparison next time around
         self._email = email

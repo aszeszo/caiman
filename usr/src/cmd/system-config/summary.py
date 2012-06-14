@@ -118,7 +118,7 @@ class SummaryScreen(BaseScreen):
                                       " when logging in."))
                 if self.sysconfig.system.locale is None:
                     self.sysconfig.system.determine_locale()
-                summary_text.append(_("  Default language: %s") %
+                summary_text.append("  " + _("Default language: %s") %
                                     self.sysconfig.system.actual_lang)
 
             # keyboard layout belongs to SC_GROUP_KBD group
@@ -126,7 +126,7 @@ class SummaryScreen(BaseScreen):
                 summary_text.append("")
                 summary_text.append(_("Keyboard layout: *The following can be "
                                       "changed when logging in."))
-                summary_text.append(_("  Default keyboard layout: %s") %
+                summary_text.append("  " + _("Default keyboard layout: %s") %
                                     self.sysconfig.system.keyboard)
                 summary_text.append("")
 
@@ -166,7 +166,7 @@ class SummaryScreen(BaseScreen):
 
         # hostname belongs to 'identity' group
         if configure_group(SC_GROUP_IDENTITY):
-            network_summary.append(_("  Computer name: %s") %
+            network_summary.append("  " + _("Computer name: %s") %
                                    self.sysconfig.system.hostname)
 
         if not configure_group(SC_GROUP_NETWORK):
@@ -174,19 +174,21 @@ class SummaryScreen(BaseScreen):
 
         nic = self.sysconfig.nic
         if nic.type == NetworkInfo.AUTOMATIC:
-            network_summary.append(_("  Network Configuration: Automatic"))
+            network_summary.append("  " +
+                                   _("Network Configuration: Automatic"))
         elif nic.type == NetworkInfo.NONE:
-            network_summary.append(_("  Network Configuration: None"))
+            network_summary.append("  " + _("Network Configuration: None"))
         elif nic.type == NetworkInfo.FROMGZ:
-            network_summary.append(_("  Network Configuration:"
+            network_summary.append("  " + _("Network Configuration:"
                                      " Mandated from global zone"))
         elif nic.type == NetworkInfo.MANUAL:
-            network_summary.append(_("  Manual Configuration: %s")
+            network_summary.append("  " + _("Manual Configuration: %s")
                                    % NetworkInfo.get_nic_desc(nic.nic_iface))
-            network_summary.append(_("IP Address: %s") % nic.ip_address)
-            network_summary.append(_("Netmask: %s") % nic.netmask)
+            network_summary.append("    " +
+                                   _("IP Address: %s") % nic.ip_address)
+            network_summary.append("    " + _("Netmask: %s") % nic.netmask)
             if nic.gateway:
-                network_summary.append(_("Router: %s") % nic.gateway)
+                network_summary.append("    " + _("Router: %s") % nic.gateway)
         return network_summary
 
     def _get_nameservice(self, summary):
@@ -202,11 +204,11 @@ class SummaryScreen(BaseScreen):
         primary = self.sysconfig.users.user
         user_summary = []
         if not root.password:
-            user_summary.append(_("  Warning: No root password set"))
+            user_summary.append("  " + _("Warning: No root password set"))
         if primary.login_name:
-            user_summary.append(_("  Username: %s") % primary.login_name)
+            user_summary.append("  " + _("Username: %s") % primary.login_name)
         else:
-            user_summary.append(_("  No user account"))
+            user_summary.append("  " + _("No user account"))
         return user_summary
 
     def get_tz_summary(self):
@@ -220,9 +222,9 @@ class SummaryScreen(BaseScreen):
         support = self.sysconfig.support
 
         if support.netcfg == SupportInfo.NOSVC:
-            support_summary.append(_("  Not generating a Support profile as "
-                                     "OCM and ASR services are not "
-                                     "installed."))
+            support_summary.append("  " + _("Not generating a Support "
+                                            "profile as OCM and ASR services "
+                                            "are not installed."))
             return support_summary
 
         ocm_level = None
@@ -237,67 +239,76 @@ class SummaryScreen(BaseScreen):
                 asr_level = "auth"
 
         if (ocm_level == None and asr_level == None):
-            support_summary.append(_("  No telemetry will be "
-                                     "sent automatically"))
+            support_summary.append("  " + _("No telemetry will be "
+                                            "sent automatically"))
         elif ocm_level == "unauth":
             # No need to check ASR; ocm_level == unauth implies no password
             # given, so asr_level will never be auth here.
-            support_summary.append(_("  Telemetry will be sent and associated "
-                                     "with email address:"))
-            support_summary.append("       %s" % support.mos_email)
-            support_summary.append(_("    but will not be registered with My "
-                                     "Oracle Support because"))
-            support_summary.append(_("    no password was saved."))
+            support_summary.append("  " + _("OCM telemetry will be sent and "
+                                            "associated with email address:\n"
+                                            "       %s") % support.mos_email)
+            support_summary.append("  " + _("Telemetry will not be registered "
+                                            "with My Oracle Support because "
+                                            "no password was saved."))
         else:
             # Equivalent to (ocm_level == "auth" or asr_level == "auth")
-            support_summary.append(_("  Telemetry will be sent and will be "
-                                     "registered with My Oracle Support"))
-            support_summary.append(_("    using email address:"))
-            support_summary.append("       %s" % support.mos_email)
+            if ocm_level is not None:
+                support_summary.append("  " + _("OCM telemetry will be sent."))
+            if asr_level is not None:
+                support_summary.append("  " + _("ASR telemetry will be sent."))
+            support_summary.append("  " + _("Telemetry will be registered "
+                                            "with My Oracle Support using "
+                                            "email address:\n"
+                                            "       %s") % support.mos_email)
 
             # Use the presence of OCM ciphertext to assume that successful OCM
             # validation took place.
             if support.ocm_ciphertext:
-                support_summary.append(_("  MOS credentials validated "
-                                         "for OCM"))
+                support_summary.append("  " + _("MOS credentials validated "
+                                                "for OCM"))
             elif support.ocm_available:
-                support_summary.append(_("  MOS credentials NOT validated "
-                                         "for OCM"))
+                support_summary.append("  " + _("MOS credentials NOT yet "
+                                                "validated for OCM"))
 
             # Use the presence of ASR private_key to assume that successful ASR
             # validation took place.
             if support.asr_private_key:
-                support_summary.append(_("  MOS credentials validated "
-                                         "for ASR"))
+                support_summary.append("  " + _("MOS credentials validated "
+                                                "for ASR"))
             elif support.asr_available:
-                support_summary.append(_("  MOS credentials NOT validated "
-                                         "for ASR"))
+                support_summary.append("  " + _("MOS credentials NOT yet "
+                                                "validated for ASR"))
 
             # Display different messages for different situations.
             if ((support.ocm_available and not support.ocm_ciphertext) or
                 (support.asr_available and not support.asr_private_key)):
                 # Installed systems may have different network config.
-                support_summary.append(_("  Validation will be attempted "
-                                         "again on (re)boot of "
-                                         "target system(s)"))
+                support_summary.append("  " + _("Validation will be attempted "
+                                                "again on (re)boot of "
+                                                "target system(s)"))
         if support.netcfg == SupportInfo.PROXY:
             if support.proxy_user:
-                proxy_line = (_("  Secure proxy "))
+                support_summary.append("  " +
+                                       _("Secure proxy specified: "
+                                         "Host and port: %s:%s ") %
+                                         (support.proxy_hostname,
+                                          support.proxy_port))
             else:
-                proxy_line = (_("  Proxy "))
-            proxy_line += (_("specified: host: %s" %
-                             support.proxy_hostname))
-            if support.proxy_port:
-                proxy_line += (_("  port: %s" % support.proxy_port))
+                support_summary.append("  " +
+                                       _("Proxy specified: "
+                                         "Host and port: %s:%s ") %
+                                         (support.proxy_hostname,
+                                          support.proxy_port))
             if support.proxy_user:
-                proxy_line += (_("  user: %s" % support.proxy_user))
-            support_summary.append(proxy_line)
+                support_summary.append("    " +
+                                       _("User: %s") % support.proxy_user)
         elif support.netcfg == SupportInfo.HUB:
             if support.ocm_hub:
-                support_summary.append(_("  OCM hub: %s" % support.ocm_hub))
+                support_summary.append("  " + _("OCM hub: %s") %
+                                                support.ocm_hub)
             if support.asr_hub:
-                support_summary.append(_("  ASR hub: %s" % support.asr_hub))
-
+                support_summary.append("  " + _("ASR hub: %s") %
+                                                support.asr_hub)
         return support_summary
 
 
