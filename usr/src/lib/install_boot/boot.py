@@ -243,13 +243,6 @@ class BootMenu(Checkpoint):
         if dest is None:
             raise RuntimeError("No destination path defined for boot" \
                                "file")
-        # XXX The 'dest' field, I believe, should be prepended with the
-        # string token '%(systemroot)s' but it currently appears not to
-        # be the case sometimes, and instead specifies an absolute path
-        # such as '/boot/grub/menu.lst'
-        # Check for a leading slash and prepend if necessary
-        if os.path.isabs(dest):
-            dest = '%(' + BootConfig.TOKEN_SYSTEMROOT + ')s' + dest
 
         real_dest = dest % (self.boot_tokens)
         par_dir = os.path.abspath(os.path.join(real_dest, os.path.pardir))
@@ -614,7 +607,7 @@ class SystemBootMenu(BootMenu):
 
         # Detect the gui-install client by checking for it's profile object
         # in the DOC
-        gui_prof = self.doc.persistent.get_first_child(name="GUI Install")
+        gui_prof = self.doc.volatile.get_first_child(name="GUI Install")
 
         # If the client is gui-install and the console device is a graphical
         # framebuffer, enable the BootLoader splash and happy face boot.
@@ -626,7 +619,7 @@ class SystemBootMenu(BootMenu):
             self.config.boot_loader.setprop(
                 BootLoader.PROP_CONSOLE,
                 BootLoader.PROP_CONSOLE_GFX)
-            instance.kargs = "-B $ZFS-BOOTFS,console=graphics"
+            instance.kargs = "-B console=graphics"
         else:
             self.logger.info("Disabling boot loader graphical splash")
             self.config.boot_loader.setprop(
@@ -876,16 +869,6 @@ class SystemBootMenu(BootMenu):
             if self.boot_target[BOOT_ENV].mountpoint == '/':
                 raise RuntimeError("Boot checkpoint can not be executed on " \
                                      "a live system except with dry run mode")
-            # XXX Seth: Pybootmgmt ought to be creating this directory tree
-            # when doing a physical boot loader installation onto the disk.
-            # While it's being fixed, create the directories ourselves to
-            # make legacy Grub installation work.
-            if not dry_run and self.config.boot_loader.name == "Legacy GRUB":
-                grub_dir = os.path.join(self.pool_tld_mount, "boot", "grub")
-                if not os.path.exists(grub_dir):
-                    self.logger.info("Creating Legacy GRUB config directory:" \
-                                     "\n\t%s" % (grub_dir))
-                    os.makedirs(grub_dir, 0755)
 
             # Danger Will Robinson!!
             self.logger.info("Installing boot loader to devices: %s" \
