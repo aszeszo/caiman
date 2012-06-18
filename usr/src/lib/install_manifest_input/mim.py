@@ -574,7 +574,7 @@ class ManifestInput(object):
           MimInvalidError - Cannot add a second tree root node
           MimMatchError - Ambiguity error:  Parent path matches more than
               one element
-          MimMatchError - No matching parent path exists
+          MimMatchError - No path found to element
           Errors raised by etree.getpath()
         '''
         # Explicitly test for a None value as etree accepts it and we do not.
@@ -684,8 +684,8 @@ class ManifestInput(object):
                 insert_before = []
                 mults_ok = True
 
-            # Check for no list (as oppoosed to empty list)
-            if insert_before == None:
+            # Check for no list (as opposed to empty list)
+            if insert_before is None:
                 # Child doesn't belong under this parent
                 raise milib.MimInvalidError(milib.ERR_NODE_PLACEMENT %
                                       {"mnode": branch,

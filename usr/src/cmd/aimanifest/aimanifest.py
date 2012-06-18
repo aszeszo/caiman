@@ -174,10 +174,10 @@ def _setup_logging():
                                 datefmt="%H:%M:%S",
                                 filename=logfile_name,
                                 filemode="a")
-        except IOError as (errno, strerror):
-            raise SystemExit(_("AIM_LOGFILE I/O Error(%(errno)s) :"
+        except IOError as (errnum, strerror):
+            raise SystemExit(_("AIM_LOGFILE I/O Error(%(errnum)s) :"
                                "%(strerror)s : %(fname)s"
-                               % ({"errno": errno, "strerror": strerror, \
+                               % ({"errnum": errnum, "strerror": strerror, \
                                "fname": logfile_name})))
 
         logging_level = os.environ.get("AIM_LOGLEVEL")
@@ -236,15 +236,19 @@ def _do_aimanifest(argv):
         parser.error_w_errno(errno.EINVAL, _("extra arguments given"))
     if (command != "load") and options.is_incremental:
         parser.error_w_errno(errno.EINVAL,
-                     _("-i is not applicable for command given"))
+                             _("-i is not applicable for command given"))
     if command not in cmds_r_option and options.show_path:
         parser.error_w_errno(errno.EINVAL,
-                     _("-r is not applicable for command given"))
+                             _("-r is not applicable for command given"))
+
+    aim_manifest = os.environ.get("AIM_MANIFEST")
+    if aim_manifest is None:
+        parser.error_w_errno(errno.EINVAL,
+                             _("AIM_MANIFEST environment variable is not set"))
 
     # Pass AIM_MANIFEST as the output file.
     try:
-        mim = ManifestInput(os.environ.get("AIM_MANIFEST"),
-                            os.environ.get("AIM_DTD"))
+        mim = ManifestInput(aim_manifest, os.environ.get("AIM_DTD"))
     except (milib.MimError, IOError) as err:
         return (_handle_error(err))
 
@@ -278,7 +282,7 @@ def _do_aimanifest(argv):
             value = "\"\""
 
         AIM_LOGGER.info(_("successful: returns value:%(mvalue)s, "
-                      "path:%(mpath)s") % {"mvalue": value, "mpath": path})
+                        "path:%(mpath)s") % {"mvalue": value, "mpath": path})
 
         # Localization not needed here.
         if not options.show_path:
@@ -289,9 +293,10 @@ def _do_aimanifest(argv):
     elif (command == "load"):
         # path arg holds the filename
         AIM_LOGGER.info(_("command:%(mcommand)s, "
-                      "incremental:%(mincr)s, file:%(mfile)s") %
-                    {"mcommand": command, "mincr": str(options.is_incremental),
-                     "mfile": path})
+                        "incremental:%(mincr)s, file:%(mfile)s") %
+                        {"mcommand": command,
+                         "mincr": str(options.is_incremental),
+                         "mfile": path})
         try:
             mim.load(path, options.is_incremental)
             mim.commit(NO_VALIDATE)

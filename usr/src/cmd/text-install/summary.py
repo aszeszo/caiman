@@ -331,15 +331,15 @@ class SummaryScreen(BaseScreen):
             if support.proxy_user:
                 support_summary.append("  " +
                                        _("Secure proxy specified: "
-                                         "Host and port: %s:%s ") %
-                                         (support.proxy_hostname,
-                                          support.proxy_port))
+                                         "Host and port: %(host)s:%(port)s ") %
+                                         ({"host": support.proxy_hostname,
+                                           "port": support.proxy_port}))
             else:
                 support_summary.append("  " +
                                        _("Proxy specified: "
-                                         "Host and port: %s:%s ") %
-                                         (support.proxy_hostname,
-                                          support.proxy_port))
+                                         "Host and port: %(host)s:%(port)s ") %
+                                         ({"host": support.proxy_hostname,
+                                           "port": support.proxy_port}))
             if support.proxy_user:
                 support_summary.append("    " +
                                        _("User: %s") % support.proxy_user)

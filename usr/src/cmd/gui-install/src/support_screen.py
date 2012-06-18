@@ -50,33 +50,33 @@ MAX_PORT = 65535
 VALIDATION_ERROR_MSG = "Validation Error:"
 AUTH_SLEEP_INTERVAL = 0.1
 
-# Strings displayed in GUI
-SUPPORT_SCREEN_TITLE = _("Support Registration")
-SUPPORT_SCREEN_SUBTITLE = _(" ")
-ANON_EMAIL_ADDRESS = _("anonymous@oracle.com")
-MISSING_PASSWD_ERROR = _("You must enter a valid My Oracle Support password "
-    "to receive security updates.")
-MISSING_PROXY_HOST_ERROR = _("Hostname must be given for Proxy option")
-PROXY_USER_PASS_ERROR = _("Proxy Username and Password error")
-NO_HUB_ERROR = _("Neither Hub entered")
-NO_REG_WARN_MSG = _("Do you wish to remain uninformed of critical security "
-    "issues in your configuration?")
-ENTER_VALID_EMAIL_MSG = _("Enter a valid email address.")
-ENTER_VALID_PASSWD_MSG = _("Enter a valid My Oracle Support password.")
-ENTER_PROXY_HOST_MSG = _("Enter a valid Proxy Hostname")
-ENTER_PROXY_USER_PASS_MSG = _("Either enter both Proxy Username and Password, "
-    "or neither")
-ENTER_OCM_ASR_MSG = _("Enter OCM Hub URL and/or ASR Manager URL")
-AUTHENTICATING_MSG = _("Contacting Oracle to authenticate credentials...")
-OVERRIDE_ALLOWED_MSG = _("Press 'Next' again to continue anyway")
-OCM_AUTH_FAILED_MSG = _("Failed to authenticate with Oracle OCM.")
-ASR_AUTH_FAILED_MSG = _("Failed to authenticate with Oracle ASR.")
-
 
 class SupportScreen(BaseScreen):
     '''
         The Support Registration screen.
     '''
+
+    # Strings displayed in GUI
+    SUPPORT_SCREEN_TITLE = _("Support Registration")
+    SUPPORT_SCREEN_SUBTITLE = " "
+    ANON_EMAIL_ADDRESS = _("anonymous@oracle.com")
+    MISSING_PASSWD_ERROR = _("You must enter a valid My Oracle Support "
+                             "password to receive security updates.")
+    MISSING_PROXY_HOST_ERROR = _("Hostname must be given for Proxy option.")
+    PROXY_USER_PASS_ERROR = _("Proxy Username and Password error.")
+    NO_HUB_ERROR = _("Neither Hub entered.")
+    NO_REG_WARN_MSG = _("Do you wish to remain uninformed of critical "
+                        "security issues in your configuration?")
+    ENTER_VALID_EMAIL_MSG = _("Enter a valid email address.")
+    ENTER_VALID_PASSWD_MSG = _("Enter a valid My Oracle Support password.")
+    ENTER_PROXY_HOST_MSG = _("Enter a valid Proxy Hostname.")
+    ENTER_PROXY_USER_PASS_MSG = _("Either enter both Proxy Username and "
+                                  "Password, or neither of them.")
+    ENTER_OCM_ASR_MSG = _("Enter OCM Hub URL and/or ASR Manager URL.")
+    AUTHENTICATING_MSG = _("Contacting Oracle to authenticate credentials...")
+    OVERRIDE_ALLOWED_MSG = _("Press 'Next' again to continue anyway.")
+    OCM_AUTH_FAILED_MSG = _("Failed to authenticate with Oracle OCM.")
+    ASR_AUTH_FAILED_MSG = _("Failed to authenticate with Oracle ASR.")
 
     def __init__(self, builder):
         ''' Initializer method - called from constructor.
@@ -200,7 +200,8 @@ class SupportScreen(BaseScreen):
 
         # Screen-specific configuration
         self.activate_stage_label("supportstagelabel")
-        self.set_titles(SUPPORT_SCREEN_TITLE, SUPPORT_SCREEN_SUBTITLE, None)
+        self.set_titles(self.SUPPORT_SCREEN_TITLE,
+                        self.SUPPORT_SCREEN_SUBTITLE, None)
         self._support_status_label.hide()
         self._toplevel.show()
         self._support_email_entry.grab_focus()
@@ -294,7 +295,7 @@ class SupportScreen(BaseScreen):
         if mos_pass and not email:
             self._support_email_entry.grab_focus()
             msg1 = SupportInfo.MSGS["pswd_no_email"]
-            msg2 = ENTER_VALID_EMAIL_MSG
+            msg2 = self.ENTER_VALID_EMAIL_MSG
             LOGGER.error(VALIDATION_ERROR_MSG)
             LOGGER.error(msg1)
             modal_dialog(msg1, msg2)
@@ -305,7 +306,7 @@ class SupportScreen(BaseScreen):
             if '@' not in email or email[-1] == '@':
                 self._support_email_entry.grab_focus()
                 msg1 = SupportInfo.MSGS["missing_@"]
-                msg2 = ENTER_VALID_EMAIL_MSG
+                msg2 = self.ENTER_VALID_EMAIL_MSG
                 LOGGER.error(VALIDATION_ERROR_MSG)
                 LOGGER.error(msg1)
                 modal_dialog(msg1, msg2)
@@ -314,8 +315,8 @@ class SupportScreen(BaseScreen):
         # ERROR - authentication requested, but no password given
         if auth_chosen and mos_pass is None:
             self._support_password_entry.grab_focus()
-            msg1 = MISSING_PASSWD_ERROR
-            msg2 = ENTER_VALID_PASSWD_MSG
+            msg1 = self.MISSING_PASSWD_ERROR
+            msg2 = self.ENTER_VALID_PASSWD_MSG
             LOGGER.error(VALIDATION_ERROR_MSG)
             LOGGER.error(msg1)
             modal_dialog(msg1, msg2)
@@ -324,8 +325,8 @@ class SupportScreen(BaseScreen):
         # ERROR - Proxy chosen, but no proxy hostname given
         if proxy_chosen and not proxy_hostname:
             self._support_proxy_hostname_entry.grab_focus()
-            msg1 = MISSING_PROXY_HOST_ERROR
-            msg2 = ENTER_PROXY_HOST_MSG
+            msg1 = self.MISSING_PROXY_HOST_ERROR
+            msg2 = self.ENTER_PROXY_HOST_MSG
             LOGGER.error(VALIDATION_ERROR_MSG)
             LOGGER.error(msg1)
             modal_dialog(msg1, msg2)
@@ -334,8 +335,8 @@ class SupportScreen(BaseScreen):
         # ERROR - only one of proxy password or username was given
         if proxy_chosen and (bool(proxy_username) != bool(proxy_pass)):
             self._support_proxy_username_entry.grab_focus()
-            msg1 = PROXY_USER_PASS_ERROR
-            msg2 = ENTER_PROXY_USER_PASS_MSG
+            msg1 = self.PROXY_USER_PASS_ERROR
+            msg2 = self.ENTER_PROXY_USER_PASS_MSG
             LOGGER.error(VALIDATION_ERROR_MSG)
             LOGGER.error(msg1)
             modal_dialog(msg1, msg2)
@@ -344,8 +345,8 @@ class SupportScreen(BaseScreen):
         # ERROR - Aggregation Hub chosen, but neither OCM nor ASR Hub given
         if aggregation_chosen and not ocm_url and not asr_url:
             self._support_ocm_entry.grab_focus()
-            msg1 = NO_HUB_ERROR
-            msg2 = ENTER_OCM_ASR_MSG
+            msg1 = self.NO_HUB_ERROR
+            msg2 = self.ENTER_OCM_ASR_MSG
             LOGGER.error(VALIDATION_ERROR_MSG)
             LOGGER.error(msg1)
             modal_dialog(msg1, msg2)
@@ -395,7 +396,7 @@ class SupportScreen(BaseScreen):
             # set flag so we only show this once; next time just proceed
             self._allow_no_reg_override = True
             msg1 = SupportInfo.MSGS["no_email"]
-            msg2 = NO_REG_WARN_MSG
+            msg2 = self.NO_REG_WARN_MSG
             LOGGER.info("Validation Warning:")
             LOGGER.info(msg1)
             ok_to_proceed = modal_dialog(msg1, msg2, two_buttons=True,
@@ -548,7 +549,7 @@ class SupportScreen(BaseScreen):
             Screen initiatization tasks that are only to be performed on the
             first occasion this screen is brought up.
         '''
-        self._support_email_entry.set_text(ANON_EMAIL_ADDRESS)
+        self._support_email_entry.set_text(self.ANON_EMAIL_ADDRESS)
         self._support_authenticate_section.set_sensitive(True)
         self._support_authenticate_checkbox.set_active(True)
         self._support_proxy_section.hide()
@@ -636,7 +637,7 @@ class SupportScreen(BaseScreen):
         # (otherwise GUI would appear unresponsive)
         self.set_back_next(back_sensitive=False, next_sensitive=False)
         self._support_status_label.set_markup(
-            '<span font_desc="Bold">%s</span>' % AUTHENTICATING_MSG)
+            '<span font_desc="Bold">%s</span>' % self.AUTHENTICATING_MSG)
         self._support_status_label.show()
         thread = AuthenticationThread(self._support_info, net_mode)
         # Keep passing control back to Gtk+ to process its event queue
@@ -669,7 +670,7 @@ class SupportScreen(BaseScreen):
             err_title = ''
             err_msg = ''
             if ocm_status != SupportInfo.OCM_SUCCESS:
-                err_title += OCM_AUTH_FAILED_MSG
+                err_title += self.OCM_AUTH_FAILED_MSG
                 if ocm_status == SupportInfo.PH_TIMEOUT:
                     err_msg += SupportInfo.MSGS["ocm_timeout"]
                 elif ocm_status == SupportInfo.OCM_BAD_CRED:
@@ -684,7 +685,7 @@ class SupportScreen(BaseScreen):
                 if err_msg:
                     err_msg += "\n"
 
-                err_title += ASR_AUTH_FAILED_MSG
+                err_title += self.ASR_AUTH_FAILED_MSG
                 if asr_status == SupportInfo.PH_TIMEOUT:
                     err_msg += SupportInfo.MSGS["asr_timeout"]
                 elif asr_status == SupportInfo.ASR_BAD_CRED:
@@ -710,7 +711,7 @@ class SupportScreen(BaseScreen):
                 self._allow_error_override = True
 
             if self._allow_error_override:
-                err_msg = err_msg + "\n\n" + OVERRIDE_ALLOWED_MSG
+                err_msg = err_msg + "\n\n" + self.OVERRIDE_ALLOWED_MSG
 
             self._support_email_entry.grab_focus()
             LOGGER.error(err_msg)

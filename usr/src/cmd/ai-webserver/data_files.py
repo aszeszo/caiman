@@ -80,7 +80,7 @@ def verifyCriteria(schema, criteria_path, db, table=AIdb.MANIFESTS_TABLE,
     # they exist.  We validate those separately later.
     try:
         crit = lxml.etree.parse(criteria_path)
-    except lxml.etree.XMLSyntaxError, err:
+    except lxml.etree.XMLSyntaxError as err:
         raise ValueError(_("Error: %s") % err.error_log.last_error)
 
     ai_sc_list = list()
@@ -109,7 +109,7 @@ def verifyCriteria(schema, criteria_path, db, table=AIdb.MANIFESTS_TABLE,
                             'msg': errors.message})
     try:
         verifyXML.prepValuesAndRanges(root, db, table)
-    except ValueError, err:
+    except ValueError as err:
         raise ValueError(_("Error:\tCriteria manifest error: %s") % err)
 
     # Reinsert AI and SC elements back into the criteria_root DOM.
@@ -173,17 +173,17 @@ def verifyCriteriaDict(schema, criteria_dict, db, table=AIdb.MANIFESTS_TABLE):
             value_elem = lxml.etree.SubElement(crit, "value")
             value_elem.text = value_or_range
 
+    try:
+        verifyXML.prepValuesAndRanges(root, db, table)
+    except ValueError as err:
+        raise ValueError(_("Error:\tCriteria error: %s") % err)
+
     # Verify the generated criteria DOM
     root, errors = verifyXML.verifyRelaxNGManifest(schema,
                         StringIO.StringIO(lxml.etree.tostring(root)))
     if errors:
         raise ValueError(_("Error: Criteria failed validation:\n\t%s") %
                            errors.message)
-    try:
-        verifyXML.prepValuesAndRanges(root, db, table)
-    except ValueError, err:
-        raise ValueError(_("Error:\tCriteria error: %s") % err)
-
     return root
 
 
@@ -340,7 +340,7 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
         profile - file path of profile
         image_dir - path of service image, used to locate service_bundle
         verbose - boolean, True if verbosity desired, False otherwise
-    
+
     Return: Raw profile in string format if it is valid, None otherwise.
 
     '''
@@ -353,7 +353,7 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
     except IOError as strerror:
         print >> sys.stderr, _("Error opening profile %(name)s:  %(err)s") % \
                 {'name': profile_name, 'err': strerror}
-        return 
+        return
 
     errmsg = ''
     validated_xml = ''
@@ -365,9 +365,9 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
         validated_xml = sc.validate_profile_string(tmpl_profile, image_dir,
                                                    dtd_validation=True,
                                                    warn_if_dtd_missing=True)
-    except lxml.etree.XMLSyntaxError, err:
+    except lxml.etree.XMLSyntaxError as err:
         errmsg = _('XML syntax error in profile %s:' % profile_name)
-    except KeyError, err:  # usr specified bad template variable (not criteria)
+    except KeyError as err:  # bad template variable specified (not criteria)
         value = sys.exc_info()[1]  # take value from exception
         found = False
         # check if missing variable in error is supported
@@ -383,7 +383,7 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
         else:
             errmsg = \
                 _("Error: template variable %(value)s in profile %(name)s is "
-                  "not a valid template variable.  Valid template " 
+                  "not a valid template variable.  Valid template "
                   "variables:  ") % {'value': value, 'name': profile_name} + \
                   '\n\t' + ', '.join(sc.TEMPLATE_VARIABLES.keys())
         err = list()  # no supplemental message text needed for this exception
@@ -396,7 +396,7 @@ def validate_file(profile_name, profile, image_dir=None, verbose=True):
         print >> sys.stderr, errmsg  # print error message
         for eline in err:  # print supplemental text from exception
             print >> sys.stderr, '\t' + eline
-        return 
+        return
     if validated_xml and verbose:
         print >> sys.stderr, " Passed"
     return raw_profile
@@ -885,7 +885,7 @@ class DataFiles(object):
             else:
                 raise SystemExit(_("Error: manifest must have a DOCTYPE string"
                                    " with DTD reference."))
-        except lxml.etree.XMLSyntaxError, syntax_error:
+        except lxml.etree.XMLSyntaxError as syntax_error:
             raise SystemExit(_("Error: There was a syntax error parsing the "
                                "manifest %(mf)s:\n  %(error)s") %
                                {'mf': manifest_file,
@@ -912,9 +912,9 @@ class DataFiles(object):
             self._AIschema = os.path.join(self.image_path,
                                          IMG_AI_MANIFEST_SCHEMA)
         else:
-            raise SystemExit(_("Error: The DTD \"%(dtd)s\" version specifed "
-                               "in the manifest \n\"%(mf)s\" could not be "
-                               "found in the image path of the install "
+            raise SystemExit(_("Error: The DTD and version \"%(dtd)s\" "
+                               "specified in the manifest \n\"%(mf)s\" could "
+                               "not be found in the image path of the install "
                                "service.") %
                                {'dtd': schema_basename,
                                 'mf': manifest_file})
@@ -991,7 +991,7 @@ class DataFiles(object):
             elif self.AI_root.getroot().tag == "auto_install":
                 try:
                     ai_instance = self.AI_root.find(".//ai_instance")
-                except lxml.etree.LxmlError, err:
+                except lxml.etree.LxmlError as err:
                     raise SystemExit(_("Error:\tAI manifest error: %s") % err)
 
                 if 'name' in ai_instance.attrib:

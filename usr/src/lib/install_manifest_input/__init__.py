@@ -29,8 +29,8 @@
 
 import gettext
 
-_ = gettext.translation("solaris_install_mim", 
-                        "/usr/share/locale", 
+_ = gettext.translation("solaris_install_mim",
+                        "/usr/share/locale",
                         fallback=True).gettext
 
 
@@ -146,9 +146,14 @@ ERR_SCHDATA_PROC = _("SchemaData error processing "
                      "DTD data from file \"%(mfile)s\": %(merr)s")
 ERR_EMPTY_TREE = _("No XML data present.")
 ERR_AMBIG_PATH = _("Ambiguity error:  Path matches more than one element")
-ERR_AMBIG_PARENT_PATH = _("Ambiguity error: "
-                          "Parent path matches more than one element")
-ERR_NO_PARENT_PATH = _("No matching parent path exists")
+
+
+ERR_AMBIG_PARENT_PATH = _("Ambiguity error: Multiple possible matches for "
+                          "parent path")
+ERR_NO_PARENT_PATH = _("No path found to element")
+ERR_AMBIG_ABS_PATH = _("Ambiguity error: DTD shows multiple possible "
+                       "absolute paths")
+ERR_NO_ABS_PATH = _("DTD shows no matching absolute path")
 ERR_NO_ELEM_MATCH = _("Path matches no elements")
 ERR_NO_ATTR_MATCH = _("Path matches no attributes")
 ERR_FINAL_BRANCH_VAL_INVALID = _("Final path branch has a value or is invalid")

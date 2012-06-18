@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 process_dtd.py - Digest DTD info for use by XML processing
@@ -196,9 +196,9 @@ class SchemaData(object):
             return self._qty
 
         # pylint doesn't get along well with property decorators
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         @qty.setter
-        # pylint: disable-msg=E0102
+        # pylint: disable=E0102
         def qty(self, arg):
             '''Check and store quantifier'''
             if (len(arg) != 1) or (not arg in "+*?1"):
@@ -797,9 +797,10 @@ class SchemaData(object):
           MimInvalidError - Argument is missing or invalid
           - No parent element found with tagname to match a path branch
           - element_arg has slashes
-          MimInvalidError -
-              Ambiguity error: Parent path matches more than one element
-          - Cannot find a unique parent path.
+          MimInvalidError - Ambiguity error: Multiple possible absolute paths
+          - Cannot find a unique absolute path to given relative path.
+          MimInvalidError - No matching absolute path
+          - Cannot find any absolute path to given relative path.
         '''
         if '/' in element_arg:
             raise milib.MimInvalidError(milib.ERR_ARG_INVALID)
@@ -821,12 +822,12 @@ class SchemaData(object):
                     if found_parent:
                         # Multiple possible parents.
                         raise milib.MimInvalidError(
-                            milib.ERR_AMBIG_PARENT_PATH)
+                            milib.ERR_AMBIG_ABS_PATH)
                     else:
                         path_list.append(parent_tag)
                         found_parent = parent_tag
             if not found_parent:
-                raise milib.MimInvalidError(milib.ERR_ARG_INVALID)
+                raise milib.MimInvalidError(milib.ERR_NO_ABS_PATH)
 
             # Loop to look for the found parent's parent.
             branch = found_parent

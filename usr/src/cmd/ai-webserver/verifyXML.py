@@ -118,7 +118,7 @@ def checkIPv4(value):
     """
 # =============================================================================
 
-    ipv4_err_msg = "Malformed IPV4 address in criteria"
+    ipv4_err_msg = _("Malformed IPV4 address in criteria")
     newval = ""
 
     values = value.split(".")
@@ -154,7 +154,7 @@ def checkMAC(value):
     """
 # =============================================================================
 
-    mac_err_msg = "Malformed MAC address in criteria"
+    mac_err_msg = _("Malformed MAC address in criteria")
     try:
         macAddress = com.MACAddress(value)
     except com.MACAddress.MACAddressError:
@@ -199,7 +199,7 @@ def checkCPU(value):
       None
 
     Raises:
-      ValueError: Warning: CPU class is not listed in list of know CPU classes
+      ValueError: Warning: CPU class is not listed in list of known CPU classes
     """
 
     if value not in com.KNOWN_CPUS:
@@ -207,6 +207,29 @@ def checkCPU(value):
                         "list of known CPU classes: %(cpus)s") % \
                         {'value': value, 'cpus': com.KNOWN_CPUS}
         raise ValueError(cpu_err_msg)
+
+
+# =============================================================================
+def checkMem(value):
+# =============================================================================
+    """
+    Private function that checks an memory size string, that it is an integer.
+
+    Args:
+      value: the string being checked and processed
+
+    Returns: N/A
+
+    Raises:
+      ValueError: Malformed memory size in criteria
+    """
+# =============================================================================
+
+    mem_err_msg = _("Malformed memory size in criteria")
+    try:
+        int(value)
+    except ValueError:
+        raise ValueError(mem_err_msg)
 
 
 # =============================================================================
@@ -271,13 +294,15 @@ def prepValuesAndRanges(criteriaRoot, database, table=AIdb.MANIFESTS_TABLE):
             # However, for criteria that can be provided as a range, we
             # currently do not support lists for them.
             if num_values > 1 and crit_name in range_crit:
-                raise ValueError("Criteria '" + crit_name + "' is not "
-                    "supported to be provided as a list of values")
+                raise ValueError(_("Criteria '%(name)s' is not "
+                    "supported to be provided as a list of values") %
+                    ({"name": crit_name}))
         else:
             # For ranges, make sure it is indeed a range criteria
             if crit_name not in range_crit:
-                raise ValueError("Criteria '" + crit_name + "' can not "
-                    "be passed as a range pair")
+                raise ValueError(_("Criteria '%(name)s' can not "
+                    "be passed as a range pair") %
+                    ({"name": crit_name}))
 
         # For value criteria, there is no need to do anything to store
         # single value into val_range.text.  It is already there.
@@ -330,6 +355,11 @@ def prepValuesAndRanges(criteriaRoot, database, table=AIdb.MANIFESTS_TABLE):
                 # Handle MAC addresses.
                 elif crit_name == "mac":
                     new_values += checkMAC(one_value)
+
+                # Handle memory sizes.
+                elif crit_name == "mem":
+                    checkMem(one_value)
+                    new_values += one_value
 
                 # Handle everything else by passing through.
                 else:

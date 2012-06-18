@@ -51,10 +51,6 @@ def LOGGER():
         _LOGGER = logging.getLogger(INSTALL_LOGGER_NAME + ".sysconfig")
     return _LOGGER
 
-_SAVE_ANYWAY_MSG = _("  Press F2 again to save anyway.")
-
-_DUMMY_PASSWORD = "dummy"
-
 _MAX_CRED_WIDTH = 40
 _MAX_URL_WIDTH = 128
 
@@ -99,6 +95,9 @@ class SupportMOSScreen(BaseScreen):
     HEADER_OFFSET = _HEADER_OFFSET
     ITEM_OFFSET = _ITEM_OFFSET
     RIGHT_MARGIN = _RIGHT_MARGIN
+
+    # Shared among other classes in this file.
+    SAVE_ANYWAY_MSG = "  " + _("Press F2 again to save anyway.")
 
     def __init__(self, main_win):
         super(SupportMOSScreen, self).__init__(main_win)
@@ -395,7 +394,7 @@ class SupportMOSScreen(BaseScreen):
             self.support.check_mos(self.error_override)
         if message:
             if self.error_override:
-                message += _SAVE_ANYWAY_MSG
+                message += SupportMOSScreen.SAVE_ANYWAY_MSG
             raise UIMessage(message)
 
         # Attempt authentication if email and password are non-blank.
@@ -446,7 +445,7 @@ class SupportMOSScreen(BaseScreen):
             message = SupportInfo.phone_home_msg(ocm_status, asr_status)
             if message:
                 if self.error_override:
-                    message += _SAVE_ANYWAY_MSG
+                    message += SupportMOSScreen.SAVE_ANYWAY_MSG
                 raise UIMessage(message)
 
 
@@ -638,12 +637,17 @@ class SupportProxyScreen(BaseScreen):
                                       max_y=y_loc + 2,
                                       max_x=self.win_size_x - 1)
 
+        left_label_width = max(textwidth(SupportProxyScreen.HOSTNAME_LABEL),
+                               textwidth(SupportProxyScreen.USERNAME_LABEL))
+
+        right_label_width = max(textwidth(SupportProxyScreen.PORT_LABEL),
+                                textwidth(SupportProxyScreen.PASSWORD_LABEL))
+
         y_loc += 2
         self.window_area.y_loc = y_loc
         self.window_area.x_loc = SupportProxyScreen.LEFT_ITEM_OFFSET
         self.window_area.lines = 1
-        self.window_area.columns = \
-            textwidth(SupportProxyScreen.HOSTNAME_LABEL) + 1
+        self.window_area.columns = left_label_width + 1
         self.hostname_label = ListItem(self.window_area,
                                        window=self.center_win,
                                        text=SupportProxyScreen.HOSTNAME_LABEL)
@@ -663,7 +667,7 @@ class SupportProxyScreen(BaseScreen):
         self.field_dict["0,0"] = self.hostname_edit
 
         self.window_area.x_loc = right_item_offset
-        self.window_area.columns = textwidth(SupportProxyScreen.PORT_LABEL) + 1
+        self.window_area.columns = right_label_width + 1
         self.port_label = ListItem(self.window_area, window=self.center_win,
                                    text=SupportProxyScreen.PORT_LABEL)
 
@@ -686,8 +690,7 @@ class SupportProxyScreen(BaseScreen):
         y_loc += 2
         self.window_area.y_loc = y_loc
         self.window_area.x_loc = SupportProxyScreen.LEFT_ITEM_OFFSET
-        self.window_area.columns = \
-            textwidth(SupportProxyScreen.USERNAME_LABEL) + 1
+        self.window_area.columns = left_label_width + 1
         self.username_label = ListItem(self.window_area,
                                        window=self.center_win,
                                        text=SupportProxyScreen.USERNAME_LABEL)
@@ -704,8 +707,7 @@ class SupportProxyScreen(BaseScreen):
         self.field_dict["0,1"] = self.username_edit
 
         self.window_area.x_loc = right_item_offset
-        self.window_area.columns = \
-            textwidth(SupportProxyScreen.PASSWORD_LABEL) + 1
+        self.window_area.columns = right_label_width + 1
         self.password_label = ListItem(self.window_area,
                                        window=self.center_win,
                                        text=SupportProxyScreen.PASSWORD_LABEL)
@@ -871,7 +873,7 @@ class SupportProxyScreen(BaseScreen):
             self.support.check_mos(self.error_override)
         if message:
             if self.error_override:
-                message += _SAVE_ANYWAY_MSG
+                message += SupportMOSScreen.SAVE_ANYWAY_MSG
             raise UIMessage(message)
 
         # Proxy-field-specific syntax checks.
@@ -965,7 +967,7 @@ class SupportProxyScreen(BaseScreen):
                 self._show()
                 self.main_win.do_update()
             if self.error_override:
-                message += _SAVE_ANYWAY_MSG
+                message += SupportMOSScreen.SAVE_ANYWAY_MSG
             raise UIMessage(message)
 
     def port_valid(self, edit_field):
@@ -984,8 +986,8 @@ class SupportHubScreen(BaseScreen):
                 "that pool data and forward it.")
     INTRO_2 = _("Enter at least one hub URL.")
 
-    OCM_HUB_LABEL = "    OCM Hub URL:"
-    ASR_HUB_LABEL = "ASR Manager URL:"
+    OCM_HUB_LABEL = _("OCM Hub URL:")
+    ASR_HUB_LABEL = _("ASR Manager URL:")
 
     HELP_DATA = (SCI_HELP + "/%s/support_net_config.txt", _("Support"))
 
@@ -1043,12 +1045,15 @@ class SupportHubScreen(BaseScreen):
                                       max_x=self.win_size_x - 1)
         y_loc += 2
 
+        # For left-alignment of OCM hub and ASR manager hub labels.
+        hub_label_width = max(textwidth(SupportHubScreen.OCM_HUB_LABEL),
+                              textwidth(SupportHubScreen.ASR_HUB_LABEL))
+
         if self.support.ocm_available:
             self.window_area.y_loc = y_loc
             self.window_area.x_loc = SupportHubScreen.ITEM_OFFSET
             self.window_area.lines = 1
-            self.window_area.columns = \
-                textwidth(SupportHubScreen.OCM_HUB_LABEL) + 1
+            self.window_area.columns = hub_label_width + 1
             self.ocm_hub_label = ListItem(self.window_area,
                                           window=self.center_win,
                                           text=SupportHubScreen.OCM_HUB_LABEL)
@@ -1070,8 +1075,7 @@ class SupportHubScreen(BaseScreen):
             self.window_area.y_loc = y_loc
             self.window_area.x_loc = SupportHubScreen.ITEM_OFFSET
             self.window_area.lines = 1
-            self.window_area.columns = \
-                textwidth(SupportHubScreen.ASR_HUB_LABEL) + 1
+            self.window_area.columns = hub_label_width + 1
             self.asr_hub_label = ListItem(self.window_area,
                                           window=self.center_win,
                                           text=SupportHubScreen.ASR_HUB_LABEL)
@@ -1189,7 +1193,7 @@ class SupportHubScreen(BaseScreen):
             self.support.check_mos(self.error_override)
         if message:
             if self.error_override:
-                message += _SAVE_ANYWAY_MSG
+                message += SupportMOSScreen.SAVE_ANYWAY_MSG
             raise UIMessage(message)
 
         # Err if both hubs are blank.
@@ -1249,7 +1253,7 @@ class SupportHubScreen(BaseScreen):
                     self._show()
                     self.main_win.do_update()
                 if self.error_override:
-                    message += _SAVE_ANYWAY_MSG
+                    message += SupportMOSScreen.SAVE_ANYWAY_MSG
                 raise UIMessage(message)
 
     def url_valid(self, edit_field):
