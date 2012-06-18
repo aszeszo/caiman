@@ -25,6 +25,7 @@
 
 LANGUAGE_FILE=/etc/sysconfig/language
 
+export TEXTDOMAINDIR="/usr/share/locale"
 export TEXTDOMAIN="solaris_install_text_menu"
 # LOGNAME variable is needed to display the shell prompt appropriately
 export LOGNAME=root
@@ -56,7 +57,8 @@ menu_items=( \
 	do_subprocess="true"						 \
 	msg_str=`gettext "To return to the main menu, exit the shell"`)	 \
     # this string gets overwritten every time $TERM is updated
-    (menu_str=`gettext "Terminal type (currently "`"$TERM)"		 \
+    (menu_str_form=`gettext "Terminal type (currently %s)"`		 \
+	menu_str=`printf "${menu_str_form}" "$TERM"`                     \
 	cmds=("prompt_for_term_type")					 \
 	do_subprocess="false"						 \
 	msg_str="")							 \
@@ -74,7 +76,8 @@ function update_term_menu_str
     # update the menu string to reflect the current TERM
     for i in "${!menu_items[@]}"; do
 	    if [[ "${menu_items[$i].cmds[0]}" = "prompt_for_term_type" ]] ; then
-		menu_items[$i].menu_str=`gettext "Terminal type (currently "`"$TERM)"
+		menu_str_form=`gettext "Terminal type (currently %s)"`
+		menu_items[$i].menu_str=`printf "${menu_str_form}" "$TERM"`
 	    fi
     done
 }
@@ -116,16 +119,16 @@ function prompt_for_term_type
 
 	# hard coded common terminal types
 	termtypes.fixedlist=(
-		[0]=(  name="dtterm"		desc="CDE terminal emulator")
-		[1]=(  name="xterm"		desc="xterm"		    )
-		[2]=(  name="vt100"		desc="DEC VT100"	    )
+		[0]=(  name="dtterm"	desc=`gettext "CDE terminal emulator"`)
+		[1]=(  name="xterm"	desc="xterm"		    )
+		[2]=(  name="vt100"	desc="DEC VT100"	    )
 	)
 
 	termtypes.list_len=${#termtypes.fixedlist[@]}
 
 	# Start with a newline before presenting the choices
 	print
-	printf "Indicate the type of terminal being used, such as:\n"
+	printf "`gettext \"Indicate the type of terminal being used, such as:\"`\n"
 
 	# list suggested terminal types
 	for (( i=0 ; i < termtypes.list_len ; i++ )) ; do
@@ -137,7 +140,9 @@ function prompt_for_term_type
 	# Prompt user to select terminal type and check for valid entry
 	typeset term=""
 	while true ; do
-		read "term?Enter terminal type [$TERM]: " || continue
+		menu_str_form=`gettext "Enter Terminal type [%s]: "`
+		menu_str=`printf "${menu_str_form}" "$TERM"`
+		read "term?${menu_str}" || continue
 
 		# if the user just hit return, don't set the term variable
 		[[ "${term}" = "" ]] && return
@@ -145,8 +150,8 @@ function prompt_for_term_type
 		# check if the user specified option is valid
 		term_entry=`/usr/bin/ls /usr/gnu/share/terminfo/*/$term 2> /dev/null`
 		[[ ! -z ${term_entry} ]] && break
-		printf "%s `gettext \"terminal type not supported. Supported terminal types can be\"` \n" "${term}"
-		printf "`gettext \"found by using the Shell to list the contents of /usr/gnu/share/terminfo.\"`\n\n"
+		printf "`gettext \"\\\"%s\\\" terminal type not supported.\"` \n" "${term}"
+		printf "`gettext \"Supported terminal types can be found by using the Shell to list the contents of /usr/gnu/share/terminfo.\"`\n\n"
 	done
 
 	export TERM="${term}"
