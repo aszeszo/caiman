@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -69,6 +69,8 @@ class NICSelect(BaseScreen):
         #  * number of NICs mandated from global zone.
         self.ether_nics = NetworkInfo.find_links()[0]
         self.nic = None
+        # NIC highlighted by default
+        self.default_nic = NetworkInfo.get_default_nic(self.ether_nics)
     
     def _show(self):
         '''Create a list of NICs to choose from. If more than 15 NICs are
@@ -82,8 +84,12 @@ class NICSelect(BaseScreen):
             self.set_nic_in_profile(self.ether_nics[0])
             raise SkipException
         
+        #
+        # If NIC selection screen is entered for the first time, pick up
+        # default NIC. Otherwise, preselect NIC previously chosen by user.
+        #
         if self.nic.nic_iface is None:
-            selected_nic_name = ""
+            selected_nic_name = NetworkInfo.get_nic_name(self.default_nic)
         else:
             selected_nic_name = NetworkInfo.get_nic_name(self.nic.nic_iface)
         

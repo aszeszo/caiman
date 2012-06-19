@@ -395,18 +395,20 @@ class UserScreen(BaseScreen):
         # obtain mountpoints for all existing ZFS datasets
         cmd = [ZFS, "list", "-H", "-o", "mountpoint"]
         try:
-            mountpoint_list = run(cmd, logger=LOGGER)
+            stdout_stderr = run(cmd, logger=LOGGER)
         except CalledProcessError:
             LOGGER.warn("Could not determine if parent of home ZFS dataset "
                         "exists.")
             return False
 
-        if "/export/home" not in mountpoint_list.stdout.splitlines():
-            LOGGER.debug("Parent of home ZFS dataset does not exist, creation "
+        mountpoint_set = set(stdout_stderr.stdout.splitlines())
+        # Account for ZFS mountpoints with as well as without trailing slash.
+        if mountpoint_set.isdisjoint(set(["/export/home", "/export/home/"])):
+            LOGGER.info("Parent of home ZFS dataset does not exist, creation "
                          "of user account disabled.")
             return False
 
-        LOGGER.debug("Parent of home ZFS dataset exists, creation of user "
+        LOGGER.info("Parent of home ZFS dataset exists, creation of user "
                      "account enabled.")
         return True
 

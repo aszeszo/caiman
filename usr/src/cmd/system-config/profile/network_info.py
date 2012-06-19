@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -29,13 +29,17 @@ the NICs installed on the system by name (using dladm)
 
 import logging
 from operator import itemgetter
-from solaris_install import Popen, CalledProcessError
+from solaris_install import Popen, CalledProcessError, run
 from solaris_install.data_object import DataObject
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig.profile.ip_address import IPAddress
 from solaris_install.sysconfig.profile.nameservice_info import NameServiceInfo
 from solaris_install.sysconfig.profile import SMFConfig, SMFInstance, \
      SMFPropertyGroup, NETWORK_LABEL
+
+
+# Consumed CLIs
+IPADM = "/usr/sbin/ipadm"
 
 
 _LOGGER = None
@@ -289,6 +293,88 @@ class NetworkInfo(SMFConfig):
             return False
 
     @staticmethod
+    def get_default_nic(nic_list):
+        '''Determines which NIC is the best candidate to be configured
+        in Manual network configuration scenario. It is used by text installer
+        booted from network or media. In former case, boot NIC is selected,
+        in latter case, first 'wired' network interface under dhcp control
+        is chosen.
+
+        This mechanism is not applicable in system reconfiguration scenarios
+        where network is unconfigured during sysconfig run (thus no configured
+        network interface exists at that moment). None is returned for that
+        case.
+
+        As far as implementation is concerned, the first NIC reported by
+        ipadm(1m) command and meeting following criteria is chosen:
+
+          * IPv4 address object is created for NIC and that address object
+            is under DHCP control - indicated by 'dhcp' TYPE
+          * NIC is up (though not necessarily assigned with IPv4 address) -
+            indicated by 'ok' STATE
+
+        There is only one such NIC in case of net booted text installer,
+        multiple can exist if text installer is booted from media. The first
+        one is picked up in that latter case.
+
+        None is returned if no NIC meeting those criteria is found.
+
+        '''
+        cmd = [IPADM, 'show-addr', '-p', '-o', 'state,type,addrobj']
+        try:
+            stdout_stderr = run(cmd, logger=LOGGER())
+        except CalledProcessError:
+            LOGGER().info("Default NIC not determined.")
+            return None
+
+        #
+        # Information for address object is reported as a string in form
+        # of <state>:<type>:<addrobj>, for instance
+        #
+        # ok:dhcp:net0/v4
+        #
+        found_nics = stdout_stderr.stdout.splitlines()
+
+        #
+        # Enumerate through the list and try to find a NIC meeting
+        # desired criteria.
+        #
+        try:
+            nic_name = ""
+            for nic in found_nics:
+                (nic_state, nic_type, nic_addrobj) = nic.split(':')
+
+                LOGGER().debug("found nic: state: %s, type: %s, addr: %s" %
+                               (nic_state, nic_type, nic_addrobj))
+
+                if nic_state == "ok" and nic_type == "dhcp":
+                    nic_name = nic_addrobj.split('/')[0]
+                    LOGGER().debug("default nic name: %s" % nic_name)
+                    break
+        except ValueError:
+            LOGGER().info("Default NIC not determined.")
+            return None
+
+        if not nic_name:
+            LOGGER().info("Default NIC not determined.")
+            return None
+
+        #
+        # Verify that given list contains NIC with determined default name.
+        # Name could be either in form of vanity name (media boot) or raw
+        # device name (network boot).
+        #
+        for nic in nic_list:
+            if NetworkInfo.get_nic_name(nic) == nic_name or \
+               NetworkInfo.get_nic_link(nic) == nic_name:
+                    LOGGER().info("Selected default NIC %s" % nic_name)
+                    return nic
+
+        LOGGER().info("%s NIC not recognized, default NIC not determined.",
+                      nic_name)
+        return None
+
+    @staticmethod
     def get_nic_desc(nic):
         '''Generate and return NIC description for given network interface.
         Description is in form of "NIC name (NIC device)" - e.g. "net0 (bge0)".
@@ -321,7 +407,10 @@ class NetworkInfo(SMFConfig):
         available).
 
         '''
-        return nic[NetworkInfo.NIC_NAME_KEY]
+        if nic is None:
+            return ""
+        else:
+            return nic[NetworkInfo.NIC_NAME_KEY]
 
     def _nic_is_under_dhcp_control(self):
         '''Returns True if selected NIC is controlled by DHCP.
@@ -334,7 +423,7 @@ class NetworkInfo(SMFConfig):
         # Then search for presence of 'dhcp' type which indicates IPv4
         # address object controlled by DHCP.
         #
-        argslist = ['/usr/sbin/ipadm', 'show-addr', '-p', '-o', 'type',
+        argslist = [IPADM, 'show-addr', '-p', '-o', 'type',
                     self.get_nic_link(self.nic_iface) + "/"]
         try:
             ipadm_popen = Popen.check_call(argslist, stdout=Popen.STORE,
