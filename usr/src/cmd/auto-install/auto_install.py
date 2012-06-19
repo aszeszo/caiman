@@ -78,7 +78,7 @@ from solaris_install.ict import initialize_smf, update_dumpadm, \
 from solaris_install.ict.apply_sysconfig import APPLY_SYSCONFIG_DICT, \
     APPLY_SYSCONFIG_PROFILE_KEY
 from solaris_install.ict.transfer_files import add_transfer_files_to_doc
-from solaris_install.logger import FileHandler, ProgressHandler, MAX_INT
+from solaris_install.logger import ProgressHandler, MAX_INT
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.manifest.parser import ManifestError, \
     MANIFEST_PARSER_DATA
@@ -123,12 +123,16 @@ class AutoInstall(object):
         Class constructor
         """
         self.installed_root_dir = self.INSTALLED_ROOT_DIR
-        self.install_log = None
         self.auto_reboot = False
         self.doc = None
         self.exitval = self.AI_EXIT_SUCCESS
         self.derived_script = None
         self.manifest = None
+
+        # Logger Variables
+        self.install_log = None
+        self.logger = None
+        self.progress_ph = None
 
         # To remember the BE when we find it.
         self._be = None
@@ -136,17 +140,15 @@ class AutoInstall(object):
         # Parse command line arguments
         self.options, self.args = self.parse_args(args)
 
-        # Initialize Install Engine
-        self.engine = InstallEngine(stop_on_error=True)
-        self.doc = self.engine.data_object_cache
-
         if self.options.zonename is not None:
             # If we're installing a zone root, generate a work_dir
             # location based on the current PID.
             work_dir = "/system/volatile/install." + str(os.getpid())
 
             # Add ApplicationData to the DOC
-            self._app_data = ApplicationData("auto-install", work_dir=work_dir)
+            self._app_data = ApplicationData("auto-install", work_dir=work_dir,
+                logname=self.INSTALL_LOG)
+
             self._app_data.data_dict[ALT_POOL_DATASET] = \
                 self.options.alt_zpool_dataset
 
@@ -154,7 +156,24 @@ class AutoInstall(object):
             self.installed_root_dir = work_dir + self.INSTALLED_ROOT_DIR
         else:
             # Add ApplicationData to the DOC
-            self._app_data = ApplicationData("auto-install")
+            self._app_data = ApplicationData("auto-install",
+                logname=self.INSTALL_LOG)
+
+        # Get the logname handle
+        self.install_log = self._app_data.logname
+
+        # Initialize the Install Engine
+        self.engine = InstallEngine(self.install_log,
+                loglevel=logging.DEBUG, stop_on_error=True)
+        self.doc = self.engine.data_object_cache
+
+        # Establish the logger instance for AI
+        self.logger = logging.getLogger(INSTALL_LOGGER_NAME)
+
+        if not self.options.list_checkpoints:
+            self.logger.info("Install Log: %s" % (self.install_log),
+            extra={self.AI_INFO_PREFIX: "Install Log",
+            self.AI_INFO_MSG: self.install_log})
 
         # Add profile location to the ApplySysconfig checkpoint's data dict.
         if self.options.profile is not None:
@@ -184,10 +203,7 @@ class AutoInstall(object):
         # Clear error service
         errsvc.clear_error_list()
 
-        # Create Logger and setup logfiles
-        self.install_log_fh = None
-        self.logger = None
-        self.progress_ph = None
+        # Setup additional AI logging
         self.setup_logs()
 
         if not self.options.list_checkpoints:
@@ -384,12 +400,8 @@ class AutoInstall(object):
 
     def setup_logs(self):
         """
-        Create the logger instance for AI and create simple and
-        detailed log files to use.
+        Create the additional loggers for AI.
         """
-
-        # Create logger for AI
-        self.logger = logging.getLogger(INSTALL_LOGGER_NAME)
 
         # Log progress and info messages to the console.
         self.progress_ph = AIProgressHandler(self.logger,
@@ -408,20 +420,6 @@ class AutoInstall(object):
                 align_prefix=(self.options.zonename is not None),
                 prefix_key=self.AI_INFO_PREFIX, msg_key=self.AI_INFO_MSG)
         self.progress_ph.setFormatter(formatter)
-
-        # create a install_log file handler and add it to the ai_logger
-
-        # set the logfile names
-        self.install_log = os.path.join(self._app_data.work_dir,
-            self.INSTALL_LOG)
-        self.install_log_fh = FileHandler(self.install_log)
-
-        self.install_log_fh.setLevel(logging.DEBUG)
-        if not self.options.list_checkpoints:
-            self.logger.info("Install Log: %s" % (self.install_log),
-                extra={self.AI_INFO_PREFIX: "Install Log",
-                self.AI_INFO_MSG: self.install_log})
-        self.logger.addHandler(self.install_log_fh)
 
     @property
     def be(self):
@@ -671,7 +669,7 @@ class AutoInstall(object):
                     # Now do actual transfer of logs
                     self.logger.debug("Transferring log to %s" %
                         (new_be.mountpoint + self.BE_LOG_DIR))
-                    self.install_log_fh.transfer_log(
+                    self.logger.default_fh.transfer_log(
                         new_be.mountpoint + self.BE_LOG_DIR, isdir=True)
 
                     # And cleanup

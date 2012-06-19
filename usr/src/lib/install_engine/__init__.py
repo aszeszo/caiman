@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -50,7 +50,7 @@ from solaris_install.data_object import DataObject
 from solaris_install.data_object.cache import DataObjectCache
 from solaris_install.engine.checkpoint_data import CheckpointData
 from solaris_install.logger import InstallLogger, LogInitError, \
-    INSTALL_LOGGER_NAME
+     INSTALL_LOGGER_NAME
 from solaris_install.target.logical import Filesystem
 
 LOGGER = None
@@ -166,8 +166,8 @@ class InstallEngine(object):
         ''' thread used for execute_checkpoints() for the blocking case '''
         start = threading.Thread.run
 
-    def __new__(cls, default_log=None, loglevel=None, debug=False,
-                dataset=None, stop_on_error=True):
+    def __new__(cls, default_log, loglevel=None, debug=False,
+        exclusive_rw=False, dataset=None, stop_on_error=True):
 
         if InstallEngine._instance is None:
             return object.__new__(cls)
@@ -175,15 +175,13 @@ class InstallEngine(object):
             raise SingletonError("InstallEngine instance already exists",
                                  InstallEngine._instance)
 
-    def __init__(self, default_log=None, loglevel=None, debug=False,
-                 dataset=None, stop_on_error=True):
+    def __init__(self, default_log, loglevel=None, debug=False,
+        exclusive_rw=False, dataset=None, stop_on_error=True):
         ''' Initializes the InstallEngine
 
         Input:
-            - default_log: Optional. Defaults to None.
-              The location of the default log for the application. If not
-              specified, the default log location is provided by the
-              logging service.
+            - default_log: Required. The location of the default log for
+              the application.
 
             - loglevel: Optional.  Defaults to None.
               Logging level to use for everything: application,
@@ -195,6 +193,10 @@ class InstallEngine(object):
               If true, copies of DataObjectCache snapshot will not be
               removed from the directory defined to store temporary snapshots
               of DataObjectCache.
+
+            - exclusive_rw: Optional. Default to false.
+              If true, causes the default log file to be opened with exclusive
+              read/write privileges and restrictive access to the file.
 
             - Dataset: Optional.  Default to None.
               ZFS Dataset to be used by the engine to create ZFS snapshots
@@ -219,7 +221,7 @@ class InstallEngine(object):
 
         # Logging must be instantiated before instantiating the DataObjectCache
         # because data object cache might need to make logging calls.
-        self._init_logging(default_log, loglevel)
+        self._init_logging(default_log, loglevel, exclusive_rw)
 
         # initialize the data object cache
         self.data_object_cache = DataObjectCache()
@@ -257,15 +259,14 @@ class InstallEngine(object):
             shutil.rmtree(self._tmp_cache_path, ignore_errors=True)
         self._tmp_cache_path = None
 
-    def _init_logging(self, default_log, loglevel):
+    def _init_logging(self, default_log, loglevel, exclusive_rw):
         ''' Initialize logging and set the loglevel if provided '''
         logging.setLoggerClass(InstallLogger)
         global LOGGER
         LOGGER = InstallLogger.manager.getLogger(INSTALL_LOGGER_NAME,
-                                                 default_log)
+            log=default_log, level=loglevel, exclusive_rw=exclusive_rw)
         InstallLogger.ENGINE = self
-        if loglevel is not None:
-            LOGGER.setLevel(loglevel)
+
         if not isinstance(LOGGER, InstallLogger):
             # Occurs if some module has called logging.getLogger prior to
             # this function being run. As this means we don't have control

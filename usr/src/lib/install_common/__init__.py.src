@@ -428,12 +428,14 @@ class ApplicationData(DataObject):
     - Work Directory, defaulting to /system/volatile
     """
 
-    def __init__(self, application_name, work_dir="/system/volatile/"):
+    def __init__(self, application_name, work_dir="/system/volatile/",
+        logname=None):
         super(ApplicationData, self).__init__(application_name)
 
         self._application_name = application_name
         self._work_dir = work_dir
         self.data_dict = dict()
+        self._logname = logname
 
     @property
     def application_name(self):
@@ -444,6 +446,11 @@ class ApplicationData(DataObject):
     def work_dir(self):
         """Read-only Work Directory - set at initialisation"""
         return self._work_dir
+
+    @property
+    def logname(self):
+        """Read-only logname - set at initialization"""
+        return self._work_dir + "/" + self._logname
 
     # Implement no-op XML methods
     def to_xml(self):
@@ -554,8 +561,17 @@ def check_auth_and_euid(auth):
                                       "required to perform this operation." % \
                                       auth))
 
-    # raise error if euid is not 0 
+    # raise error if euid is not 0
     if os.geteuid() != 0:
         raise UnauthorizedUserError(_("Insufficient permission to perform "
                                       "operation.\neuid required to be "
                                       "0 to perform this operation."))
+
+
+def check_log_level(level):
+    """ Checks the log level being passed in"""
+    try:
+        logging.getLevelName(level)
+        return True
+    except NameError:
+        return False

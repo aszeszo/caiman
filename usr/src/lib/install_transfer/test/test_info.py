@@ -26,9 +26,14 @@
 
 '''Tests for the Transfer Info interface'''
 
+import logging
+import os
+import shutil
+import tempfile
 import unittest
 from pkg.client.api import IMG_TYPE_PARTIAL
 from solaris_install.engine import InstallEngine
+from solaris_install.logger import InstallLogger
 from solaris_install.transfer.info import Args
 from solaris_install.transfer.info import CPIOSpec
 from solaris_install.transfer.info import Destination
@@ -47,7 +52,9 @@ from solaris_install.transfer.info import SVR4Spec
 class TestCPIOInfoFunctions(unittest.TestCase):
     def setUp(self):
         InstallEngine._instance = None
-        InstallEngine()
+        default_log_dir = tempfile.mkdtemp(dir="/tmp", prefix="logging_")
+        default_log = default_log_dir + "/install_log"
+        InstallEngine(default_log)
         self.engine = InstallEngine.get_instance()
         self.doc = self.engine.data_object_cache.volatile
 
@@ -56,6 +63,15 @@ class TestCPIOInfoFunctions(unittest.TestCase):
         self.engine.data_object_cache.clear()
         self.engine = None
         self.doc = None
+
+        try:
+            shutil.rmtree(os.path.dirname(
+                InstallLogger.DEFAULTFILEHANDLER.baseFilename))
+        except:
+            pass
+
+        logging.Logger.manager.loggerDict = {}
+        InstallLogger.DEFAULTFILEHANDLER = None
 
     def test_info(self):
         '''Test that all the arguments get into the node correctly'''
@@ -285,7 +301,9 @@ class TestIPSInfoFunctions(unittest.TestCase):
 
     def setUp(self):
         InstallEngine._instance = None
-        InstallEngine()
+        default_log_dir = tempfile.mkdtemp(dir="/tmp", prefix="logging_")
+        default_log = default_log_dir + "/install_log"
+        InstallEngine(default_log)
         self.engine = InstallEngine.get_instance()
         self.doc = self.engine.data_object_cache.volatile
 
@@ -294,6 +312,15 @@ class TestIPSInfoFunctions(unittest.TestCase):
         InstallEngine._instance = None
         self.engine = None
         self.doc = None
+
+        try:
+            shutil.rmtree(os.path.dirname(
+                InstallLogger.DEFAULTFILEHANDLER.baseFilename))
+        except:
+            pass
+
+        logging.Logger.manager.loggerDict = {}
+        InstallLogger.DEFAULTFILEHANDLER = None
 
     def test_name(self):
         '''Test that names are populated correctly in the Software node'''
@@ -733,7 +760,9 @@ class TestP5IInfoFunctions(unittest.TestCase):
 
     def setUp(self):
         InstallEngine._instance = None
-        InstallEngine()
+        default_log_dir = tempfile.mkdtemp(dir="/tmp", prefix="logging_")
+        default_log = default_log_dir + "/install_log"
+        InstallEngine(default_log)
         self.engine = InstallEngine.get_instance()
         self.doc = self.engine.data_object_cache.volatile
 
@@ -742,6 +771,15 @@ class TestP5IInfoFunctions(unittest.TestCase):
         InstallEngine._instance = None
         self.engine = None
         self.doc = None
+
+        try:
+            shutil.rmtree(os.path.dirname(
+                InstallLogger.DEFAULTFILEHANDLER.baseFilename))
+        except:
+            pass
+
+        logging.Logger.manager.loggerDict = {}
+        InstallLogger.DEFAULTFILEHANDLER = None
 
     def test_file_name(self):
         '''Test that Origin is set correctly in the node'''
@@ -765,7 +803,9 @@ class TestP5IInfoFunctions(unittest.TestCase):
 class TestSVR4InfoFunctions(unittest.TestCase):
     def setUp(self):
         InstallEngine._instance = None
-        InstallEngine()
+        default_log_dir = tempfile.mkdtemp(dir="/tmp", prefix="logging_")
+        default_log = default_log_dir + "/install_log"
+        InstallEngine(default_log)
         self.engine = InstallEngine.get_instance()
         self.doc = self.engine.data_object_cache.volatile
 
@@ -774,6 +814,15 @@ class TestSVR4InfoFunctions(unittest.TestCase):
         self.engine.data_object_cache.clear()
         self.engine = None
         self.doc = None
+
+        try:
+            shutil.rmtree(os.path.dirname(
+                InstallLogger.DEFAULTFILEHANDLER.baseFilename))
+        except:
+            pass
+
+        logging.Logger.manager.loggerDict = {}
+        InstallLogger.DEFAULTFILEHANDLER = None
 
     def test_info(self):
         '''Test that all the arguments get into the node correctly'''

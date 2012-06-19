@@ -29,7 +29,8 @@ Text / (n)Curses based UI for installing Oracle Solaris
 import gettext
 import os
 
-from solaris_install import gpt_firmware_check
+from solaris_install import gpt_firmware_check, ApplicationData, \
+    check_log_level
 from solaris_install.getconsole import get_console, SERIAL_CONSOLE
 
 #
@@ -129,8 +130,8 @@ from terminalui.screen_list import ScreenList
 
 LOG_LOCATION_FINAL = post_install_logs_path('install_log')
 DEFAULT_LOG_LOCATION = "/system/volatile/install_log"
-DEFAULT_LOG_LEVEL = "info"
-DEBUG_LOG_LEVEL = "debug"
+DEFAULT_LOG_LEVEL = logging.INFO
+DEBUG_LOG_LEVEL = logging.DEBUG
 REBOOT = "/usr/sbin/reboot"
 
 LOGGER = None
@@ -163,26 +164,6 @@ def exit_text_installer(logname=None, errcode=0):
     if isinstance(errcode, unicode):
         errcode = errcode.encode(get_encoding())
     sys.exit(errcode)
-
-
-def setup_logging(logname, log_level):
-    '''setup the logger, logging to logname at log_level'''
-
-    global LOGGER
-    LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
-
-    log_level = log_level.upper()
-    if hasattr(logging, log_level):
-        log_level = getattr(logging, log_level.upper())
-    elif log_level == LOG_NAME_INPUT:
-        log_level = LOG_LEVEL_INPUT
-    else:
-        raise IOError(2, "Invalid --log-level parameter", log_level.lower())
-
-    LOGGER.setLevel(log_level)
-    LOGGER.transfer_log(destination=logname)
-
-    LOGGER.info("**** START ****")
 
 
 def make_screen_list(main_win, target_controller, install_data):
@@ -257,10 +238,31 @@ def prepare_engine(options):
         the checkpoints to be used for doing the install.
     '''
 
-    eng = InstallEngine(debug=options.debug)
+    # Set up logging and initialize the InstallEngine
+    work_dir = os.path.dirname(options.logname)
+    logname = os.path.basename(options.logname)
+    app_data = ApplicationData("text-install", work_dir=work_dir,
+                               logname=logname)
 
-    # setup_logging() must be called after the engine is initialized.
-    setup_logging(options.logname, options.log_level)
+    # Check to make sure the log levels are valid.
+    if check_log_level(options.log_level):
+        # This delineation is necessary because of the "INPUT" log
+        # level that is available in the text installer. It won't
+        # register as an integer, while the logging levels will.
+        if isinstance(options.log_level, int):
+            eng = InstallEngine(app_data.logname, loglevel=options.log_level,
+                                debug=options.debug)
+        else:
+            eng = InstallEngine(app_data.logname, debug=options.debug)
+    else:
+        raise IOError(2, "Invalid --log-level parameter", options.log_level)
+
+    doc = InstallEngine.get_instance().doc
+    doc.persistent.insert_children(app_data)
+
+    global LOGGER
+    LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
+    LOGGER.info("**** START ****")
 
     terminalui.init_logging(INSTALL_LOGGER_NAME)
 

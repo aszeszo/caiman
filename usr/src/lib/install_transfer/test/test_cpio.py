@@ -44,8 +44,9 @@ from solaris_install.transfer.info import Args
 
 import logging
 import os
-import unittest
 import shutil
+import tempfile
+import unittest
 
 
 class TestCPIOFunctions(unittest.TestCase):
@@ -60,7 +61,10 @@ class TestCPIOFunctions(unittest.TestCase):
 
     def setUp(self):
         InstallEngine._instance = None
-        InstallEngine()
+
+        default_log_dir = tempfile.mkdtemp(dir="/tmp", prefix="logging_")
+        default_log = default_log_dir + "/install_log"
+        InstallEngine(default_log)
         self.engine = InstallEngine.get_instance()
         self.doc = self.engine.data_object_cache.volatile
         self.soft_node = Software("CPIO_Transfer", "CPIO")
@@ -92,6 +96,15 @@ class TestCPIOFunctions(unittest.TestCase):
         self.tr_cpio = None
         InstallEngine._instance = None
         TEST_CONTENTS_LIST = []
+
+        try:
+            shutil.rmtree(os.path.dirname(
+                InstallLogger.DEFAULTFILEHANDLER.baseFilename))
+        except:
+            pass
+
+        logging.Logger.manager.loggerDict = {}
+        InstallLogger.DEFAULTFILEHANDLER = None
 
     def test_software_type(self):
         self.assertTrue(self.soft_node.tran_type == "CPIO")

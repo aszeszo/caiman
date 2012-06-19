@@ -25,7 +25,6 @@
 
 '''System Configuration Interactive (SCI) Tool'''
 
-
 import gettext
 import atexit
 import curses
@@ -175,7 +174,7 @@ DEFAULT_SC_PROFILE = "sc_profile.xml"
 DEFAULT_SC_LOCATION = os.path.join(VOLATILE_PATH, "profile",
                                    DEFAULT_SC_PROFILE)
 
-DEFAULT_LOG_LOCATION = "/var/tmp/install/sysconfig.log"
+DEFAULT_LOG_LOC = os.path.join(VOLATILE_PATH, "sysconfig/sysconfig.log")
 DEFAULT_LOG_LEVEL = "info"
 LOG_FORMAT = ("%(asctime)s - %(levelname)-8s: "
               "%(filename)s:%(lineno)d %(message)s")
@@ -983,7 +982,7 @@ def _parse_options(arguments):
         parser.add_option("-l", "--log-location", dest="logname",
                           help=_("Set log location to FILE "
                           "(default: %default)"),
-                          metavar="FILE", default=DEFAULT_LOG_LOCATION)
+                          metavar="FILE", default=DEFAULT_LOG_LOC)
         parser.add_option("-v", "--log-level", dest="log_level",
                           default=DEFAULT_LOG_LEVEL,
                           help=_("Set log verbosity to LEVEL. In order of "
@@ -1075,8 +1074,8 @@ def _show_screens(options):
 
 def _prepare_engine(options):
     '''Initialize the InstallEngine'''
-    InstallEngine(default_log=options.logname, loglevel=options.log_level,
-                  debug=options.debug)
+    InstallEngine(options.logname, loglevel=options.log_level,
+                  debug=options.debug, exclusive_rw=options.exclusive_rw)
 
     logger = logging.getLogger(INSTALL_LOGGER_NAME)
 
@@ -1132,6 +1131,8 @@ def main():
     if sub_cmd[0] == CONFIGURE or sub_cmd[0] == UNCONFIGURE:
         do_unconfigure(sub_cmd[0], options)
     elif sub_cmd[0] == CREATE_PROFILE:
+        # Set the exclusive read write flag to true
+        options.exclusive_rw = True
         do_create_profile(options)
 
     sys.exit(SU_OK)

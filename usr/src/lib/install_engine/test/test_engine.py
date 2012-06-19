@@ -22,7 +22,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''Some unit tests to cover engine functionality'''
@@ -31,6 +31,7 @@ import logging
 import os
 import sys
 import shutil
+import tempfile
 import threading
 import unittest
 import warnings
@@ -51,54 +52,57 @@ from solaris_install.data_object import DataObject
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_THIS_DIR)
 
+
 class MockDataset(object):
 
     ''' Fake Dataset object so the real ZFS dataset object does
         not need to be used for testing
     '''
-    
+
     def __init__(self, path):
         self.exists = True
         self.mountpoint = path
         self.snapped = (None, None)
         self.snapshot_list = []
-    
+
     def snapshot(self, name, overwrite=False):
         self.snapped = (name, overwrite)
-    
+
     def snapname(self, name):
         return self.mountpoint + '@' + name
-    
+
     def rollback(self, name, recursive=True):
         pass
 
     def get(self, property):
         return getattr(self, property)
 
+
 class MockDOC(object):
 
     ''' Fake DOC object so the real DataObjectCache object we do not rely
         on the actual DataObjectCache class for testing.
     '''
-    
+
     def take_snapshot(self, dummy):
         self.snapshotted = dummy
 
     def insert_children(self, dummy):
         pass
-    
+
     @property
     def persistent(self):
         return self
-    
+
     def get_first_child(self, name=None):
         return self
 
     def clear(self):
         pass
-    
+
     def load_from_snapshot(self, filename):
         self.loaded_from = filename
+
 
 class MockCheckpointRegData(DataObject):
 
@@ -118,6 +122,7 @@ class MockCheckpointRegData(DataObject):
     def can_handle(cls, xml_node):
         return False
 
+
 class MockCheckpointData(object):
     ''' Fake CheckpointData object so we do not rely on the actual
         CheckpointData object for testing
@@ -127,20 +132,21 @@ class MockCheckpointData(object):
         self.name = "MockCheckpointData"
         self.prog_reported = 0
         self.prog_est_ratio = 0
-    
+
+
 class EngineTest(unittest.TestCase):
 
     ''' Tests that validates the interfaces in the install engine code.
         All tests here do not require a user to be
         root to execute.
     '''
-    
+
     def setUp(self):
         self.callback_results = (None, None)
         self.callback_executed = threading.Event()
 
         self.engine = get_new_engine_instance()
-       
+
     def tearDown(self):
 
         # Force spawning of fresh singleton for each test.
@@ -149,7 +155,7 @@ class EngineTest(unittest.TestCase):
 
         self.callback_results = None
         self.callback_executed = None
-    
+
     def _exec_cp_callback(self, status, errsvc):
         ''' Callback function for none-block execute_checkpoints() tests '''
 
@@ -166,7 +172,7 @@ class EngineTest(unittest.TestCase):
         os.mkdir(self.cache_dir_name)
 
         for cp in cp_names:
-            file_name = os.path.join(self.cache_dir_name, 
+            file_name = os.path.join(self.cache_dir_name,
                            engine.InstallEngine.CACHE_FILE_NAME_PREFIX + cp)
             shutil.copyfile("/etc/hosts", file_name)
             self.full_cp_names.append(file_name)
@@ -175,146 +181,156 @@ class EngineTest(unittest.TestCase):
         ''' Destroyes the fake DOC snapshots in /tmp used for testing '''
         shutil.rmtree(self.cache_dir_name)
 
+
 class SimpleEngineTests(EngineTest):
     '''Tests the less complicated engine functionality'''
-    
+
     def test_engine_is_singleton(self):
         engine.InstallEngine._instance = None
-        
+
         self.assertRaises(engine.SingletonError,
                           engine.InstallEngine.get_instance)
-        
-        install_engine = engine.InstallEngine()
+
+        log_tmp_dir = tempfile.mkdtemp(dir="/tmp", prefix="logging_")
+        log_tmp_file = log_tmp_dir + "/install_log"
+
+        install_engine = engine.InstallEngine(log_tmp_file)
         self.assertTrue(isinstance(install_engine, engine.InstallEngine))
-        
-        self.assertRaises(engine.SingletonError, engine.InstallEngine)
-        
+
+        self.assertRaises(engine.SingletonError, engine.InstallEngine,
+                          "secondlog")
+
         engine_instance = engine.InstallEngine.get_instance()
         self.assertTrue(install_engine is engine_instance)
-    
+
+        try:
+            shutil.rmtree(os.path.dirname(log_tmp_file))
+        except:
+            pass
+
     def test_check_callback_None(self):
         '''Assert InstallEngine._check_callback accepts None '''
         try:
             self.engine._check_callback(None)
         except TypeError:
             self.fail("Engine did not accept 'None' for callback")
-    
+
     def test_check_callback_varargs(self):
         '''Assert InstallEngine._check_callback accepts a vararg function'''
         def vararg_func(*args):
             pass
-        
+
         try:
             self.engine._check_callback(vararg_func)
         except TypeError:
             self.fail("Engine did not accept function with *args param")
-    
+
     def test_check_callback_two_args(self):
         '''Assert InstallEngine._check_callback accepts a two argument function'''
         def arg_func(arg1, arg2):
             pass
-        
+
         try:
             self.engine._check_callback(arg_func)
         except TypeError:
             self.fail("Engine did not accept function with exactly two args")
-    
+
     def test_check_callback_under_two_args(self):
         '''Asserts InstallEngine._check_callback fails on a single argument function'''
         def arg_func(arg1):
             pass
-        
+
         self.assertRaises(TypeError, self.engine._check_callback, arg_func)
-    
+
     def test_check_callback_over_two_required_args(self):
         '''Asserts InstallEngine._check_callback fails if 3 or more args are required'''
         def arg_func(arg1, arg2, arg3):
             pass
-        
+
         self.assertRaises(TypeError, self.engine._check_callback, arg_func)
-    
+
     def test_check_callback_with_kwargs(self):
         '''Asserts InstallEngine._check_callback handles functions with keyword args'''
         def kwarg_func_all(arg1=None, arg2=None, arg3=None):
             pass
-        
+
         try:
             self.engine._check_callback(kwarg_func_all)
         except TypeError:
             self.fail("Engine did not accept function with kwargs for all"
                       "arguments")
-    
+
     def test_check_callback_2_arg_optional_kwarg(self):
         '''Asserts InstallEngine._check_callback handles a function with an optional keyword argument'''
         def optional_kwarg(arg1, arg2, arg3=None):
             pass
-        
+
         try:
             self.engine._check_callback(optional_kwarg)
         except TypeError:
             self.fail("Engine did not accept function with optional kwarg")
-    
+
     def test_check_callback_bound_class_method(self):
         '''Asserts InstallEngine._check_callback handles bound class methods'''
         class DummyClass(object):
             def callback(self, status, errsvc):
                 pass
-        
+
         instance = DummyClass()
-        
+
         try:
             self.engine._check_callback(instance.callback)
         except TypeError:
             self.fail("Engine did not accept bound class method")
-    
+
     def test_check_callback_unbound_class_method(self):
         '''Asserts InstallEngine._check_callback rejects unbound class methods.
         (Unbound methods require a class instance as the first argument)'''
         class DummyClass(object):
             def callback(self, status, errsvc):
                 pass
-        
+
         self.assertRaises(TypeError, self.engine._check_callback,
                           DummyClass.callback)
 
     def test_snapshot_tmp_no_dataset(self):
         self.engine._dataset = None
         self.engine.data_object_cache = MockDOC()
-        
+
         cp_data = MockCheckpointData()
-        
+
         self.engine.snapshot(cp_data=cp_data)
-        
+
         self.assertEqual(cp_data.zfs_snap, None)
         self.assertEqual(self.engine.doc.snapshotted,
                          cp_data.data_cache_path,
                          "DOC path for Checkpoint not set")
-    
+
     def test_snapshot_tmp_dataset_no_exist(self):
         ds = MockDataset("mock")
         self.engine._dataset = ds
         self.engine.dataset.exists = False
         self.engine.data_object_cache = MockDOC()
-        
+
         cp_data = MockCheckpointData()
-        
+
         self.engine.snapshot(cp_data=cp_data)
-        
+
         self.assertEqual(cp_data.zfs_snap, None)
         self.assertEqual(self.engine.doc.snapshotted,
                          cp_data.data_cache_path,
                          "DOC path for Checkpoint not set")
-    
+
     def test_snapshot_zfs_dataset_exists(self):
         ds = MockDataset("mock")
         self.engine._dataset = ds
         self.engine.dataset.exists = True
         self.engine.data_object_cache = MockDOC()
-        
+
         cp_data = MockCheckpointData()
-        
+
         self.engine.snapshot(cp_data=cp_data)
-        
+
         self.assertEqual(cp_data.zfs_snap, ds.snapped[0])
         self.assertEqual(self.engine.doc.snapshotted,
                          cp_data.data_cache_path,
@@ -542,7 +558,7 @@ class EngineCheckpointsTest(EngineCheckpointsBase):
         '''Test that rollbacks fail when the cache doesn't exist'''
         cp = self.engine._checkpoints[0]
         cp.completed = True
-        cp.data_cache_path = os.tempnam() # Guaranteed to not exist yet
+        cp.data_cache_path = os.tempnam()  # Guaranteed to not exist yet
         self.engine.data_object_cache = MockDOC()
         
         self.assertRaises(engine.NoCacheError, self.engine._rollback, cp.name)
@@ -839,7 +855,7 @@ class EngineExecuteTests(EngineCheckpointsBase):
         self.assertNotEqual(cp, None)
         self.assertEqual(cp.name, expected_failed_cp[0])
 
-    def test_nothing_to_exec(self): 
+    def test_nothing_to_exec(self):
         '''Validate a warning is issued when there's no checkpoint to execute'''
         with warnings.catch_warnings(record=True) as w:
             self.engine.execute_checkpoints(start_from="one",
@@ -860,6 +876,7 @@ class EngineExecuteTests(EngineCheckpointsBase):
         del os.environ[self.engine.TMP_CACHE_ENV]
 
         self.assertEqual(path_result, cache_path_env)
+
 
 class EngineRegisterTests(EngineTest):
 
@@ -885,14 +902,13 @@ class EngineRegisterTests(EngineTest):
                                    self.cp_mod_path, "EmptyCheckpoint", None,
                                    None, None)
             self.test_chkpt_list.append(chkpt)
-            
 
     def check_result(self, expected_list):
 
         self.assertEquals(len(expected_list), len(self.engine._checkpoints))
 
         for expected_data, cp_data in zip(expected_list,
-                                          self.engine._checkpoints):  
+                                          self.engine._checkpoints):
 
             self.assertEquals(cp_data.cp_info.cp_name,
                               expected_data.cp_info.cp_name,
@@ -1035,7 +1051,7 @@ class EngineRegisterTests(EngineTest):
 
         self.assertRaises(ImportError,
                           self.engine.register_checkpoint, chkpt.name,
-                          chkpt.cp_info.mod_name+"/junk", 
+                          chkpt.cp_info.mod_name+"/junk",
                           chkpt.cp_info.checkpoint_class_name)
 
         self.check_result([])
@@ -1410,6 +1426,7 @@ class EngineRegisterTests(EngineTest):
 
         self.check_result([chkpt])
 
+
 class EngineCancelTests(EngineCheckpointsBase):
     '''Test InstallEngine.cancel_checkpoints(...) scenarios'''
     
@@ -1467,7 +1484,7 @@ class EngineCancelTests(EngineCheckpointsBase):
         # register a checkpoint that looks for the cancel flag
         self.reg_cancel_checkpoint()
 
-        # Call cancel_checkpoints 
+        # Call cancel_checkpoints
         self.engine.cancel_checkpoints()
 
         # Make sure the cancel checkpoint is not executed
@@ -1492,7 +1509,6 @@ class EngineCancelTests(EngineCheckpointsBase):
             self.engine.cancel_checkpoints()
         except Exception, ex:
             self.fail("cancel checkpoint failed after execute completed")
-
 
     def test_exec_after_cancel(self):
         '''Verify execute_checkpoint() works correctly after cancel_checkpoints is called. '''

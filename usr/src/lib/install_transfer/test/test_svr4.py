@@ -20,12 +20,13 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import logging
 import os
 import shutil
+import tempfile
 import unittest
 
 from solaris_install.engine import InstallEngine
@@ -52,7 +53,9 @@ class TestTransferSVR4Functions(unittest.TestCase):
 
     def setUp(self):
         InstallEngine._instance = None
-        InstallEngine()
+        default_log_dir = tempfile.mkdtemp(dir="/tmp", prefix="logging_")
+        default_log = default_log_dir + "/install_log"
+        InstallEngine(default_log)
         self.engine = InstallEngine.get_instance()
         self.doc = self.engine.data_object_cache.volatile
         self.soft_node = Software("SVR4Transfer", "SVR4")
@@ -70,6 +73,15 @@ class TestTransferSVR4Functions(unittest.TestCase):
         self.engine.data_object_cache.clear()
         self.doc = None
         self.engine = None
+        try:
+            shutil.rmtree(os.path.dirname(
+                InstallLogger.DEFAULTFILEHANDLER.baseFilename))
+        except:
+            pass
+
+        logging.Logger.manager.loggerDict = {}
+        InstallLogger.DEFAULTFILEHANDLER = None
+
         self.soft_node = None
         self.tr_node = None
         self.tr_svr4 = None

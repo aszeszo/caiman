@@ -21,13 +21,18 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''Tests for the Transfer Info interface'''
 
+import logging
+import os
+import shutil
+import tempfile
 import unittest
 from solaris_install.engine import InstallEngine
+from solaris_install.logger import InstallLogger
 from solaris_install.transfer.info import Software
 import solaris_install.transfer as Transfer
 
@@ -35,7 +40,9 @@ import solaris_install.transfer as Transfer
 class TestCreateCheckpoint(unittest.TestCase):
     def setUp(self):
         InstallEngine._instance = None
-        InstallEngine()
+        default_log_dir = tempfile.mkdtemp(dir="/tmp", prefix="logging_")
+        default_log = default_log_dir + "/install_log"
+        InstallEngine(default_log)
         self.engine = InstallEngine.get_instance()
         self.doc = self.engine.data_object_cache.volatile
 
@@ -44,6 +51,15 @@ class TestCreateCheckpoint(unittest.TestCase):
         self.engine.data_object_cache.clear()
         self.engine = None
         self.doc = None
+
+        try:
+            shutil.rmtree(os.path.dirname(
+                InstallLogger.DEFAULTFILEHANDLER.baseFilename))
+        except:
+            pass
+
+        logging.Logger.manager.loggerDict = {}
+        InstallLogger.DEFAULTFILEHANDLER = None
 
     def test_create_cpio_chkpt(self):
         '''Test create_checkpoint correctly returns cpio values'''

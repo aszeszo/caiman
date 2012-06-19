@@ -28,7 +28,6 @@
 
 __all__ = ["cli", "distro_const", "execution_checkpoint", "distro_spec"]
 
-
 import logging
 import optparse
 import os
@@ -47,6 +46,7 @@ from osol_install.install_utils import set_http_proxy
 from osol_install.liberrsvc import ES_DATA_EXCEPTION
 from solaris_install import CalledProcessError, run, DC_LABEL
 from solaris_install.boot.boot_spec import BootMods
+from solaris_install import system_temp_path
 from solaris_install.data_object import DataObject, ObjectNotFoundError
 from solaris_install.data_object.cache import DataObjectCache
 from solaris_install.data_object.data_dict import DataObjectDict
@@ -55,7 +55,7 @@ from solaris_install.distro_const.distro_spec import Distro
 from solaris_install.engine import FileNotFoundError, InstallEngine, \
     NoDatasetError, RollbackError, UsageError, UnknownChkptError
 from solaris_install.engine import INSTALL_LOGGER_NAME
-from solaris_install.logger import DEFAULTLOG, FileHandler, InstallFormatter
+from solaris_install.logger import FileHandler, InstallFormatter
 from solaris_install.manifest.parser import ManifestError
 from solaris_install.target import Target
 from solaris_install.target.logical import Filesystem, Zpool
@@ -64,6 +64,8 @@ from solaris_install.transfer.info import Destination, Dir, Image, Software, \
 
 DC_LOCKFILE = "distro_const.lock"
 DC_LOGGER = None
+LOG_TIMESTAMP = time.strftime("%Y-%m-%d.%H:%M")
+DEFAULTLOG = system_temp_path("dc/default_log" + '.' + LOG_TIMESTAMP)
 
 
 class Lockfile(object):
@@ -82,7 +84,7 @@ class Lockfile(object):
 
         if os.path.exists(self.filename):
             raise RuntimeError("distro_const: An instance of distro_const "
-                               "is already running in %s" % 
+                               "is already running in %s" %
                                os.path.split(self.filename)[0])
         else:
             # touch the lockfile
@@ -442,21 +444,22 @@ def main():
     try:
         # We initialize the Engine with stop_on_error set so that if there are
         # errors during manifest parsing, the processing stops
-        eng = InstallEngine(debug=False, stop_on_error=True)
+        eng = InstallEngine(DEFAULTLOG, debug=False, exclusive_rw=True,
+            stop_on_error=True)
         doc = eng.data_object_cache
 
         global DC_LOGGER
         DC_LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
 
         # set the logfile name
-        log_name = "log.%s" % time.strftime("%Y-%m-%d.%H:%M")
+        log_name = "log.%s" % LOG_TIMESTAMP
         detail_log_name = "detail-%s" % log_name
         simple_log_name = "simple-%s" % log_name
 
         # create an additional FileHandler for a simple log
         base, logfile = os.path.split(DEFAULTLOG)
         simple_logname = os.path.join(base, "simple-" + logfile)
-        simple_fh = FileHandler(simple_logname)
+        simple_fh = FileHandler(simple_logname, exclusive_rw=True)
         simple_fh.setLevel(logging.INFO)
         DC_LOGGER.addHandler(simple_fh)
 
@@ -497,6 +500,9 @@ def main():
                 DC_LOGGER.info("Detail Log: %s" % new_detaillog)
                 DC_LOGGER.transfer_log(destination=new_detaillog)
                 simple_fh.transfer_log(destination=new_simplelog)
+
+                # Remove the original DEFAULTLOG. It's no longer needed
+                shutil.rmtree(base)
 
                 # set the http_proxy if one is specified in the manifest
                 dc_set_http_proxy(DC_LOGGER)

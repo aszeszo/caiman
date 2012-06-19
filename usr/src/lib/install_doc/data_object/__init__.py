@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 '''Provides definition of base classes for storage in Data Object Cache.
 '''
@@ -32,12 +32,14 @@ import copy
 import logging
 import re
 import sys
-from urllib import quote, unquote
 
 from abc import ABCMeta, abstractmethod
-
 from lxml import etree
 from solaris_install.logger import INSTALL_LOGGER_NAME
+from urllib import quote, unquote
+
+DEFAULTLOG = "/system/volatile/install_log"
+
 
 # Define various Data Object specific exceptions
 
@@ -118,10 +120,10 @@ class DataObjectBase(object):
         Mainly used for logging from class methods, so most will just use
         self.logger property if it's an object instance.
         '''
-        if cls.__logger is None:
-            cls.__logger = logging.getLogger(INSTALL_LOGGER_NAME)
-
-        return cls.__logger
+        if cls._DataObjectBase__logger is None:
+            cls._DataObjectBase__logger = \
+                 logging.getLogger(INSTALL_LOGGER_NAME)
+        return cls._DataObjectBase__logger
 
     @property
     def logger(self):
@@ -248,7 +250,7 @@ class DataObjectBase(object):
         root_object = self
         while root_object._parent is not None:
             root_object = root_object._parent
-                
+
         return root_object
 
     @property

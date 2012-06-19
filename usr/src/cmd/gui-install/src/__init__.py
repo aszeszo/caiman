@@ -43,14 +43,15 @@ import g11nsvc
 import gtk
 
 import osol_install.errsvc as errsvc
-from solaris_install import CalledProcessError, Popen, \
-    post_install_logs_path, run
+from solaris_install import ApplicationData, CalledProcessError, Popen, \
+    post_install_logs_path, run, check_log_level
 from solaris_install.engine import InstallEngine
 from solaris_install.gui_install.gui_install_common import exit_gui_install, \
     modal_dialog, other_instance_is_running, start_td_local, write_pid_file, \
-    CLEANUP_CPIO_INSTALL, DEFAULT_LOG_LEVEL, DEFAULT_LOG_LOCATION, GLADE_DIR, \
-    LOG_FORMAT, LOG_LEVEL_INPUT, LOG_NAME_INPUT, LOGNAME, RELEASE, \
-    TARGET_DISCOVERY, TRANSFER_PREP, VARSHARE_DATASET
+    CLEANUP_CPIO_INSTALL, DEBUG_LOG_LEVEL, DEFAULT_LOG_LEVEL, \
+    DEFAULT_LOG_LOCATION, GLADE_DIR, LOG_FORMAT, LOG_LEVEL_INPUT, \
+    LOG_NAME_INPUT, LOGNAME, RELEASE, TARGET_DISCOVERY, TRANSFER_PREP, \
+    VARSHARE_DATASET
 from solaris_install.gui_install.install_profile import InstallProfile
 from solaris_install.gui_install.screen_manager import ScreenManager
 from solaris_install.ict.transfer_files import add_transfer_files_to_doc
@@ -229,25 +230,6 @@ def save_locale_in_doc():
     profile.set_locale_data([locale_description], [the_locale], the_locale)
 
 
-def setup_logging(logname, log_level):
-    '''Initialize the logger, logging to logname at log_level'''
-    logger = logging.getLogger(INSTALL_LOGGER_NAME)
-
-    log_level = log_level.upper()
-    if hasattr(logging, log_level):
-        log_level = getattr(logging, log_level.upper())
-    elif log_level == LOG_NAME_INPUT:
-        log_level = LOG_LEVEL_INPUT
-    else:
-        raise IOError(2, "Invalid --log-level parameter", log_level.lower())
-
-    logger.setLevel(log_level)
-    logger.transfer_log(destination=logname)
-
-    logger.info("**** START ****")
-    return logger
-
-
 def _init_locale():
     '''Initialize the locale for gui-install'''
     locale.setlocale(locale.LC_ALL, "")
@@ -296,25 +278,37 @@ def main():
                       "logging level to 'input' and enables CTRL-C for "
                       "killing the program\n"))
     options, args = parser.parse_args()
+
+    # Initialize the Engine and set up logging
+    work_dir = os.path.dirname(options.logname)
+    logname = os.path.basename(options.logname)
+    app_data = ApplicationData("gui-install", work_dir=work_dir,
+                               logname=logname)
+
     if options.log_level is None:
         if options.debug:
-            options.log_level = "debug"
+            options.log_level = DEBUG_LOG_LEVEL
         else:
             options.log_level = DEFAULT_LOG_LEVEL
+        InstallEngine(app_data.logname, loglevel=options.log_level, debug=True)
+    elif check_log_level(options.log_level):
+        InstallEngine(app_data.logname, loglevel=options.log_level,
+                      debug=options.debug)
+    else:
+        raise IOError(2, "Invalid --log-level parameter", options.log_level)
 
-    engine = InstallEngine(loglevel=options.log_level,
-                           debug=True)
-    try:
-        logger = setup_logging(options.logname, options.log_level)
-    except IOError, err:
-        parser.error("%s '%s'" % (err.strerror, err.filename))
+    doc = InstallEngine.get_instance().doc
+    doc.persistent.insert_children(app_data)
+
+    logger = logging.getLogger(INSTALL_LOGGER_NAME)
+    logger.info("**** START ****")
 
     logger.debug("CLI options: log location = %s, verbosity = %s, debug "
-                  "mode = %s",
-                  options.logname, options.log_level, options.debug)
+        "mode = %s", app_data.logname,
+        logging.getLevelName(options.log_level).lower(), options.debug)
 
     setup_checkpoints()
-    manager = ScreenManager(options.logname)
+    manager = ScreenManager(app_data.logname)
 
     start_td_local()
 
@@ -322,7 +316,7 @@ def main():
     save_locale_in_doc()
     manager.main()
 
-    exit_gui_install(logname=options.logname, errcode=0)
+    exit_gui_install(logname=app_data.logname, errcode=0)
 
 if __name__ == '__main__':
     main()

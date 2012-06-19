@@ -76,10 +76,10 @@ PIDFILE = "/system/volatile/gui-install.pid"
 LOGNAME = None
 
 # default logging level
-DEFAULT_LOG_LEVEL = "info"
+DEFAULT_LOG_LEVEL = logging.INFO
 
 # debug logging level
-DEBUG_LOG_LEVEL = "debug"
+DEBUG_LOG_LEVEL = logging.DEBUG
 
 # default log format
 LOG_FORMAT = ("%(asctime)s - %(levelname)-8s: %(message)s")

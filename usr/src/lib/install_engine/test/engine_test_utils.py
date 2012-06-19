@@ -22,16 +22,17 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''Some convenience functions that can be used by other test suites that use
    the engine in their testing
 '''
 
-import os
 import logging
+import os
 import shutil
+import tempfile
 import solaris_install.engine as engine
 
 from solaris_install.logger import InstallLogger
@@ -39,16 +40,20 @@ from solaris_install.logger import InstallLogger
 DEBUG_ENGINE = (os.environ.get("DEBUG_ENGINE", "false").lower() == "true")
 
 
-def get_new_engine_instance(doc_in_tmp=True):
+def get_new_engine_instance(doc_in_tmp=True, default_log=None):
     '''Returns a new install engine instance.  If an existing instance exists,
        it will be cleaned up.
     '''
 
     reset_engine()
-        
+
+    if not default_log:
+        default_log_dir = tempfile.mkdtemp(dir="/tmp", prefix="logging_")
+        default_log = default_log_dir + "/install_log"
+
     engine.InstallEngine._instance = None
 
-    new_engine = engine.InstallEngine()
+    new_engine = engine.InstallEngine(default_log)
 
     new_engine.debug = DEBUG_ENGINE
 
@@ -62,8 +67,7 @@ def get_new_engine_instance(doc_in_tmp=True):
 
 
 def reset_engine(old_engine=None):
-
-    ''' Clean up the engine for the tests ''' 
+    ''' Clean up the engine for the tests '''
 
     try:
         if old_engine is None:
@@ -78,6 +82,12 @@ def reset_engine(old_engine=None):
         pass
 
     engine.InstallEngine._instance = None
+
+    try:
+        shutil.rmtree(os.path.dirname(
+                      InstallLogger.DEFAULTFILEHANDLER.baseFilename))
+    except:
+        pass
 
     logging.Logger.manager.loggerDict = {}
 

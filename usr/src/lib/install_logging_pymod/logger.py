@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 ''' Code specific for the implementation of the InstallLogger'''
 import errno
@@ -32,8 +32,6 @@ import struct
 import time
 
 # Global variables
-_PID = str(os.getpid())
-DEFAULTLOG = '/var/tmp/install/default_log' + '.' + _PID
 DEFAULTPROGRESSFORMAT = '%(progress)s %(msg)s'
 DEFAULTLOGLEVEL = logging.DEBUG
 DEFAULTDESTINATION = '/var/tmp/install/dest'
@@ -47,11 +45,27 @@ class InstallManager(logging.Manager):
        of allowing applications to pass in a default log rather than
        using the default log provided by the installLogger class.
     '''
-    def getLogger(self, name, default_log=None):
+    def getLogger(self, name, log=None, level=None, exclusive_rw=False):
         """
-        This getLogger method allows the application to pass in a name,
-        a default log, and a logging level. These values are passed to
-        the InstallLogger to set up a custom default log file.
+        This getLogger method allows the application to pass in the following
+        input:
+
+        - name: Required. The name of the logger
+
+        - log: Optional. If a default log is included, it will be set
+          up as the default log location for the logging process.
+
+        - level: Optional. This value may be set for a default log
+          file. If it is not set, the logger sets to DEBUG as the default
+          value. The format of the level should follow the format of
+          the logging module. For example, logging.DEBUG, logging.INFO.
+
+        - exclusive_rw - Optional. Opens the file in a more secure mode. It
+          ensures safe log file creation and gives the file restrictive
+          permissions. If it is not set, it defaults to False.
+
+        These values are passed to the InstallLogger to set up a custom default
+        log file.
 
         The placeholder code is an adjunct to the python logging module.
         It is used to manage the logging hierarchy. Because this getLogger
@@ -66,13 +80,15 @@ class InstallManager(logging.Manager):
                 if isinstance(logger_name, logging.PlaceHolder):
                     placeholder_for_fixup = logger_name
                     logger_name = \
-                        logging._loggerClass(name, default_log)
+                        logging._loggerClass(name, default_log=log,
+                            level=level, exclusive_rw=exclusive_rw)
                     logger_name.manager = self
                     logging.Logger.manager.loggerDict[name] = logger_name
                     self._fixupChildren(placeholder_for_fixup, logger_name)
                     self._fixupParents(logger_name)
             else:
-                logger_name = logging._loggerClass(name, default_log)
+                logger_name = logging._loggerClass(name, default_log=log,
+                    level=level, exclusive_rw=exclusive_rw)
                 logger_name.manager = self
                 logging.Logger.manager.loggerDict[name] = logger_name
                 self._fixupParents(logger_name)
@@ -123,14 +139,23 @@ class FileHandler(logging.FileHandler):
        directory exists, so the check is done here.
     '''
 
-    def __init__(self, filename, mode='a', encoding=None, delay=0):
+    def __init__(self, filename, mode='a', encoding=None, delay=0,
+        exclusive_rw=False):
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename), mode=0777)
+
+        if exclusive_rw:
+            delay = True
 
         # The mode may be set differently by the consumer, so
         # it should be passed through to the constructor.
         logging.FileHandler.__init__(self, filename, mode=mode,
             encoding=encoding, delay=delay)
+
+        if exclusive_rw:
+            fd = os.open(self.baseFilename,
+                os.O_CREAT | os.O_EXCL | os.O_RDWR, 0644)
+            self.stream = os.fdopen(fd, mode)
 
     def transfer_log(self, destination, isdir=False):
         ''' transfer_log() - method to move the log from its original location
@@ -268,16 +293,24 @@ class InstallLogger(logging.Logger):
     INSTALL_FORMAT = '%(asctime)-25s %(name)-10s ' \
         '%(levelname)-10s %(message)-50s'
 
-    def __init__(self, name, default_log=None, level=None):
+    def __init__(self, name, default_log=None, level=None, exclusive_rw=False):
         # If logging level was not provided, choose the desired default one.
         # Use DEFAULTLOGLEVEL for top level logger, while default to
         # logging.NOTSET for sub-loggers. That instructs Python logging to
         # inherit logging level from parent.
 
-        if default_log is None:
-            self.default_log_file = DEFAULTLOG
-        else:
+        self.default_log_file = None
+        self._prog_filter = ProgressFilter(log_progress=True)
+        self._no_prog_filter = ProgressFilter(log_progress=False)
+
+        if InstallLogger.DEFAULTFILEHANDLER is not None:
+            logging.Logger.__init__(self, name)
+            return
+
+        if not InstallLogger.DEFAULTFILEHANDLER and default_log:
             self.default_log_file = default_log
+
+        self.exclusive_rw = exclusive_rw
 
         if level is None:
             if "." in name:
@@ -286,8 +319,6 @@ class InstallLogger(logging.Logger):
                 level = DEFAULTLOGLEVEL
 
         logging.Logger.__init__(self, name, level=level)
-        self._prog_filter = ProgressFilter(log_progress=True)
-        self._no_prog_filter = ProgressFilter(log_progress=False)
 
         # MAX_INT is the level that is associated with progress
         # reporting. The following commands add MAX_INT to the
@@ -296,11 +327,9 @@ class InstallLogger(logging.Logger):
         logging.addLevelName('MAX_INT', MAX_INT)
 
         # Initialize the default log.
-        if not InstallLogger.DEFAULTFILEHANDLER:
+        if not InstallLogger.DEFAULTFILEHANDLER and self.default_log_file:
             logdir = os.path.dirname(self.default_log_file)
 
-            # Make sure default log file is usable by everyone,
-            # even if created by root.
             if not os.path.exists(logdir):
                 try:
                     os.makedirs(logdir)
@@ -308,12 +337,15 @@ class InstallLogger(logging.Logger):
                     if err.errno != errno.EEXIST:
                         raise
 
+                # Make sure default log file is usable by everyone,
+                # even if created by root.
                 statbuf = os.stat(logdir)
                 if (statbuf.st_mode & 01777) != 01777:
                     os.chmod(logdir, 01777)
 
             InstallLogger.DEFAULTFILEHANDLER = \
-                FileHandler(filename=self.default_log_file, mode='a')
+                FileHandler(filename=self.default_log_file, mode='a',
+                    exclusive_rw=self.exclusive_rw)
             InstallLogger.DEFAULTFILEHANDLER.setLevel(level)
             InstallLogger.DEFAULTFILEHANDLER.setFormatter(InstallFormatter())
             logging.Logger.addHandler(self, InstallLogger.DEFAULTFILEHANDLER)
@@ -322,12 +354,17 @@ class InstallLogger(logging.Logger):
     @property
     def default_log(self):
         '''Returns the name of the default log '''
-        return self.default_log_file
+        return InstallLogger.DEFAULTFILEHANDLER.baseFilename
 
     @property
     def name(self):
         '''returns the name of the logger'''
         return self.name
+
+    @property
+    def default_fh(self):
+        '''returns the default FileHandler for the logging process'''
+        return InstallLogger.DEFAULTFILEHANDLER
 
     def addHandler(self, handler):
         '''Adds the requested handler to the InstallLogger
