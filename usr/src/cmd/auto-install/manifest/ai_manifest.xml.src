@@ -79,13 +79,17 @@ DTD sample manifest for Automatic Installer input manifest specification.
         use whole_disk="true" if you do not wish to specify <partition>
         or <slice> children.
       -->
+      <!--
       <disk whole_disk="true">
+      -->
         <!-- G1 -->
         <!--
           c#t#d# device name like c0t0d0 or 
           MPXIO name like c0t2000002037CD9F72d0
         -->
+        <!--
         <disk_name name="c1t0d0" name_type="ctd"/>
+        -->
         <!-- volume name set for instance by means
           of format(1M) command
         -->
@@ -175,6 +179,7 @@ DTD sample manifest for Automatic Installer input manifest specification.
         or, use the following to create a Solaris partition.
         Remember to set whole_disk="false" in the parent <disk> element.
         -->
+        <!--
         <partition name="1" part_type="191">
           <size start_sector="200" val="40960mb"/>
           <slice name="0">
@@ -184,13 +189,16 @@ DTD sample manifest for Automatic Installer input manifest specification.
             <size val="20480mb"/>
           </slice>
         </partition>
+        -->
         <!-- Define some other partitions to create too -->
+        <!-- 
         <partition name="2" part_type="99">
           <size start_sector="200" val="20480mb"/>
         </partition>
         <partition name="4" part_type="99">
           <size start_sector="2000" val="20480mb"/>
         </partition>
+        -->
         <!--
         On SPARC systems, only specify the Slice layout.
         -->
@@ -202,7 +210,9 @@ DTD sample manifest for Automatic Installer input manifest specification.
               <size val="20480mb"/>
             </slice>
         -->
+      <!--
       </disk>
+      -->
       <logical>
         <zpool name="rpool" is_root="true">
           <!--
