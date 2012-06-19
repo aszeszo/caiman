@@ -10,7 +10,7 @@ In this screen, you select a disk. In the following partitioning screens, you ca
 
 SIZE
 
-The recommended size and minimum size for the Oracle Solaris OS installation are displayed.
+The minimum size and recommended minimum size for the Oracle Solaris OS installation are displayed.
 
 * Devices that are too small for a successful installation are labeled that way. 
 

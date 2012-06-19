@@ -73,8 +73,8 @@ class DiskScreen(BaseScreen):
 
     HEADER_TEXT = _("Disks")
     PARAGRAPH = _("Where should %(release)s be installed?") % RELEASE
-    REC_SIZE_TEXT = _("Recommended size: ")
-    MIN_SIZE_TEXT = _("    Minimum size: ")
+    REC_SIZE_TEXT = _("Recommended minimum: ")
+    MIN_SIZE_TEXT = _("Minimum size: ")
     DISK_SEEK_TEXT = _("Seeking disks on system")
     FOUND_x86 = _("The following partitions were found on the disk.")
     FOUND_SPARC = _("The following slices were found on the disk.")
@@ -199,8 +199,8 @@ class DiskScreen(BaseScreen):
                 self.recommended_size.get(Size.gb_units)) + LOCALIZED_GB
             min_size_str = locale.format("%.1f",
                 self.minimum_size.get(Size.gb_units)) + LOCALIZED_GB
-            self._size_line = DiskScreen.REC_SIZE_TEXT + rec_size_str + \
-                DiskScreen.MIN_SIZE_TEXT + min_size_str
+            self._size_line = DiskScreen.MIN_SIZE_TEXT + min_size_str + \
+                "    " + DiskScreen.REC_SIZE_TEXT + rec_size_str
 
         return self._size_line
 

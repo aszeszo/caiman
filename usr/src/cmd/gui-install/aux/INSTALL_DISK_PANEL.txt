@@ -3,7 +3,7 @@ Disks and Partitioning
 
 This panel enables you to choose a disk, or a partition on a disk, as the installation target. The panel also enables you to make adjustments to the partition layout, such as deleting existing partitions or creating a Solaris partition. 
 
-Recommended size and minimum size for installation of the Oracle Solaris operating system (OS) are displayed in this panel. 
+Minimum size and recommended minimum size for installation of the Oracle Solaris operating system (OS) are displayed in this panel. 
 
 
 Procedure

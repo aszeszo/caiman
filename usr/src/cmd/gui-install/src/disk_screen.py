@@ -381,8 +381,8 @@ class DiskScreen(BaseScreen):
                 selected_disk.disk_prop.dev_size < \
                 self._target_controller.recommended_target_size:
 
-                LOGGER.info("Disk smaller than recommended")
-                LOGGER.info("Recommended size is %s",
+                LOGGER.info("Disk smaller than recommended minimum")
+                LOGGER.info("Recommended minimum size is %s",
                     self._target_controller.recommended_target_size)
                 if selected_disk.disk_prop is not None and \
                     selected_disk.disk_prop.dev_size is not None:
@@ -398,7 +398,7 @@ class DiskScreen(BaseScreen):
                     "applications."),
                     two_buttons=True)
                 if not ok_to_proceed:
-                    self._raise_error("Disk smaller than recommended")
+                    self._raise_error("Disk smaller than recommended minimum")
 
         # WARNING #2 - Solaris partition is smaller than recommended size
         # Identify the correct Solaris Partition or GPTPartition object.
@@ -412,8 +412,8 @@ class DiskScreen(BaseScreen):
             if solaris_partition.size < \
                 self._target_controller.recommended_target_size:
 
-                LOGGER.info("Partition smaller than recommended")
-                LOGGER.info("Recommended size is %s",
+                LOGGER.info("Partition smaller than recommended minimum")
+                LOGGER.info("Recommended minimum size is %s",
                     self._target_controller.recommended_target_size)
                 LOGGER.info("Partition size is (%s)", solaris_partition.size)
 
@@ -424,7 +424,8 @@ class DiskScreen(BaseScreen):
                     "applications."),
                     two_buttons=True)
                 if not ok_to_proceed:
-                    self._raise_error("Partition smaller than recommended")
+                    self._raise_error("Partition smaller than recommended " 
+                    "minimum")
 
         # Save the TargetController in the DOC (used to retrieve the
         # minimum_target_size and call setup_vfstab_for_swap())
@@ -694,7 +695,7 @@ class DiskScreen(BaseScreen):
         # NB This messing about is because we want to re-use the existing
         # localized size formatting string from C, but the Python formatting
         # options are different
-        size_str = _("Recommended size: %lldGB Minimum: %.1fGB")
+        size_str = _("Recommended minimum: %lldGB Minimum: %.1fGB")
         size_str = size_str.replace('%lld', '%s')
         size_str = size_str.replace('%.1f', '%s')
 
