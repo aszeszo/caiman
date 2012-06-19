@@ -42,7 +42,7 @@ from solaris_install import run, CalledProcessError
 from solaris_install.engine import InstallEngine
 from solaris_install.gui_install.base_screen import BaseScreen, \
     NotOkToProceedError
-from solaris_install.gui_install.gui_install_common import \
+from solaris_install.gui_install.gui_install_common import _, \
     is_discovery_complete, modal_dialog, queue_td_iscsi, \
     set_td_results_state, start_td_iscsi, GLADE_ERROR_MSG, \
     ISCSI_LABEL
@@ -56,34 +56,6 @@ from solaris_install.sysconfig.profile.ip_address import IPAddress
 
 LOGGER = None
 
-# Strings displayed in GUI
-INTERNAL_ERROR_MSG = _("Internal error")
-DISK_DISCOVERY_TITLE = _("Disk Discovery")
-DISK_DISCOVERY_SUBTITLE = _("What types of disks would you like the "
-                            "Installer to discover?")
-NO_DISK_TYPE_SELECTED_MSG = _("No disk types selected.")
-SELECT_DISK_TYPE_MSG = _("You must select at least one of the disk types "
-                         "to search for.")
-TARGET_IP_1_FIELD = _("Target IP (#1)")
-TARGET_IP_2_FIELD = _("Target IP (#2)")
-TARGET_IP_3_FIELD = _("Target IP (#3)")
-TARGET_IP_4_FIELD = _("Target IP (#4)")
-TARGET_LUN_FIELD = _("LUN")
-NO_INITIATOR_NODE_MSG = _("Could not obtain Initiator Node Name for this host")
-REQUIRED_FIELD_MISSING_MSG = _("Required field not entered")
-ENTER_REQUIRED_FIELD_MSG = _("You must enter a value for : ")
-INVALID_IP_MSG = _("Invalid Target IP address")
-INVALID_TARGET_IQN_MSG = _("Invalid Target IQN string")
-INVALID_INITIATOR_IQN_MSG = _("Invalid Initiator IQN string")
-ENTER_VALID_VALUE_MSG = _("Enter a valid value")
-CHAP_PASSWORD_INVALID_LENGTH = _("CHAP password must be between 12 and 16 "
-                                 "characters")
-CHAP_USERNAME_MISSING = _("CHAP username not specified")
-CHAP_PASSWORD_MISSING = _("CHAP password not specified")
-MAPPING_TARGET_MSG = _("Mapping iSCSI Target...")
-MAPPING_LUN_MSG = _("Mapping iSCSI LUN...")
-CANNOT_MAP_LUN_MSG = _("Unable to map iSCSI LUN")
-
 # Regex for iSCSI Qualified Names
 IQN_RE = re.compile("iqn\.\d{4}\-\d{2}\.\w+\.\w+", re.I)
 
@@ -92,6 +64,35 @@ class DiskDiscoveryScreen(BaseScreen):
     '''
         The Disk Discovery screen.
     '''
+
+    # Strings displayed in GUI
+    INTERNAL_ERROR_MSG = _("Internal error")
+    DISK_DISCOVERY_TITLE = _("Disk Discovery")
+    DISK_DISCOVERY_SUBTITLE = _("What types of disks would you like the "
+                                "Installer to discover?")
+    NO_DISK_TYPE_SELECTED_MSG = _("No disk types selected.")
+    SELECT_DISK_TYPE_MSG = _("You must select at least one of the disk types "
+                             "to search for.")
+    TARGET_IP_1_FIELD = _("Target IP (#1)")
+    TARGET_IP_2_FIELD = _("Target IP (#2)")
+    TARGET_IP_3_FIELD = _("Target IP (#3)")
+    TARGET_IP_4_FIELD = _("Target IP (#4)")
+    TARGET_LUN_FIELD = _("LUN")
+    NO_INITIATOR_NODE_MSG = _("Could not obtain Initiator Node Name for "
+                              "this host")
+    REQUIRED_FIELD_MISSING_MSG = _("Required field not entered")
+    ENTER_REQUIRED_FIELD_MSG = _("You must enter a value for : ")
+    INVALID_IP_MSG = _("Invalid Target IP address")
+    INVALID_TARGET_IQN_MSG = _("Invalid Target IQN string")
+    INVALID_INITIATOR_IQN_MSG = _("Invalid Initiator IQN string")
+    ENTER_VALID_VALUE_MSG = _("Enter a valid value")
+    CHAP_PASSWORD_INVALID_LENGTH = _("CHAP password must be between 12 and 16 "
+                                     "characters")
+    CHAP_USERNAME_MISSING = _("CHAP username not specified")
+    CHAP_PASSWORD_MISSING = _("CHAP password not specified")
+    MAPPING_TARGET_MSG = _("Mapping iSCSI Target...")
+    MAPPING_LUN_MSG = _("Mapping iSCSI LUN...")
+    CANNOT_MAP_LUN_MSG = _("Unable to map iSCSI LUN")
 
     def __init__(self, builder):
         ''' Initializer method - called from constructor.
@@ -192,7 +193,7 @@ class DiskDiscoveryScreen(BaseScreen):
                     self._discovery_chap_name_entry,
                     self._discovery_chap_pass_entry,
                     self._discovery_status_label]:
-            modal_dialog(INTERNAL_ERROR_MSG, GLADE_ERROR_MSG)
+            modal_dialog(self.INTERNAL_ERROR_MSG, GLADE_ERROR_MSG)
             raise RuntimeError(GLADE_ERROR_MSG)
 
     def enter(self):
@@ -209,7 +210,8 @@ class DiskDiscoveryScreen(BaseScreen):
 
         # Screen-specific configuration
         self.activate_stage_label("diskdiscoverystagelabel")
-        self.set_titles(DISK_DISCOVERY_TITLE, DISK_DISCOVERY_SUBTITLE, None)
+        self.set_titles(self.DISK_DISCOVERY_TITLE,
+                        self.DISK_DISCOVERY_SUBTITLE, None)
         self._discovery_status_label.hide()
         self._toplevel.show()
         self._discovery_local_check.grab_focus()
@@ -239,8 +241,9 @@ class DiskDiscoveryScreen(BaseScreen):
         if not self._discovery_local_check.get_active() and \
            not self._discovery_iscsi_check.get_active():
             msg = "No disk types selected."
-            LOGGER.error(NO_DISK_TYPE_SELECTED_MSG)
-            modal_dialog(NO_DISK_TYPE_SELECTED_MSG, SELECT_DISK_TYPE_MSG)
+            LOGGER.error(self.NO_DISK_TYPE_SELECTED_MSG)
+            modal_dialog(self.NO_DISK_TYPE_SELECTED_MSG,
+                         self.SELECT_DISK_TYPE_MSG)
             raise NotOkToProceedError(msg)
 
         if self._discovery_iscsi_check.get_active():
@@ -318,18 +321,18 @@ class DiskDiscoveryScreen(BaseScreen):
 
             # ERROR - required fields must be entered
             required_fields = {
-                self._discovery_target_ip_1_entry: TARGET_IP_1_FIELD,
-                self._discovery_target_ip_2_entry: TARGET_IP_2_FIELD,
-                self._discovery_target_ip_3_entry: TARGET_IP_3_FIELD,
-                self._discovery_target_ip_4_entry: TARGET_IP_4_FIELD,
+                self._discovery_target_ip_1_entry: self.TARGET_IP_1_FIELD,
+                self._discovery_target_ip_2_entry: self.TARGET_IP_2_FIELD,
+                self._discovery_target_ip_3_entry: self.TARGET_IP_3_FIELD,
+                self._discovery_target_ip_4_entry: self.TARGET_IP_4_FIELD,
             }
-            #    self._discovery_lun_entry: TARGET_LUN_FIELD,
+            #    self._discovery_lun_entry: self.TARGET_LUN_FIELD,
             for field in required_fields:
                 if not field.get_text():
-                    msg = REQUIRED_FIELD_MISSING_MSG
+                    msg = self.REQUIRED_FIELD_MISSING_MSG
                     LOGGER.error(msg + " : " + required_fields[field])
                     modal_dialog(msg,
-                        ENTER_REQUIRED_FIELD_MSG + required_fields[field])
+                        self.ENTER_REQUIRED_FIELD_MSG + required_fields[field])
                     field.grab_focus()
                     raise NotOkToProceedError(msg)
 
@@ -337,7 +340,7 @@ class DiskDiscoveryScreen(BaseScreen):
             try:
                 IPAddress.convert_address(self._target_ip)
             except ValueError as error:
-                msg = INVALID_IP_MSG
+                msg = self.INVALID_IP_MSG
                 LOGGER.error(msg + " : " + str(error))
                 modal_dialog(msg, str(error))
                 self._discovery_target_ip_1_entry.grab_focus()
@@ -346,42 +349,42 @@ class DiskDiscoveryScreen(BaseScreen):
             # ERROR - Initiator Name must match regular expression
             if self._initiator_name is not None:
                 if IQN_RE.match(self._initiator_name) is None:
-                    msg = INVALID_INITIATOR_IQN_MSG
+                    msg = self.INVALID_INITIATOR_IQN_MSG
                     LOGGER.error(msg)
-                    modal_dialog(msg, ENTER_VALID_VALUE_MSG)
+                    modal_dialog(msg, self.ENTER_VALID_VALUE_MSG)
                     self._discovery_initiator_name_entry.grab_focus()
                     raise NotOkToProceedError(msg)
 
             # ERROR - Target name name must match regular expression
             if self._target_name is not None:
                 if IQN_RE.match(self._target_name) is None:
-                    msg = INVALID_TARGET_IQN_MSG
+                    msg = self.INVALID_TARGET_IQN_MSG
                     LOGGER.error(msg)
-                    modal_dialog(msg, ENTER_VALID_VALUE_MSG)
+                    modal_dialog(msg, self.ENTER_VALID_VALUE_MSG)
                     self._discovery_target_name_entry.grab_focus()
                     raise NotOkToProceedError(msg)
 
             # ERROR - if CHAP name is given, password must also
             # be given, and vice versa
             if self._chap_name and not self._chap_password:
-                msg = CHAP_PASSWORD_MISSING
+                msg = self.CHAP_PASSWORD_MISSING
                 LOGGER.error(msg)
-                modal_dialog(msg, ENTER_VALID_VALUE_MSG)
+                modal_dialog(msg, self.ENTER_VALID_VALUE_MSG)
                 self._discovery_chap_pass_entry.grab_focus()
                 raise NotOkToProceedError(msg)
             if self._chap_password and not self._chap_name:
-                msg = CHAP_USERNAME_MISSING
+                msg = self.CHAP_USERNAME_MISSING
                 LOGGER.error(msg)
-                modal_dialog(msg, ENTER_VALID_VALUE_MSG)
+                modal_dialog(msg, self.ENTER_VALID_VALUE_MSG)
                 self._discovery_chap_name_entry.grab_focus()
                 raise NotOkToProceedError(msg)
 
             # ERROR - CHAP password must be correct length
             if self._chap_password is not None:
                 if not 12 <= len(self._chap_password) <= 16:
-                    msg = CHAP_PASSWORD_INVALID_LENGTH
+                    msg = self.CHAP_PASSWORD_INVALID_LENGTH
                     LOGGER.error(msg)
-                    modal_dialog(msg, ENTER_VALID_VALUE_MSG)
+                    modal_dialog(msg, self.ENTER_VALID_VALUE_MSG)
                     self._discovery_chap_pass_entry.grab_focus()
                     raise NotOkToProceedError(msg)
 
@@ -426,10 +429,11 @@ class DiskDiscoveryScreen(BaseScreen):
             self.set_back_next(back_sensitive=False, next_sensitive=False)
             if iscsi.target_lun is not None:
                 self._discovery_status_label.set_markup(
-                    '<span font_desc="Bold">%s</span>' % MAPPING_LUN_MSG)
+                    '<span font_desc="Bold">%s</span>' % self.MAPPING_LUN_MSG)
             else:
                 self._discovery_status_label.set_markup(
-                    '<span font_desc="Bold">%s</span>' % MAPPING_TARGET_MSG)
+                    '<span font_desc="Bold">%s</span>' %
+                    self.MAPPING_TARGET_MSG)
             self._discovery_status_label.show()
             thread = SetupIscsiThread(iscsi)
             # Keep passing control back to Gtk+ to process its event queue
@@ -443,7 +447,7 @@ class DiskDiscoveryScreen(BaseScreen):
             self._discovery_status_label.hide()
             self.set_back_next(back_sensitive=True, next_sensitive=True)
             if thread.error is not None:
-                msg = CANNOT_MAP_LUN_MSG
+                msg = self.CANNOT_MAP_LUN_MSG
                 LOGGER.error(msg)
                 LOGGER.error(str(thread.error))
                 modal_dialog(msg, str(thread.error))
@@ -510,7 +514,7 @@ class DiskDiscoveryScreen(BaseScreen):
                 try:
                     segments = IPAddress.convert_address(self._dhcp_ip)
                 except ValueError as error:
-                    title = INVALID_IP_MSG
+                    title = self.INVALID_IP_MSG
                     msg = self._dhcp_ip + ' : ' + str(error)
                     LOGGER.error(title)
                     LOGGER.error(msg)
@@ -612,7 +616,7 @@ class DiskDiscoveryScreen(BaseScreen):
         try:
             popen = run(cmd)
         except CalledProcessError as error:
-            title = NO_INITIATOR_NODE_MSG
+            title = self.NO_INITIATOR_NODE_MSG
             msg = cmd + " failed : " + str(error)
             LOGGER.error(title)
             LOGGER.error(msg)
@@ -626,7 +630,7 @@ class DiskDiscoveryScreen(BaseScreen):
                 self._discovery_initiator_name_entry.set_text(initiator_name)
                 LOGGER.debug("iSCSI Initiator Name is: ", initiator_name)
             else:
-                title = NO_INITIATOR_NODE_MSG
+                title = self.NO_INITIATOR_NODE_MSG
                 msg = popen.stdout.splitlines()
                 LOGGER.error(title)
                 LOGGER.error(msg)
