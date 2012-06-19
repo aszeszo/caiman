@@ -77,7 +77,7 @@ SYS_AI_MANIFEST_DTD = "/usr/share/install/ai.dtd.@DTD_VERSION_AI@"
 
 # global version number for all of the consumers of the pkg5 API in the source
 # tree
-PKG5_API_VERSION = 66
+PKG5_API_VERSION = 72
 
 # Reg-exp to match that a given string would be a valid DTD path for Install
 DTD_PATH_RE = ".*\.dtd\.\d+$"
