@@ -24,11 +24,14 @@
 # Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
+import logging
 import os
 import shutil
 
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
+import pkg.client.progress as progress
+import pkg.client.printengine as printengine
 import solaris_install.ict as ICT
 
 from stat import S_IREAD, S_IRGRP, S_IROTH
@@ -38,7 +41,6 @@ from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.transfer.info import Args
 from solaris_install.transfer.info import CPIOSpec
 from solaris_install.transfer.info import IPSSpec
-from solaris_install.transfer.ips import InstallCLIProgressTracker
 from solaris_install.transfer.info import Software
 
 
@@ -198,9 +200,13 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
 
         if not dry_run:
             try:
+                # Set up the logging progress tracker-- this is a
+                # CommandLineProgressTracker hooked up to a special printengine.
+                pe = printengine.LoggingPrintEngine(self.logger, logging.DEBUG)
+                logt = progress.CommandLineProgressTracker(print_engine=pe)
                 api_inst = api.ImageInterface(self.target_dir,
                                PKG5_API_VERSION,
-                               InstallCLIProgressTracker(self.logger),
+                               logt,
                                None,
                                ICT.PKG_CLIENT_NAME)
 

@@ -29,13 +29,16 @@ import abc
 import copy
 import gettext
 import locale
+import logging
 import os
 import shutil
+import sys
 
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
 import pkg.client.image as image
 import pkg.client.progress as progress
+import pkg.client.printengine as printengine
 import pkg.client.publisher as publisher
 import pkg.misc as misc
 
@@ -70,197 +73,12 @@ global_settings.client_name = PKG_CLIENT_NAME
 misc.setlocale(locale.LC_ALL, "")
 gettext.install("pkg", "/usr/share/locale")
 
-
-class InstallCLIProgressTracker(progress.NullProgressTracker):
-    ''' Subclass of the IPS api's NullProgressTracker to handle a simple
-        form of progress reporting.  If requested with 'show_stdout', we
-        output progress to stdout by posting a logging INFO message.
-        Otherwise we just output progress to log files by posting a
-        logging DEBUG message.
-    '''
-
-    def __init__(self, trans_logger, show_stdout=False):
-        super(InstallCLIProgressTracker, self).__init__()
-        self.trans_logger = trans_logger
-        self.show_stdout = show_stdout
-        self._dl_cur_pkg = None
-        self._dl_started = False
-        self._act_started = False
-        self._ind_started = False
-        self._item_started = False
-        self._package_dict = {}
-
-    def _logger_output(self, message):
-        if self.show_stdout:
-            self.trans_logger.info(message)
-        else:
-            self.trans_logger.debug(message)
-
-    def eval_output_start(self):
-        self._logger_output("Creating Plan ... Started.")
-
-    def eval_output_done(self):
-        self._logger_output("Creating Plan ... Done.")
-
-    def refresh_output_start(self):
-        self._logger_output("Refreshing Catalog ... Started.")
-
-    def refresh_output_done(self):
-        self._logger_output("Refreshing Catalog ... Done.")
-
-    def dl_output(self):
-        if not self._dl_started:
-            self._logger_output("Download Phase ... Started.")
-            self._dl_started = True
-
-        if self._dl_cur_pkg != self.cur_pkg:
-            if (self.cur_pkg in self._package_dict):
-                fmri = self._package_dict[self.cur_pkg]
-                self._logger_output("Download: %s ..." % fmri.get_fmri())
-            else:
-                # only hits this at end when the cur_pkg becomes empty str
-                self._logger_output("Download: %s ..." % self.cur_pkg)
-            self._dl_cur_pkg = self.cur_pkg
-
-    def dl_output_done(self):
-        self._logger_output("Download Phase ... Done.")
-        self._dl_started = False
-        self._dl_cur_pkg = None
-
-    def act_output(self, force=False):
-        if not self._act_started:
-            self._logger_output("%s ... Started." % self.act_phase)
-            self._act_started = True
-
-    def act_output_done(self):
-        self._logger_output("%s ... Done." % self.act_phase)
-        self._act_started = False
-
-    def ind_output(self, force=False):
-        if not self._ind_started:
-            self._logger_output("%s ... Started." % self.ind_phase)
-            self._ind_started = True
-
-    def ind_output_done(self):
-        self._logger_output("%s ... Done." % self.ind_phase)
-        self._ind_started = False
-
-    def item_output(self, force=False):
-        if not self._item_started:
-            self._logger_output("%s ... Started." % self.item_phase)
-            self._item_started = True
-
-    def item_output_done(self):
-        self._logger_output("%s ... Done." % self.item_phase)
-        self._item_started = False
-
-    def set_package_dict(self, package_dict):
-        self._package_dict = package_dict
-
-
-class InstallFancyProgressTracker(progress.FancyUNIXProgressTracker):
-    ''' Subclass of the IPS api's FancyUNIXProgressTracker; we leverage
-        that class's progress reporting, allowing it to output straight to
-        stdout.  The overridden methods we define allow us to capture the
-        parts of the progress that we want recorded to the install log.
-
-        This progress tracking class should only be used when the
-        application is being run on a terminal with UNIX-like semantics
-        and will fail to initialize otherwise.
-    '''
-    def __init__(self, trans_logger, quiet=False, verbose=0):
-        super(InstallFancyProgressTracker, self).__init__(quiet=quiet,
-            verbose=verbose)
-
-        self.trans_logger = trans_logger
-        self._dl_cur_pkg = None
-        self._dl_started = False
-        self._act_started = False
-        self._ind_started = False
-        self._item_started = False
-        self._package_dict = {}
-
-    def eval_output_start(self):
-        super(InstallFancyProgressTracker, self).eval_output_start()
-        self.trans_logger.debug("Creating Plan ... Started.")
-
-    def eval_output_done(self):
-        super(InstallFancyProgressTracker, self).eval_output_done()
-        self.trans_logger.debug("Creating Plan ... Done.")
-
-    def refresh_output_start(self):
-        super(InstallFancyProgressTracker, self).refresh_output_start()
-        self.trans_logger.debug("Refreshing Catalog ... Started.")
-
-    def refresh_output_done(self):
-        super(InstallFancyProgressTracker, self).refresh_output_done()
-        self.trans_logger.debug("Refreshing Catalog ... Done.")
-
-    def dl_output(self, force=False):
-        super(InstallFancyProgressTracker, self).dl_output(force=force)
-        if not self._dl_started:
-            self.trans_logger.debug("Download Phase ... Started.")
-            self._dl_started = True
-
-        if self._dl_cur_pkg != self.cur_pkg:
-            if (self.cur_pkg in self._package_dict):
-                fmri = self._package_dict[self.cur_pkg]
-                self.trans_logger.debug("Download: %s ..." % fmri.get_fmri())
-            else:
-                # only hits this at end when the cur_pkg becomes empty str
-                self.trans_logger.debug("Download: %s ..." % self.cur_pkg)
-            self._dl_cur_pkg = self.cur_pkg
-
-    def dl_output_done(self):
-        super(InstallFancyProgressTracker, self).dl_output_done()
-        self.trans_logger.debug("Download Phase ... Done.")
-        self._dl_started = False
-        self._dl_cur_pkg = None
-
-    def act_output(self, force=False):
-        super(InstallFancyProgressTracker, self).act_output(force=force)
-        if not self._act_started:
-            self.trans_logger.debug("%s ... Started." % self.act_phase)
-            self._act_started = True
-
-    def act_output_done(self):
-        super(InstallFancyProgressTracker, self).act_output_done()
-        self.trans_logger.debug("%s ... Done." % self.act_phase)
-        self._act_started = False
-
-    def ind_output(self, force=False):
-        super(InstallFancyProgressTracker, self).ind_output(force=force)
-        if not self._ind_started:
-            self.trans_logger.debug("%s ... Started." % self.ind_phase)
-            self._ind_started = True
-
-    def ind_output_done(self):
-        super(InstallFancyProgressTracker, self).ind_output_done()
-        self.trans_logger.debug("%s ... Done." % self.ind_phase)
-        self._ind_started = False
-
-    def item_output(self, force=False):
-        super(InstallFancyProgressTracker, self).item_output(force=force)
-        if not self._item_started:
-            self.trans_logger.debug("%s ... Started." % self.item_phase)
-            self._item_started = True
-
-    def item_output_done(self):
-        super(InstallFancyProgressTracker, self).item_output_done()
-        self.trans_logger.debug("%s ... Done." % self.item_phase)
-        self._item_started = False
-
-    def set_package_dict(self, package_dict):
-        self._package_dict = package_dict
-
-
 class AbstractIPS(Checkpoint):
     '''Subclass for transfer IPS checkpoint'''
     __metaclass__ = abc.ABCMeta
 
     # Variables associated with the package image
     DEF_REPO_URI = "http://pkg.opensolaris.org/release"
-    DEF_PROG_TRACKER = progress.CommandLineProgressTracker()
 
     # Variables used in calculating the image size
     DEFAULT_PROG_EST = 10
@@ -311,20 +129,28 @@ class AbstractIPS(Checkpoint):
         self._cancel_event = False
 
         # Set the progress tracker for IPS operations.
+        trackers = []
         if self.show_stdout:
-            # If we've been requested to show progress to stdout, try to
-            # intantiate the Fancy progress tracker.  If we're not running
-            # on a capable terminal, fall back to the CLI progress tracker.
+            # Try to create a Fancy progress tracker.  If we're not running on a
+            # capable terminal, then bump the loglevel up to INFO.  This is a
+            # hack, but it will cause the log messages to appear on stdout
+            # and in the log file.
             try:
-                self.prog_tracker = InstallFancyProgressTracker(self.logger)
+                t = progress.FancyUNIXProgressTracker(output_file=sys.stdout)
+                trackers.append(t)
+                loglevel = logging.DEBUG
             except progress.ProgressTrackerException:
-                self.prog_tracker = InstallCLIProgressTracker(self.logger,
-                    show_stdout=self.show_stdout)
+                loglevel = logging.INFO
         else:
-            # Else if we've not been requested to show progress at all,
-            # instantiate the the CLI progress tracker.
-            self.prog_tracker = InstallCLIProgressTracker(self.logger,
-                show_stdout=self.show_stdout)
+            loglevel = logging.DEBUG
+
+        # Set up the logging progress tracker-- this is a
+        # CommandLineProgressTracker hooked up to a special printengine.
+        pe = printengine.LoggingPrintEngine(self.logger, loglevel)
+        logt = progress.CommandLineProgressTracker(print_engine=pe)
+        trackers.append(logt)
+
+        self.prog_tracker = progress.MultiProgressTracker(trackers)
 
         # local attributes used to create the publisher.
         self._publ = None
@@ -749,14 +575,11 @@ class AbstractIPS(Checkpoint):
                                 "using the command:")
                             self.logger.info("  pkg info --license <pkg_fmri>")
 
-                        # building up a collection of packages so we have
-                        # the publisher and version info for each package
-                        package_dict = {}
+                        # Describe the install plan in the debug log.
                         plan = self.api_inst.describe().get_changes()
-                        for pkg_plan in plan:
-                            fmri = PkgFmri(pkg_plan[1].__str__())
-                            package_dict[fmri.get_name()] = fmri
-                        self.prog_tracker.set_package_dict(package_dict)
+                        self.logger.debug("Installation Plan:")
+                        for src_pkg, dest_pkg in plan:
+                            self.logger.debug("    %s" % str(dest_pkg))
 
                         # Execute the transfer action
                         self.api_inst.prepare()
