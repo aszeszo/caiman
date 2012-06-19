@@ -64,4 +64,6 @@ $(GENERATEDPYFILES):
 python:	$(GENERATEDPYFILES)
 	$(PYTHON) -m compileall -l $(@D)
 
+$(POFILE): python
+
 include ../Makefile.targ
