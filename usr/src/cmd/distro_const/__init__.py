@@ -65,7 +65,7 @@ from solaris_install.transfer.info import Destination, Dir, Image, Software, \
 DC_LOCKFILE = "distro_const.lock"
 DC_LOGGER = None
 LOG_TIMESTAMP = time.strftime("%Y-%m-%d.%H:%M")
-DEFAULTLOG = system_temp_path("dc/default_log" + '.' + LOG_TIMESTAMP)
+DEFAULTLOG = system_temp_path("dc/default_log" + '.' + str(os.getpid()))
 
 
 class Lockfile(object):
