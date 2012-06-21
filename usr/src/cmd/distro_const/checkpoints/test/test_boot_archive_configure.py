@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_boot_archive_configure
@@ -183,19 +183,13 @@ class TestConfigureSystem(unittest.TestCase):
         self.assert_(os.path.isdir(os.path.join(self.bac.ba_build, "dev")))
 
         # verify files were created
-        for entry in ["reconfigure", "etc/rtc_config",
+        for entry in ["reconfigure", "etc/rtc_config", "etc/dumpadm.conf",
                       "etc/svc/repository.db", "test"]:
             self.assert_(os.path.isfile(os.path.join(self.bac.ba_build,
                                                      entry)))
 
-        # verify the directories were created
-        for d in ["tmp", "proc", "mnt", "mnt/misc", "mnt/pkg", ".cdrom"]:
-            self.assert_(os.path.isdir(os.path.join(self.bac.ba_build, d)))
-
-        # verify /bin and /opt are symlinks
-        for entry in ["bin", "opt"]:
-            self.assert_(os.path.islink(os.path.join(self.bac.ba_build,
-                                                     entry)))
+        # verify /opt is a symlink
+        self.assert_(os.path.islink(os.path.join(self.bac.ba_build, "opt")))
 
         # verify .volsetid
         volsetid = os.path.join(self.bac.ba_build, ".volsetid")

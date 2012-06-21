@@ -20,7 +20,7 @@
  
   CDDL HEADER END
  
-  Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+  Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 
   XML specification for building an Oracle Solaris installer iso image
 -->
@@ -139,23 +139,6 @@
       </source>
       <xi:include xmlns:xi="http://www.w3.org/2003/XInclude"
           href="/usr/share/distro_const/boot_archive_contents_sparc.xml"/>
-      <software_data action="install">
-        <name>kernel</name>
-        <name>boot</name>
-        <name>platform</name>
-        <name>system</name>
-        <name>lib</name>
-        <name>dev</name>
-        <name>devices</name>
-        <name>root</name>
-        <name>jack</name>
-        <name>etc</name>
-        <name>usr/sbin/ibd_delete_link</name>
-        <name>usr/sbin/ibd_upgrade</name>
-        <name>var/svc/manifest</name>
-        <name>var/svc/profile</name>
-        <name>var/sadm</name>
-      </software_data>
     </software>
 
     <!--

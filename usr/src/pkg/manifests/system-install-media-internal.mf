@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/system/install/media/internal@$(PKGVERS)
@@ -50,6 +50,7 @@ dir path=lib/svc/method
 dir path=lib/svc/share
 dir path=mnt group=sys
 dir path=mnt/misc group=sys
+dir path=mnt/pkg group=sys
 dir path=usr group=sys
 dir path=usr/lib
 dir path=usr/lib/install

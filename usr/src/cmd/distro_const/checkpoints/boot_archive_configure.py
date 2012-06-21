@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ boot_archive_configure - configure a populated boot archive area into a
@@ -87,50 +87,28 @@ class BootArchiveConfigure(Checkpoint):
         # the image
         lockfile = os.path.join(self.ba_build, "etc/dev/.devfsadm_dev.lock")
         if os.path.exists(lockfile):
-            self.logger.debug("removing devfsadm lock file")
+            self.logger.debug("Removing devfsadm lock file")
             os.remove(lockfile)
 
         # Set a marker so that every boot is a reconfiguration boot
-        cmd = [cli.TOUCH, os.path.join(self.ba_build, "reconfigure")]
-        run(cmd)
+        self.logger.debug("Creating /reconfigure")
+        with open(os.path.join(self.ba_build, "reconfigure"), "w"):
+            pass
 
         # Set up /etc/rtc_config
+        self.logger.debug("Setting up /etc/rtc_config")
         cmd = [cli.CP, os.path.join(self.file_defaults, "rtc_config.default"),
                os.path.join(self.ba_build, "etc/rtc_config")]
         run(cmd)
 
         # go to the ba_build directory
-        self.logger.debug("creating symlinks and mountpoints")
         os.chdir(self.ba_build)
-
-        # create ./tmp.  mkdir and chmod have to be done seperately
-        self.logger.debug("creating tmp dir and setting it to 01777")
-        os.mkdir("tmp")
-        os.chmod("tmp", 01777)
-
-        # create ./proc
-        self.logger.debug("creating proc directory")
-        os.mkdir("proc")
-
-        # create ./mnt
-        self.logger.debug("creating mnt directory")
-        os.mkdir("mnt")
-
-        # create bin symlink to /usr/bin if needed
-        self.logger.debug("checking for symlink of bin -> usr/bin")
-        if not os.path.islink("bin"):
-            os.symlink("usr/bin", "bin")
-
-        # create mountpoints for misc and pkg zlibs
-        self.logger.debug("creating mnt/misc and mnt/pkg mountpoints")
-        os.mkdir("mnt/misc", 0755)
-        os.mkdir("mnt/pkg", 0755)
 
         # create volume set id file, use system name + date for uniqueness
         with open(".volsetid", "w") as v:
             volsetid = os.uname()[1] + '-' + \
                        datetime.datetime.now().isoformat()
-            self.logger.debug("setting .volsetid to %s" % volsetid)
+            self.logger.debug("Setting .volsetid to %s" % volsetid)
             v.write(volsetid)
 
         # chmod it to 444 and set the ownership to root:root (0:0)
@@ -139,22 +117,19 @@ class BootArchiveConfigure(Checkpoint):
 
         # create the file marking the image type (e.g. .autoinstall or
         # .livecd)
-        self.logger.debug("creating image_type file")
+        self.logger.debug("Creating image_type file")
         with open(self.image_type, "w"):
             pass
 
-        # create .cdrom directory
-        self.logger.debug("creating .cdrom directory")
-        os.mkdir(".cdrom", 0755)
-
         # touch an empty etc/dumpadm.conf file so the dumpadm service will
-        # start correctly
+        # start correctly; it's a required dependency of fmd
+        self.logger.debug("Creating empty /etc/dumpadm.conf")
         with open(os.path.join(self.ba_build, "etc/dumpadm.conf"), "w"):
             pass
 
         # create opt symlink to mnt/misc/opt if needed
-        self.logger.debug("checking for symlink of opt -> mnt/misc/opt")
         if not os.path.islink("opt"):
+            self.logger.debug("Creating symlink of opt -> mnt/misc/opt")
             os.symlink("mnt/misc/opt", "opt")
 
         tr_uninstall = CPIOSpec()

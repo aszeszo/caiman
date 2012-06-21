@@ -21,10 +21,30 @@
  
   Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 
-  XML specification for building an Oracle Solaris installer iso image
+  XML specification of common boot archive contents of Oracle Solaris x86
+  installer iso images
 -->
 <software_data action="install">
+  <name>.cdrom</name>
+  <name>bin</name>
+  <name>boot</name>
+  <name>dev</name>
+  <name>devices</name>
+  <name>etc</name>
+  <name>jack</name>
+  <name>kernel</name>
+  <name>lib</name>
+  <name>mnt</name>
+  <name>platform</name>
+  <name>proc</name>
+  <name>root</name>
   <name>sbin</name>
+  <name>system</name>
+  <name>tmp</name>
+  <name>var/share</name>
+  <name>var/svc/manifest</name>
+  <name>var/svc/profile</name>
+  <name>var/sadm</name>
   <name>usr/bin/nawk</name>
   <name>usr/bin/mkdir</name>
   <name>usr/bin/cp</name>
@@ -150,20 +170,7 @@
   <name>usr/lib/fs/ufs/mount</name>
   <name>usr/lib/libfstyp.so.1</name>
   <name>usr/lib/platexec</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_cfg_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_disk_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_fssnap_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_ieee1394_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_lofi_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_misc_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_misc_link_i386.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_port_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_ramdisk_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_sgen_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_tape_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_usb_link.so</name>
-  <name>usr/lib/devfsadm/linkmod/SUNW_zfs_link.so</name>
-  <name>usr/lib/devfsadm/devfsadmd</name>
+  <name>usr/lib/devfsadm</name>
   <name>usr/lib/iconv/alias</name>
   <name>usr/lib/iconv/646%UTF-8.so</name>
   <name>usr/lib/iconv/UTF-8%646.so</name>
