@@ -201,7 +201,8 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
         if not dry_run:
             try:
                 # Set up the logging progress tracker-- this is a
-                # CommandLineProgressTracker hooked up to a special printengine.
+                # CommandLineProgressTracker hooked up
+                # to a special printengine.
                 pe = printengine.LoggingPrintEngine(self.logger, logging.DEBUG)
                 logt = progress.CommandLineProgressTracker(print_engine=pe)
                 api_inst = api.ImageInterface(self.target_dir,
@@ -216,6 +217,43 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
                                  " does not agree with "
                                  "the expected version, "
                                  + str(ips_err.expected_version))
+
+        #
+        # Restore files from the save directory before pkg(5) is called
+        # to remove install-specific packages. This order of steps is needed,
+        # as during process of media build, files were saved _after_ pkg(5)
+        # installed all packages.
+        #
+        # As an example, saved shadow(4) file contains entry for media specific
+        # 'jack' user. That entry will be removed in the next step as a result
+        # of uninstalling media/internal package.
+        #
+        savedir = os.path.join(self.target_dir, 'save')
+        if os.path.exists(savedir):
+            self.logger.debug('Executing: Relocate configuration files')
+            for root, dirs, files in os.walk(savedir, topdown=False):
+                if not files:
+                    continue
+
+                target = root.replace('/save', '')
+                if not dry_run:
+                    if not os.access(target, os.F_OK):
+                        os.makedirs(target, 0755)
+
+                for name in files:
+                    src_file = os.path.join(root, name)
+                    dst_file = os.path.join(target, name)
+                    self.logger.debug('Moving %s to %s', src_file, dst_file)
+                    if not dry_run:
+                        #
+                        # Use shutil.move(), as it transfers also file
+                        # permissions and ownership. Assuming that files
+                        # in save area were created with desired permissions
+                        # and ownership.
+                        #
+                        shutil.move(src_file, dst_file)
+
+            shutil.rmtree(savedir)
 
         # Remove install-specific packages that are not needed
         if pkg_rm_node and len(pkg_rm_node.contents) > 0:
@@ -291,44 +329,6 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
         if not dry_run:
             publisher = api_inst.get_highest_ranked_publisher()
             publisher.reset_client_uuid()
-
-        #
-        # Now that all pkg(5) operations are finished, restore files
-        # from the save directory. This order of steps is intentional,
-        # as pkg(5) operations may have wanted to modify files which
-        # are to be restored.
-        #
-        # As an example, uninstalling media/internal package removed
-        # media specific 'jack' user from the target system. That (among other
-        # things) removed related entry from shadow(4) file (now to be
-        # restored from save area).
-        #
-        savedir = os.path.join(self.target_dir, 'save')
-        if os.path.exists(savedir):
-            self.logger.debug('Executing: Relocate configuration files')
-            for root, dirs, files in os.walk(savedir, topdown=False):
-                if not files:
-                    continue
-
-                target = root.replace('/save', '')
-                if not dry_run:
-                    if not os.access(target, os.F_OK):
-                        os.makedirs(target, 0755)
-
-                for name in files:
-                    src_file = os.path.join(root, name)
-                    dst_file = os.path.join(target, name)
-                    self.logger.debug('Moving %s to %s', src_file, dst_file)
-                    if not dry_run:
-                        #
-                        # Use shutil.move(), as it transfers also file
-                        # permissions and ownership. Assuming that files
-                        # in save area were created with desired permissions
-                        # and ownership.
-                        #
-                        shutil.move(src_file, dst_file)
-
-            shutil.rmtree(savedir)
 
         # Remove the files and directories in the cleanup_list
         self.logger.debug('Executing: Cleanup of %s', self.cleanup_list)
