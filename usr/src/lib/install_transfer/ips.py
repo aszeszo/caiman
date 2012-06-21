@@ -73,6 +73,7 @@ global_settings.client_name = PKG_CLIENT_NAME
 misc.setlocale(locale.LC_ALL, "")
 gettext.install("pkg", "/usr/share/locale")
 
+
 class AbstractIPS(Checkpoint):
     '''Subclass for transfer IPS checkpoint'''
     __metaclass__ = abc.ABCMeta
@@ -131,8 +132,8 @@ class AbstractIPS(Checkpoint):
         # Set the progress tracker for IPS operations.
         trackers = []
         if self.show_stdout:
-            # Try to create a Fancy progress tracker.  If we're not running on a
-            # capable terminal, then bump the loglevel up to INFO.  This is a
+            # Try to create a Fancy progress tracker.  If we're not running on
+            # a capable terminal, then bump the loglevel up to INFO.  This is a
             # hack, but it will cause the log messages to appear on stdout
             # and in the log file.
             try:
