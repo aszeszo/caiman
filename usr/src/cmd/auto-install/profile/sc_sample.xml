@@ -19,7 +19,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 -->
 
 <!--
@@ -46,6 +46,7 @@ See installadm(1M) for usage of 'create-profile' subcommand.
           <propval name="description" value="default_user"/>
           <propval name="shell" value="/usr/bin/bash"/>
           <propval name="gid" value="10"/>
+          <propval name="uid" value="101"/>
           <propval name="type" value="normal"/>
           <propval name="roles" value="root"/>
           <propval name="profiles" value="System Administrator"/>
