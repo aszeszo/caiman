@@ -65,7 +65,7 @@ from solaris_install.transfer.info import Destination, Dir, Image, Software, \
 DC_LOCKFILE = "distro_const.lock"
 DC_LOGGER = None
 LOG_TIMESTAMP = time.strftime("%Y-%m-%d.%H:%M")
-DEFAULTLOG = system_temp_path("dc/default_log" + '.' + str(os.getpid()))
+DEFAULTLOG = system_temp_path("dc" + str(os.getpid()) + "/default_log")
 
 
 class Lockfile(object):
@@ -501,8 +501,10 @@ def main():
                 DC_LOGGER.transfer_log(destination=new_detaillog)
                 simple_fh.transfer_log(destination=new_simplelog)
 
-                # Remove the original DEFAULTLOG. It's no longer needed
-                shutil.rmtree(base)
+                # Remove the directory containing DEFAULTLOG and the original
+		# simple log. Their contents have been transferred to the DC
+		# log location.
+		shutil.rmtree(os.path.dirname(DEFAULTLOG))
 
                 # set the http_proxy if one is specified in the manifest
                 dc_set_http_proxy(DC_LOGGER)
