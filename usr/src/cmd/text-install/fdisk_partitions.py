@@ -32,15 +32,14 @@ import platform
 
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME
-from solaris_install.target.controller import DEFAULT_VDEV_NAME, \
-    DEFAULT_ZPOOL_NAME
+from solaris_install.target.controller import DEFAULT_ZPOOL_NAME
 from solaris_install.target.physical import Disk, Partition, Slice
 from solaris_install.target.size import Size
 from solaris_install.text_install import _, RELEASE, TUI_HELP, LOCALIZED_GB
 from solaris_install.text_install.disk_window import DiskWindow
 from solaris_install.text_install.ti_target_utils import \
-    get_desired_target_disk, get_solaris_gpt_partition, \
-    get_solaris_partition, dump_doc
+    get_desired_target_disk, get_solaris_partition, \
+    dump_doc
 from terminalui.base_screen import BaseScreen, SkipException
 from terminalui.i18n import textwidth
 from terminalui.list_item import ListItem
